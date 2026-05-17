@@ -100,6 +100,12 @@ export type RootItem = {
   type: 'directory' | 'file';
 };
 
+export type WorkspaceInfo = {
+  branchName?: string;
+  folderName: string;
+  iconDataUrl: string;
+};
+
 export type ChatEvent = {
   name: string;
 };
@@ -108,6 +114,7 @@ const api = {
   app: {
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
+    workspace: (): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace'),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),

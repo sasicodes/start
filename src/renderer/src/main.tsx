@@ -2,6 +2,7 @@ import type { EffortLevel } from '@preload/index';
 import { Composer, Messages, Settings } from '@renderer/shared/chat';
 import { RecentSessions } from '@renderer/shared/sessions';
 import { useChat } from '@renderer/shared/use-chat';
+import { Workspace } from '@renderer/shared/workspace';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { render } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
@@ -164,6 +165,7 @@ const App = () => {
         <>
           {surface === 'main' && <Messages status={status} messages={messages} />}
           {surface === 'main' && <RecentSessions onOpenSession={openSession} activeSessionId={activeSessionId} />}
+          {surface === 'main' && <Workspace />}
           <Composer
             draft={draft}
             models={models}

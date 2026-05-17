@@ -17,6 +17,7 @@ import {
   showComposerWindow,
   submitComposerToMainWindow
 } from '@main/window';
+import { getWorkspace } from '@main/workspace';
 import {
   app,
   BrowserWindow,
@@ -68,7 +69,7 @@ const installStatusItem = () => {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: 'New Chat',
+        label: 'New Session',
         accelerator: 'CommandOrControl+N',
         click: () => void startNewSession()
       },
@@ -119,7 +120,7 @@ const installApplicationMenu = () => {
         label: 'File',
         submenu: [
           {
-            label: 'New Chat',
+            label: 'New Session',
             accelerator: 'CommandOrControl+N',
             click: () => void startNewSession()
           },
@@ -169,6 +170,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
     listRootItems(relativePath, scope)
   );
+  ipcMain.handle('app:workspace', () => getWorkspace());
   ipcMain.handle('app:settings', () => appSettings);
   ipcMain.handle('app:hide-composer', () => {
     hideComposerWindow();

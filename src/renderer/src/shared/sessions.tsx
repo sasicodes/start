@@ -3,19 +3,21 @@ import { HistoryIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 const EmptySessions = () => <li class="px-3 py-8 text-center text-sm text-soft">No recent sessions</li>;
+const ICON_EXIT_DELAY = 70;
+const ICON_RETURN_DELAY = 130;
 
-const SessionIcon = ({ open }: { open: boolean }) => (
+const SessionIcon = ({ hidden }: { hidden: boolean }) => (
   <AnimatePresence>
-    {!open && (
+    {!hidden && (
       <motion.span
         key="history-icon"
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.82 }}
         initial={{ opacity: 0, scale: 0.82 }}
-        transition={{ duration: 0.12 }}
+        transition={{ duration: 0.08 }}
         class="absolute inset-0 grid place-items-center"
       >
         <HistoryIcon class="size-5" />
@@ -43,22 +45,23 @@ const SessionRow = ({
       )}
     >
       <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
-      <span class="text-xs leading-4 text-soft">
-        {formatRelativeTime(session.modified)} · {session.messageCount} messages
-      </span>
+      <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
     </button>
   </li>
 );
 
 const SessionRows = ({
   sessions,
+  loaded,
   onOpenSession,
   activeSessionId
 }: {
   sessions: RecentSession[];
+  loaded: boolean;
   activeSessionId: string | undefined;
   onOpenSession: (path: string) => Promise<boolean>;
 }) => {
+  if (!loaded) return null;
   if (sessions.length === 0) return <EmptySessions />;
 
   return sessions.map((session) => (
@@ -74,12 +77,16 @@ const SessionRows = ({
 const SessionContent = ({
   open,
   sessions,
+  loaded,
   onOpenSession,
-  activeSessionId
+  activeSessionId,
+  expandedHeight
 }: {
   open: boolean;
   sessions: RecentSession[];
+  loaded: boolean;
   activeSessionId: string | undefined;
+  expandedHeight: number;
   onOpenSession: (path: string) => Promise<boolean>;
 }) => (
   <AnimatePresence>
@@ -87,12 +94,18 @@ const SessionContent = ({
       <motion.ul
         key="sessions"
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 4, transition: { duration: 0.08 } }}
+        exit={{ opacity: 0, y: 4, transition: { duration: 0.1, ease: 'easeOut' } }}
         initial={{ opacity: 0, y: 4 }}
-        transition={{ duration: 0.1, delay: 0.03 }}
+        style={{ width: 360, height: expandedHeight }}
+        transition={{ duration: 0.12, delay: 0.05, ease: 'easeOut' }}
         class="flex h-full flex-col gap-1 overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        <SessionRows sessions={sessions} onOpenSession={onOpenSession} activeSessionId={activeSessionId} />
+        <SessionRows
+          sessions={sessions}
+          loaded={loaded}
+          onOpenSession={onOpenSession}
+          activeSessionId={activeSessionId}
+        />
       </motion.ul>
     )}
   </AnimatePresence>
@@ -106,26 +119,57 @@ export const RecentSessions = ({
   onOpenSession: (path: string) => Promise<boolean>;
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [iconHidden, setIconHidden] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<RecentSession[]>([]);
-  const expandedHeight = sessions.length > 0 ? 520 : 108;
+  const expandedHeight = !loaded || sessions.length > 0 ? 520 : 108;
+  const panelTransition = { duration: 0.16, ease: [0.22, 1, 0.36, 1] };
+
+  const clearOpenTimer = useCallback(() => {
+    if (!openTimerRef.current) return;
+    clearTimeout(openTimerRef.current);
+    openTimerRef.current = undefined;
+  }, []);
+
+  const closeSessions = useCallback(() => {
+    setOpen(false);
+    clearOpenTimer();
+    openTimerRef.current = setTimeout(() => setIconHidden(false), ICON_RETURN_DELAY);
+  }, [clearOpenTimer]);
+
+  const openSessions = useCallback(() => {
+    if (open) return;
+    setIconHidden(true);
+    clearOpenTimer();
+    openTimerRef.current = setTimeout(() => setOpen(true), ICON_EXIT_DELAY);
+  }, [clearOpenTimer, open]);
 
   useEffect(() => {
-    if (!open) return;
+    let active = true;
 
-    void window.pi.chat.recentSessions().then(setSessions);
-  }, [open]);
+    void window.pi.chat.recentSessions().then((nextSessions) => {
+      if (!active) return;
+      setLoaded(true);
+      setSessions(nextSessions);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [activeSessionId]);
 
   useEffect(() => {
     if (!open) return;
 
     const closeOnPointerDown = (event: PointerEvent) => {
       if (rootRef.current?.contains(event.target as Node)) return;
-      setOpen(false);
+      closeSessions();
     };
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') closeSessions();
     };
 
     document.addEventListener('pointerdown', closeOnPointerDown, true);
@@ -134,7 +178,9 @@ export const RecentSessions = ({
       document.removeEventListener('pointerdown', closeOnPointerDown, true);
       document.removeEventListener('keydown', closeOnEscape);
     };
-  }, [open]);
+  }, [closeSessions, open]);
+
+  useEffect(() => () => clearOpenTimer(), [clearOpenTimer]);
 
   return (
     <div ref={rootRef} class="absolute bottom-4.5 left-4.5 z-40 size-11.5 [-webkit-app-region:no-drag]">
@@ -148,23 +194,23 @@ export const RecentSessions = ({
         aria-label="Recent sessions"
         initial={false}
         onClick={() => {
-          if (!open) setOpen(true);
+          if (!open) openSessions();
         }}
         onKeyDown={(event: KeyboardEvent) => {
-          if (!open && (event.key === 'Enter' || event.key === ' ')) setOpen(true);
+          if (!open && (event.key === 'Enter' || event.key === ' ')) openSessions();
         }}
         role="button"
         tabIndex={0}
-        transition={
-          open ? { type: 'spring', duration: 0.18, bounce: 0.1 } : { type: 'spring', duration: 0.12, bounce: 0.1 }
-        }
+        transition={{ width: panelTransition, height: panelTransition, borderRadius: panelTransition }}
         style={{ transformOrigin: 'bottom left' }}
         class="absolute bottom-0 left-0 overflow-hidden bg-composer text-ink shadow-shell outline-0 select-none focus-visible:opacity-90"
       >
-        <SessionIcon open={open} />
+        <SessionIcon hidden={iconHidden} />
         <SessionContent
           open={open}
           sessions={sessions}
+          loaded={loaded}
+          expandedHeight={expandedHeight}
           onOpenSession={onOpenSession}
           activeSessionId={activeSessionId}
         />
