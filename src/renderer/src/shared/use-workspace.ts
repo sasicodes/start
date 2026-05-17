@@ -1,7 +1,7 @@
 import type { WorkspaceInfo } from '@preload/index';
 import { useEffect, useState } from 'preact/hooks';
 
-export const useWorkspace = () => {
+export const useWorkspace = (refreshKey: string | undefined) => {
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
 
   useEffect(() => {
@@ -14,7 +14,7 @@ export const useWorkspace = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   return workspace;
 };

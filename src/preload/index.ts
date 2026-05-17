@@ -12,6 +12,7 @@ export type AppSettingsResult = {
 
 export type ChatStatus = {
   ready: boolean;
+  workspacePath?: string;
   modelLabel?: string;
   selectedModelKey?: string;
   sessionId?: string;
@@ -94,6 +95,13 @@ export type WorkspaceFolder = {
   sessionCount: number;
 };
 
+export type SwitchWorkspaceResult = {
+  ok: boolean;
+  cancelled?: boolean;
+  status?: ChatStatus;
+  error?: string;
+};
+
 export type OpenSessionResult = {
   ok: boolean;
   id?: string;
@@ -150,6 +158,10 @@ const api = {
       ipcRenderer.invoke('chat:models'),
     recentSessions: (): Promise<RecentSession[]> => ipcRenderer.invoke('chat:recent-sessions'),
     workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
+    switchWorkspace: (path: string): Promise<SwitchWorkspaceResult> =>
+      ipcRenderer.invoke('chat:switch-workspace', path),
+    chooseWorkspaceDirectory: (): Promise<SwitchWorkspaceResult> =>
+      ipcRenderer.invoke('chat:choose-workspace-directory'),
     openSession: (path: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:open-session', path),
     authProviders: (): Promise<ProviderAuthStatus[]> => ipcRenderer.invoke('chat:auth-providers'),
     setRuntimeApiKey: (provider: string, apiKey: string): Promise<ProviderAuthStatus[]> =>

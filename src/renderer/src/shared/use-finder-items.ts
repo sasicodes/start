@@ -4,6 +4,10 @@ import { useEffect, useState } from 'preact/hooks';
 
 const finderItemsCache = new Map<string, RootItem[]>();
 
+export const clearFinderItemsCache = () => {
+  finderItemsCache.clear();
+};
+
 const finderCacheKey = (token: Pick<FinderToken, 'folderPath' | 'scope'>) => `${token.scope}:${token.folderPath}`;
 
 export const useFinderItems = (token: FinderToken | undefined) => {

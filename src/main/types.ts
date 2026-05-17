@@ -6,6 +6,7 @@ export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
 export const enabledTools = ['ls', 'read', 'edit', 'find', 'grep', 'bash', 'write'];
 export type ChatStatus = {
   ready: boolean;
+  workspacePath?: string;
   modelLabel?: string;
   selectedModelKey?: string;
   sessionId?: string;
@@ -80,6 +81,13 @@ export type WorkspaceFolder = {
   path: string;
   modified: number;
   sessionCount: number;
+};
+
+export type SwitchWorkspaceResult = {
+  ok: boolean;
+  cancelled?: boolean;
+  status?: ChatStatus;
+  error?: string;
 };
 
 export type OpenSessionResult = {

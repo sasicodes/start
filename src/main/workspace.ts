@@ -38,7 +38,7 @@ const ignoredDirectories = new Set([
 const maxCandidates = 80;
 const maxDepth = 5;
 const maxEntries = 8000;
-let workspacePromise: Promise<WorkspaceInfo> | undefined;
+const workspaceCache = new Map<string, Promise<WorkspaceInfo>>();
 
 const directoryScore = (segments: string[]) => {
   const normalized = segments.join('/');
@@ -180,8 +180,7 @@ const workspaceInfo = (folderName: string, iconDataUrl: string, branchName: stri
   iconDataUrl
 });
 
-const readWorkspace = async (): Promise<WorkspaceInfo> => {
-  const cwd = process.cwd();
+const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
   const folderName = path.basename(cwd) || cwd;
   const branchName = await getGitBranch(cwd);
   const candidates = await scanIconCandidates(cwd);
@@ -194,7 +193,11 @@ const readWorkspace = async (): Promise<WorkspaceInfo> => {
   return workspaceInfo(folderName, generatedIconDataUrl(folderName), branchName);
 };
 
-export const getWorkspace = () => {
-  workspacePromise ??= readWorkspace();
+export const getWorkspace = (cwd = process.cwd()) => {
+  const cached = workspaceCache.get(cwd);
+  if (cached) return cached;
+
+  const workspacePromise = readWorkspace(cwd);
+  workspaceCache.set(cwd, workspacePromise);
   return workspacePromise;
 };

@@ -35,6 +35,7 @@ import {
   type ProviderLoginResult,
   type RecentSession,
   type SendResult,
+  type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
 import { shell, type WebContents } from 'electron';
@@ -47,6 +48,7 @@ export class ChatService {
   private activeSessionId: string | undefined;
   private shouldCreateSession = false;
   private selectedModelKey: string | null = null;
+  private workspaceCwd = process.cwd();
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = 'medium';
@@ -66,6 +68,7 @@ export class ChatService {
 
     return {
       ready: true,
+      workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       selectedModelKey: modelKey(model),
       ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}),
@@ -121,6 +124,7 @@ export class ChatService {
 
       this.session = session;
       this.setActiveSession(sessionManager);
+      this.workspaceCwd = sessionManager.getCwd() || this.workspaceCwd;
       this.shouldCreateSession = false;
       return {
         ok: true,
@@ -133,7 +137,7 @@ export class ChatService {
   }
 
   async getRecentSessions(): Promise<RecentSession[]> {
-    const sessions = await SessionManager.list(process.cwd());
+    const sessions = await SessionManager.list(this.workspaceCwd);
 
     return Promise.all(
       sessions
@@ -171,6 +175,30 @@ export class ChatService {
     }
 
     return [...folders.values()].sort((a, b) => b.modified - a.modified);
+  }
+
+  async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
+    const nextCwd = cwd.trim();
+    if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
+    if (this.isGenerating) return { ok: false, error: 'Stop the current response before switching workspaces.' };
+
+    try {
+      this.session?.abortBash();
+      await this.session?.abort();
+      this.session?.dispose();
+      this.session = null;
+      this.activeSessionId = undefined;
+      this.shouldCreateSession = false;
+      this.workspaceCwd = nextCwd;
+
+      return { ok: true, status: await this.getStatus() };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Workspace could not be switched.' };
+    }
+  }
+
+  getWorkspaceCwd(): string {
+    return this.workspaceCwd;
   }
 
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {
@@ -271,6 +299,7 @@ export class ChatService {
 
     return {
       ready: true,
+      workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       selectedModelKey: nextModelKey,
       thinkingLevel: this.selectedThinkingLevel
@@ -290,6 +319,7 @@ export class ChatService {
 
     return {
       ready: true,
+      workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       selectedModelKey: modelKey(model),
       thinkingLevel: this.selectedThinkingLevel
@@ -407,7 +437,7 @@ export class ChatService {
       throw new Error(this.modelRegistry.getError() ?? 'No configured Pi models found.');
     }
 
-    const cwd = process.cwd();
+    const cwd = this.workspaceCwd;
     const sessionManager = this.shouldCreateSession ? SessionManager.create(cwd) : SessionManager.continueRecent(cwd);
     const { session } = await createAgentSession({
       cwd,

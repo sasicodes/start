@@ -113,8 +113,10 @@ const SessionContent = ({
 
 export const RecentSessions = ({
   onOpenSession,
+  workspacePath,
   activeSessionId
 }: {
+  workspacePath: string | undefined;
   activeSessionId: string | undefined;
   onOpenSession: (path: string) => Promise<boolean>;
 }) => {
@@ -166,7 +168,7 @@ export const RecentSessions = ({
 
   useEffect(() => {
     void loadSessions();
-  }, [activeSessionId, loadSessions]);
+  }, [activeSessionId, loadSessions, workspacePath]);
 
   useEffect(() => {
     if (!open) return;
