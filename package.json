@@ -1,0 +1,106 @@
+{
+  "name": "start",
+  "productName": "Start",
+  "version": "0.1.0-alpha.1",
+  "description": "open-source coding agent.",
+  "type": "module",
+  "main": "out/main/index.js",
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "biome lint .",
+    "format": "biome format . --write",
+    "format:check": "biome format .",
+    "check": "biome check . && pnpm typecheck",
+    "check:fix": "biome check . --write && pnpm typecheck",
+    "build": "electron-vite build",
+    "package": "pnpm build && electron-builder --dir",
+    "dist": "pnpm build && electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "vite",
+    "preact",
+    "coding-agent"
+  ],
+  "author": "Intelligence One",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@base-ui/react": "^1.4.1",
+    "@earendil-works/pi-coding-agent": "^0.74.1",
+    "@preact/signals": "latest",
+    "@tanstack/hotkeys": "^0.8.0",
+    "motion": "^12.38.0",
+    "preact": "latest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.15",
+    "@electron/notarize": "latest",
+    "@preact/preset-vite": "latest",
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/node": "^25.8.0",
+    "electron": "latest",
+    "electron-builder": "latest",
+    "electron-vite": "6.0.0-beta.1",
+    "tailwindcss": "^4.3.0",
+    "typescript": "latest",
+    "vite": "^8.0.13"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "electron-winstaller"
+    ],
+    "patchedDependencies": {
+      "@earendil-works/pi-ai@0.74.1": "patches/@earendil-works__pi-ai@0.74.1.patch"
+    }
+  },
+  "build": {
+    "appId": "one.intelligence.start",
+    "productName": "Start",
+    "copyright": "Copyright © 2026 Intelligence One",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**",
+      "build/icons/**",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "homepage": "https://start.intelligence.one"
+    },
+    "afterSign": "scripts/notarize.cjs",
+    "mac": {
+      "icon": "build/icons/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "extendInfo": {
+        "NSRequiresAquaSystemAppearance": false,
+        "NSPrefersDisplaySafeAreaCompatibilityMode": false
+      },
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "build/icons/icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "build/icons/icon.png",
+      "target": "AppImage",
+      "category": "Development"
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
+  }
+}

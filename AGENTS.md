@@ -1,0 +1,20 @@
+# Project Rules
+
+- Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
+- Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `cn` only for conditional inline classes.
+- For Pi SDK capabilities and agent-runtime infrastructure planning, refer to `PI_SDK.md`.
+- Keep code comment-free unless a comment prevents a real maintenance hazard.
+- Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
+- Keep files small. Split component files before they approach 300 lines.
+- Keep UI smooth: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
+- Name component files with clear component words only; avoid extra suffixes like `list` or `card` when the component name is already clear.
+- Read environment variables only through `src/main/environment.ts`; do not scatter `process.env` usage across the app.
+- Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
+- The app description is `open-source coding agent.`
+- The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.
+- The application window, html, body, and root backgrounds must stay transparent in light and dark mode.
+- The prompt send button icon must remain visible in all themes and use a 2 px stroke.
+- Tooltips must use Base UI side data attributes for direction-aware transform/opacity animations.
+- Use system UI fonts only. Do not add external fonts.
+- Use Tailwind `size-*` instead of matching `w-*` and `h-*` utilities for square elements.
+- Use the Start app assets from `/Users/studio/Code/github.com/intelligence-one/start/src-tauri/icons` for development and production builds. Keep `build/icons` and renderer public icons in sync with that source.
