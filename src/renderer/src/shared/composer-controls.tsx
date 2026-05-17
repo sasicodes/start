@@ -28,9 +28,9 @@ export const ThinkingButton = ({ label, level, visible, onNext }: ThinkingButton
         type="button"
         onClick={onNext}
         aria-label={`Thinking level ${label}`}
-        class="grid h-9.5 min-w-10 place-items-center rounded-[3px_20px_20px_3px] border-0 bg-control px-2 pl-2 text-ink select-none"
+        class="grid h-9.5 w-10 place-items-center rounded-[3px_20px_20px_3px] border-0 bg-control text-ink select-none"
       >
-        <EffortSignal level={level} />
+        <EffortSignal className="-translate-x-px" level={level} />
       </button>
     </CommonTooltip>
   );

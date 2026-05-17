@@ -64,7 +64,6 @@ export const Composer = ({
     [models, activeModelKey]
   );
   const selectedModelLabel = selectedModel?.name ?? 'Models';
-  const showModelLabel = !overlay && !hasMessages;
   const modelEffortLevels = selectedModel?.effortLevels ?? [];
   const availableEfforts = useMemo(
     () => effortLevels.filter((effortLevel) => modelEffortLevels.includes(effortLevel.id)),
@@ -235,24 +234,14 @@ export const Composer = ({
               )}
             >
               <Menu.Root modal={false}>
-                {showModelLabel ? (
+                <CommonTooltip label={selectedModelLabel}>
                   <Menu.Trigger
                     aria-label="Choose model"
-                    className="inline-flex h-full max-w-44 items-center gap-1.5 rounded-full border-0 bg-transparent px-3 pl-2.5 text-xs leading-none font-medium whitespace-nowrap text-ink select-none"
+                    className="grid h-full w-10 place-items-center rounded-full border-0 bg-transparent text-ink select-none"
                   >
                     <OpenAIIcon class="size-4 flex-none translate-x-px -translate-y-[0.5px]" />
-                    <span class="truncate">{selectedModelLabel}</span>
                   </Menu.Trigger>
-                ) : (
-                  <CommonTooltip label={selectedModelLabel}>
-                    <Menu.Trigger
-                      aria-label="Choose model"
-                      className="inline-flex h-full items-center rounded-full border-0 bg-transparent px-2.5 text-ink select-none"
-                    >
-                      <OpenAIIcon class="size-4 flex-none translate-x-px -translate-y-[0.5px]" />
-                    </Menu.Trigger>
-                  </CommonTooltip>
-                )}
+                </CommonTooltip>
                 <Menu.Portal>
                   <Menu.Positioner
                     side="top"

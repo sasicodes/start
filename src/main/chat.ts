@@ -131,14 +131,11 @@ export class ChatService {
   }
 
   async getRecentSessions(): Promise<RecentSession[]> {
-    const since = Date.now() - 24 * 60 * 60 * 1000;
     const sessions = await SessionManager.list(process.cwd());
 
     return Promise.all(
       sessions
-        .filter((session) => session.modified.getTime() >= since)
         .sort((a, b) => b.modified.getTime() - a.modified.getTime())
-        .slice(0, 12)
         .map(async (session) => ({
           id: session.id,
           path: session.path,

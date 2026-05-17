@@ -71,7 +71,7 @@ const MessageArticle = ({ message }: { message: ChatMessage }) => {
         class={cn(
           'whitespace-pre-wrap rounded-[18px] text-sm leading-6 [overflow-wrap:anywhere]',
           message.role === 'user' && 'w-fit max-w-full rounded-br-md bg-composer px-4 py-2',
-          message.role !== 'user' && 'px-3.5 py-2',
+          message.role !== 'user' && 'py-2',
           message.role === 'event' && 'py-0.5 text-xs leading-none text-soft',
           message.role === 'system' && 'text-danger',
           message.role === 'terminal' && 'text-xs leading-5 text-ink',

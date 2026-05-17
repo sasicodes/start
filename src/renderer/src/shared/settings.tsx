@@ -1,5 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, CheckIcon, OpenAIIcon, XIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, OpenAIIcon, XIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -20,21 +20,16 @@ const providers: {
 ];
 
 type SettingsProps = {
-  providers: ProviderAuthStatus[];
   onClose: () => void;
+  providers: ProviderAuthStatus[];
   composerShortcut: string;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onLoginSubscription: (provider: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
 };
 
 const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) =>
   providers.find((status) => status.key === provider);
-
-const ConnectedCheck = ({ connected }: { connected: boolean }) => {
-  if (!connected) return null;
-  return <CheckIcon class="size-3.5 flex-none text-ink" />;
-};
 
 const ProviderIcon = ({ provider }: { provider: ProviderKey }) => {
   if (provider === 'openai') return <OpenAIIcon class="size-5" />;
@@ -45,6 +40,8 @@ const subscriptionLabel = (connected: boolean) => {
   if (connected) return 'Reconnect subscription';
   return 'Connect subscription';
 };
+
+const connectionDetail = (label: string | undefined) => label?.replace(/^Connected\s*/u, '').trim();
 
 const modifierLabel = (event: KeyboardEvent) => {
   const modifiers = [];
@@ -63,16 +60,16 @@ const keyLabel = (key: string) => {
 };
 
 export const Settings = ({
-  providers: authProviders,
   onClose,
   onSaveApiKey,
   composerShortcut,
   onLoginSubscription,
+  providers: authProviders,
   onComposerShortcutChange
 }: SettingsProps) => {
-  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
   const [shortcutError, setShortcutError] = useState('');
   const [recordingShortcut, setRecordingShortcut] = useState(false);
+  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -131,7 +128,10 @@ export const Settings = ({
       {providers.map((provider, index) => {
         const auth = providerStatus(authProviders, provider.key);
         const draftKey = apiKeys[provider.key];
+        const authLabel = auth?.label ?? 'Checking';
         const hasDraftKey = draftKey.trim().length > 0;
+        const authDetail = auth?.connected ? connectionDetail(auth.label) : undefined;
+
         return (
           <div class={cn('py-4', index > 0 && 'border-t border-line')} key={provider.key}>
             <div class="flex min-w-0 items-center gap-3">
@@ -139,11 +139,17 @@ export const Settings = ({
                 <ProviderIcon provider={provider.key} />
               </div>
               <div class="min-w-0 flex-1">
-                <h3 class="m-0 flex items-center gap-2 text-sm leading-5 font-medium text-ink">
-                  <span>{provider.name}</span>
-                  <ConnectedCheck connected={auth?.connected ?? false} />
-                </h3>
-                <p class="m-0 text-xs leading-4 text-soft">{auth?.label ?? 'Checking'}</p>
+                <h3 class="m-0 text-sm leading-5 font-medium text-ink">{provider.name}</h3>
+                <p class="m-0 text-xs leading-4 text-soft">
+                  {auth?.connected ? (
+                    <>
+                      <span class="text-success">Connected</span>
+                      {authDetail && <> {authDetail}</>}
+                    </>
+                  ) : (
+                    authLabel
+                  )}
+                </p>
               </div>
             </div>
 

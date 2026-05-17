@@ -2,6 +2,7 @@
 
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
 - Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `cn` only for conditional inline classes.
+- Follow commit style: use lowercase, precise commit titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
 - For Pi SDK capabilities and agent-runtime infrastructure planning, refer to `PI_SDK.md`.
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.

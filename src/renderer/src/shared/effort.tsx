@@ -8,11 +8,11 @@ export const effortLevels = [
   { id: 'medium', label: 'Medium' }
 ] as const;
 
-export const EffortSignal = ({ level }: { level: EffortLevel }) => {
+export const EffortSignal = ({ className, level }: { className?: string; level: EffortLevel }) => {
   const activeCount = effortLevels.findIndex((effortLevel) => effortLevel.id === level) + 1;
 
   return (
-    <span aria-hidden="true" class="inline-flex translate-y-[0.5px] flex-none items-center gap-0.5">
+    <span aria-hidden="true" class={cn('inline-flex translate-y-[0.5px] flex-none items-center gap-0.5', className)}>
       {effortLevels.map((effortLevel, index) => (
         <span
           key={effortLevel.id}

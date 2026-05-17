@@ -10,6 +10,7 @@
   --color-hover: oklch(20% 0.01 255 / 0.86);
   --color-brand: oklch(0% 0 0);
   --color-danger: oklch(55% 0.18 27);
+  --color-success: oklch(52% 0.14 145);
   --color-brand-ink: oklch(100% 0 0);
   --color-composer: oklch(98.8% 0.001 264);
   --color-control: oklch(94.8% 0.004 264);
@@ -39,6 +40,7 @@
     --color-soft: oklch(100% 0 0 / 0.58);
     --color-hover: oklch(100% 0 0 / 0.86);
     --color-brand: oklch(100% 0 0);
+    --color-success: oklch(72% 0.15 145);
     --color-composer: oklch(18% 0.005 285);
     --color-brand-ink: oklch(0% 0 0);
     --color-control: oklch(27% 0.006 285);
