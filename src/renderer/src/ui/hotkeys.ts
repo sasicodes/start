@@ -10,7 +10,7 @@ type AppHotkeyCallback = (event: KeyboardEvent, context: HotkeyCallbackContext) 
 
 export const appHotkeys = {
   newChat: {
-    name: 'New Chat',
+    name: 'New Session',
     shortcut: 'Mod+N'
   },
   settings: {
