@@ -40,7 +40,7 @@
     "@preact/preset-vite": "latest",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^25.8.0",
-    "electron": "latest",
+    "electron": "42.1.0",
     "electron-builder": "latest",
     "electron-vite": "6.0.0-beta.1",
     "tailwindcss": "^4.3.0",

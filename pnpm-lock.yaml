@@ -48,7 +48,7 @@ importers:
         specifier: ^25.8.0
         version: 25.8.0
       electron:
-        specifier: latest
+        specifier: 42.1.0
         version: 42.1.0
       electron-builder:
         specifier: latest
