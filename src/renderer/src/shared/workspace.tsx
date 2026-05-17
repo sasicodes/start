@@ -1,13 +1,21 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { useWorkspace } from '@renderer/shared/use-workspace';
+import { cachedWorkspaceFolders, loadWorkspaceFolders } from '@renderer/shared/workspace-folders';
 import { ChevronDownIcon, FolderIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { cn } from '@renderer/utils/cn';
-import { useCallback, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
-const WorkspaceFolderItem = ({ folder }: { folder: WorkspaceFolder }) => (
+const WorkspaceFolderItem = ({
+  folder,
+  onSelectWorkspace
+}: {
+  folder: WorkspaceFolder;
+  onSelectWorkspace: (path: string) => void;
+}) => (
   <AppMenu.Item
-    closeOnClick={false}
+    closeOnClick
+    onClick={() => onSelectWorkspace(folder.path)}
     className="grid w-full gap-0.5 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
   >
     <span class="truncate">{folder.name}</span>
@@ -15,20 +23,36 @@ const WorkspaceFolderItem = ({ folder }: { folder: WorkspaceFolder }) => (
   </AppMenu.Item>
 );
 
-export const Workspace = () => {
-  const workspace = useWorkspace();
+export const Workspace = ({
+  workspacePath,
+  onChooseDirectory,
+  onSelectWorkspace
+}: {
+  onChooseDirectory: () => void;
+  onSelectWorkspace: (path: string) => void;
+  workspacePath: string | undefined;
+}) => {
+  const workspace = useWorkspace(workspacePath);
   const rootRef = useRef<HTMLDivElement>(null);
-  const [folders, setFolders] = useState<WorkspaceFolder[]>([]);
+  const [folders, setFolders] = useState<WorkspaceFolder[]>(cachedWorkspaceFolders() ?? []);
   const [open, setOpen] = useState(false);
 
   const updateOpen = useCallback((nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) return;
 
-    void window.pi.chat
-      .workspaceFolders()
+    const cachedFolders = cachedWorkspaceFolders();
+    if (cachedFolders) setFolders(cachedFolders);
+    void loadWorkspaceFolders()
       .then(setFolders)
-      .catch(() => setFolders([]));
+      .catch(() => setFolders(cachedWorkspaceFolders() ?? []));
+  }, []);
+
+  useEffect(() => {
+    if (cachedWorkspaceFolders()) return;
+    void loadWorkspaceFolders()
+      .then(setFolders)
+      .catch(() => undefined);
   }, []);
 
   if (!workspace) return null;
@@ -71,10 +95,11 @@ export const Workspace = () => {
           >
             <MenuPanel width="workspace">
               {folders.map((folder) => (
-                <WorkspaceFolderItem key={folder.path} folder={folder} />
+                <WorkspaceFolderItem key={folder.path} folder={folder} onSelectWorkspace={onSelectWorkspace} />
               ))}
               <AppMenu.Item
-                closeOnClick={false}
+                closeOnClick
+                onClick={onChooseDirectory}
                 className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
               >
                 <FolderIcon class="size-4.5" />

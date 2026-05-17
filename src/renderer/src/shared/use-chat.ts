@@ -1,6 +1,8 @@
-import type { EffortLevel, ModelOption, ProviderAuthStatus } from '@preload/index';
+import type { EffortLevel, ModelOption, ProviderAuthStatus, SwitchWorkspaceResult } from '@preload/index';
 import { createMessage } from '@renderer/functions/chat';
 import { commandInput, commandMode } from '@renderer/shared/input';
+import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
+import { loadWorkspaceFolders } from '@renderer/shared/workspace-folders';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import type { ChatMessage } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
@@ -54,6 +56,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const [status, setStatus] = useState('Checking Pi auth...');
   const [models, setModels] = useState<ModelOption[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
+  const [workspacePath, setWorkspacePath] = useState<string | undefined>();
   const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
   const [selectedModelKey, setSelectedModelKey] = useState<string | undefined>();
   const [thinkingLevel, setThinkingLevel] = useState<EffortLevel>('medium');
@@ -88,11 +91,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     setMessages([]);
     setIsGenerating(false);
     updateActiveSessionId(undefined);
-  }, []);
+  }, [updateActiveSessionId]);
 
   useEffect(() => {
     void window.pi.chat.status().then((nextStatus) => {
       setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
+      setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey;
       setSelectedModelKey(nextStatus.selectedModelKey);
       if (nextStatus.sessionId) updateActiveSessionId(nextStatus.sessionId);
@@ -234,11 +238,43 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setIsGenerating(false);
       setMessages(result.messages ?? []);
       updateActiveSessionId(result.id);
+      const nextStatus = await window.pi.chat.status();
+      setWorkspacePath(nextStatus.workspacePath);
       textareaRef.current?.focus();
       return true;
     },
     [textareaRef, updateActiveSessionId]
   );
+
+  const applyWorkspaceSwitch = useCallback(
+    (result: SwitchWorkspaceResult) => {
+      if (result.cancelled) return false;
+      if (!result.ok || !result.status) {
+        setStatus(result.error ?? 'Workspace could not be switched.');
+        return false;
+      }
+
+      clearFinderItemsCache();
+      clearSession();
+      setWorkspacePath(result.status.workspacePath);
+      setStatus(
+        result.status.ready ? `Using ${result.status.modelLabel}` : (result.status.error ?? 'Pi is not ready.')
+      );
+      void loadWorkspaceFolders();
+      textareaRef.current?.focus();
+      return true;
+    },
+    [clearSession, textareaRef]
+  );
+
+  const switchWorkspace = useCallback(
+    async (path: string) => applyWorkspaceSwitch(await window.pi.chat.switchWorkspace(path)),
+    [applyWorkspaceSwitch]
+  );
+
+  const chooseWorkspaceDirectory = useCallback(async () => {
+    return applyWorkspaceSwitch(await window.pi.chat.chooseWorkspaceDirectory());
+  }, [applyWorkspaceSwitch]);
 
   const loginSubscription = useCallback(
     async (provider: string) => {
@@ -301,24 +337,27 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, [loadAuthProviders, loadModels]);
 
   return {
+    send,
     draft,
     models,
-    send,
     status,
     sendText,
-    messages,
     setDraft,
+    messages,
     saveApiKey,
-    isGenerating,
     openSession,
-    refreshSettings,
+    isGenerating,
+    workspacePath,
     selectModel,
     thinkingLevel,
     authProviders,
+    switchWorkspace,
+    refreshSettings,
     selectedModelKey,
     activeSessionId,
-    previousUserMessage,
     loginSubscription,
+    previousUserMessage,
+    chooseWorkspaceDirectory,
     selectThinkingLevel
   };
 };

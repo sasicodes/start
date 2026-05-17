@@ -18,10 +18,9 @@ type RootItemsCacheEntry = {
 
 const rootItemsCache = new Map<string, RootItemsCacheEntry>();
 const rootItemsCacheMs = 3000;
-const workspaceRoot = process.cwd();
 const filesystemRoot = homedir();
 
-const readRootItems = async (relativePath: string, scope: RootItemsScope) => {
+const readRootItems = async (relativePath: string, scope: RootItemsScope, workspaceRoot: string) => {
   const basePath = scope === 'root' ? filesystemRoot : workspaceRoot;
   const normalizedPath = path.normalize(relativePath || '.');
   const targetPath = path.resolve(basePath, normalizedPath);
@@ -57,15 +56,15 @@ const readRootItems = async (relativePath: string, scope: RootItemsScope) => {
     });
 };
 
-export const listRootItems = async (relativePath: string, scope: RootItemsScope) => {
-  const cacheKey = `${scope}:${relativePath || ''}`;
+export const listRootItems = async (relativePath: string, scope: RootItemsScope, workspaceRoot = process.cwd()) => {
+  const cacheKey = `${scope}:${workspaceRoot}:${relativePath || ''}`;
   const cached = rootItemsCache.get(cacheKey);
   const now = Date.now();
 
   if (cached?.items && cached.expiresAt > now) return cached.items;
   if (cached?.promise) return cached.promise;
 
-  const promise = readRootItems(relativePath, scope)
+  const promise = readRootItems(relativePath, scope, workspaceRoot)
     .then((items) => {
       rootItemsCache.set(cacheKey, { expiresAt: Date.now() + rootItemsCacheMs, items });
       return items;

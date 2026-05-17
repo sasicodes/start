@@ -21,6 +21,7 @@ import { getWorkspace } from '@main/workspace';
 import {
   app,
   BrowserWindow,
+  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -168,9 +169,9 @@ app.whenReady().then(async () => {
   installStatusItem();
 
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
-    listRootItems(relativePath, scope)
+    listRootItems(relativePath, scope, chat.getWorkspaceCwd())
   );
-  ipcMain.handle('app:workspace', () => getWorkspace());
+  ipcMain.handle('app:workspace', () => getWorkspace(chat.getWorkspaceCwd()));
   ipcMain.handle('app:settings', () => appSettings);
   ipcMain.handle('app:hide-composer', () => {
     hideComposerWindow();
@@ -205,6 +206,16 @@ app.whenReady().then(async () => {
   ipcMain.handle('chat:models', () => chat.getModels());
   ipcMain.handle('chat:recent-sessions', () => chat.getRecentSessions());
   ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
+  ipcMain.handle('chat:switch-workspace', (_event, path: string) => chat.switchWorkspace(path));
+  ipcMain.handle('chat:choose-workspace-directory', async () => {
+    const result = await dialog.showOpenDialog({
+      defaultPath: chat.getWorkspaceCwd(),
+      properties: ['openDirectory']
+    });
+    const path = result.filePaths[0];
+    if (result.canceled || !path) return { ok: true, cancelled: true, status: await chat.getStatus() };
+    return chat.switchWorkspace(path);
+  });
   ipcMain.handle('chat:open-session', (_event, path: string) => chat.openSession(path));
   ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());
   ipcMain.handle('chat:set-runtime-api-key', (_event, provider: string, apiKey: string) =>

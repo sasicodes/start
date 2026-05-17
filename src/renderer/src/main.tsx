@@ -38,24 +38,27 @@ const App = () => {
   }, [surface]);
 
   const {
+    send,
     draft,
     models,
-    send,
     status,
-    messages,
     sendText,
     setDraft,
+    messages,
     saveApiKey,
-    isGenerating,
     selectModel,
     openSession,
-    refreshSettings,
+    isGenerating,
+    workspacePath,
     thinkingLevel,
     authProviders,
+    switchWorkspace,
+    refreshSettings,
     selectedModelKey,
     activeSessionId,
-    previousUserMessage,
     loginSubscription,
+    previousUserMessage,
+    chooseWorkspaceDirectory,
     selectThinkingLevel
   } = useChat({ onShowChat: showChat, onShowSettings: showSettings, textareaRef });
 
@@ -167,8 +170,16 @@ const App = () => {
           {surface === 'main' && <Messages status={status} messages={messages} />}
           {surface === 'main' && (
             <div class="absolute bottom-4.5 left-4.5 z-40 flex items-end gap-2 [-webkit-app-region:no-drag]">
-              <Workspace />
-              <RecentSessions onOpenSession={openSession} activeSessionId={activeSessionId} />
+              <Workspace
+                workspacePath={workspacePath}
+                onChooseDirectory={() => void chooseWorkspaceDirectory()}
+                onSelectWorkspace={(path) => void switchWorkspace(path)}
+              />
+              <RecentSessions
+                workspacePath={workspacePath}
+                onOpenSession={openSession}
+                activeSessionId={activeSessionId}
+              />
             </div>
           )}
           {surface === 'main' && <SettingsButton onOpenSettings={showSettings} />}
