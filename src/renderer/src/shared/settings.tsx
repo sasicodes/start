@@ -1,5 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, OpenAIIcon, XIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, ChevronLeftIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -113,15 +113,16 @@ export const Settings = ({
 
   return (
     <section class="mx-auto size-full max-w-3xl overflow-y-auto px-5 pt-20 pb-16">
-      <div class="mb-8 flex items-center justify-between gap-3">
-        <h1 class="m-0 text-xl leading-8 font-medium text-ink">Settings</h1>
+      <div class="mb-8 flex items-center">
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close settings"
-          class="grid size-9 place-items-center rounded-full border-0 bg-transparent text-ink transition-[background-color,box-shadow] duration-100 ease-in hover:bg-composer hover:shadow-nav"
+          class="flex h-9 items-center gap-2 rounded-full border-0 bg-transparent text-sm font-medium text-soft transition-colors duration-100 ease-in hover:text-ink"
         >
-          <XIcon class="size-4" />
+          <span class="grid size-10 flex-none place-items-center rounded-full bg-transparent">
+            <ChevronLeftIcon class="size-5" />
+          </span>
+          <span class="leading-none">Back to app</span>
         </button>
       </div>
 
@@ -135,7 +136,7 @@ export const Settings = ({
         return (
           <div class={cn('py-4', index > 0 && 'border-t border-line')} key={provider.key}>
             <div class="flex min-w-0 items-center gap-3">
-              <div class="grid size-10 flex-none place-items-center rounded-full bg-control text-ink">
+              <div class="grid size-10 flex-none place-items-center rounded-full bg-[linear-gradient(145deg,var(--color-panel),var(--color-control))] text-ink">
                 <ProviderIcon provider={provider.key} />
               </div>
               <div class="min-w-0 flex-1">

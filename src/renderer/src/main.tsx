@@ -1,6 +1,7 @@
 import type { EffortLevel } from '@preload/index';
 import { Composer, Messages, Settings } from '@renderer/shared/chat';
 import { RecentSessions } from '@renderer/shared/sessions';
+import { SettingsButton } from '@renderer/shared/settings-button';
 import { useChat } from '@renderer/shared/use-chat';
 import { Workspace } from '@renderer/shared/workspace';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
@@ -164,8 +165,13 @@ const App = () => {
       ) : (
         <>
           {surface === 'main' && <Messages status={status} messages={messages} />}
-          {surface === 'main' && <RecentSessions onOpenSession={openSession} activeSessionId={activeSessionId} />}
-          {surface === 'main' && <Workspace />}
+          {surface === 'main' && (
+            <div class="absolute bottom-4.5 left-4.5 z-40 flex items-end gap-2 [-webkit-app-region:no-drag]">
+              <Workspace />
+              <RecentSessions onOpenSession={openSession} activeSessionId={activeSessionId} />
+            </div>
+          )}
+          {surface === 'main' && <SettingsButton onOpenSettings={showSettings} />}
           <Composer
             draft={draft}
             models={models}

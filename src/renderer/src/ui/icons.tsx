@@ -19,17 +19,23 @@ export const ChevronLeftIcon = (props: IconProps) => (
   </svg>
 );
 
-export const XIcon = (props: IconProps) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path d="M4.5 4.5L19.5 19.5M19.5 4.5L4.5 19.5" stroke="currentColor" stroke-linecap="round" />
-  </svg>
-);
-
 export const ChevronRightIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
       d="M9 4L14.8787 9.87866C16.0503 11.0502 16.0503 12.9497 14.8787 14.1213L9 20"
       stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
+export const ChevronDownIcon = (props: IconProps) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M20 9L14.1213 14.8787C12.9498 16.0503 11.0503 16.0503 9.8787 14.8787L4 9"
+      stroke="currentColor"
+      stroke-width="1.5"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
@@ -107,6 +113,18 @@ export const GearIcon = (props: IconProps) => (
   </svg>
 );
 
+export const SettingsIcon = (props: IconProps) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5" />
+    <path
+      d="M7.37506 3.98898C6.3995 4.55222 5.99767 5.75491 6.43871 6.79146L6.62174 7.22161C5.98033 7.94301 5.48186 8.79434 5.17077 9.73116L4.70884 9.78747C3.59064 9.92379 2.75 10.8731 2.75 11.9996C2.75 13.1261 3.59064 14.0754 4.70884 14.2117L5.1704 14.268C5.48144 15.2052 5.97999 16.0568 6.62157 16.7785L6.43873 17.2082C5.99769 18.2447 6.39952 19.4474 7.37508 20.0107C8.35064 20.5739 9.59311 20.3206 10.2703 19.4203L10.55 19.0484C11.0184 19.1442 11.5034 19.1946 12.0001 19.1946C12.4969 19.1946 12.9818 19.1442 13.4503 19.0484L13.7299 19.4201C14.407 20.3203 15.6495 20.5737 16.6251 20.0105C17.6006 19.4472 18.0025 18.2445 17.5614 17.208L17.3786 16.7785C18.0202 16.0568 18.5188 15.2052 18.8298 14.268L19.2912 14.2117C20.4094 14.0754 21.25 13.1261 21.25 11.9996C21.25 10.8731 20.4094 9.92379 19.2912 9.78747L18.8294 9.73119C18.7517 9.49698 18.6622 9.26812 18.5617 9.04529C18.2601 8.37679 17.8594 7.76262 17.3784 7.22156L17.5613 6.7916C18.0024 5.75506 17.6005 4.55237 16.625 3.98913C15.6494 3.42589 14.4069 3.67923 13.7298 4.57947L13.4497 4.95176C12.9815 4.85595 12.4967 4.8057 12.0001 4.8057C11.5035 4.8057 11.0187 4.85601 10.5504 4.95181L10.2702 4.57932C9.59309 3.67909 8.35062 3.42574 7.37506 3.98898Z"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const HistoryIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
@@ -130,14 +148,5 @@ export const HistoryIcon = (props: IconProps) => (
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-  </svg>
-);
-
-export const UpdateIcon = (props: IconProps) => (
-  <svg aria-hidden="true" fill="none" stroke-width="1.5" viewBox="0 0 24 24" {...props}>
-    <path d="M20 12A8 8 0 0 1 6.35 17.65" stroke="currentColor" stroke-linecap="round" />
-    <path d="M4 12A8 8 0 0 1 17.65 6.35" stroke="currentColor" stroke-linecap="round" />
-    <path d="M17.5 3.5V6.5H20.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M6.5 20.5V17.5H3.5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" />
   </svg>
 );

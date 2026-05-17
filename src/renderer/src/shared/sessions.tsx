@@ -120,6 +120,7 @@ export const RecentSessions = ({
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const openTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const sessionsRequestRef = useRef(0);
   const [iconHidden, setIconHidden] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
@@ -133,6 +134,22 @@ export const RecentSessions = ({
     openTimerRef.current = undefined;
   }, []);
 
+  const loadSessions = useCallback(async () => {
+    const requestId = sessionsRequestRef.current + 1;
+    sessionsRequestRef.current = requestId;
+
+    try {
+      const nextSessions = await window.pi.chat.recentSessions();
+      if (sessionsRequestRef.current !== requestId) return;
+      setSessions(nextSessions);
+    } catch {
+      if (sessionsRequestRef.current !== requestId) return;
+      setSessions([]);
+    } finally {
+      if (sessionsRequestRef.current === requestId) setLoaded(true);
+    }
+  }, []);
+
   const closeSessions = useCallback(() => {
     setOpen(false);
     clearOpenTimer();
@@ -141,24 +158,15 @@ export const RecentSessions = ({
 
   const openSessions = useCallback(() => {
     if (open) return;
+    void loadSessions();
     setIconHidden(true);
     clearOpenTimer();
     openTimerRef.current = setTimeout(() => setOpen(true), ICON_EXIT_DELAY);
-  }, [clearOpenTimer, open]);
+  }, [clearOpenTimer, loadSessions, open]);
 
   useEffect(() => {
-    let active = true;
-
-    void window.pi.chat.recentSessions().then((nextSessions) => {
-      if (!active) return;
-      setLoaded(true);
-      setSessions(nextSessions);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [activeSessionId]);
+    void loadSessions();
+  }, [activeSessionId, loadSessions]);
 
   useEffect(() => {
     if (!open) return;
@@ -183,7 +191,7 @@ export const RecentSessions = ({
   useEffect(() => () => clearOpenTimer(), [clearOpenTimer]);
 
   return (
-    <div ref={rootRef} class="absolute bottom-4.5 left-4.5 z-40 size-11.5 [-webkit-app-region:no-drag]">
+    <div ref={rootRef} class="relative size-11.5">
       <motion.div
         animate={{
           width: open ? 360 : 46,
