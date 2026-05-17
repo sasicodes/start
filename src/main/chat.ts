@@ -1,6 +1,7 @@
 import './environment.js';
 
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import {
   type AgentSession,
   AuthStorage,
@@ -33,7 +34,8 @@ import {
   type ProviderAuthStatus,
   type ProviderLoginResult,
   type RecentSession,
-  type SendResult
+  type SendResult,
+  type WorkspaceFolder
 } from '@main/types';
 import { shell, type WebContents } from 'electron';
 
@@ -144,6 +146,31 @@ export class ChatService {
           title: session.name || session.firstMessage || 'Untitled session'
         }))
     );
+  }
+
+  async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
+    const sessions = await SessionManager.listAll();
+    const folders = new Map<string, WorkspaceFolder>();
+
+    for (const session of sessions) {
+      if (!session.cwd) continue;
+
+      const current = folders.get(session.cwd);
+      const modified = session.modified.getTime();
+      if (current) {
+        current.modified = Math.max(current.modified, modified);
+        current.sessionCount += 1;
+      } else {
+        folders.set(session.cwd, {
+          modified,
+          path: session.cwd,
+          sessionCount: 1,
+          name: path.basename(session.cwd) || session.cwd
+        });
+      }
+    }
+
+    return [...folders.values()].sort((a, b) => b.modified - a.modified);
   }
 
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {

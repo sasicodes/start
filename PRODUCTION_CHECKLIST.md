@@ -8,7 +8,7 @@ Use this checklist before publishing a production release of Start from this ope
   - [ ] `name`: `start`
   - [ ] `productName`: `Start`
   - [ ] `appId`: `one.intelligence.start`
-  - [ ] `description`: `open-source coding agent.`
+  - [ ] `description`: `your coding agent`
   - [ ] `homepage`: `https://start.intelligence.one`
 - [ ] Confirm the license is intentional for an open-source repository.
   - Current value: `UNLICENSED`

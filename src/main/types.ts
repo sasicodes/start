@@ -75,6 +75,13 @@ export type RecentSession = {
   messageCount: number;
 };
 
+export type WorkspaceFolder = {
+  name: string;
+  path: string;
+  modified: number;
+  sessionCount: number;
+};
+
 export type OpenSessionResult = {
   ok: boolean;
   id?: string;

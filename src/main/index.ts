@@ -204,6 +204,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('chat:status', () => chat.getStatus());
   ipcMain.handle('chat:models', () => chat.getModels());
   ipcMain.handle('chat:recent-sessions', () => chat.getRecentSessions());
+  ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
   ipcMain.handle('chat:open-session', (_event, path: string) => chat.openSession(path));
   ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());
   ipcMain.handle('chat:set-runtime-api-key', (_event, provider: string, apiKey: string) =>

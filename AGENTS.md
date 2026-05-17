@@ -11,7 +11,7 @@
 - Name component files with clear component words only; avoid extra suffixes like `list` or `card` when the component name is already clear.
 - Read environment variables only through `src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
-- The app description is `open-source coding agent.`
+- The app description is `your coding agent`
 - The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.
 - The application window, html, body, and root backgrounds must stay transparent in light and dark mode.
 - The prompt send button icon must remain visible in all themes and use a 2 px stroke.

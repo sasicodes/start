@@ -2,7 +2,7 @@
   "name": "start",
   "productName": "Start",
   "version": "0.1.0-alpha.1",
-  "description": "open-source coding agent.",
+  "description": "your coding agent",
   "type": "module",
   "main": "out/main/index.js",
   "packageManager": "pnpm@10.25.0",

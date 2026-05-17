@@ -87,6 +87,13 @@ export type RecentSession = {
   messageCount: number;
 };
 
+export type WorkspaceFolder = {
+  name: string;
+  path: string;
+  modified: number;
+  sessionCount: number;
+};
+
 export type OpenSessionResult = {
   ok: boolean;
   id?: string;
@@ -142,6 +149,7 @@ const api = {
     models: (): Promise<{ models: ModelOption[]; selectedModelKey: string | undefined; error: string | undefined }> =>
       ipcRenderer.invoke('chat:models'),
     recentSessions: (): Promise<RecentSession[]> => ipcRenderer.invoke('chat:recent-sessions'),
+    workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
     openSession: (path: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:open-session', path),
     authProviders: (): Promise<ProviderAuthStatus[]> => ipcRenderer.invoke('chat:auth-providers'),
     setRuntimeApiKey: (provider: string, apiKey: string): Promise<ProviderAuthStatus[]> =>
