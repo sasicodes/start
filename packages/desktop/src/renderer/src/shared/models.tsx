@@ -7,8 +7,8 @@ import { useMemo } from 'preact/hooks';
 type ProviderId = 'anthropic' | 'openai';
 
 interface ProviderGroup {
-  id: ProviderId;
   name: string;
+  id: ProviderId;
   models: ModelOption[];
 }
 

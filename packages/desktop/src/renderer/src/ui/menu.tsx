@@ -3,13 +3,13 @@ import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 
 interface MenuPanelProps {
-  children: ComponentChildren;
   className?: string;
+  children: ComponentChildren;
 }
 
 export const AppMenu = Menu;
 
-export const MenuPanel = ({ children, className }: MenuPanelProps) => {
+export const MenuPanel = ({ className, children }: MenuPanelProps) => {
   return (
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
@@ -39,15 +39,15 @@ export const MenuRadioOption = ({
 }: {
   label: string;
   value: string;
-  children: ComponentChildren;
   onSelect?: () => void;
+  children: ComponentChildren;
 }) => {
   return (
     <Menu.RadioItem
       key={value}
+      closeOnClick
       label={label}
       value={value}
-      closeOnClick
       onClick={onSelect}
       onPointerUp={onSelect}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
@@ -59,7 +59,7 @@ export const MenuRadioOption = ({
 
 export const MenuEmptyItem = ({ children }: { children: ComponentChildren }) => {
   return (
-    <Menu.Item className="px-3 py-2 text-sm leading-5 text-soft" disabled>
+    <Menu.Item disabled className="px-3 py-2 text-sm leading-5 text-soft">
       {children}
     </Menu.Item>
   );
