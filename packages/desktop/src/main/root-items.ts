@@ -48,7 +48,7 @@ const toPosixPath = (value: string) => value.split(path.sep).join('/').replace(/
 
 const cleanRelativePath = (value: string) =>
   toPosixPath(path.normalize(value || '.'))
-    .replace(/^\.\/?/u, '')
+    .replace(/^\.(?:\/|$)/u, '')
     .replace(/^\/+/u, '')
     .replace(/\/+$|^\.$/gu, '');
 
