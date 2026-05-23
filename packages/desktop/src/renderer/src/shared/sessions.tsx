@@ -1,5 +1,4 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
-import { useAppFocusState } from '@renderer/shared/app-focus';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
@@ -61,7 +60,6 @@ interface RecentSessionsProps {
 }
 
 export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
-  const appFocused = useAppFocusState();
   const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
   const [open, setOpen] = useState(false);
@@ -108,10 +106,6 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   useEffect(() => {
     void loadSessions(true);
   }, [loadSessions]);
-
-  useEffect(() => {
-    if (!appFocused) setOpen(false);
-  }, [appFocused]);
 
   useEffect(() => {
     const refreshOnChange = (event: RecentSessionsChanged) => {
