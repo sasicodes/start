@@ -1,23 +1,22 @@
 import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
-import { useAppNavigation, routeForSession } from '@renderer/app/navigation';
+import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
 import { useSessionPanels } from '@renderer/app/panels';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionRouting } from '@renderer/app/session-routing';
 import { AppShell } from '@renderer/app/shell';
+import { AppSidePanel, sidePanelLabel as getSidePanelLabel } from '@renderer/app/side-panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
-import { Composer, Settings } from '@renderer/shared/chat/index';
+import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
-import { ActivityPanel } from '@renderer/shared/turn/panel';
-import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
-import { useCallback, useEffect, useRef } from 'preact/hooks';
+import { useRef, useEffect, useCallback } from 'preact/hooks';
 
 export const App = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { route, surface, setSurface, navigate, showChat, showSettings } = useAppNavigation(textareaRef);
+  const { route, surface, setSurface, navigate, showChat } = useAppNavigation(textareaRef);
   const { composerExiting, composerRevealKey, finishComposerExit, completeComposerExit } = useComposerOverlay({
     setSurface,
     textareaRef
@@ -27,12 +26,31 @@ export const App = () => {
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const {
     activityTurnId,
+    sidePanelVisible,
     gitPanelVisible,
-    clearSidePanels,
+    closeSidePanel,
     openActivityPanel,
+    openSettingsPanel,
     activityPanelVisible,
+    settingsPanelVisible,
+    renderedSidePanelMode,
     toggleGitChangesPanel
   } = useSessionPanels({ sessionViewActive, surface });
+
+  const showSettings = useCallback(() => {
+    if (surface === 'composer') {
+      void window.pi.app.openSettings().catch(() => {});
+      return;
+    }
+
+    setSurface('main');
+    openSettingsPanel();
+  }, [openSettingsPanel, setSurface, surface]);
+
+  const showChatFromEvent = useCallback(() => {
+    closeSidePanel();
+    showChat();
+  }, [closeSidePanel, showChat]);
 
   const {
     send,
@@ -63,18 +81,12 @@ export const App = () => {
     deleteQueuedMessage,
     selectThinkingLevel,
     chooseWorkspaceDirectory
-  } = useChat({ onShowChat: showChat, onShowSettings: showSettings, textareaRef });
+  } = useChat({ onShowChat: showChatFromEvent, onShowSettings: showSettings, textareaRef });
 
   const discardComposerDraft = useCallback(() => {
     clearPendingAttachments();
     setDraft('');
   }, [clearPendingAttachments, setDraft]);
-
-  const closeSettings = useCallback(() => {
-    setSurface('main');
-    navigate(routeForSession(activeSessionId));
-    textareaRef.current?.focus();
-  }, [activeSessionId, navigate]);
 
   useEffect(() => {
     prewarmMarkdownRenderer();
@@ -94,8 +106,8 @@ export const App = () => {
   }, [activeSessionId, clearPendingAttachments, navigate, sendText]);
 
   useEffect(() => {
-    if (route.name === 'settings') refreshSettings();
-  }, [refreshSettings, route.name]);
+    if (settingsPanelVisible) refreshSettings();
+  }, [refreshSettings, settingsPanelVisible]);
 
   const refillPrevious = useCallback(() => {
     setDraft(previousUserTurn);
@@ -117,25 +129,25 @@ export const App = () => {
   );
 
   const chooseWorkspaceFromComposer = useCallback(async () => {
-    clearSidePanels();
+    closeSidePanel();
     await chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' });
-  }, [chooseWorkspaceDirectory, clearSidePanels, surface]);
+  }, [chooseWorkspaceDirectory, closeSidePanel, surface]);
 
   const selectWorkspaceFromComposer = useCallback(
     (path: string) => {
-      clearSidePanels();
+      closeSidePanel();
       void switchWorkspace(path, { preserveDraft: true });
     },
-    [clearSidePanels, switchWorkspace]
+    [closeSidePanel, switchWorkspace]
   );
 
   const startNewSession = useCallback(() => {
     void newSession();
+    closeSidePanel();
     clearPendingAttachments();
-    clearSidePanels();
     setSurface('main');
     navigate({ name: 'chat' });
-  }, [clearPendingAttachments, clearSidePanels, navigate, newSession, setSurface]);
+  }, [clearPendingAttachments, closeSidePanel, navigate, newSession, setSurface]);
 
   const openRecentSession = useSessionRouting({
     route,
@@ -145,7 +157,7 @@ export const App = () => {
     openSessionId,
     activeSessionId,
     loadedSessionId,
-    clearSidePanels
+    closeSidePanel
   });
 
   const stopResponse = useCallback(() => {
@@ -186,25 +198,31 @@ export const App = () => {
   }, []);
 
   const chooseWorkspaceFromDock = useCallback(() => {
-    clearSidePanels();
+    closeSidePanel();
     void chooseWorkspaceDirectory();
-  }, [chooseWorkspaceDirectory, clearSidePanels]);
+  }, [chooseWorkspaceDirectory, closeSidePanel]);
 
   const selectWorkspaceFromDock = useCallback(
     (path: string) => {
-      clearSidePanels();
+      closeSidePanel();
       void switchWorkspace(path);
     },
-    [clearSidePanels, switchWorkspace]
+    [closeSidePanel, switchWorkspace]
   );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
-  const sidePanelVisible = activityPanelVisible || gitPanelVisible;
-  const sidePanelLabel = gitPanelVisible ? 'Git changes' : 'Agent activity';
-  const sidePanel = gitPanelVisible ? (
-    <GitChangesPanel workspacePath={workspacePath} />
-  ) : (
-    <ActivityPanel turnId={activityTurnId} />
+  const sidePanelLabel = getSidePanelLabel(renderedSidePanelMode);
+  const sidePanel = (
+    <AppSidePanel
+      mode={renderedSidePanelMode}
+      providers={authProviders}
+      turnId={activityTurnId}
+      workspacePath={workspacePath}
+      onSaveApiKey={saveApiKey}
+      composerShortcut={composerShortcut}
+      onLoginSubscription={loginSubscription}
+      onComposerShortcutChange={updateComposerShortcut}
+    />
   );
 
   const fileHandlers = useFileAttachments({
@@ -255,7 +273,6 @@ export const App = () => {
 
   return (
     <AppShell
-      route={route}
       surface={surface}
       sidePanel={sidePanel}
       fileHandlers={fileHandlers}
@@ -266,6 +283,7 @@ export const App = () => {
       activeSessionId={activeSessionId}
       onOpenSettings={showSettings}
       sessionRoutePending={sessionRoutePending}
+      settingsPanelVisible={settingsPanelVisible}
       onToggleGitPanel={toggleGitChangesPanel}
       sidePanelVisible={sidePanelVisible}
       onChooseDirectory={chooseWorkspaceFromDock}
@@ -274,17 +292,7 @@ export const App = () => {
       onSelectWorkspace={selectWorkspaceFromDock}
       activityPanelTurnId={activityPanelVisible ? activityTurnId : ''}
       onOpenActivityPanel={openActivityPanel}
-      onSidePanelCollapse={clearSidePanels}
-      settingsView={
-        <Settings
-          providers={authProviders}
-          onClose={closeSettings}
-          onSaveApiKey={saveApiKey}
-          composerShortcut={composerShortcut}
-          onComposerShortcutChange={updateComposerShortcut}
-          onLoginSubscription={loginSubscription}
-        />
-      }
+      onSidePanelCollapse={closeSidePanel}
       mainComposer={renderComposer(false, turnCount > 0 || sessionRoutePending)}
       overlayComposer={renderComposer(true, false)}
     />

@@ -1,10 +1,10 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import {
-  type EffortLevel,
   effortLevels,
-  type ProviderAuthKind,
+  type EffortLevel,
   type ProviderKey,
-  type ThinkingModel
+  type ThinkingModel,
+  type ProviderAuthKind
 } from '@main/types';
 
 export const getSupportedEffortLevels = (model: ThinkingModel): EffortLevel[] => {
@@ -67,7 +67,13 @@ export const isProviderModel = (model: { provider: string; id: string; name?: st
   return haystack.includes('anthropic') || haystack.includes('claude');
 };
 
-const allowedLatestOpenAiModelIds = new Set(['gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-pro']);
+const allowedLatestOpenAiModelIds = new Set([
+  'gpt-5.4',
+  'gpt-5.5',
+  'gpt-5.4-pro',
+  'gpt-5.5-pro',
+  'gpt-5.3-codex-spark'
+]);
 const allowedLatestAnthropicModelIds = new Set([
   'claude-opus-4-7',
   'claude-opus-4-6',

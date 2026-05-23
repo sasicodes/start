@@ -1,15 +1,15 @@
 import {
   clamp,
-  defaultMaxSidePanelWidthRatio,
   getResizeCursor,
-  getSidePanelCollapseWidth,
-  readStoredSidePanelWidth,
-  sidePanelSettleDurationMs,
   type ResizeCursor,
-  writeStoredSidePanelWidth
+  readStoredSidePanelWidth,
+  getSidePanelCollapseWidth,
+  sidePanelSettleDurationMs,
+  writeStoredSidePanelWidth,
+  defaultMaxSidePanelWidthRatio
 } from '@renderer/shared/side-panel/width';
 import type { JSX } from 'preact';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'preact/hooks';
 
 interface UseSidePanelResizeOptions {
   fallbackWidth: number;

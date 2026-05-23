@@ -6,7 +6,6 @@ import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
 import { GitChangesBadge } from '@renderer/shared/workspace/changes';
 import { WorkspaceDock } from '@renderer/shared/workspace/dock';
-import type { AppRoute } from '@renderer/utils/route';
 import type { ComponentChildren } from 'preact';
 import { memo } from 'preact/compat';
 
@@ -28,6 +27,7 @@ interface MainSessionSurfaceProps {
   sidePanelVisible: boolean;
   activityPanelTurnId: string;
   sessionRoutePending: boolean;
+  settingsPanelVisible: boolean;
   onOpenSettings: () => void;
   onToggleGitPanel: () => void;
   onChooseDirectory: () => void;
@@ -38,9 +38,7 @@ interface MainSessionSurfaceProps {
 }
 
 interface AppShellProps {
-  route: AppRoute;
   surface: AppSurface;
-  settingsView: ComponentChildren;
   sidePanel: ComponentChildren;
   mainComposer: ComponentChildren;
   overlayComposer: ComponentChildren;
@@ -53,6 +51,7 @@ interface AppShellProps {
   sidePanelVisible: boolean;
   activityPanelTurnId: string;
   sessionRoutePending: boolean;
+  settingsPanelVisible: boolean;
   onOpenSettings: () => void;
   onToggleGitPanel: () => void;
   onChooseDirectory: () => void;
@@ -75,6 +74,7 @@ const MainSessionSurface = memo(
     activityPanelTurnId,
     onOpenSettings,
     sessionRoutePending,
+    settingsPanelVisible,
     onToggleGitPanel,
     onChooseDirectory,
     onSidePanelCollapse,
@@ -98,8 +98,10 @@ const MainSessionSurface = memo(
         onChooseDirectory={onChooseDirectory}
         onSelectWorkspace={onSelectWorkspace}
       />
-      <GitChangesBadge workspacePath={workspacePath} expanded={gitPanelVisible} onTogglePanel={onToggleGitPanel} />
-      <SettingsButton onOpenSettings={onOpenSettings} />
+      <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
+        <GitChangesBadge workspacePath={workspacePath} expanded={gitPanelVisible} onTogglePanel={onToggleGitPanel} />
+        <SettingsButton active={settingsPanelVisible} onOpenSettings={onOpenSettings} />
+      </div>
       {mainComposer}
     </SidePanelLayout>
   )
@@ -107,10 +109,8 @@ const MainSessionSurface = memo(
 
 export const AppShell = memo(
   ({
-    route,
     surface,
     sidePanel,
-    settingsView,
     mainComposer,
     fileHandlers,
     workspacePath,
@@ -121,6 +121,7 @@ export const AppShell = memo(
     sidePanelVisible,
     onOpenSession,
     sessionRoutePending,
+    settingsPanelVisible,
     onOpenSettings,
     onToggleGitPanel,
     onChooseDirectory,
@@ -147,9 +148,7 @@ export const AppShell = memo(
       {surface === 'main' && (
         <div aria-hidden="true" class="absolute inset-x-0 top-0 z-60 h-7 [-webkit-app-region:drag]" />
       )}
-      {route.name === 'settings' ? (
-        settingsView
-      ) : surface === 'main' ? (
+      {surface === 'main' ? (
         <MainSessionSurface
           sidePanel={sidePanel}
           workspacePath={workspacePath}
@@ -160,6 +159,7 @@ export const AppShell = memo(
           activeSessionId={activeSessionId}
           onOpenSettings={onOpenSettings}
           sessionRoutePending={sessionRoutePending}
+          settingsPanelVisible={settingsPanelVisible}
           onToggleGitPanel={onToggleGitPanel}
           sidePanelVisible={sidePanelVisible}
           onChooseDirectory={onChooseDirectory}

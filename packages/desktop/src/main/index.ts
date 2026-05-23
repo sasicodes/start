@@ -5,6 +5,7 @@ import { getGitChangeSummary, getGitPatch } from '@main/git';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
 import { WorkspaceSessionWatcher } from '@main/session-watcher';
+import { listSkills } from '@main/skills';
 import { type AppSettings, readAppSettings, validateAccelerator, writeAppSettings } from '@main/settings';
 import {
   createMainWindow,
@@ -121,6 +122,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
     listRootItems(relativePath, scope, chat.getWorkspaceCwd())
   );
+  ipcMain.handle('app:list-skills', () => listSkills(chat.getWorkspaceCwd()));
   ipcMain.handle('app:git-changes', (_event, workspacePath?: string) =>
     getGitChangeSummary(workspacePath ?? chat.getWorkspaceCwd())
   );

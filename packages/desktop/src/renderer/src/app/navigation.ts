@@ -1,7 +1,7 @@
 import type { AppSurface } from '@renderer/app/types';
-import { currentRoute, routeUrl, sameRoute, type AppRoute } from '@renderer/utils/route';
+import { routeUrl, sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
 import type { RefObject } from 'preact';
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 
 const initialSurface = (): AppSurface =>
   new URLSearchParams(window.location.search).get('surface') === 'composer' ? 'composer' : 'main';
@@ -40,19 +40,7 @@ export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement>) =>
     textareaRef.current?.focus();
   }, [navigate, textareaRef]);
 
-  const showSettings = useCallback(() => {
-    if (surface === 'composer') {
-      void window.pi.app.openSettings().catch(() => {});
-      return;
-    }
-
-    setSurface('main');
-    navigate({ name: 'settings' });
-  }, [navigate, surface]);
-
   useEffect(() => {
-    if (route.name === 'settings') return;
-
     const frame = requestAnimationFrame(() => textareaRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [route.name, surface, textareaRef]);
@@ -72,7 +60,6 @@ export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement>) =>
     surface,
     setSurface,
     navigate,
-    showChat,
-    showSettings
+    showChat
   };
 };

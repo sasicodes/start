@@ -1,14 +1,14 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
-import { currentRoute, sameRoute, type AppRoute } from '@renderer/utils/route';
-import { useCallback, useEffect, useRef } from 'preact/hooks';
+import { sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
+import { useRef, useEffect, useCallback } from 'preact/hooks';
 
 interface SessionRoutingOptions {
   route: AppRoute;
   surface: AppSurface;
   activeSessionId: string;
   loadedSessionId: string;
-  clearSidePanels: () => void;
+  closeSidePanel: () => void;
   navigate: (route: AppRoute, replace?: boolean) => void;
   openSession: (path: string) => Promise<boolean>;
   openSessionId: (sessionId: string) => Promise<boolean>;
@@ -22,7 +22,7 @@ export const useSessionRouting = ({
   openSessionId,
   activeSessionId,
   loadedSessionId,
-  clearSidePanels
+  closeSidePanel
 }: SessionRoutingOptions) => {
   const selectingSessionRef = useRef(false);
   const openingRouteSessionRef = useRef('');
@@ -43,7 +43,7 @@ export const useSessionRouting = ({
     let active = true;
     const sessionId = route.sessionId;
     openingRouteSessionRef.current = sessionId;
-    clearSidePanels();
+    closeSidePanel();
 
     void openSessionId(sessionId)
       .then((opened) => {
@@ -63,14 +63,14 @@ export const useSessionRouting = ({
       active = false;
       if (openingRouteSessionRef.current === sessionId) openingRouteSessionRef.current = '';
     };
-  }, [clearSidePanels, loadedSessionId, navigate, openSessionId, route, surface]);
+  }, [closeSidePanel, loadedSessionId, navigate, openSessionId, route, surface]);
 
   return useCallback(
     async (session: RecentSession) => {
       const nextRoute: AppRoute = { name: 'session', sessionId: session.id };
       selectingSessionRef.current = true;
       openingRouteSessionRef.current = session.id;
-      clearSidePanels();
+      closeSidePanel();
       navigate(nextRoute, true);
 
       try {
@@ -83,6 +83,6 @@ export const useSessionRouting = ({
         selectingSessionRef.current = false;
       }
     },
-    [clearSidePanels, navigate, openSession]
+    [closeSidePanel, navigate, openSession]
   );
 };

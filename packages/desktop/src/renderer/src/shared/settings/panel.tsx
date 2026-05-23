@@ -1,8 +1,8 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, OpenAIIcon } from '@renderer/ui/icons';
+import { OpenAIIcon, AnthropicIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
-import { useEffect, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 
 type ProviderKey = 'openai' | 'anthropic';
 
@@ -21,7 +21,6 @@ const providers: {
 ];
 
 interface SettingsProps {
-  onClose: () => void;
   providers: ProviderAuthStatus[];
   composerShortcut: string;
   onLoginSubscription: (provider: string) => Promise<void>;
@@ -62,7 +61,6 @@ const keyLabel = (key: string) => {
 
 export const Settings = memo(
   ({
-    onClose,
     onSaveApiKey,
     composerShortcut,
     onLoginSubscription,
@@ -72,15 +70,6 @@ export const Settings = memo(
     const [shortcutError, setShortcutError] = useState('');
     const [recordingShortcut, setRecordingShortcut] = useState(false);
     const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
-
-    useEffect(() => {
-      const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') onClose();
-      };
-
-      window.addEventListener('keydown', onKeyDown);
-      return () => window.removeEventListener('keydown', onKeyDown);
-    }, [onClose]);
 
     const saveApiKey = async (provider: ProviderKey) => {
       await onSaveApiKey(provider, apiKeys[provider]);
@@ -118,7 +107,7 @@ export const Settings = memo(
     };
 
     return (
-      <section class="mx-auto size-full max-w-3xl overflow-y-auto px-5 pt-20 pb-16">
+      <section class="min-h-full px-5 py-4 outline-0">
         {providers.map((provider, index) => {
           const auth = providerStatus(authProviders, provider.key);
           const draftKey = apiKeys[provider.key];
@@ -180,7 +169,7 @@ export const Settings = memo(
           );
         })}
 
-        <div class="mt-8 border-t border-line pt-6">
+        <div class="mt-4 border-t border-line pt-5">
           <div class="flex min-w-0 items-center justify-between gap-4">
             <div class="min-w-0">
               <h2 class="m-0 text-sm leading-5 font-medium text-ink">Composer shortcut</h2>

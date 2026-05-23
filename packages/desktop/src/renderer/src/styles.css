@@ -114,18 +114,6 @@ body {
   @apply overflow-hidden bg-transparent;
 }
 
-@keyframes composer-placeholder-cycle {
-  0%,
-  24.99% {
-    opacity: 1;
-  }
-
-  25%,
-  100% {
-    opacity: 0;
-  }
-}
-
 .composer-floating-shell::before,
 .composer-floating-shell::after {
   @apply pointer-events-none absolute rounded-full;

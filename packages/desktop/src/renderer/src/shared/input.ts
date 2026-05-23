@@ -11,7 +11,14 @@ export type FinderToken = {
   scope: FinderScope;
   start: number;
   token: string;
+  value: string;
   folderPath: string;
+};
+
+export type SkillToken = {
+  query: string;
+  start: number;
+  token: string;
 };
 
 export const commandInput = (draft: string): CommandInput | undefined => {
@@ -39,10 +46,25 @@ export const activeFinderToken = (draft: string): FinderToken | undefined => {
 
   return {
     marker,
+    value,
     folderPath,
     query: slashIndex >= 0 ? value.slice(slashIndex + 1) : value,
     scope: marker === '~' ? 'root' : 'workspace',
     start: draft.length - token.length,
+    token
+  };
+};
+
+export const activeSkillToken = (draft: string): SkillToken | undefined => {
+  const match = /^(\s*)(\/[^\s]*)$/u.exec(draft);
+  if (!match?.[2]) return;
+
+  const token = match[2];
+  const value = token.slice(1);
+
+  return {
+    query: value.startsWith('skill:') ? value.slice(6) : value,
+    start: match[1]?.length ?? 0,
     token
   };
 };

@@ -64,9 +64,9 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
         onClick={onTogglePanel}
-        style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}%` }}
+        style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}vw` }}
         class={tw(
-          'absolute right-18 bottom-4.5 z-40 flex h-11.5 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control [-webkit-app-region:no-drag] @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0',
+          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
           !appFocused && 'pointer-events-none opacity-0'
         )}
       >

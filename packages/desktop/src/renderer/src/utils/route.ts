@@ -3,9 +3,6 @@ export type AppRoute =
       name: 'chat';
     }
   | {
-      name: 'settings';
-    }
-  | {
       name: 'session';
       sessionId: string;
     };
@@ -14,8 +11,6 @@ const cleanPath = (path: string) => path.replace(/\/+/gu, '/').replace(/\/$/u, '
 
 const routeFromPath = (path: string): AppRoute => {
   const clean = cleanPath(path);
-  if (clean === '/settings') return { name: 'settings' };
-
   const sessionMatch = /^\/sessions\/([^/]+)$/u.exec(clean);
   if (sessionMatch?.[1]) {
     try {
@@ -46,12 +41,7 @@ export const currentRoute = (): AppRoute => {
 };
 
 export const routeUrl = (route: AppRoute) => {
-  const path =
-    route.name === 'settings'
-      ? '/settings'
-      : route.name === 'session'
-        ? `/sessions/${encodeURIComponent(route.sessionId)}`
-        : '/';
+  const path = route.name === 'session' ? `/sessions/${encodeURIComponent(route.sessionId)}` : '/';
   const url = new URL(window.location.href);
 
   if (url.protocol !== 'file:') url.pathname = '/';

@@ -1,8 +1,8 @@
 import { ResizeHandle } from '@renderer/shared/side-panel/resize-handle';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
-import { AnimatePresence, motion } from 'motion/react';
-import type { ComponentChildren, JSX } from 'preact';
+import { motion, AnimatePresence } from 'motion/react';
+import type { JSX, ComponentChildren } from 'preact';
 
 interface SidePanelFrameProps {
   children: ComponentChildren;
@@ -18,12 +18,12 @@ const sidePanelHiddenState = { opacity: 0, transition: closeMotionTransition, x:
 const sidePanelVisibleState = { opacity: 1, transition: openMotionTransition, x: 0 };
 
 export const SidePanelFrame = ({
-  children,
-  initialWidth,
   label,
-  resizing,
-  settling,
   visible,
+  children,
+  settling,
+  resizing,
+  initialWidth,
   onResizePointerDown
 }: SidePanelFrameProps) => {
   return (

@@ -20,7 +20,7 @@ const setFinderItemsCache = (key: string, items: RootItem[]) => {
   }
 };
 
-const finderCacheKey = (token: Pick<FinderToken, 'folderPath' | 'scope'>) => `${token.scope}:${token.folderPath}`;
+const finderCacheKey = (token: Pick<FinderToken, 'scope' | 'value'>) => `${token.scope}:${token.value}`;
 
 export const useFinderItems = (token: FinderToken | undefined) => {
   const [items, setItems] = useState<RootItem[]>([]);
@@ -50,7 +50,7 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     if (cachedItems) setItems(cachedItems);
 
     window.pi.app
-      .listRootItems(token.folderPath, token.scope)
+      .listRootItems(token.value, token.scope)
       .then((rootItems) => {
         setFinderItemsCache(cacheKey, rootItems);
         if (!disposed) setItems(rootItems);
@@ -62,7 +62,7 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     return () => {
       disposed = true;
     };
-  }, [token?.folderPath, token?.scope]);
+  }, [token?.scope, token?.value]);
 
   return items;
 };

@@ -1,4 +1,3 @@
-import type { RootItem } from '@preload/index';
 import { AttachmentStack } from '@renderer/shared/composer/attachment-stack';
 import { GenerateButton } from '@renderer/shared/composer/generate-button';
 import { ComposerModelPicker } from '@renderer/shared/composer/model-picker';
@@ -6,16 +5,17 @@ import { PromptControl } from '@renderer/shared/composer/prompt-control';
 import { Queue } from '@renderer/shared/composer/queue';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { ComposerWorkspacePicker } from '@renderer/shared/composer/workspace-picker';
-import { Finder, finderItemId } from '@renderer/shared/finder';
-import { activeFinderToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
+import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
+import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
+import { useSkillItems } from '@renderer/shared/skills';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface FinderSelection {
-  items: RootItem[];
+  items: FinderItem[];
   query: string;
   index: number;
 }
@@ -77,24 +77,23 @@ export const Composer = memo(
     );
 
     const finderToken = useMemo(() => activeFinderToken(draft), [draft]);
-    const finderItems = useFinderItems(finderToken);
-    const finderQuery = finderToken?.query.trim().toLowerCase() ?? '';
-    const filteredFinderItems = useMemo(() => {
-      if (!finderQuery) return finderItems;
-      return finderItems.filter((item) => item.name.toLowerCase().includes(finderQuery));
-    }, [finderItems, finderQuery]);
-    const finderVisible = Boolean(finderToken);
+    const skillToken = useMemo(() => activeSkillToken(draft), [draft]);
+    const fileItems: FinderItem[] = useFinderItems(finderToken);
+    const skillItems: FinderItem[] = useSkillItems(skillToken);
+    const finderItems: FinderItem[] = skillToken ? skillItems : fileItems;
+    const finderQuery = skillToken?.query.trim().toLowerCase() ?? finderToken?.query.trim().toLowerCase() ?? '';
+    const finderVisible = Boolean(finderToken || skillToken);
     const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
     const hasAttachments = attachments.length > 0;
     const defaultFinderIndex = useMemo(() => {
-      const exactIndex = filteredFinderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
+      const exactIndex = finderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
       return Math.max(exactIndex, 0);
-    }, [filteredFinderItems, finderQuery]);
+    }, [finderItems, finderQuery]);
     const activeFinderIndex =
-      finderSelection.items === filteredFinderItems && finderSelection.query === finderQuery
+      finderSelection.items === finderItems && finderSelection.query === finderQuery
         ? finderSelection.index
         : defaultFinderIndex;
-    const selectedFinderItem = filteredFinderItems[activeFinderIndex] ?? filteredFinderItems[0];
+    const selectedFinderItem = finderItems[activeFinderIndex] ?? finderItems[0];
     const centered = overlay || !hasTurns;
     const layered = hasAttachments || (!singleLine && isMultiline);
     const promptPlaceholder = usePromptPlaceholder({ centered, draft, hasTurns, isCommandMode });
@@ -103,15 +102,15 @@ export const Composer = memo(
       (delta: number) => {
         setFinderSelection((current) => {
           const baseIndex =
-            current.items === filteredFinderItems && current.query === finderQuery ? current.index : defaultFinderIndex;
+            current.items === finderItems && current.query === finderQuery ? current.index : defaultFinderIndex;
           return {
             query: finderQuery,
-            items: filteredFinderItems,
-            index: Math.min(Math.max(baseIndex + delta, 0), filteredFinderItems.length - 1)
+            items: finderItems,
+            index: Math.min(Math.max(baseIndex + delta, 0), finderItems.length - 1)
           };
         });
       },
-      [defaultFinderIndex, filteredFinderItems, finderQuery]
+      [defaultFinderIndex, finderItems, finderQuery]
     );
 
     useLayoutEffect(() => {
@@ -125,7 +124,12 @@ export const Composer = memo(
       updateTextareaLayout(element, draft);
     }, [draft, singleLine, updateTextareaLayout]);
 
-    const completeFinderItem = (item: RootItem, enterDirectory: boolean) => {
+    const completeFinderItem = (item: FinderItem, enterDirectory: boolean) => {
+      if (skillToken) {
+        onDraftChange(`${draft.slice(0, skillToken.start)}/${item.path} `);
+        return;
+      }
+
       if (!finderToken) return;
 
       const suffix = item.type === 'directory' && enterDirectory ? '/' : ' ';
@@ -148,13 +152,13 @@ export const Composer = memo(
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'ArrowDown' && finderToken && filteredFinderItems.length > 0) {
+      if (event.key === 'ArrowDown' && finderVisible && finderItems.length > 0) {
         event.preventDefault();
         moveFinderSelection(1);
         return;
       }
 
-      if (event.key === 'ArrowUp' && finderToken && filteredFinderItems.length > 0) {
+      if (event.key === 'ArrowUp' && finderVisible && finderItems.length > 0) {
         event.preventDefault();
         moveFinderSelection(-1);
         return;
@@ -166,13 +170,13 @@ export const Composer = memo(
         return;
       }
 
-      if (event.key === 'Escape' && finderToken) {
+      if (event.key === 'Escape' && (finderToken || skillToken)) {
         event.preventDefault();
-        onDraftChange(draft.slice(0, finderToken.start));
+        onDraftChange(draft.slice(0, (skillToken ?? finderToken)?.start ?? 0));
         return;
       }
 
-      if (event.key === 'Enter' && finderToken && selectedFinderItem) {
+      if (event.key === 'Enter' && finderVisible && selectedFinderItem) {
         event.preventDefault();
         completeFinderItem(selectedFinderItem, true);
         return;
@@ -216,9 +220,11 @@ export const Composer = memo(
           />
         )}
         <Finder
-          items={filteredFinderItems}
+          items={finderItems}
+          emptyLabel={skillToken ? 'No matching skills' : 'No matching items'}
           activePath={selectedFinderItem?.path}
           visible={finderVisible}
+          ariaLabel={skillToken ? 'Skills' : 'Project files'}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
         />
         <Queue
@@ -257,37 +263,12 @@ export const Composer = memo(
               onSelectThinkingLevel={onSelectThinkingLevel}
             />
             <div class={tw('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
-              {promptPlaceholder.rotating && (
-                <div
-                  aria-hidden="true"
-                  class={tw(
-                    'pointer-events-none absolute overflow-hidden py-0.5 text-sm leading-6 text-soft',
-                    layered ? 'inset-x-0 inset-y-1 px-2.5' : 'inset-0 px-1'
-                  )}
-                >
-                  {promptPlaceholder.placeholders.map((text, index) => (
-                    <span
-                      key={text}
-                      style={{
-                        animationDelay: `${index * 10}s`,
-                        animationDuration: `${promptPlaceholder.placeholders.length * 10}s`,
-                        animationIterationCount: 'infinite',
-                        animationName: 'composer-placeholder-cycle',
-                        animationTimingFunction: 'linear'
-                      }}
-                      class={tw('absolute top-0.5 truncate opacity-0', layered ? 'inset-x-2.5' : 'inset-x-1')}
-                    >
-                      {text}
-                    </span>
-                  ))}
-                </div>
-              )}
               <PromptControl
                 draft={draft}
                 label={promptPlaceholder.label}
                 onPaste={onPaste}
                 onInput={handleDraftInput}
-                expanded={Boolean(finderToken)}
+                expanded={finderVisible}
                 inputRef={setPromptInputRef}
                 singleLine={singleLine}
                 onKeyDown={handleKeyDown}

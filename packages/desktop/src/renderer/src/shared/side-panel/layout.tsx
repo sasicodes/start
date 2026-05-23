@@ -16,7 +16,7 @@ export const SidePanelLayout = ({
   minSidePanelWidthRatio = defaultMinSidePanelWidthRatio,
   defaultSidePanelWidth: fallbackWidth = defaultSidePanelWidth
 }: SidePanelLayoutProps) => {
-  const { initialWidth, resizing, rootRef, settling, startResize } = useSidePanelResize({
+  const { rootRef, resizing, settling, startResize, initialWidth } = useSidePanelResize({
     fallbackWidth,
     sidePanelVisible,
     maxSidePanelWidthRatio,

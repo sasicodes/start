@@ -20,7 +20,7 @@ export const WorkspaceDock = memo(
     return (
       <div
         class={tw(
-          'absolute bottom-4.5 left-4.5 z-40 flex items-end gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0',
+          'absolute bottom-4.5 left-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0',
           !appFocused && 'pointer-events-none opacity-0'
         )}
       >
