@@ -9,7 +9,7 @@ import {
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
 interface WorkspaceDockProps {
@@ -21,7 +21,7 @@ interface WorkspaceDockProps {
 }
 
 export const WorkspaceDock = memo(
-  ({ workspacePath, onOpenSession, activeSessionId, onChooseDirectory, onSelectWorkspace }: WorkspaceDockProps) => {
+  ({ workspacePath, activeSessionId, onOpenSession, onChooseDirectory, onSelectWorkspace }: WorkspaceDockProps) => {
     const appFocused = useAppFocusState();
 
     return (
@@ -31,23 +31,29 @@ export const WorkspaceDock = memo(
           !appFocused && 'pointer-events-none'
         )}
       >
-        <motion.div
-          animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
-          class="flex h-full items-center gap-2"
-          initial={false}
-          transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
-        >
-          <Workspace
-            workspacePath={workspacePath}
-            onChooseDirectory={onChooseDirectory}
-            onSelectWorkspace={onSelectWorkspace}
-          />
-          <RecentSessions
-            workspacePath={workspacePath}
-            onOpenSession={onOpenSession}
-            activeSessionId={activeSessionId}
-          />
-        </motion.div>
+        <AnimatePresence initial={false}>
+          {appFocused && (
+            <motion.div
+              key="workspace-dock-controls"
+              class="flex h-full items-center gap-2"
+              animate={bottomBubbleVisibleMotion}
+              initial={bottomBubbleHiddenMotion}
+              transition={bottomBubbleRevealTransition}
+              exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
+            >
+              <Workspace
+                workspacePath={workspacePath}
+                onChooseDirectory={onChooseDirectory}
+                onSelectWorkspace={onSelectWorkspace}
+              />
+              <RecentSessions
+                workspacePath={workspacePath}
+                activeSessionId={activeSessionId}
+                onOpenSession={onOpenSession}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }

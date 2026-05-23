@@ -1,73 +1,43 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import { HistoryIcon } from '@renderer/ui/icons';
-import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
+import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
-import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
-const EmptySessions = () => <li class="px-3 py-8 text-center text-sm text-soft">No recent sessions</li>;
-
-const SessionToggle = ({ hidden, onOpen }: { hidden: boolean; onOpen: () => void }) => (
-  <AnimatePresence>
-    {!hidden && (
-      <motion.button
-        key="history-button"
-        type="button"
-        animate={{ opacity: 1, scale: 1 }}
-        aria-label="Recent sessions"
-        exit={{ opacity: 0, scale: 0.82 }}
-        initial={{ opacity: 0, scale: 0.82 }}
-        onClick={(event: MouseEvent) => {
-          event.stopPropagation();
-          onOpen();
-        }}
-        transition={{ duration: 0.08 }}
-        class="absolute inset-0 grid place-items-center rounded-full border-0 bg-transparent text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control"
-      >
-        <HistoryIcon class="size-5" />
-      </motion.button>
-    )}
-  </AnimatePresence>
-);
+const EmptySessions = () => <div class="px-3 py-8 text-center text-sm text-soft">No recent sessions</div>;
 
 const SessionRow = ({
   active,
-  session,
-  onOpen
+  onOpen,
+  session
 }: {
   active: boolean;
   session: RecentSession;
   onOpen: (session: RecentSession) => void;
 }) => (
-  <li>
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpen(session);
-      }}
-      class={tw(
-        'grid w-full gap-1 rounded-xl border-0 px-3 py-2 text-left text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control',
-        active ? 'bg-control text-hover' : 'bg-transparent'
-      )}
-    >
-      <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
-      <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
-    </button>
-  </li>
+  <AppMenu.Item
+    onClick={() => onOpen(session)}
+    className={tw(
+      'grid w-full gap-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+      active ? 'bg-control text-hover' : 'bg-transparent'
+    )}
+  >
+    <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
+    <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
+  </AppMenu.Item>
 );
 
 const SessionRows = ({
-  sessions,
   loaded,
-  onOpenSession,
-  activeSessionId
+  sessions,
+  activeSessionId,
+  onOpenSession
 }: {
-  sessions: RecentSession[];
   loaded: boolean;
   activeSessionId: string;
+  sessions: RecentSession[];
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   if (!loaded) return null;
@@ -83,55 +53,18 @@ const SessionRows = ({
   ));
 };
 
-const SessionContent = ({
-  open,
-  sessions,
-  loaded,
-  onOpenSession,
-  activeSessionId
-}: {
-  open: boolean;
-  sessions: RecentSession[];
-  loaded: boolean;
-  activeSessionId: string;
-  onOpenSession: (session: RecentSession) => Promise<boolean>;
-}) => (
-  <AnimatePresence>
-    {open && (
-      <motion.ul
-        key="sessions"
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 4, transition: closeMotionTransition }}
-        initial={{ opacity: 0, y: 4 }}
-        transition={{ ...openMotionTransition, delay: 0.05 }}
-        class="flex h-full w-90 flex-col gap-1 overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden"
-      >
-        <SessionRows
-          sessions={sessions}
-          loaded={loaded}
-          onOpenSession={onOpenSession}
-          activeSessionId={activeSessionId}
-        />
-      </motion.ul>
-    )}
-  </AnimatePresence>
-);
-
 interface RecentSessionsProps {
   workspacePath: string;
   activeSessionId: string;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessionId }: RecentSessionsProps) => {
-  const rootRef = useRef<HTMLDivElement>(null);
+export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
   const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
-  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [sessions, setSessions] = useState<RecentSession[]>([]);
-  const expandedHeight = !loaded || sessions.length > 0 ? 520 : 108;
-  const panelTransition = open ? openMotionTransition : closeMotionTransition;
 
   const loadSessions = useCallback(
     async (showLoading = false) => {
@@ -153,23 +86,15 @@ export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessio
     [workspacePath]
   );
 
-  const closeSessions = useCallback(() => {
-    setOpen(false);
-  }, []);
-
-  const openSessions = useCallback(() => {
-    if (open) return;
-    void loadSessions();
-    setOpen(true);
-  }, [loadSessions, open]);
-
-  const openSessionAndClose = useCallback(
-    async (session: RecentSession) => {
-      closeSessions();
-      return onOpenSession(session);
+  const updateOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) void loadSessions();
+      setOpen(nextOpen);
     },
-    [closeSessions, onOpenSession]
+    [loadSessions]
   );
+
+  const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
 
   useEffect(() => {
     return () => {
@@ -191,47 +116,28 @@ export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessio
     return window.pi.chat.onRecentSessionsChanged(refreshOnChange);
   }, [loadSessions, workspacePath]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOnPointerDown = (event: PointerEvent) => {
-      if (rootRef.current?.contains(event.target as Node)) return;
-      closeSessions();
-    };
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeSessions();
-    };
-
-    document.addEventListener('pointerdown', closeOnPointerDown, true);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnPointerDown, true);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [closeSessions, open]);
-
   return (
-    <div ref={rootRef} class="relative size-11.5">
-      <motion.div
-        animate={{
-          width: open ? 360 : 46,
-          height: open ? expandedHeight : 46,
-          borderRadius: open ? 16 : 23
-        }}
-        initial={false}
-        transition={{ width: panelTransition, height: panelTransition, borderRadius: panelTransition }}
-        class="absolute bottom-0 left-0 origin-bottom-left overflow-hidden bg-composer text-ink shadow-shell outline-0 select-none focus-visible:opacity-90"
+    <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
+      <AppMenu.Trigger
+        aria-label="Recent sessions"
+        className="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
       >
-        <SessionToggle hidden={open} onOpen={openSessions} />
-        <SessionContent
-          open={open}
-          sessions={sessions}
-          loaded={loaded}
-          onOpenSession={openSessionAndClose}
-          activeSessionId={activeSessionId}
-        />
-      </motion.div>
-    </div>
+        <HistoryIcon class="size-5" />
+      </AppMenu.Trigger>
+      <AppMenu.Portal>
+        <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
+          <MenuPanel className="w-90">
+            <div class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+              <SessionRows
+                loaded={loaded}
+                sessions={sessions}
+                activeSessionId={activeSessionId}
+                onOpenSession={openSessionAndClose}
+              />
+            </div>
+          </MenuPanel>
+        </AppMenu.Positioner>
+      </AppMenu.Portal>
+    </AppMenu.Root>
   );
 });

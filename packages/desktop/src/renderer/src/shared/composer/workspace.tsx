@@ -1,7 +1,7 @@
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
-import { AppMenu } from '@renderer/ui/menu';
+import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { useCallback, useState } from 'preact/hooks';
 
@@ -41,13 +41,14 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
         </Tooltip>
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" align="start" sideOffset={12} className="z-50" collisionPadding={12}>
-            <WorkspaceMenu
-              folders={folders}
-              panelWidth="workspaceBubble"
-              workspacePath={workspacePath}
-              onChooseDirectory={onChooseDirectory}
-              onSelectWorkspace={onSelectWorkspace}
-            />
+            <MenuPanel className="w-64">
+              <WorkspaceMenu
+                folders={folders}
+                workspacePath={workspacePath}
+                onChooseDirectory={onChooseDirectory}
+                onSelectWorkspace={onSelectWorkspace}
+              />
+            </MenuPanel>
           </AppMenu.Positioner>
         </AppMenu.Portal>
       </AppMenu.Root>

@@ -2,7 +2,7 @@ import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { ChevronDownIcon } from '@renderer/ui/icons';
-import { AppMenu } from '@renderer/ui/menu';
+import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -14,9 +14,9 @@ export const Workspace = memo(
     onChooseDirectory,
     onSelectWorkspace
   }: {
+    workspacePath: string;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
-    workspacePath: string;
   }) => {
     const workspace = useWorkspace(workspacePath);
     const rootRef = useRef<HTMLDivElement>(null);
@@ -43,10 +43,10 @@ export const Workspace = memo(
               >
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img
-                    src={workspace.iconDataUrl}
                     alt=""
-                    class="size-full rounded-full object-cover"
+                    src={workspace.iconDataUrl}
                     draggable={false}
+                    class="size-full rounded-full object-cover"
                   />
                 </span>
                 <span class="flex min-w-0 flex-1 flex-col justify-center gap-0.5 transition-[opacity,transform] duration-150 ease-out @max-workspace-dock/chat:hidden">
@@ -69,20 +69,21 @@ export const Workspace = memo(
           </Tooltip>
           <AppMenu.Portal>
             <AppMenu.Positioner
-              anchor={rootRef}
               side="top"
               align="start"
+              anchor={rootRef}
               sideOffset={8}
               className="z-50"
               collisionPadding={12}
             >
-              <WorkspaceMenu
-                folders={folders}
-                panelWidth="workspaceBubble"
-                workspacePath={workspacePath}
-                onChooseDirectory={onChooseDirectory}
-                onSelectWorkspace={onSelectWorkspace}
-              />
+              <MenuPanel className="w-64">
+                <WorkspaceMenu
+                  folders={folders}
+                  workspacePath={workspacePath}
+                  onChooseDirectory={onChooseDirectory}
+                  onSelectWorkspace={onSelectWorkspace}
+                />
+              </MenuPanel>
             </AppMenu.Positioner>
           </AppMenu.Portal>
         </AppMenu.Root>

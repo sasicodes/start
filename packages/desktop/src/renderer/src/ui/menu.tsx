@@ -2,24 +2,20 @@ import { Menu } from '@base-ui/react/menu';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 
-export type MenuPanelWidth = 'provider' | 'model' | 'workspaceBubble';
-
 interface MenuPanelProps {
+  className?: string;
   children: ComponentChildren;
-  width: MenuPanelWidth;
 }
 
 export const AppMenu = Menu;
 
-export const MenuPanel = ({ children, width }: MenuPanelProps) => {
+export const MenuPanel = ({ className, children }: MenuPanelProps) => {
   return (
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
       className={tw(
         'origin-bottom rounded-2xl bg-panel p-1 shadow-panel outline-0 transition-[opacity,transform] duration-100 ease-out data-[ending-style]:scale-[0.96] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.96] data-[starting-style]:opacity-0',
-        width === 'provider' && 'w-44',
-        width === 'model' && 'w-56',
-        width === 'workspaceBubble' && 'w-64'
+        className
       )}
     >
       {children}
@@ -43,15 +39,15 @@ export const MenuRadioOption = ({
 }: {
   label: string;
   value: string;
-  children: ComponentChildren;
   onSelect?: () => void;
+  children: ComponentChildren;
 }) => {
   return (
     <Menu.RadioItem
       key={value}
+      closeOnClick
       label={label}
       value={value}
-      closeOnClick
       onClick={onSelect}
       onPointerUp={onSelect}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
@@ -63,7 +59,7 @@ export const MenuRadioOption = ({
 
 export const MenuEmptyItem = ({ children }: { children: ComponentChildren }) => {
   return (
-    <Menu.Item className="px-3 py-2 text-sm leading-5 text-soft" disabled>
+    <Menu.Item disabled className="px-3 py-2 text-sm leading-5 text-soft">
       {children}
     </Menu.Item>
   );
