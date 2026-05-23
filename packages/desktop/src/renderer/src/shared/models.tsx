@@ -14,9 +14,9 @@ interface ProviderGroup {
 
 interface ModelsProps {
   models: ModelOption[];
+  onOpenSettings: () => void;
   selectedModel: ModelOption | undefined;
   onSelectModel: (modelKey: string) => void;
-  onOpenSettings: () => void;
 }
 
 const isAnthropicModel = (model: ModelOption) => {
@@ -81,10 +81,10 @@ const ModelOptions = ({
 const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<ModelsProps, 'onOpenSettings'>) => {
   return (
     <AppMenu.Item
-      closeOnClick={false}
-      className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
+      closeOnClick
       onClick={onOpenSettings}
       onPointerDown={onOpenSettings}
+      className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
       <GearIcon class="size-4" />
       <span>Set up {name}</span>

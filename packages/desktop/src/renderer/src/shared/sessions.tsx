@@ -11,8 +11,8 @@ const EmptySessions = () => <div class="px-3 py-8 text-center text-sm text-soft"
 
 const SessionRow = ({
   active,
-  session,
-  onOpen
+  onOpen,
+  session
 }: {
   active: boolean;
   session: RecentSession;
@@ -38,8 +38,8 @@ const SessionRows = ({
   onOpenSession
 }: {
   loaded: boolean;
-  sessions: RecentSession[];
   activeSessionId: string;
+  sessions: RecentSession[];
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   if (!loaded) return null;
@@ -48,8 +48,8 @@ const SessionRows = ({
   return sessions.map((session) => (
     <SessionRow
       key={session.id}
-      active={session.id === activeSessionId}
       session={session}
+      active={session.id === activeSessionId}
       onOpen={(session) => void onOpenSession(session)}
     />
   ));
@@ -61,7 +61,7 @@ interface RecentSessionsProps {
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessionId }: RecentSessionsProps) => {
+export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
   const appFocused = useAppFocusState();
   const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
@@ -124,7 +124,7 @@ export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessio
   }, [loadSessions, workspacePath]);
 
   return (
-    <AppMenu.Root modal={false} open={open} onOpenChange={updateOpen}>
+    <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
       <AppMenu.Trigger
         aria-label="Recent sessions"
         className="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"

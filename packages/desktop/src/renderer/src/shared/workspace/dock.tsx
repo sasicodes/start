@@ -21,7 +21,7 @@ interface WorkspaceDockProps {
 }
 
 export const WorkspaceDock = memo(
-  ({ workspacePath, onOpenSession, activeSessionId, onChooseDirectory, onSelectWorkspace }: WorkspaceDockProps) => {
+  ({ workspacePath, activeSessionId, onOpenSession, onChooseDirectory, onSelectWorkspace }: WorkspaceDockProps) => {
     const appFocused = useAppFocusState();
 
     return (
@@ -35,11 +35,11 @@ export const WorkspaceDock = memo(
           {appFocused && (
             <motion.div
               key="workspace-dock-controls"
-              animate={bottomBubbleVisibleMotion}
               class="flex h-full items-center gap-2"
-              exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
+              animate={bottomBubbleVisibleMotion}
               initial={bottomBubbleHiddenMotion}
               transition={bottomBubbleRevealTransition}
+              exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
             >
               <Workspace
                 workspacePath={workspacePath}
@@ -48,8 +48,8 @@ export const WorkspaceDock = memo(
               />
               <RecentSessions
                 workspacePath={workspacePath}
-                onOpenSession={onOpenSession}
                 activeSessionId={activeSessionId}
+                onOpenSession={onOpenSession}
               />
             </motion.div>
           )}

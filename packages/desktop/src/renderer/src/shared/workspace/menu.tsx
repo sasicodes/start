@@ -8,8 +8,8 @@ const WorkspaceOption = ({
   selected,
   onSelectWorkspace
 }: {
-  folder: WorkspaceFolder;
   selected: boolean;
+  folder: WorkspaceFolder;
   onSelectWorkspace: (path: string) => void;
 }) => (
   <AppMenu.Item
