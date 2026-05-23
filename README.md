@@ -1,8 +1,6 @@
-# start
+Start, your coding assistant.
 
-your coding assistant
-
-start is a desktop and mobile coding assistant.
+Start is a desktop and mobile coding assistant.
 
 ```text
 .
