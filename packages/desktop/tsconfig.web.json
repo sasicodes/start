@@ -28,7 +28,12 @@
     "ignoreDeprecations": "6.0",
     "paths": {
       "@preload/*": ["src/preload/*"],
-      "@renderer/*": ["src/renderer/src/*"]
+      "@renderer/*": ["src/renderer/src/*"],
+      "react": ["node_modules/preact/compat"],
+      "react-dom": ["node_modules/preact/compat"],
+      "react-dom/*": ["node_modules/preact/compat/*"],
+      "react/jsx-dev-runtime": ["node_modules/preact/jsx-dev-runtime"],
+      "react/jsx-runtime": ["node_modules/preact/jsx-runtime"]
     }
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"]

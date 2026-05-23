@@ -1,10 +1,11 @@
 import { closeMotionTransition, openMotionTransition, quickLayoutTransition } from '@renderer/ui/motion';
 import type { TurnDetail } from '@renderer/utils/types';
+import type { Transition } from 'motion/react';
 
 const diffMetricPattern = /^(.*?)(\+\d+)\s+(-\d+)$/;
 
-const closeAccordionTextTransition = { duration: 0.05, ease: 'easeOut' };
-const openAccordionTextTransition = { duration: 0.12, ease: 'easeOut' };
+const closeAccordionTextTransition = { duration: 0.05, ease: 'easeOut' } as const satisfies Transition;
+const openAccordionTextTransition = { duration: 0.12, ease: 'easeOut' } as const satisfies Transition;
 
 export const accordionLayoutTransition = quickLayoutTransition;
 

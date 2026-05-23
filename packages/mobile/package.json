@@ -3,10 +3,12 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "license": "MIT",
-  "description": "your coding agent",
+  "description": "your coding assistant",
   "type": "module",
   "main": "expo-router/entry",
+  "homepage": "https://start.intelligence.one",
   "scripts": {
+    "android": "expo start --android",
     "check": "pnpm run check:deps && pnpm run typecheck",
     "check:deps": "expo install --check",
     "dev": "expo start",
@@ -22,8 +24,7 @@
   "author": "Intelligence One",
   "dependencies": {
     "@expo/metro-runtime": "56.0.11",
-    "expo": "56.0.2",
-    "expo-build-properties": "56.0.13",
+    "expo": "56.0.3",
     "expo-constants": "56.0.14",
     "expo-linking": "56.0.11",
     "expo-router": "56.2.5",

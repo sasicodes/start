@@ -10,16 +10,15 @@ interface ScreenProps {
 }
 
 const defaultBody = [
-  'Start is your coding agent for planning, editing, and reviewing real projects. This placeholder copy is intentionally long enough to move behind the floating controls so the liquid surfaces can be judged against live content instead of a flat empty screen.',
-  'The bottom navigation is not a full-width bar. Home and Settings sit inside one native glass group on the left, while the new session action floats separately on the right. Text should remain visible behind both shapes as you scroll.',
-  'Use this screen to check the feel in light mode, dark mode, and reduced transparency settings. The fallback keeps a translucent shell, but iOS uses system Liquid Glass when the API is available.'
+  'Start keeps the mobile surface direct: one place to resume work, one place to begin, and one place to tune the app.',
+  'Controls use platform navigation so the shell feels native before deeper session views arrive.'
 ];
 
 export function Screen({
   children,
   eyebrow = 'Start',
   paragraphs = defaultBody,
-  title = 'Your coding agent'
+  title = 'Your coding assistant'
 }: ScreenProps) {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -28,8 +27,15 @@ export function Screen({
   return (
     <ScrollView
       bounces
+      contentInsetAdjustmentBehavior="never"
       style={[styles.screen, dark && styles.screenDark]}
-      contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top + 48, 72) }]}
+      contentContainerStyle={[
+        styles.content,
+        {
+          paddingTop: Math.max(insets.top + 48, 72),
+          paddingBottom: Math.max(insets.bottom + 120, 160)
+        }
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
@@ -59,7 +65,6 @@ const styles = StyleSheet.create({
   content: {
     gap: 30,
     paddingRight: 24,
-    paddingBottom: 180,
     paddingLeft: 24
   },
   header: {

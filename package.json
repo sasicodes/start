@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0-alpha.1",
   "license": "MIT",
-  "description": "your coding agent",
+  "description": "your coding assistant",
   "type": "module",
   "packageManager": "pnpm@10.25.0",
   "homepage": "https://start.intelligence.one",
@@ -11,16 +11,21 @@
     "audit": "pnpm run audit:deps && pnpm run audit:signatures",
     "audit:deps": "pnpm audit && pnpm --dir packages/desktop audit",
     "audit:signatures": "npm audit signatures && npm --prefix packages/desktop audit signatures",
+    "build": "pnpm run build:desktop",
     "build:desktop": "pnpm --filter @start/desktop build",
-    "check": "pnpm run check:pins && pnpm run lint && pnpm run format && pnpm run typecheck",
-    "check:fix": "pnpm run check:pins && biome check . --write && pnpm run typecheck",
+    "check": "pnpm run check:pins && pnpm run check:deps && pnpm run lint && pnpm run format && pnpm run typecheck",
+    "check:deps": "pnpm --filter @start/mobile check:deps",
+    "check:fix": "pnpm run check:pins && pnpm run check:deps && biome check . --write && pnpm run typecheck",
     "check:pins": "node scripts/check-dependency-pins.js",
     "desktop": "pnpm --filter @start/desktop dev",
+    "dev": "pnpm run desktop",
+    "dist": "pnpm --filter @start/desktop dist",
     "format": "biome ci --linter-enabled=false --assist-enabled=false .",
     "format:fix": "biome format . --write",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome lint . --error-on-warnings",
     "mobile": "pnpm --filter @start/mobile dev",
+    "package": "pnpm --filter @start/desktop package",
     "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck"
   },
   "devDependencies": {
@@ -28,8 +33,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild",
-      "electron"
+      "electron",
+      "esbuild"
     ],
     "patchedDependencies": {
       "@earendil-works/pi-ai@0.75.4": "patches/@earendil-works__pi-ai@0.75.4.patch"

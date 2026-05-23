@@ -11,15 +11,10 @@
       "bundleIdentifier": "one.intelligence.start",
       "supportsTablet": true
     },
+    "android": {
+      "package": "one.intelligence.start"
+    },
     "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "26.0"
-          }
-        }
-      ],
       [
         "expo-splash-screen",
         {

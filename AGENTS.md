@@ -37,7 +37,7 @@
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
-- The app description is `your coding agent`
+- The app description is `your coding assistant`
 - The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.
 - The application window, html, body, and root backgrounds must stay transparent in light and dark mode.
 - The renderer runs in Electron Chromium; avoid Safari, Firefox, and legacy Edge fallback CSS. Keep only Chromium/Electron-required prefixed CSS such as `-webkit-app-region` or `::-webkit-scrollbar`.

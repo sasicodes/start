@@ -35,19 +35,19 @@ export default function RootLayout() {
           />
           <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="compose">
+          <NativeTabs.Trigger.Icon
+            md={{ default: 'add', selected: 'add' }}
+            sf={{ default: 'plus', selected: 'plus' }}
+          />
+          <NativeTabs.Trigger.Label>New</NativeTabs.Trigger.Label>
+        </NativeTabs.Trigger>
         <NativeTabs.Trigger name="settings">
           <NativeTabs.Trigger.Icon
             md={{ default: 'settings', selected: 'settings' }}
             sf={{ default: 'gearshape', selected: 'gearshape' }}
           />
           <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="compose" role="search">
-          <NativeTabs.Trigger.Icon
-            md={{ default: 'add', selected: 'add' }}
-            sf={{ default: 'plus', selected: 'plus' }}
-          />
-          <NativeTabs.Trigger.Label hidden>New session</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       </NativeTabs>
     </ThemeProvider>

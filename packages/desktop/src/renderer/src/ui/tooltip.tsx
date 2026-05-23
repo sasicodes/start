@@ -1,5 +1,5 @@
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip';
-import type { ComponentChildren } from 'preact';
+import type { ComponentChildren, VNode } from 'preact';
 
 export const TooltipProvider = ({ children }: { children: ComponentChildren }) => {
   return <BaseTooltip.Provider>{children}</BaseTooltip.Provider>;
@@ -13,7 +13,7 @@ export const Tooltip = ({
   align = 'center'
 }: {
   label: ComponentChildren;
-  children: ComponentChildren;
+  children: VNode;
   disabled?: boolean;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';

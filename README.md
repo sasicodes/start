@@ -1,6 +1,6 @@
 # start
 
-your coding agent
+your coding assistant
 
 ## Setup
 
@@ -16,7 +16,15 @@ Sign in with your subscription or configure your API keys before running the app
 pnpm dev
 ```
 
-The Electron app lives in `packages/desktop`. Root scripts forward to that package so the common commands work from the repository root.
+The Electron app lives in `packages/desktop`. You can also run it explicitly with `pnpm desktop`.
+
+## Mobile app
+
+```bash
+pnpm mobile
+```
+
+The Expo app lives in `packages/mobile`.
 
 ## Check
 
@@ -36,7 +44,7 @@ pnpm build
 pnpm package
 ```
 
-Create distributable builds:
+Create distributable desktop builds:
 
 ```bash
 pnpm dist
