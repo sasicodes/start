@@ -117,6 +117,12 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const offShowSettings = window.pi.app.onShowSettings(() => optionsRef.current.onShowSettings());
     const offNewSession = window.pi.chat.onNewSession(() => {
+      if (optionsRef.current.assistantIdRef.current || optionsRef.current.terminalIdRef.current) {
+        optionsRef.current.onShowChat();
+        void optionsRef.current.syncStatus().catch(() => {});
+        return;
+      }
+
       optionsRef.current.clearSession();
       optionsRef.current.onShowChat();
     });

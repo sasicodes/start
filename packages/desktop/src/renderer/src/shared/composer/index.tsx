@@ -8,6 +8,7 @@ import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
+import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
 import { composerDockTransition } from '@renderer/ui/motion';
@@ -85,8 +86,8 @@ export const Composer = memo(
     const finderItems: FinderItem[] = skillToken ? skillItems : fileItems;
     const finderQuery = skillToken?.query.trim().toLowerCase() ?? finderToken?.query.trim().toLowerCase() ?? '';
     const finderVisible = Boolean(finderToken || skillToken);
-    const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
     const hasAttachments = attachments.length > 0;
+    const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
     const defaultFinderIndex = useMemo(() => {
       const exactIndex = finderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
       return Math.max(exactIndex, 0);
@@ -218,6 +219,7 @@ export const Composer = memo(
             onChooseDirectory={onChooseWorkspaceDirectory}
           />
         )}
+        {!centered && <ScrollToBottom />}
         <Finder
           items={finderItems}
           emptyLabel={skillToken ? 'No matching skills' : 'No matching items'}

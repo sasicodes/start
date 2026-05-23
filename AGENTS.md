@@ -33,6 +33,7 @@
 - Use a bare `return;` for no-value exits instead of `return undefined;`.
 - Use conditional object spreads for optional JSX props instead of passing `undefined` with a ternary.
 - Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a real maintenance hazard.
+- Keep local component prop names minimal and contextual; avoid repeating parent/domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`, and similarly clear local names when the scope makes the meaning obvious.
 - Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; reserve `undefined` for optional API boundaries and omitted object properties.
 - For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose `value === undefined ? {}` branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.

@@ -114,6 +114,12 @@ body {
   @apply overflow-hidden bg-transparent;
 }
 
+@keyframes activity-text-shimmer {
+  100% {
+    background-position: -240% 0;
+  }
+}
+
 .composer-floating-shell::before,
 .composer-floating-shell::after {
   @apply pointer-events-none absolute rounded-full;

@@ -15,6 +15,7 @@ type TurnScrollIntent = BottomScrollIntent | TurnStartScrollIntent;
 
 let nextScrollSequence = 0;
 
+export const scrollToBottomButtonState = signal(false);
 export const turnScrollIntentState = signal<TurnScrollIntent>({ kind: 'bottom', sequence: 0 });
 
 export const scrollSessionToBottom = () => {
