@@ -3,7 +3,7 @@
 ```text
 .
 ├── .github/workflows/
-│   ├── desktop.yml
+│   ├── release-desktop.yml
 │   └── quality-and-security.yml
 ├── scripts/
 │   └── release-desktop.js
@@ -17,7 +17,7 @@ Release is split into two paths:
   - runs on pull requests
   - only checks quality + security
 
-- Desktop release workflow: `.github/workflows/desktop.yml`
+- Desktop release workflow: `.github/workflows/release-desktop.yml`
   - runs on tag push where tag starts with `v`
   - builds mac artifacts and publishes a GitHub release
 
@@ -30,20 +30,11 @@ Release is split into two paths:
 node scripts/release-desktop.js patch --push
 ```
 
-3. Then push the tag:
-
-- `patch` makes `x.y.z -> x.y.(z+1)`
-- `minor` makes `x.y.z -> x.(y+1).0`
-- `major` makes `x.y.z -> (x+1).0.0`
-- `v1.2.3` (or `1.2.3`) creates a specific version
-
-The command:
+3. The command:
 
 - updates `packages/desktop/package.json` version
 - creates the Git tag `v<version>`
-- optionally pushes commit + tag with `--push`
-
-After push, the tag workflow runs automatically and publishes the desktop release.
+- pushes commit + tag with `--push`
 
 You can preview first with:
 
@@ -51,10 +42,30 @@ You can preview first with:
 node scripts/release-desktop.js patch --dry-run
 ```
 
-## Version tagging behavior
+## Version and tag examples
 
-A tag like `v1.2.3` always triggers the desktop workflow because of the `v*` tag filter.
+Current desktop `package.json` version is currently `0.1.0-alpha.1`, so your tags can be:
 
-But for a clean release, use the release helper so the tag and desktop package version stay aligned.
+- `v0.1.0-alpha.1` (or `v0.1.0-alpha.2`) for alpha
+- `v0.1.0-beta.1` for beta
+- `v0.1.0` for first stable
 
-If you push a random tag manually (for example `vrandom`), the workflow runs, but it may not match the desktop app version inside `packages/desktop/package.json`.
+To let the script compute numbers:
+
+- `patch` -> `0.1.1`
+- `minor` -> `0.2.0`
+- `major` -> `1.0.0`
+
+You can also pass a full version:
+
+```bash
+node scripts/release-desktop.js v0.1.0-beta.1 --push
+# or
+node scripts/release-desktop.js 1.0.0 --push
+```
+
+## Note on tag matching
+
+Any tag that starts with `v` (for example `vrandom`) will trigger the workflow.
+
+Use the release helper so the tag and `packages/desktop/package.json` stay aligned.
