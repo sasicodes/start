@@ -13,6 +13,7 @@ import { useMemo } from 'preact/hooks';
 export const ComposerModelPicker = ({
   models,
   layered,
+  disabled,
   modelsLoaded,
   thinkingLevel,
   onSelectModel,
@@ -21,6 +22,7 @@ export const ComposerModelPicker = ({
   onSelectThinkingLevel
 }: {
   layered: boolean;
+  disabled: boolean;
   models: ModelOption[];
   modelsLoaded: boolean;
   thinkingLevel: EffortLevel;
@@ -48,7 +50,7 @@ export const ComposerModelPicker = ({
   );
 
   const nextEffort = () => {
-    if (availableEfforts.length < 2) return;
+    if (disabled || availableEfforts.length < 2) return;
     const currentIndex = availableEfforts.findIndex((level) => level.id === thinkingLevel);
     const nextIndex = (currentIndex + 1) % availableEfforts.length;
     playCycleSound();
@@ -67,9 +69,10 @@ export const ComposerModelPicker = ({
         <Menu.Root modal={false}>
           <Tooltip label={selectedModelLabel}>
             <Menu.Trigger
+              disabled={disabled}
               aria-label="Choose model"
               className={tw(
-                'grid place-items-center rounded-full border-0 bg-transparent text-ink select-none',
+                'grid place-items-center rounded-full border-0 bg-transparent text-ink select-none disabled:cursor-not-allowed disabled:opacity-60',
                 showThinkingPicker && 'h-full w-10',
                 !showThinkingPicker && 'size-9.5'
               )}
@@ -97,6 +100,7 @@ export const ComposerModelPicker = ({
         </Menu.Root>
       </div>
       <ThinkingButton
+        disabled={disabled}
         label={selectedEffort.label}
         level={thinkingLevel}
         visible={showThinkingPicker}

@@ -254,6 +254,7 @@ export const Composer = memo(
             <ComposerModelPicker
               models={models}
               layered={layered}
+              disabled={isGenerating}
               modelsLoaded={modelsLoaded}
               thinkingLevel={thinkingLevel}
               onSelectModel={onSelectModel}
