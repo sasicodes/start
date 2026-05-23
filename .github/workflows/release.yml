@@ -16,13 +16,13 @@ jobs:
         include:
           - platform: macOS
             os: macos-latest
-            command: pnpm dist --mac
+            command: cd packages/desktop && pnpm dist --mac
           - platform: Windows
             os: windows-latest
-            command: pnpm dist --win
+            command: cd packages/desktop && pnpm dist --win
           - platform: Linux
             os: ubuntu-latest
-            command: pnpm dist --linux
+            command: cd packages/desktop && pnpm dist --linux
 
     steps:
       - uses: actions/checkout@v6
@@ -60,14 +60,14 @@ jobs:
         with:
           name: start-${{ matrix.platform }}
           path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.AppImage
-            release/*.deb
-            release/*.rpm
-            release/*.blockmap
-            release/latest*.yml
+            packages/desktop/release/*.dmg
+            packages/desktop/release/*.zip
+            packages/desktop/release/*.exe
+            packages/desktop/release/*.AppImage
+            packages/desktop/release/*.deb
+            packages/desktop/release/*.rpm
+            packages/desktop/release/*.blockmap
+            packages/desktop/release/latest*.yml
           if-no-files-found: error
 
   publish:

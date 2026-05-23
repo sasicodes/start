@@ -4,15 +4,13 @@ Use this checklist before publishing a production release of Start from this ope
 
 ## Repository readiness
 
-- [ ] Confirm `package.json` has the intended public metadata:
-  - [ ] `name`: `start`
-  - [ ] `productName`: `Start`
-  - [ ] `appId`: `one.intelligence.start`
+- [ ] Confirm `package.json` and `packages/desktop/package.json` have the intended public metadata:
+  - [ ] root `name`: `start`
+  - [ ] desktop `productName`: `Start`
+  - [ ] desktop `appId`: `one.intelligence.start`
   - [ ] `description`: `your coding agent`
   - [ ] `homepage`: `https://start.intelligence.one`
-- [ ] Confirm the license is intentional for an open-source repository.
-  - Current value: `UNLICENSED`
-  - Change this before public release if the repo should be open-source licensed.
+- [ ] Confirm the MIT license is intentional for the open-source repository.
 - [ ] Confirm no private credentials, internal URLs, local paths, developer account names, or company-only identifiers are committed.
 - [ ] Confirm `README.md` explains installation, development, release channels, supported platforms, and security expectations.
 - [ ] Confirm issue templates, contribution guide, code of conduct, and security policy are present if desired.
@@ -122,7 +120,7 @@ These are Tauri-specific and are not required by this Electron release workflow.
 ## Release versioning
 
 - [ ] Decide the version number.
-- [ ] Update `package.json` version.
+- [ ] Update the root and desktop `package.json` versions.
 - [ ] Commit the version change.
 - [ ] Create an annotated or lightweight tag:
 

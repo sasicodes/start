@@ -26,7 +26,7 @@
 - Omit optional object properties when absent instead of serializing `undefined` or placeholder `null` values.
 - Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; reserve `undefined` for optional API boundaries and omitted object properties.
 - For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose `value === undefined ? {}` branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
-- Read environment variables only through `src/main/environment.ts`; do not scatter `process.env` usage across the app.
+- Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
@@ -38,4 +38,4 @@
 - Tooltips must use Base UI side data attributes for direction-aware transform/opacity animations.
 - Use system UI fonts only. Do not add external fonts.
 - Use Tailwind `size-*` instead of matching `w-*` and `h-*` utilities for square elements.
-- Use the Start app assets from `/Users/studio/Code/github.com/intelligence-one/start/src-tauri/icons` for development and production builds. Keep `build/icons` and renderer public icons in sync with that source.
+- Keep `packages/desktop/build/icons` and `packages/desktop/src/renderer/public` icons in sync.

@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!node_modules", "!out", "!release", "!dist", "!*.tsbuildinfo"]
+    "includes": ["**", "!**/node_modules", "!**/out", "!**/release", "!**/dist", "!**/*.tsbuildinfo"]
   },
   "formatter": {
     "enabled": true,

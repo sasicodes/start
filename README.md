@@ -10,11 +10,13 @@ pnpm install
 
 Sign in with your subscription or configure your API keys before running the app.
 
-## Run
+## Desktop app
 
 ```bash
 pnpm dev
 ```
+
+The Electron app lives in `packages/desktop`. Root scripts forward to that package so the common commands work from the repository root.
 
 ## Check
 

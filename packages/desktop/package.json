@@ -1,0 +1,97 @@
+{
+  "name": "@intelligence-one/start-desktop",
+  "private": true,
+  "productName": "Start",
+  "version": "0.1.0-alpha.1",
+  "license": "MIT",
+  "description": "your coding agent",
+  "type": "module",
+  "main": "out/main/index.js",
+  "homepage": "https://start.intelligence.one",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "check": "pnpm run typecheck",
+    "build": "electron-vite build",
+    "typecheck": "tsc -b --pretty false",
+    "dist": "pnpm build && electron-builder",
+    "package": "pnpm build && electron-builder --dir"
+  },
+  "keywords": [
+    "vite",
+    "preact",
+    "electron",
+    "coding-agent"
+  ],
+  "author": "Intelligence One",
+  "dependencies": {
+    "motion": "12.39.0",
+    "preact": "10.29.2",
+    "@base-ui/react": "1.5.0",
+    "@preact/signals": "2.9.0",
+    "@tanstack/hotkeys": "0.8.0",
+    "@earendil-works/pi-coding-agent": "0.75.4"
+  },
+  "devDependencies": {
+    "vite": "8.0.13",
+    "electron": "42.2.0",
+    "typescript": "6.0.3",
+    "tailwindcss": "4.3.0",
+    "@types/node": "25.9.1",
+    "@tailwindcss/vite": "4.3.0",
+    "electron-builder": "26.8.1",
+    "@electron/notarize": "3.1.1",
+    "@preact/preset-vite": "2.10.5",
+    "electron-vite": "6.0.0-beta.1"
+  },
+  "build": {
+    "appId": "one.intelligence.start",
+    "productName": "Start",
+    "copyright": "Copyright © 2026 Intelligence One",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**",
+      "build/icons/**",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "homepage": "https://start.intelligence.one"
+    },
+    "afterSign": "scripts/notarize.cjs",
+    "mac": {
+      "icon": "build/icons/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "Start needs access to project files you choose so your coding agent can read and edit them.",
+        "NSDocumentsFolderUsageDescription": "Start needs access to project files you choose so your coding agent can read and edit them.",
+        "NSDownloadsFolderUsageDescription": "Start needs access to project files you choose so your coding agent can read and edit them.",
+        "NSNetworkVolumesUsageDescription": "Start needs access to project folders you choose on network volumes.",
+        "NSPrefersDisplaySafeAreaCompatibilityMode": false,
+        "NSRemovableVolumesUsageDescription": "Start needs access to project folders you choose on removable drives.",
+        "NSRequiresAquaSystemAppearance": false
+      },
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "icon": "build/icons/icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "build/icons/icon.png",
+      "target": "AppImage",
+      "category": "Development"
+    },
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false
+  }
+}
