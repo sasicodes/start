@@ -3,6 +3,7 @@ import { AttachmentStack } from '@renderer/shared/composer/attachment-stack';
 import { GenerateButton } from '@renderer/shared/composer/generate-button';
 import { ComposerModelPicker } from '@renderer/shared/composer/model-picker';
 import { PromptControl } from '@renderer/shared/composer/prompt-control';
+import { QueuePanel } from '@renderer/shared/composer/queue-panel';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { ComposerWorkspacePicker } from '@renderer/shared/composer/workspace-picker';
 import { Finder, finderItemId } from '@renderer/shared/finder';
@@ -25,6 +26,7 @@ export const Composer = memo(
     models,
     attachments,
     modelsLoaded,
+    queuedMessages,
     onStop,
     onPaste,
     onSubmit,
@@ -42,6 +44,7 @@ export const Composer = memo(
     workspacePath,
     onOpenSettings,
     onExitComplete,
+    onSteerQueuedMessage,
     selectedModelKey,
     onRefillPrevious,
     onOpenAttachment,
@@ -80,6 +83,7 @@ export const Composer = memo(
       return finderItems.filter((item) => item.name.toLowerCase().includes(finderQuery));
     }, [finderItems, finderQuery]);
     const finderVisible = Boolean(finderToken);
+    const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
     const hasAttachments = attachments.length > 0;
     const defaultFinderIndex = useMemo(() => {
       const exactIndex = filteredFinderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
@@ -216,13 +220,14 @@ export const Composer = memo(
           visible={finderVisible}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
         />
+        <QueuePanel messages={queuedMessages} visible={queueVisible} onSteer={onSteerQueuedMessage} />
         <form
           class={cn(
             'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
             layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
             overlay && 'shadow-composer-overlay',
-            finderVisible && !isCommandMode && 'shadow-composer-attached',
-            !finderVisible && !overlay && 'shadow-shell'
+            (finderVisible || queueVisible) && !isCommandMode && 'shadow-composer-attached',
+            !finderVisible && !queueVisible && !overlay && 'shadow-shell'
           )}
           onMouseDown={(event) => {
             if (overlay) event.stopPropagation();
@@ -277,6 +282,7 @@ export const Composer = memo(
                 inputRef={setPromptInputRef}
                 singleLine={singleLine}
                 onKeyDown={handleKeyDown}
+                showScrollbar={layered}
                 placeholder={promptPlaceholder.placeholder}
                 {...(selectedFinderItem ? { activeDescendant: finderItemId(selectedFinderItem.path) } : {})}
               />

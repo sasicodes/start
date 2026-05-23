@@ -75,6 +75,7 @@ export interface PreparedDropFiles {
 export interface SendResult {
   ok: boolean;
   text?: string;
+  queued?: boolean;
   sessionId?: string;
   error?: string;
 }
@@ -85,6 +86,19 @@ export interface CommandResult {
   sessionId?: string;
   exitCode?: number;
   error?: string;
+}
+
+export type QueuedMessageKind = 'followUp' | 'steer';
+
+export interface QueuedMessage {
+  id: string;
+  kind: QueuedMessageKind;
+  text: string;
+}
+
+export interface QueuedTurnStart {
+  id: string;
+  text: string;
 }
 
 export type TurnDetailKind = 'error' | 'metadata' | 'tool';
@@ -254,6 +268,7 @@ const api = {
     cancelSubscriptionLogin: (): Promise<void> => ipcRenderer.invoke('chat:cancel-subscription-login'),
     submitSubscriptionAuthInput: (value: string): Promise<void> =>
       ipcRenderer.invoke('chat:submit-subscription-auth-input', value),
+    steerQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:steer-queued-message', id),
     selectModel: (modelKey: string): Promise<ChatStatus> => ipcRenderer.invoke('chat:select-model', modelKey),
     selectThinkingLevel: (level: EffortLevel): Promise<ChatStatus> =>
       ipcRenderer.invoke('chat:select-thinking-level', level),
@@ -271,6 +286,10 @@ const api = {
     onCommandDelta: (listener: (delta: string) => void): IpcDisposer => onIpc<[string]>('chat:command-delta', listener),
     onCommandDone: (listener: (output: string) => void): IpcDisposer => onIpc<[string]>('chat:command-done', listener),
     onError: (listener: (message: string) => void): IpcDisposer => onIpc<[string]>('chat:error', listener),
+    onQueueUpdate: (listener: (messages: QueuedMessage[]) => void): IpcDisposer =>
+      onIpc<[QueuedMessage[]]>('chat:queue-update', listener),
+    onQueuedTurnStart: (listener: (turn: QueuedTurnStart) => void): IpcDisposer =>
+      onIpc<[QueuedTurnStart]>('chat:queued-turn-start', listener),
     onEvent: (listener: (event: ChatEvent) => void): IpcDisposer => onIpc<[ChatEvent]>('chat:event', listener),
     onSubscriptionAuthUpdate: (listener: (update: SubscriptionAuthUpdate) => void): IpcDisposer =>
       onIpc<[SubscriptionAuthUpdate]>('chat:subscription-auth-update', listener)

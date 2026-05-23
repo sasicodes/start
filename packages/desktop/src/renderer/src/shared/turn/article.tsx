@@ -108,7 +108,8 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
       data-turn-id={turn.id}
       class={cn(
         'group/turn [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
-        isUser && 'flex w-fit max-w-[min(38rem,82%)] flex-col items-end self-end',
+        isUser &&
+          'flex w-fit max-w-[min(38rem,82%)] flex-col items-end self-end @max-chat-narrow/chat:w-full @max-chat-narrow/chat:max-w-full',
         !isUser && !fullWidth && 'max-w-[min(38rem,82%)] self-start',
         isEvent && !fullWidth && 'self-center',
         fullWidth && 'w-full max-w-full self-start'

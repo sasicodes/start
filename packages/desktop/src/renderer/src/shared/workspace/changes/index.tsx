@@ -1,4 +1,4 @@
-import { ChangesIcon, CycleVerticalIcon } from '@renderer/ui/icons';
+import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { cn } from '@renderer/utils/cn';
 import { lazy, memo, Suspense } from 'preact/compat';
@@ -15,6 +15,7 @@ import {
   useGitChanges,
   useGitPatch
 } from '@renderer/shared/workspace/changes/state';
+import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 
 const gitChangesBadgeMaxWidthRatio = 0.7;
 const loadGitDiffViewer = () =>
@@ -76,6 +77,7 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
 
 export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
+  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('split');
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
   const patch = useGitPatch(workspacePath, Boolean(workspacePath && diffReady));
 
@@ -107,6 +109,7 @@ export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) =>
   const visibleSummary =
     patch.kind === 'ready' ? summaryForViewMode(patchSummary, patch.patch.sections, viewMode) : emptyGitSummary;
   const canCycle = patch.kind === 'ready' && availableViewModes(patch.patch.sections).length > 1;
+  const splitDiffView = diffViewMode === 'split';
 
   return (
     <div class="flex min-h-full flex-col gap-4 outline-0">
@@ -124,9 +127,20 @@ export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) =>
             <span class="min-w-0 truncate">{gitViewLabel(viewMode, visibleSummary.filesChanged)}</span>
             {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
           </button>
-          <div class="flex items-center gap-2 font-medium">
-            <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
-            <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+          <div class="flex items-center gap-3 font-medium">
+            <div class="flex items-center gap-2">
+              <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
+              <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+            </div>
+            <button
+              type="button"
+              aria-pressed={!splitDiffView}
+              aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
+              onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
+              class="group/diff-view inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+            >
+              <DiffSplitIcon class={cn('transition-transform duration-100 ease-out', !splitDiffView && 'rotate-90')} />
+            </button>
           </div>
         </header>
       )}
@@ -138,7 +152,7 @@ export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) =>
       {patch.kind === 'ready' && patch.patch.sections.length > 0 && (
         <div class="min-w-0 pb-4">
           <Suspense fallback={<p class="m-0 px-4 text-sm leading-6 text-soft">Preparing diff…</p>}>
-            <GitDiffViewer sections={visibleSections} />
+            <GitDiffViewer sections={visibleSections} viewMode={diffViewMode} />
           </Suspense>
         </div>
       )}

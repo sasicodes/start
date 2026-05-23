@@ -1,6 +1,6 @@
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
-import type { DiffFileStatus } from '@renderer/shared/workspace/changes/diff/types';
+import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { memo } from 'preact/compat';
@@ -11,6 +11,7 @@ interface DiffFileProps {
   highlightRevision: number;
   language: string;
   status: DiffFileStatus;
+  viewMode: DiffViewMode;
 }
 
 interface FileProps {
@@ -74,7 +75,7 @@ const EmptyFileDiff = ({ file }: FileProps) => (
   </p>
 );
 
-export const DiffFile = memo(({ file, highlightRevision, language, status }: DiffFileProps) => {
+export const DiffFile = memo(({ file, highlightRevision, language, status, viewMode }: DiffFileProps) => {
   const [open, setOpen] = useState(file.added + file.removed <= 320);
   const hasPathChange = Boolean(file.oldPath && file.newPath && file.oldPath !== file.newPath);
 
@@ -97,14 +98,14 @@ export const DiffFile = memo(({ file, highlightRevision, language, status }: Dif
           <FileStats file={file} />
           <ChevronDownIcon
             class={cn(
-              'size-3.5 flex-none text-soft transition-transform duration-100 ease-out group-hover/file:text-hover group-focus-visible/file:text-hover',
+              'size-3.5 flex-none text-soft transition-[color,transform] duration-100 ease-out group-hover/file:text-hover group-focus-visible/file:text-hover',
               !open && '-rotate-90'
             )}
           />
         </div>
       </button>
       {open && file.hunks.length === 0 && <EmptyFileDiff file={file} />}
-      {open && <DiffHunks file={file} language={language} highlightRevision={highlightRevision} />}
+      {open && <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />}
     </section>
   );
 });

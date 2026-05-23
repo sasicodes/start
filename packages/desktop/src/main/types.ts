@@ -63,6 +63,7 @@ export type PreparedDropFiles = {
 export type SendResult = {
   ok: boolean;
   text?: string;
+  queued?: boolean;
   sessionId?: string;
   error?: string;
 };
@@ -73,6 +74,19 @@ export type CommandResult = {
   sessionId?: string;
   exitCode?: number;
   error?: string;
+};
+
+export type QueuedMessageKind = 'followUp' | 'steer';
+
+export type QueuedMessage = {
+  id: string;
+  kind: QueuedMessageKind;
+  text: string;
+};
+
+export type QueuedTurnStart = {
+  id: string;
+  text: string;
 };
 
 export type TurnDetailKind = 'error' | 'metadata' | 'tool';

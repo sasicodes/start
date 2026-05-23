@@ -4,6 +4,7 @@ import type {
   ModelOption,
   OpenSessionResult,
   ProviderAuthStatus,
+  QueuedMessage,
   SwitchWorkspaceResult
 } from '@preload/index';
 import { useChatEvents } from '@renderer/shared/chat/events';
@@ -35,6 +36,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const [isGenerating, setIsGenerating] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [workspacePath, setWorkspacePath] = useState('');
+  const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
   const [thinkingLevel, setThinkingLevel] = useState<EffortLevel>('medium');
   const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
   const [activeSessionId, setActiveSessionId] = useState('');
@@ -98,6 +100,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       if (!preserveDraft) setDraft('');
       setTurns(() => []);
+      setQueuedMessages([]);
       setIsGenerating(false);
       setLoadedSessionId('');
       updateActiveSessionId('');
@@ -127,7 +130,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     terminalIdRef,
     assistantIdRef,
     onShowSettings,
-    setIsGenerating
+    setIsGenerating,
+    setQueuedMessages
   });
 
   const { send, sendText } = useChatSend({
@@ -142,6 +146,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     setLoadedSessionId,
     updateActiveSessionId
   });
+
+  const steerQueuedMessage = useCallback(async (id: string) => {
+    try {
+      setQueuedMessages(await window.pi.chat.steerQueuedMessage(id));
+    } catch {}
+  }, []);
 
   const applyOpenSession = useCallback(
     async (result: OpenSessionResult, requestId: number) => {
@@ -159,6 +169,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       setDraft('');
       setIsGenerating(false);
+      setQueuedMessages([]);
       setTurns(() => result.turns ?? []);
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
@@ -316,6 +327,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     isGenerating,
     workspacePath,
     thinkingLevel,
+    queuedMessages,
     authProviders,
     openSessionId,
     activeSessionId,
@@ -325,6 +337,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     selectedModelKey,
     previousUserTurn,
     loginSubscription,
+    steerQueuedMessage,
     selectThinkingLevel,
     chooseWorkspaceDirectory
   };

@@ -49,6 +49,7 @@ export const App = () => {
     workspacePath,
     thinkingLevel,
     authProviders,
+    queuedMessages,
     openSessionId,
     activeSessionId,
     loadedSessionId,
@@ -57,6 +58,7 @@ export const App = () => {
     selectedModelKey,
     previousUserTurn,
     loginSubscription,
+    steerQueuedMessage,
     selectThinkingLevel,
     chooseWorkspaceDirectory
   } = useChat({ onShowChat: showChat, onShowSettings: showSettings, textareaRef });
@@ -223,6 +225,7 @@ export const App = () => {
       textareaRef={textareaRef}
       isGenerating={isGenerating}
       thinkingLevel={thinkingLevel}
+      queuedMessages={queuedMessages}
       workspacePath={workspacePath}
       overlay={overlay}
       hasTurns={hasTurns}
@@ -233,6 +236,7 @@ export const App = () => {
       previousTurn={previousUserTurn}
       onOpenAttachment={openAttachment}
       onRemoveAttachment={removeAttachment}
+      onSteerQueuedMessage={steerQueuedMessage}
       onSelectModel={selectModelFromComposer}
       onOpenSettings={showSettings}
       onExitComplete={completeComposerExit}
@@ -254,6 +258,7 @@ export const App = () => {
       gitPanelVisible={gitPanelVisible}
       activeSessionId={activeSessionId}
       onOpenSettings={showSettings}
+      sessionRoutePending={sessionRoutePending}
       onToggleGitPanel={toggleGitChangesPanel}
       sidePanelVisible={sidePanelVisible}
       onChooseDirectory={chooseWorkspaceFromDock}

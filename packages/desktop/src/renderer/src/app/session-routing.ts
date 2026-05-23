@@ -43,16 +43,14 @@ export const useSessionRouting = ({
     let active = true;
     const sessionId = route.sessionId;
     openingRouteSessionRef.current = sessionId;
+    clearSidePanels();
 
     void openSessionId(sessionId)
       .then((opened) => {
         if (!active) return;
 
         openingRouteSessionRef.current = '';
-        if (opened) {
-          clearSidePanels();
-          return;
-        }
+        if (opened) return;
         if (sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
       })
       .catch(() => {
@@ -69,15 +67,19 @@ export const useSessionRouting = ({
 
   return useCallback(
     async (session: RecentSession) => {
+      const nextRoute: AppRoute = { name: 'session', sessionId: session.id };
       selectingSessionRef.current = true;
+      openingRouteSessionRef.current = session.id;
+      clearSidePanels();
+      navigate(nextRoute, true);
+
       try {
         const opened = await openSession(session.path);
-        if (opened) {
-          clearSidePanels();
-          navigate({ name: 'session', sessionId: session.id }, true);
-        }
-        return opened;
+        if (opened) return true;
+        if (sameRoute(currentRoute(), nextRoute)) navigate({ name: 'chat' }, true);
+        return false;
       } finally {
+        if (openingRouteSessionRef.current === session.id) openingRouteSessionRef.current = '';
         selectingSessionRef.current = false;
       }
     },

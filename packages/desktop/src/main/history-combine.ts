@@ -70,7 +70,8 @@ export const combineHistoryTurns = (turns: HistoryTurn[]) => {
 
   for (const turn of turns) {
     if (turn.role === 'user') {
-      pushPending();
+      if (result.length === 0) clearPending();
+      else pushPending();
       result.push(turn);
       lastAssistantIndex = -1;
       continue;

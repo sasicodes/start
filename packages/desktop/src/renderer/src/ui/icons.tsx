@@ -61,6 +61,34 @@ export const CycleVerticalIcon = ({ strokeWidth = 1.5, ...props }: IconProps & {
   </svg>
 );
 
+export const DiffSplitIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <rect
+      x="3.75"
+      y="5.5"
+      width="6.75"
+      height="13"
+      rx="1.5"
+      class="fill-danger/35 opacity-0 transition-opacity duration-100 ease-out group-hover/diff-view:opacity-100 group-focus-visible/diff-view:opacity-100"
+    />
+    <rect
+      x="13.5"
+      y="5.5"
+      width="6.75"
+      height="13"
+      rx="1.5"
+      class="fill-success/35 opacity-0 transition-opacity duration-100 ease-out group-hover/diff-view:opacity-100 group-focus-visible/diff-view:opacity-100"
+    />
+    <path
+      d="M12 2.75V21.25M8.25 4.75H5.75C4.09315 4.75 2.75 6.09315 2.75 7.75V16.25C2.75 17.9069 4.09315 19.25 5.75 19.25H8.25M15.75 19.25H18.25C19.9069 19.25 21.25 17.9069 21.25 16.25V7.75C21.25 6.09315 19.9069 4.75 18.25 4.75H15.75"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const ChangesIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path

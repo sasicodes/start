@@ -1,6 +1,7 @@
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 
 export type DiffFileStatus = PatchFile['status'] | 'untracked';
+export type DiffViewMode = 'split' | 'unified';
 
 export interface DiffEntry {
   file: PatchFile;

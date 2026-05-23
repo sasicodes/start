@@ -1,4 +1,4 @@
-import type { EffortLevel, ImageAttachment, ModelOption } from '@preload/index';
+import type { EffortLevel, ImageAttachment, ModelOption, QueuedMessage } from '@preload/index';
 import type { RefObject } from 'preact';
 
 export interface ComposerProps {
@@ -9,6 +9,7 @@ export interface ComposerProps {
   onCancel?: () => void;
   hasTurns: boolean;
   attachments: ImageAttachment[];
+  queuedMessages: QueuedMessage[];
   models: ModelOption[];
   modelsLoaded: boolean;
   isGenerating: boolean;
@@ -25,6 +26,7 @@ export interface ComposerProps {
   onSelectModel: (modelKey: string) => void;
   onRemoveAttachment: (id: string) => void;
   onOpenSettings: () => void;
+  onSteerQueuedMessage: (id: string) => void;
   onOpenAttachment: (path: string) => void;
   onChooseWorkspaceDirectory: () => void;
   onSelectWorkspace: (path: string) => void;

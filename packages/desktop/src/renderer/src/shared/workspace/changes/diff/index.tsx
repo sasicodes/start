@@ -11,7 +11,7 @@ import {
 import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
-import type { DiffEntriesState, DiffEntry } from '@renderer/shared/workspace/changes/diff/types';
+import type { DiffEntriesState, DiffEntry, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { useEffect, useState } from 'preact/hooks';
 
 const initialRenderedEntryCount = 40;
@@ -131,7 +131,7 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
   return highlightRevision;
 };
 
-export const GitDiffViewer = ({ sections }: { sections: GitPatchSection[] }) => {
+export const GitDiffViewer = ({ sections, viewMode }: { sections: GitPatchSection[]; viewMode: DiffViewMode }) => {
   const entryState = useDiffEntries(sections);
   const limited = sections.some((section) => section.limited && !section.patch);
   const entries = entryState.kind === 'ready' ? entryState.entries : [];
@@ -153,6 +153,7 @@ export const GitDiffViewer = ({ sections }: { sections: GitPatchSection[] }) => 
           file={entry.file}
           status={entry.status}
           language={entry.language}
+          viewMode={viewMode}
           highlightRevision={highlightRevision}
         />
       ))}

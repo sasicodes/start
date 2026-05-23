@@ -1,5 +1,6 @@
-import type { ChatEvent } from '@preload/index';
+import type { ChatEvent, QueuedMessage } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
+import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
   appendTurnDetails,
@@ -23,6 +24,7 @@ interface UseChatEventsOptions {
   syncStatus: () => Promise<void>;
   onShowSettings: () => void;
   setIsGenerating: (value: boolean) => void;
+  setQueuedMessages: (messages: QueuedMessage[]) => void;
   setTurns: (updater: (current: Turn[]) => Turn[]) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
   assistantIdRef: MutableRef<string | null>;
@@ -40,6 +42,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     };
     const setTurns = (updater: (current: Turn[]) => Turn[]) => optionsRef.current.setTurns(updater);
     const setIsGenerating = (value: boolean) => optionsRef.current.setIsGenerating(value);
+    const setQueuedMessages = (messages: QueuedMessage[]) => optionsRef.current.setQueuedMessages(messages);
     const focusTextarea = () => optionsRef.current.textareaRef.current?.focus();
 
     refreshChatState();
@@ -127,6 +130,26 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (optionsRef.current.assistantIdRef.current) queueThinkingDelta(delta);
     });
 
+    const offQueueUpdate = window.pi.chat.onQueueUpdate(setQueuedMessages);
+
+    const offQueuedTurnStart = window.pi.chat.onQueuedTurnStart((turn) => {
+      if (detailFrame) cancelAnimationFrame(detailFrame);
+      if (assistantFrame) cancelAnimationFrame(assistantFrame);
+      if (thinkingFrame) cancelAnimationFrame(thinkingFrame);
+      flushDetails();
+      flushAssistantDelta();
+      flushThinkingDelta();
+      const currentAssistantId = optionsRef.current.assistantIdRef.current;
+      const userTurn = createTurn('user', turn.text);
+      const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
+      if (currentAssistantId) setTurnStreaming(setTurns, currentAssistantId, false);
+      optionsRef.current.assistantIdRef.current = assistantTurn.id;
+      activityClearedAssistantId = null;
+      setIsGenerating(true);
+      setTurns((current) => [...current, userTurn, assistantTurn]);
+      scrollTurnToStart(userTurn.id);
+    });
+
     const offDone = window.pi.chat.onDone(() => {
       const id = optionsRef.current.assistantIdRef.current;
       if (detailFrame) cancelAnimationFrame(detailFrame);
@@ -204,8 +227,10 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       offError();
       offEvent();
       offNewSession();
+      offQueueUpdate();
       offStatusChanged();
       offThinkingDelta();
+      offQueuedTurnStart();
       offFocusStateChanged();
       offShowSettings();
       offCommandDone();

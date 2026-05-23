@@ -1,5 +1,6 @@
 import '@main/environment';
 
+import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
@@ -10,6 +11,7 @@ import {
   ModelRegistry,
   SessionManager
 } from '@earendil-works/pi-coding-agent';
+import { textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
 import {
@@ -45,6 +47,7 @@ import {
   type PreparedDropFiles,
   type ProviderAuthStatus,
   type ProviderLoginResult,
+  type QueuedMessage,
   type RecentSession,
   type SendResult,
   type SwitchWorkspaceResult,
@@ -55,6 +58,12 @@ import { shell, type WebContents } from 'electron';
 const maxRecentSessions = 40;
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 
+type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
+
+type PendingQueuedMessage = QueuedMessage & {
+  images?: SessionImageAttachment[];
+};
+
 export class ChatService {
   private appState = readStartState();
   private readonly authStorage = AuthStorage.create();
@@ -62,6 +71,10 @@ export class ChatService {
   private session: AgentSession | null = null;
   private isGenerating = false;
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
+  private queuedMessages: PendingQueuedMessage[] = [];
+  private queueDeliveryCandidates: QueuedMessage[] = [];
+  private queueRebuildDepth = 0;
+  private sessionOpenSequence = 0;
   private activeSessionId: string | undefined;
   private shouldCreateSession = true;
   private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
@@ -126,13 +139,18 @@ export class ChatService {
   async openSession(path: string): Promise<OpenSessionResult> {
     if (this.isGenerating) return { ok: false, error: 'Stop the current response before opening a session.' };
 
+    const openSequence = this.sessionOpenSequence + 1;
+    this.sessionOpenSequence = openSequence;
+
     try {
       this.refreshAuth();
       const model = this.pickModel();
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured Pi models found.' };
 
       const sessionManager = SessionManager.open(path);
+      this.clearQueuedMessages();
       this.session?.dispose();
+      this.session = null;
       const { session } = await createAgentSession({
         cwd: sessionManager.getCwd() || process.cwd(),
         model,
@@ -142,6 +160,11 @@ export class ChatService {
         thinkingLevel: this.selectedThinkingLevel,
         sessionManager
       });
+
+      if (this.sessionOpenSequence !== openSequence) {
+        session.dispose();
+        return { ok: false, error: 'Session open was superseded.' };
+      }
 
       this.session = session;
       this.setActiveSession(sessionManager);
@@ -249,10 +272,12 @@ export class ChatService {
     if (this.isGenerating) return { ok: false, error: 'Stop the current response before switching workspaces.' };
 
     try {
+      this.sessionOpenSequence += 1;
       this.session?.abortBash();
       await this.session?.abort();
       this.session?.dispose();
       this.session = null;
+      this.clearQueuedMessages();
       this.attachments.clear();
       this.activeSessionId = undefined;
       this.shouldCreateSession = true;
@@ -289,6 +314,7 @@ export class ChatService {
 
     this.authStorage.setRuntimeApiKey(cleanProvider, cleanApiKey);
     this.modelRegistry.refresh();
+    this.sessionOpenSequence += 1;
     this.session?.dispose();
     this.session = null;
 
@@ -327,6 +353,7 @@ export class ChatService {
       });
 
       this.modelRegistry.refresh();
+      this.sessionOpenSequence += 1;
       this.session?.dispose();
       this.session = null;
 
@@ -377,6 +404,7 @@ export class ChatService {
     this.selectedThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
     if (this.selectedModelKey !== nextModelKey) {
       this.selectedModelKey = nextModelKey;
+      this.sessionOpenSequence += 1;
       this.session?.dispose();
       this.session = null;
     }
@@ -436,7 +464,7 @@ export class ChatService {
   async send(prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
-    if (this.isGenerating) return { ok: false, error: 'A Pi response is already running.' };
+    if (this.isGenerating) return this.queueFollowUp(text, webContents, attachments);
 
     this.isGenerating = true;
     let endError: string | undefined;
@@ -446,6 +474,15 @@ export class ChatService {
       const session = await this.getSession();
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
+        if (event.type === 'queue_update') {
+          this.syncQueuedMessages(event.steering, event.followUp, webContents);
+          return;
+        }
+
+        if (event.type === 'message_start' && event.message.role === 'user') {
+          this.emitQueuedTurnStart(textContent(event.message.content), webContents);
+        }
+
         if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {
           toolArgs.set(event.toolCallId, event.args);
         }
@@ -477,6 +514,7 @@ export class ChatService {
       }
 
       if (endError) {
+        this.clearQueuedMessages(webContents);
         this.emit(webContents, 'error', endError);
         return { ok: false, error: endError };
       }
@@ -486,6 +524,7 @@ export class ChatService {
       return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Chat failed.';
+      this.clearQueuedMessages(webContents);
       this.emit(webContents, 'error', message);
       return { ok: false, error: message };
     } finally {
@@ -528,16 +567,31 @@ export class ChatService {
     }
   }
 
-  async abort(): Promise<void> {
+  async steerQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
+    const session = this.session;
+    const message = this.queuedMessages.find((item) => item.id === id);
+    if (!session || !message) return this.visibleQueuedMessages();
+
+    const nextMessage: PendingQueuedMessage = { ...message, kind: 'steer' };
+    this.queuedMessages = [nextMessage, ...this.queuedMessages.filter((item) => item.id !== id)];
+    await this.rebuildSessionQueue(session);
+    this.emitQueueUpdate(webContents);
+    return this.visibleQueuedMessages();
+  }
+
+  async abort(webContents?: WebContents): Promise<void> {
+    this.clearQueuedMessages(webContents);
     this.session?.abortBash();
     await this.session?.abort();
   }
 
   async newSession(): Promise<void> {
+    this.sessionOpenSequence += 1;
     this.session?.abortBash();
     await this.session?.abort();
     this.session?.dispose();
     this.session = null;
+    this.clearQueuedMessages();
     this.attachments.clear();
     this.activeSessionId = undefined;
     this.isGenerating = false;
@@ -545,10 +599,12 @@ export class ChatService {
   }
 
   dispose(): void {
+    this.sessionOpenSequence += 1;
     this.authInputReject?.(new Error('Chat service disposed.'));
     this.clearSubscriptionAuthInput();
     this.session?.dispose();
     this.session = null;
+    this.clearQueuedMessages();
     this.attachments.clear();
   }
 
@@ -569,9 +625,9 @@ export class ChatService {
     return stripAttachmentData(attachment);
   }
 
-  private async resolveAttachments(attachments: ImageAttachment[]) {
+  private async resolveAttachments(attachments: ImageAttachment[]): Promise<SessionImageAttachment[]> {
     this.cleanupAttachments();
-    const images: { type: 'image'; data: string; mimeType: string }[] = [];
+    const images: SessionImageAttachment[] = [];
 
     for (const attachment of attachments) {
       const stored = this.attachments.get(attachment.id);
@@ -587,6 +643,131 @@ export class ChatService {
     }
 
     return images;
+  }
+
+  private visibleQueuedMessages(): QueuedMessage[] {
+    return this.queuedMessages.map((message) => ({
+      id: message.id,
+      kind: message.kind,
+      text: message.text
+    }));
+  }
+
+  private emitQueueUpdate(webContents: WebContents): void {
+    webContents.send('chat:queue-update', this.visibleQueuedMessages());
+  }
+
+  private consumeQueuedText(messages: string[], text: string): boolean {
+    const index = messages.indexOf(text);
+    if (index === -1) return false;
+
+    messages.splice(index, 1);
+    return true;
+  }
+
+  private syncQueuedMessages(steering: readonly string[], followUp: readonly string[], webContents: WebContents): void {
+    if (this.queueRebuildDepth > 0) return;
+
+    const steeringMessages = [...steering];
+    const followUpMessages = [...followUp];
+    const nextMessages: PendingQueuedMessage[] = [];
+    const deliveredMessages: QueuedMessage[] = [];
+
+    for (const message of this.queuedMessages) {
+      if (message.kind === 'steer' && this.consumeQueuedText(steeringMessages, message.text)) {
+        nextMessages.push(message);
+      } else if (message.kind === 'followUp' && this.consumeQueuedText(followUpMessages, message.text)) {
+        nextMessages.push(message);
+      } else if (this.consumeQueuedText(steeringMessages, message.text)) {
+        nextMessages.push({ ...message, kind: 'steer' });
+      } else if (this.consumeQueuedText(followUpMessages, message.text)) {
+        nextMessages.push({ ...message, kind: 'followUp' });
+      } else {
+        deliveredMessages.push({ id: message.id, kind: message.kind, text: message.text });
+      }
+    }
+
+    for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
+    for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
+
+    this.queueDeliveryCandidates.push(...deliveredMessages);
+    this.queuedMessages = nextMessages;
+    this.emitQueueUpdate(webContents);
+  }
+
+  private async queueFollowUp(
+    text: string,
+    webContents: WebContents,
+    attachments: ImageAttachment[]
+  ): Promise<SendResult> {
+    const session = this.session;
+    if (!session?.isStreaming) return { ok: false, error: 'Pi is still starting the response.' };
+
+    const id = randomUUID();
+
+    try {
+      const images = await this.resolveAttachments(attachments);
+      const message: PendingQueuedMessage = {
+        id,
+        kind: 'followUp',
+        text,
+        ...(images.length > 0 ? { images } : {})
+      };
+      this.queuedMessages.push(message);
+      await session.prompt(text, {
+        streamingBehavior: 'followUp',
+        ...(images.length > 0 ? { images } : {})
+      });
+      this.emitQueueUpdate(webContents);
+      return { ok: true, queued: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+    } catch (error) {
+      this.queuedMessages = this.queuedMessages.filter((message) => message.id !== id);
+      this.emitQueueUpdate(webContents);
+      return { ok: false, error: error instanceof Error ? error.message : 'Message could not be queued.' };
+    }
+  }
+
+  private async rebuildSessionQueue(session: AgentSession): Promise<void> {
+    this.queueRebuildDepth += 1;
+    try {
+      session.clearQueue();
+      for (const message of this.queuedMessages) {
+        if (message.kind === 'steer') {
+          await session.steer(message.text, message.images);
+        } else {
+          await session.followUp(message.text, message.images);
+        }
+      }
+    } finally {
+      this.queueRebuildDepth = Math.max(0, this.queueRebuildDepth - 1);
+    }
+  }
+
+  private clearQueuedMessages(webContents?: WebContents): void {
+    if (this.session) {
+      this.queueRebuildDepth += 1;
+      try {
+        this.session.clearQueue();
+      } finally {
+        this.queueRebuildDepth = Math.max(0, this.queueRebuildDepth - 1);
+      }
+    }
+
+    this.queuedMessages = [];
+    this.queueDeliveryCandidates = [];
+    if (webContents) this.emitQueueUpdate(webContents);
+  }
+
+  private queuedMessageMatches(message: QueuedMessage, text: string): boolean {
+    return message.text === text || text.startsWith(`${message.text}\n[image`);
+  }
+
+  private emitQueuedTurnStart(text: string, webContents: WebContents): void {
+    const index = this.queueDeliveryCandidates.findIndex((message) => this.queuedMessageMatches(message, text));
+    if (index === -1) return;
+
+    const [message] = this.queueDeliveryCandidates.splice(index, 1);
+    if (message) webContents.send('chat:queued-turn-start', { id: message.id, text: message.text });
   }
 
   private setActiveSession(sessionManager: SessionManager): void {

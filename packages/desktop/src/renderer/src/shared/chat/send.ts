@@ -37,11 +37,11 @@ export const useChatSend = ({
   const sendText = useCallback(
     async (value: string, attachments: ImageAttachment[] = []) => {
       const text = value.trim();
-      if (!text || isGenerating) return;
+      if (!text) return;
 
       const command = commandInput(text);
       if (commandMode(text)) {
-        if (!command) return;
+        if (!command || isGenerating) return;
 
         const requestId = sessionRequestRef.current + 1;
         const terminalTurn = createTurn('terminal', '');
@@ -80,6 +80,19 @@ export const useChatSend = ({
             ...current.filter((turn) => turn.id !== terminalId),
             createTurn('system', result.error ?? 'Command failed.')
           ]);
+        }
+        return;
+      }
+
+      if (isGenerating) {
+        setDraft('');
+        try {
+          const result = await window.pi.chat.send(text, attachments);
+          if (result.sessionId) updateActiveSessionId(result.sessionId);
+          if (!result.ok)
+            setTurns((current) => [...current, createTurn('system', result.error ?? 'Message could not be queued.')]);
+        } catch {
+          setTurns((current) => [...current, createTurn('system', 'Message could not be queued.')]);
         }
         return;
       }

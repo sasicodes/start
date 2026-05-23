@@ -1,6 +1,7 @@
 import { highlightedDiffLine } from '@renderer/shared/workspace/changes/diff/highlight';
-import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
+import type { PatchFile, PatchLine } from '@renderer/shared/workspace/changes/diff/parser';
 import type { SplitDiffCell, SplitDiffRow, SplitDiffTone } from '@renderer/shared/workspace/changes/diff/rows';
+import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { splitDiffRows } from '@renderer/shared/workspace/changes/diff/rows';
 import { cn } from '@renderer/utils/cn';
 import { memo } from 'preact/compat';
@@ -15,6 +16,7 @@ interface DiffHunksProps {
   file: PatchFile;
   highlightRevision: number;
   language: string;
+  viewMode: DiffViewMode;
 }
 
 const lineNumberText = (lineNumber: number | undefined) => (lineNumber ? lineNumber.toString() : '');
@@ -131,6 +133,74 @@ const SplitMetaRow = ({ row }: { row: Extract<SplitDiffRow, { kind: 'meta' }> })
   <div class="px-4 py-1 text-xs leading-5 text-soft">{row.content}</div>
 );
 
+const UnifiedMetaRow = ({ line }: { line: PatchLine }) => (
+  <div class="px-4 py-1 text-xs leading-5 text-soft">{line.content}</div>
+);
+
+const UnifiedLineRow = ({
+  highlightRevision,
+  language,
+  line
+}: {
+  highlightRevision: number;
+  language: string;
+  line: PatchLine;
+}) => {
+  const addition = line.kind === 'add';
+  const removal = line.kind === 'remove';
+  const changed = addition || removal;
+  const highlightedHtml = highlightedDiffLine(language, line.content, highlightRevision);
+
+  return (
+    <div
+      class={cn(
+        'grid min-w-0 grid-cols-[0.25rem_3rem_3rem_minmax(0,1fr)] text-sm leading-6',
+        addition && 'bg-success/[0.045]',
+        removal && 'bg-danger/[0.045]'
+      )}
+    >
+      <span
+        aria-hidden="true"
+        class={cn(
+          'my-px',
+          changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
+          addition && 'text-success',
+          removal && 'text-danger',
+          !changed && 'bg-transparent'
+        )}
+      />
+      <span
+        title="old line"
+        class={cn('select-none px-2 py-0.5 text-right tabular-nums', removal && 'text-danger', !removal && 'text-soft')}
+      >
+        {lineNumberText(line.oldLine)}
+      </span>
+      <span
+        title="new line"
+        class={cn(
+          'select-none px-2 py-0.5 text-right tabular-nums',
+          addition && 'text-success',
+          !addition && 'text-soft'
+        )}
+      >
+        {lineNumberText(line.newLine)}
+      </span>
+      <pre
+        {...(highlightedHtml ? { dangerouslySetInnerHTML: { __html: highlightedHtml } } : {})}
+        class={cn(
+          'm-0 min-w-0 whitespace-pre-wrap break-words py-0.5 pr-2',
+          highlightedHtml && 'text-ink',
+          !highlightedHtml && addition && 'text-success',
+          !highlightedHtml && removal && 'text-danger',
+          !highlightedHtml && !changed && 'text-ink'
+        )}
+      >
+        {highlightedHtml ? null : line.content || '\u00a0'}
+      </pre>
+    </div>
+  );
+};
+
 const SplitRow = ({
   highlightRevision,
   language,
@@ -159,31 +229,46 @@ const DiffHunk = memo(
     highlightRevision,
     hunk,
     language,
-    padded
+    padded,
+    viewMode
   }: {
     highlightRevision: number;
     hunk: PatchFile['hunks'][number];
     language: string;
     padded: boolean;
+    viewMode: DiffViewMode;
   }) => {
-    const rows = useMemo(() => splitDiffRows(hunk.lines), [hunk.lines]);
+    const splitRows = useMemo(() => (viewMode === 'split' ? splitDiffRows(hunk.lines) : []), [hunk.lines, viewMode]);
 
     return (
       <div class={cn('min-w-0', padded && 'pt-2')}>
-        {rows.map((row, index) => (
-          <SplitRow
-            key={`${hunk.header}:${index}`}
-            row={row}
-            language={language}
-            highlightRevision={highlightRevision}
-          />
-        ))}
+        {viewMode === 'split'
+          ? splitRows.map((row, index) => (
+              <SplitRow
+                key={`${hunk.header}:${index}`}
+                row={row}
+                language={language}
+                highlightRevision={highlightRevision}
+              />
+            ))
+          : hunk.lines.map((line, index) =>
+              line.kind === 'meta' ? (
+                <UnifiedMetaRow key={`${hunk.header}:${index}`} line={line} />
+              ) : (
+                <UnifiedLineRow
+                  key={`${hunk.header}:${index}`}
+                  line={line}
+                  language={language}
+                  highlightRevision={highlightRevision}
+                />
+              )
+            )}
       </div>
     );
   }
 );
 
-export const DiffHunks = memo(({ file, highlightRevision, language }: DiffHunksProps) => (
+export const DiffHunks = memo(({ file, highlightRevision, language, viewMode }: DiffHunksProps) => (
   <>
     {file.hunks.map((hunk, index) => {
       const previousHunk = index > 0 ? file.hunks[index - 1] : undefined;
@@ -192,7 +277,13 @@ export const DiffHunks = memo(({ file, highlightRevision, language }: DiffHunksP
       return (
         <div key={`${file.displayPath}:${hunk.header}:${index}`} class="min-w-0">
           {hiddenLines > 0 && <HunkGap hiddenLines={hiddenLines} />}
-          <DiffHunk hunk={hunk} language={language} padded={index === 0} highlightRevision={highlightRevision} />
+          <DiffHunk
+            hunk={hunk}
+            language={language}
+            padded={index === 0}
+            viewMode={viewMode}
+            highlightRevision={highlightRevision}
+          />
         </div>
       );
     })}

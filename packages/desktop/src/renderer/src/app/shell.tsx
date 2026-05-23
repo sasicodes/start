@@ -27,6 +27,7 @@ interface MainSessionSurfaceProps {
   activeSessionId: string;
   sidePanelVisible: boolean;
   activityPanelTurnId: string;
+  sessionRoutePending: boolean;
   onOpenSettings: () => void;
   onToggleGitPanel: () => void;
   onChooseDirectory: () => void;
@@ -51,6 +52,7 @@ interface AppShellProps {
   sessionViewActive: boolean;
   sidePanelVisible: boolean;
   activityPanelTurnId: string;
+  sessionRoutePending: boolean;
   onOpenSettings: () => void;
   onToggleGitPanel: () => void;
   onChooseDirectory: () => void;
@@ -72,6 +74,7 @@ const MainSessionSurface = memo(
     sidePanelVisible,
     activityPanelTurnId,
     onOpenSettings,
+    sessionRoutePending,
     onToggleGitPanel,
     onChooseDirectory,
     onSidePanelCollapse,
@@ -85,7 +88,9 @@ const MainSessionSurface = memo(
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={onSidePanelCollapse}
     >
-      <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
+      {!sessionRoutePending && (
+        <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
+      )}
       <WorkspaceDock
         workspacePath={workspacePath}
         onOpenSession={onOpenSession}
@@ -115,6 +120,7 @@ export const AppShell = memo(
     activeSessionId,
     sidePanelVisible,
     onOpenSession,
+    sessionRoutePending,
     onOpenSettings,
     onToggleGitPanel,
     onChooseDirectory,
@@ -153,6 +159,7 @@ export const AppShell = memo(
           gitPanelVisible={gitPanelVisible}
           activeSessionId={activeSessionId}
           onOpenSettings={onOpenSettings}
+          sessionRoutePending={sessionRoutePending}
           onToggleGitPanel={onToggleGitPanel}
           sidePanelVisible={sidePanelVisible}
           onChooseDirectory={onChooseDirectory}

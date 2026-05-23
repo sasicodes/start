@@ -1,6 +1,7 @@
 import { TurnArticleById } from '@renderer/shared/turn/article';
 import { turnScrollIntentState } from '@renderer/shared/turn/scroll';
 import { turnIdsState } from '@renderer/state/chat';
+import { cn } from '@renderer/utils/cn';
 import { memo } from 'preact/compat';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
@@ -45,22 +46,38 @@ export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: Turn
   const turnIds = turnIdsState.value;
   const scrollIntent = turnScrollIntentState.value;
   const [roomTurnId, setRoomTurnId] = useState('');
+  const [positioned, setPositioned] = useState(false);
+  const positionedRef = useRef(false);
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element || turnIds.length === 0) {
       setRoomTurnId('');
+      if (!positionedRef.current) {
+        positionedRef.current = true;
+        setPositioned(true);
+      }
       return;
     }
 
     if (scrollIntent.kind === 'bottom') {
       setRoomTurnId('');
-      const frame = requestAnimationFrame(() => scrollToBottom(element));
-      return () => cancelAnimationFrame(frame);
+      scrollToBottom(element);
+      if (!positionedRef.current) {
+        positionedRef.current = true;
+        setPositioned(true);
+      }
+      return;
     }
 
     setRoomTurnId(scrollIntent.turnId);
-    const frame = requestAnimationFrame(() => scrollToTurnStart(element, scrollIntent.turnId));
+    const frame = requestAnimationFrame(() => {
+      scrollToTurnStart(element, scrollIntent.turnId);
+      if (!positionedRef.current) {
+        positionedRef.current = true;
+        setPositioned(true);
+      }
+    });
     return () => cancelAnimationFrame(frame);
   }, [scrollIntent, turnIds.length]);
 
@@ -69,11 +86,14 @@ export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: Turn
       ref={scrollRef}
       aria-live="polite"
       data-turn-scroll="true"
-      class="absolute inset-0 overflow-y-auto pt-9 pb-28 [overflow-anchor:none] [&::-webkit-scrollbar]:hidden"
+      class={cn(
+        'absolute inset-0 overflow-y-auto pt-9 pb-28 [overflow-anchor:none] [&::-webkit-scrollbar]:hidden',
+        !positioned && 'opacity-0'
+      )}
     >
       <div class="mx-auto flex min-h-full max-w-3xl flex-col justify-end gap-3 px-5">
         <TurnArticles activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
-        {roomTurnId && <div aria-hidden="true" class="min-h-screen shrink-0" />}
+        {roomTurnId && <div aria-hidden="true" class="h-[calc(100vh-9.25rem)] shrink-0" />}
       </div>
     </section>
   );
