@@ -1,4 +1,4 @@
-import { useAppFocusState } from '@renderer/shared/use-app-focus-state';
+import { useAppFocusState } from '@renderer/shared/app-focus';
 
 const defaultPromptPlaceholder = 'Ask to plan or work on something';
 const emptyPromptPlaceholders = [

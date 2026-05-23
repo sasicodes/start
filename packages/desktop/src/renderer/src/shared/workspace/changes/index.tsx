@@ -1,3 +1,4 @@
+import { useAppFocusState } from '@renderer/shared/app-focus';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
@@ -34,8 +35,8 @@ interface GitChangesPanelProps {
 
 interface GitSummaryLike {
   deletions: number;
-  filesChanged: number;
   insertions: number;
+  filesChanged: number;
 }
 
 const summaryFromSections = (sections: GitSummaryLike[]) =>
@@ -50,6 +51,7 @@ const summaryFromSections = (sections: GitSummaryLike[]) =>
 
 export const GitChangesBadge = memo(({ expanded = false, workspacePath, onTogglePanel }: GitChangesBadgeProps) => {
   const git = useGitChanges(workspacePath);
+  const appFocused = useAppFocusState();
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
   const label = gitChangesLabel(git.summary.filesChanged);
@@ -63,7 +65,10 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
         aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
         onClick={onTogglePanel}
         style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}%` }}
-        class="absolute right-18 bottom-4.5 z-40 flex h-11.5 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control [-webkit-app-region:no-drag] @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0"
+        class={tw(
+          'absolute right-18 bottom-4.5 z-40 flex h-11.5 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control [-webkit-app-region:no-drag] @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0',
+          !appFocused && 'pointer-events-none opacity-0'
+        )}
       >
         <ChangesIcon class="hidden size-5 flex-none @max-workspace-dock/chat:block" />
         <span class="flex min-w-0 items-center gap-2 @max-workspace-dock/chat:hidden">

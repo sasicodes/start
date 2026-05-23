@@ -121,10 +121,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, [clearSession]);
 
   useChatEvents({
-    onShowChat,
     setTurns,
-    syncStatus,
+    onShowChat,
     loadModels,
+    syncStatus,
     textareaRef,
     clearSession,
     terminalIdRef,

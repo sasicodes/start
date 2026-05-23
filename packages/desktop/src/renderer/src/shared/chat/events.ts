@@ -1,5 +1,6 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
+import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
@@ -11,7 +12,7 @@ import {
 } from '@renderer/shared/turn/state';
 import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 
 interface MutableRef<T> {
   current: T;
@@ -20,26 +21,31 @@ interface MutableRef<T> {
 interface UseChatEventsOptions {
   onShowChat: () => void;
   clearSession: () => void;
+  onShowSettings: () => void;
   loadModels: () => Promise<void>;
   syncStatus: () => Promise<void>;
-  onShowSettings: () => void;
+  terminalIdRef: MutableRef<string | null>;
   setIsGenerating: (value: boolean) => void;
+  assistantIdRef: MutableRef<string | null>;
+  textareaRef: RefObject<HTMLTextAreaElement>;
   setQueuedMessages: (messages: QueuedMessage[]) => void;
   setTurns: (updater: (current: Turn[]) => Turn[]) => void;
-  textareaRef: RefObject<HTMLTextAreaElement>;
-  assistantIdRef: MutableRef<string | null>;
-  terminalIdRef: MutableRef<string | null>;
 }
 
 export const useChatEvents = (options: UseChatEventsOptions) => {
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  const refreshChatState = useCallback(() => {
+    void optionsRef.current.syncStatus().catch(() => {});
+    void optionsRef.current.loadModels().catch(() => {});
+  }, []);
+
+  useAppFocusChange((focused) => {
+    if (focused) refreshChatState();
+  });
+
   useEffect(() => {
-    const refreshChatState = () => {
-      void optionsRef.current.syncStatus().catch(() => {});
-      void optionsRef.current.loadModels().catch(() => {});
-    };
     const setTurns = (updater: (current: Turn[]) => Turn[]) => optionsRef.current.setTurns(updater);
     const setIsGenerating = (value: boolean) => optionsRef.current.setIsGenerating(value);
     const setQueuedMessages = (messages: QueuedMessage[]) => optionsRef.current.setQueuedMessages(messages);
@@ -217,10 +223,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
 
-    const offFocusStateChanged = window.pi.app.onFocusStateChanged((state) => {
-      if (state.focused) refreshChatState();
-    });
-
     return () => {
       offDone();
       offDelta();
@@ -231,7 +233,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       offStatusChanged();
       offThinkingDelta();
       offQueuedTurnStart();
-      offFocusStateChanged();
       offShowSettings();
       offCommandDone();
       offCommandDelta();
@@ -240,5 +241,5 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (terminalFrame) cancelAnimationFrame(terminalFrame);
       if (thinkingFrame) cancelAnimationFrame(thinkingFrame);
     };
-  }, []);
+  }, [refreshChatState]);
 };
