@@ -8,12 +8,12 @@ export interface MarkdownProps {
   streaming?: boolean;
 }
 
-const StreamdownMarkdown = lazy(() =>
-  import('@renderer/markdown/streamdown').then(({ StreamdownMarkdown }) => ({ default: StreamdownMarkdown }))
+const MarkdownRenderer = lazy(() =>
+  import('@renderer/markdown/renderer').then(({ MarkdownRenderer }) => ({ default: MarkdownRenderer }))
 );
 
 export const Markdown = (props: MarkdownProps) => (
   <Suspense fallback={null}>
-    <StreamdownMarkdown {...props} />
+    <MarkdownRenderer {...props} />
   </Suspense>
 );

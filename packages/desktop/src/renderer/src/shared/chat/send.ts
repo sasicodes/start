@@ -1,7 +1,8 @@
 import type { CommandResult, ImageAttachment, SendResult } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
-import { commandInput, commandMode } from '@renderer/shared/input';
 import type { TurnUpdater } from '@renderer/shared/chat/turn-summary';
+import { commandInput, commandMode } from '@renderer/shared/input';
+import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import { useCallback } from 'preact/hooks';
 
 interface MutableRef<T> {
@@ -50,6 +51,7 @@ export const useChatSend = ({
         setDraft('');
         setIsGenerating(true);
         setTurns((current) => [...current, userTurn, terminalTurn]);
+        scrollTurnToStart(userTurn.id);
 
         let result: CommandResult;
         try {
@@ -90,6 +92,7 @@ export const useChatSend = ({
       setDraft('');
       setIsGenerating(true);
       setTurns((current) => [...current, userTurn, assistantTurn]);
+      scrollTurnToStart(userTurn.id);
 
       let result: SendResult;
       try {

@@ -32,7 +32,6 @@
     "@streamdown/math": "1.0.2",
     "@streamdown/mermaid": "1.0.2",
     "@tanstack/hotkeys": "0.8.0",
-    "highlight.js": "11.11.1",
     "katex": "0.16.46",
     "motion": "12.39.0",
     "preact": "10.29.2",

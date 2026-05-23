@@ -1,4 +1,5 @@
 import { Markdown } from '@renderer/markdown';
+import { ActiveIndicator } from '@renderer/shared/turn/active-indicator';
 import { TurnDetails } from '@renderer/shared/turn/details';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
@@ -6,27 +7,22 @@ import { cn } from '@renderer/utils/cn';
 import { formatTurnTime } from '@renderer/utils/time';
 import type { Turn } from '@renderer/utils/types';
 import { memo } from 'preact/compat';
-import { useCallback, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import { useCallback } from 'preact/hooks';
 
 const fallbackText = (turn: Turn) => {
   if (turn.text) return turn.text;
   if (turn.role === 'terminal') return 'Running...';
-  if (turn.role === 'assistant') return turn.activity ?? 'Thinking...';
   return '';
 };
 
 const supplementOnlyRoles = new Set<Turn['role']>(['event', 'terminal', 'assistant']);
 
-const detailScrollKey = (turn: Turn) =>
-  (turn.details ?? []).map((detail) => `${detail.id}:${detail.count}:${detail.updatedAt}`).join(',');
-
-const turnScrollKey = (turn: Turn) =>
-  [turn.id, turn.text.length, turn.thinking?.length ?? 0, detailScrollKey(turn)].join(':');
-
 const hasSupplement = (turn: Turn) => Boolean(turn.thinking) || Boolean(turn.details?.length);
 
 const shouldShowBody = (turn: Turn) =>
-  Boolean(turn.text) || !supplementOnlyRoles.has(turn.role) || !hasSupplement(turn);
+  Boolean(turn.text) ||
+  (turn.role === 'assistant' && Boolean(turn.streaming)) ||
+  (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
 
@@ -63,6 +59,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
   const useMarkdown = shouldUseMarkdown(turn);
   const isTerminal = turn.role === 'terminal';
   const isAssistantActivity = turn.role === 'assistant' && !turn.text;
+  const showActiveIndicator = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
 
   return (
     <div
@@ -77,7 +74,13 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         isAssistantActivity && 'text-soft'
       )}
     >
-      {useMarkdown ? <Markdown source={turn.text} streaming={Boolean(turn.streaming)} /> : fallbackText(turn)}
+      {showActiveIndicator ? (
+        <ActiveIndicator />
+      ) : useMarkdown ? (
+        <Markdown source={turn.text} streaming={Boolean(turn.streaming)} />
+      ) : (
+        fallbackText(turn)
+      )}
     </div>
   );
 });
@@ -97,30 +100,18 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
   const thinking = turn.thinking ?? '';
   const isUser = turn.role === 'user';
   const isEvent = turn.role === 'event';
-  const wide = hasSupplement(turn) || turn.role === 'terminal';
-  const articleRef = useRef<HTMLElement>(null);
-  const autoScrollDuringUpdates = Boolean(turn.streaming) || turn.role === 'terminal';
-  const scrollKey = useMemo(() => turnScrollKey(turn), [turn]);
+  const fullWidth = turn.role === 'assistant' || hasSupplement(turn) || turn.role === 'terminal';
   const openActivityPanel = useCallback(() => onOpenActivityPanel(turn.id), [onOpenActivityPanel, turn.id]);
-
-  useLayoutEffect(() => {
-    if (!autoScrollDuringUpdates) return;
-
-    const scroller = articleRef.current?.closest<HTMLElement>('[data-turn-scroll="true"]');
-    if (!scroller) return;
-
-    scroller.scrollTop = scroller.scrollHeight;
-  }, [autoScrollDuringUpdates, scrollKey]);
 
   return (
     <article
-      ref={articleRef}
+      data-turn-id={turn.id}
       class={cn(
         'group/turn [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
         isUser && 'flex w-fit max-w-[min(38rem,82%)] flex-col items-end self-end',
-        !isUser && 'max-w-[min(38rem,82%)] self-start',
-        isEvent && !wide && 'self-center',
-        wide && 'w-full max-w-full'
+        !isUser && !fullWidth && 'max-w-[min(38rem,82%)] self-start',
+        isEvent && !fullWidth && 'self-center',
+        fullWidth && 'w-full max-w-full self-start'
       )}
     >
       <TurnDetails

@@ -4,7 +4,7 @@ import { DebugToolbar } from '@renderer/shared/debug';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
 import { SettingsButton } from '@renderer/shared/settings/button';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
-import { Turns } from '@renderer/shared/turn/feed';
+import { TurnFeed } from '@renderer/shared/turn/feed';
 import { GitChangesBadge } from '@renderer/shared/workspace/changes';
 import { WorkspaceDock } from '@renderer/shared/workspace/dock';
 import type { AppRoute } from '@renderer/utils/route';
@@ -87,7 +87,7 @@ const MainSessionSurface = memo(
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={onSidePanelCollapse}
     >
-      <Turns activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
+      <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
       <WorkspaceDock
         workspacePath={workspacePath}
         onOpenSession={onOpenSession}

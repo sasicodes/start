@@ -1,14 +1,15 @@
 import type {
+  ChatStatus,
   EffortLevel,
   ModelOption,
   OpenSessionResult,
   ProviderAuthStatus,
-  ChatStatus,
   SwitchWorkspaceResult
 } from '@preload/index';
 import { useChatEvents } from '@renderer/shared/chat/events';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
+import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';
@@ -159,6 +160,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setDraft('');
       setIsGenerating(false);
       setTurns(() => result.turns ?? []);
+      scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
       textareaRef.current?.focus();

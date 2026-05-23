@@ -1,6 +1,4 @@
 import type { GitPatchSection } from '@preload/index';
-import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
-import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
 import {
   cacheDiffHighlight,
@@ -11,6 +9,8 @@ import {
   loadCodeHighlighter
 } from '@renderer/shared/workspace/changes/diff/highlight';
 import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
+import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
+import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
 import type { DiffEntriesState, DiffEntry } from '@renderer/shared/workspace/changes/diff/types';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -90,25 +90,32 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
 
         const processBatch = () => {
           const end = Math.min(index + diffHighlightBatchSize, items.length);
+          const pendingHighlights: Promise<void>[] = [];
 
           for (let itemIndex = index; itemIndex < end; itemIndex += 1) {
             const item = items[itemIndex];
             if (item && !hasDiffHighlight(item.key)) {
-              cacheDiffHighlight(item.key, highlightCode(item.content, item.language));
+              pendingHighlights.push(
+                highlightCode(item.content, item.language).then((html) => {
+                  cacheDiffHighlight(item.key, html);
+                })
+              );
             }
           }
 
-          index = end;
-          batchesSinceUpdate += 1;
+          void Promise.all(pendingHighlights).then(() => {
+            index = end;
+            batchesSinceUpdate += 1;
 
-          if (!active) return;
+            if (!active) return;
 
-          if (batchesSinceUpdate >= diffHighlightRevisionBatchCount || index >= items.length) {
-            batchesSinceUpdate = 0;
-            setHighlightRevision((value) => value + 1);
-          }
+            if (batchesSinceUpdate >= diffHighlightRevisionBatchCount || index >= items.length) {
+              batchesSinceUpdate = 0;
+              setHighlightRevision((value) => value + 1);
+            }
 
-          if (index < items.length) frame = window.requestAnimationFrame(processBatch);
+            if (index < items.length) frame = window.requestAnimationFrame(processBatch);
+          });
         };
 
         frame = window.requestAnimationFrame(processBatch);

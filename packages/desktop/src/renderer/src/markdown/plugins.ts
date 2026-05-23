@@ -1,10 +1,9 @@
-import type { MarkdownProps } from '@renderer/markdown';
-import type { MermaidConfig } from '@streamdown/mermaid';
-import type { ComponentType } from 'preact';
+import { diagramConfig } from '@renderer/markdown/options';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import { type PluginConfig, Streamdown, type StreamdownProps } from 'streamdown';
+import type { PluginConfig } from 'streamdown';
 
 type PluginName = Exclude<keyof PluginConfig, 'renderers'>;
+type LoadedPlugins = Partial<Pick<PluginConfig, PluginName>>;
 
 interface PluginLoadState {
   code: boolean;
@@ -13,65 +12,21 @@ interface PluginLoadState {
   mermaid: boolean;
 }
 
-type LoadedPlugins = Partial<Pick<PluginConfig, PluginName>>;
-
 const cjkTextPattern = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/u;
 const blockMathPattern = /(^|\n)\s*\$\$[\s\S]*?\$\$/;
 const inlineMathPattern = /(^|[^\\])\$[^$\n]+\$/;
 const texMathPattern = /\\\(|\\\[/;
 const fencePattern = /^(`{3,}|~{3,})\s*([^`~]*)$/;
 
-const StreamdownRenderer = Streamdown as unknown as ComponentType<StreamdownProps>;
-
-const streamdownAnimation = {
-  animation: 'blurIn',
-  duration: 220,
-  easing: 'cubic-bezier(0.16,1,0.3,1)'
-} as const;
-
-const streamdownControls = {
-  code: { copy: true, download: false },
-  mermaid: { copy: true, download: true, fullscreen: true, panZoom: true },
-  table: { copy: true, download: true, fullscreen: true }
-} as const;
-
-const streamdownShikiTheme: NonNullable<StreamdownProps['shikiTheme']> = ['github-light', 'github-dark'];
-
-const streamdownMermaidConfig = {
-  fontFamily: 'system-ui',
-  securityLevel: 'strict',
-  startOnLoad: false,
-  suppressErrorRendering: true,
-  theme: 'base',
-  themeVariables: {
-    background: 'transparent',
-    fontFamily: 'system-ui',
-    lineColor: 'var(--color-soft)',
-    mainBkg: 'var(--color-composer)',
-    nodeBorder: 'var(--color-line)',
-    primaryBorderColor: 'var(--color-line)',
-    primaryColor: 'var(--color-composer)',
-    primaryTextColor: 'var(--color-ink)',
-    secondaryBorderColor: 'var(--color-line)',
-    secondaryColor: 'var(--color-muted)',
-    secondaryTextColor: 'var(--color-ink)',
-    tertiaryBorderColor: 'var(--color-line)',
-    tertiaryColor: 'transparent',
-    tertiaryTextColor: 'var(--color-soft)'
-  }
-} satisfies MermaidConfig;
-
 const pluginModules = {
   code: () => import('@streamdown/code').then(({ code }) => code),
   cjk: () => import('@streamdown/cjk').then(({ cjk }) => cjk),
   math: () =>
     Promise.all([import('@streamdown/math'), import('katex/dist/katex.min.css')]).then(([{ createMathPlugin }]) =>
-      createMathPlugin({ errorColor: 'var(--color-danger)', singleDollarTextMath: true })
+      createMathPlugin({ errorColor: 'var(--color-soft)', singleDollarTextMath: true })
     ),
   mermaid: () =>
-    import('@streamdown/mermaid').then(({ createMermaidPlugin }) =>
-      createMermaidPlugin({ config: streamdownMermaidConfig })
-    )
+    import('@streamdown/mermaid').then(({ createMermaidPlugin }) => createMermaidPlugin({ config: diagramConfig }))
 } as const;
 
 const pluginPromises: {
@@ -135,7 +90,7 @@ const loadMermaidPlugin = () => {
   return pluginPromises.mermaid;
 };
 
-const useStreamdownPlugins = (source: string) => {
+export const useMarkdownPlugins = (source: string) => {
   const needed = useMemo(() => requiredPlugins(source), [source]);
   const [loadedPlugins, setLoadedPlugins] = useState<LoadedPlugins>({});
 
@@ -168,27 +123,5 @@ const useStreamdownPlugins = (source: string) => {
       ...(needed.mermaid && loadedPlugins.mermaid ? { mermaid: loadedPlugins.mermaid } : {})
     }),
     [loadedPlugins, needed]
-  );
-};
-
-export const StreamdownMarkdown = ({ source, density = 'default', streaming = false }: MarkdownProps) => {
-  const plugins = useStreamdownPlugins(source);
-
-  return (
-    <StreamdownRenderer
-      animated={streamdownAnimation}
-      caret="circle"
-      className={density === 'compact' ? 'streamdown-compact' : 'streamdown-default'}
-      controls={streamdownControls}
-      dir="auto"
-      isAnimating={streaming}
-      lineNumbers={false}
-      mode={streaming ? 'streaming' : 'static'}
-      parseIncompleteMarkdown={streaming}
-      plugins={plugins}
-      shikiTheme={streamdownShikiTheme}
-    >
-      {source}
-    </StreamdownRenderer>
   );
 };
