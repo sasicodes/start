@@ -1,7 +1,5 @@
 Start, your coding assistant.
 
-Start is a desktop and mobile coding assistant.
-
 ```text
 .
 ├── packages/
