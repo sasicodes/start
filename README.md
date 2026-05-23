@@ -1,51 +1,29 @@
-# start
+# start — your coding assistant
 
-your coding assistant
+This repo is meant to be easy for agents to inspect and run.
 
-## Setup
+Use `package.json` scripts first. Do not invent one-off commands unless a script is missing.
 
-```bash
-pnpm install
-```
+Install dependencies with `pnpm install`.
 
-Sign in with your subscription or configure your API keys before running the app.
+Run the desktop app with `pnpm dev` or `pnpm desktop`.
 
-## Desktop app
+Run the mobile app with `pnpm mobile`.
 
-```bash
-pnpm dev
-```
+Before finishing changes, run `pnpm check`.
 
-The Electron app lives in `packages/desktop`. You can also run it explicitly with `pnpm desktop`.
+Build everything with `pnpm build`.
 
-## Mobile app
+Package the desktop app with `pnpm package`.
 
-```bash
-pnpm mobile
-```
+Create desktop distributables with `pnpm dist`.
 
-The Expo app lives in `packages/mobile`.
+Desktop code lives in `packages/desktop`.
 
-## Check
+Mobile code lives in `packages/mobile`.
 
-```bash
-pnpm check
-```
+Keep dependency versions pinned exactly. If a lockfile change is intentional, review it and commit with `ALLOW_LOCKFILE_CHANGE=1`.
 
-## Build
+Do not commit secrets, local machine paths, certificates, or personal email addresses. Release credentials belong in GitHub Actions secrets.
 
-```bash
-pnpm build
-```
-
-## Package
-
-```bash
-pnpm package
-```
-
-Create distributable desktop builds:
-
-```bash
-pnpm dist
-```
+Runtime sign-in and API keys are configured inside the app, not in committed files.
