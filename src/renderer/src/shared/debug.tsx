@@ -19,7 +19,7 @@ type PerformanceWithMemory = Performance & {
   };
 };
 
-const debugToolbarStorageKey = 'start-debug-toolbar-position';
+const debugToolbarPositionStorageKey = 'start-debug-toolbar-position';
 const toolbarMargin = 20;
 const toolbarWidth = 312;
 
@@ -40,7 +40,7 @@ const clampStoredPosition = (position: ToolbarPosition): ToolbarPosition => ({
 });
 
 const readPosition = (): ToolbarPosition => {
-  const rawPosition = window.localStorage.getItem(debugToolbarStorageKey);
+  const rawPosition = window.localStorage.getItem(debugToolbarPositionStorageKey);
   if (!rawPosition) return defaultPosition();
 
   try {
@@ -219,7 +219,7 @@ export const DebugToolbar = () => {
       dragRef.current.originX + event.clientX - dragRef.current.pointerX,
       dragRef.current.originY + event.clientY - dragRef.current.pointerY
     );
-    window.localStorage.setItem(debugToolbarStorageKey, JSON.stringify(nextPosition));
+    window.localStorage.setItem(debugToolbarPositionStorageKey, JSON.stringify(nextPosition));
     setPosition(nextPosition);
     if (!dragRef.current.moved) setCollapsed((value) => !value);
   };

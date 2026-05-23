@@ -17,19 +17,37 @@ type SideLayoutProps = {
   onSidebarCollapse?: () => void;
 };
 
-const defaultMaxSidebarWidth = 720;
 const defaultMinContentWidth = 320;
 const defaultMinSidebarWidth = 320;
 const defaultSidebarWidth = 480;
+const maxSidebarWindowRatio = 0.6;
+const sideLayoutSidebarWidthStorageKey = 'start-side-layout-sidebar-width';
 const sidebarPanelHidden = { opacity: 0, transition: closeMotionTransition, x: '1rem' };
 const sidebarPanelVisible = { opacity: 1, transition: openMotionTransition, x: 0 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
-const resizeCursor = (startX: number, currentX: number): CursorValue => {
+const getResizeCursor = (startX: number, currentX: number): CursorValue => {
   if (currentX < startX) return 'w-resize';
   if (currentX > startX) return 'e-resize';
   return 'ew-resize';
+};
+
+const readStoredSidebarWidth = () => {
+  try {
+    const width = Number(window.localStorage.getItem(sideLayoutSidebarWidthStorageKey));
+    return Number.isFinite(width) && width > 0 ? width : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const writeStoredSidebarWidth = (width: number) => {
+  try {
+    window.localStorage.setItem(sideLayoutSidebarWidthStorageKey, `${Math.round(width)}`);
+  } catch {
+    return;
+  }
 };
 
 export const SideLayout = ({
@@ -38,33 +56,39 @@ export const SideLayout = ({
   sidebarLabel,
   sidebarVisible,
   onSidebarCollapse,
-  maxSidebarWidth = defaultMaxSidebarWidth,
+  maxSidebarWidth,
   minSidebarWidth = defaultMinSidebarWidth,
-  defaultSidebarWidth: initialSidebarWidth = defaultSidebarWidth
+  defaultSidebarWidth: fallbackSidebarWidth = defaultSidebarWidth
 }: SideLayoutProps) => {
   const [resizing, setResizing] = useState(false);
+  const [storedInitialSidebarWidth] = useState(() => readStoredSidebarWidth() ?? fallbackSidebarWidth);
   const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController>();
   const frameRef = useRef<number>();
   const lastClientXRef = useRef(0);
   const resizingRef = useRef(false);
   const startClientXRef = useRef(0);
-  const startWidthRef = useRef(initialSidebarWidth);
-  const widthRef = useRef(initialSidebarWidth);
+  const startWidthRef = useRef(storedInitialSidebarWidth);
+  const widthRef = useRef(storedInitialSidebarWidth);
+  const preferredSidebarWidthRef = useRef(storedInitialSidebarWidth);
   const interactionStyleRef = useRef({ bodyCursor: '', htmlCursor: '', userSelect: '' });
 
-  const sidebarMaxWidth = useCallback(() => {
+  const getSidebarMaxWidth = useCallback(() => {
     const rootWidth = rootRef.current?.clientWidth ?? window.innerWidth;
-    return Math.max(minSidebarWidth, Math.min(maxSidebarWidth, rootWidth - defaultMinContentWidth));
+    const maxContentWidth = rootWidth - defaultMinContentWidth;
+    const maxWindowWidth = rootWidth * maxSidebarWindowRatio;
+    const maxConfiguredWidth = maxSidebarWidth ?? Number.POSITIVE_INFINITY;
+    return Math.max(minSidebarWidth, Math.min(maxConfiguredWidth, maxContentWidth, maxWindowWidth));
   }, [maxSidebarWidth, minSidebarWidth]);
 
   const applySidebarWidth = useCallback(
-    (width: number) => {
-      const nextWidth = clamp(width, minSidebarWidth, sidebarMaxWidth());
+    (width: number, savePreference = false) => {
+      const nextWidth = clamp(width, minSidebarWidth, getSidebarMaxWidth());
       widthRef.current = nextWidth;
+      if (savePreference) preferredSidebarWidthRef.current = nextWidth;
       rootRef.current?.style.setProperty('--side-layout-sidebar-width', `${nextWidth}px`);
     },
-    [minSidebarWidth, sidebarMaxWidth]
+    [getSidebarMaxWidth, minSidebarWidth]
   );
 
   const setDocumentCursor = useCallback((cursor: CursorValue) => {
@@ -90,6 +114,11 @@ export const SideLayout = ({
     setResizing(false);
   }, []);
 
+  const finishResize = useCallback(() => {
+    writeStoredSidebarWidth(preferredSidebarWidthRef.current);
+    stopResize();
+  }, [stopResize]);
+
   const scheduleResize = useCallback(
     (event: PointerEvent) => {
       lastClientXRef.current = event.clientX;
@@ -100,7 +129,7 @@ export const SideLayout = ({
 
         const currentX = lastClientXRef.current;
         const nextWidth = startWidthRef.current + startClientXRef.current - currentX;
-        setDocumentCursor(resizeCursor(startClientXRef.current, currentX));
+        setDocumentCursor(getResizeCursor(startClientXRef.current, currentX));
 
         if (nextWidth < minSidebarWidth) {
           stopResize();
@@ -108,7 +137,7 @@ export const SideLayout = ({
           return;
         }
 
-        applySidebarWidth(nextWidth);
+        applySidebarWidth(nextWidth, true);
       });
     },
     [applySidebarWidth, minSidebarWidth, onSidebarCollapse, setDocumentCursor, stopResize]
@@ -138,14 +167,23 @@ export const SideLayout = ({
       setResizing(true);
 
       window.addEventListener('pointermove', scheduleResize, { signal: abortRef.current.signal });
-      window.addEventListener('pointerup', stopResize, { signal: abortRef.current.signal });
-      window.addEventListener('pointercancel', stopResize, { signal: abortRef.current.signal });
+      window.addEventListener('pointerup', finishResize, { signal: abortRef.current.signal });
+      window.addEventListener('pointercancel', finishResize, { signal: abortRef.current.signal });
     },
-    [scheduleResize, setDocumentCursor, stopResize]
+    [finishResize, scheduleResize, setDocumentCursor, stopResize]
   );
 
   useLayoutEffect(() => {
-    applySidebarWidth(widthRef.current);
+    applySidebarWidth(preferredSidebarWidthRef.current);
+  }, [applySidebarWidth]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const observer = new ResizeObserver(() => applySidebarWidth(preferredSidebarWidthRef.current));
+    observer.observe(root);
+    return () => observer.disconnect();
   }, [applySidebarWidth]);
 
   useEffect(() => {
@@ -165,7 +203,7 @@ export const SideLayout = ({
             animate={sidebarPanelVisible}
             exit={sidebarPanelHidden}
             initial={sidebarPanelHidden}
-            style={{ width: `var(--side-layout-sidebar-width, ${initialSidebarWidth}px)` }}
+            style={{ width: `var(--side-layout-sidebar-width, ${storedInitialSidebarWidth}px)` }}
             class="relative h-full min-h-0 shrink-0 transform-gpu overflow-hidden outline-0 [-webkit-app-region:no-drag]"
           >
             <div
