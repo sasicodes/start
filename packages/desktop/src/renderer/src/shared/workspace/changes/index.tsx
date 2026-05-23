@@ -1,7 +1,14 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
+import {
+  bottomBubbleHiddenMotion,
+  bottomBubbleHideTransition,
+  bottomBubbleRevealTransition,
+  bottomBubbleVisibleMotion
+} from '@renderer/ui/motion';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
+import { motion } from 'motion/react';
 import { lazy, memo, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import {
@@ -59,15 +66,18 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
 
   return (
     <Tooltip label={label}>
-      <button
+      <motion.button
         type="button"
+        animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
+        initial={bottomBubbleHiddenMotion}
         onClick={onTogglePanel}
         style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}vw` }}
+        transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
-          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
-          !appFocused && 'pointer-events-none opacity-0'
+          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
+          !appFocused && 'pointer-events-none'
         )}
       >
         <ChangesIcon class="hidden size-5 flex-none @max-workspace-dock/chat:block" />
@@ -75,7 +85,7 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
           <span class="tabular-nums text-success">+{summary.insertions}</span>
           <span class="tabular-nums text-danger">-{summary.deletions}</span>
         </span>
-      </button>
+      </motion.button>
     </Tooltip>
   );
 });

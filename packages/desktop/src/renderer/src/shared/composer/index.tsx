@@ -10,7 +10,9 @@ import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } f
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
+import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
+import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
@@ -198,8 +200,9 @@ export const Composer = memo(
     };
 
     return (
-      <div
+      <motion.div
         {...(overlay ? { key: revealKey } : {})}
+        {...(!overlay ? { layout: 'position' as const, transition: { layout: composerDockTransition } } : {})}
         onAnimationEnd={(event) => {
           if (event.animationName === 'composer-floating-shell-out') onExitComplete();
         }}
@@ -293,7 +296,7 @@ export const Composer = memo(
             </div>
           </div>
         </form>
-      </div>
+      </motion.div>
     );
   }
 );
