@@ -1,6 +1,5 @@
 import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/application';
 import { ChatService } from '@main/chat';
-import { debugToolbarEnabled, getDebugMetrics } from '@main/debug';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitPatch } from '@main/git';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
@@ -118,9 +117,7 @@ app.whenReady().then(async () => {
     sendToRendererWindows('app:workspace-changed', workspace);
   });
 
-  ipcMain.handle('app:debug-metrics', getDebugMetrics);
   ipcMain.handle('app:focus-state', getAppFocusState);
-  ipcMain.handle('app:runtime', () => ({ debugToolbar: debugToolbarEnabled() }));
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
     listRootItems(relativePath, scope, chat.getWorkspaceCwd())
   );

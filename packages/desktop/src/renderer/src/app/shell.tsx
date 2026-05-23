@@ -1,6 +1,5 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
-import { DebugToolbar } from '@renderer/shared/debug';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
 import { SettingsButton } from '@renderer/shared/settings/button';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
@@ -51,7 +50,6 @@ interface AppShellProps {
   activeSessionId: string;
   sessionViewActive: boolean;
   sidePanelVisible: boolean;
-  debugToolbarVisible: boolean;
   activityPanelTurnId: string;
   onOpenSettings: () => void;
   onToggleGitPanel: () => void;
@@ -122,7 +120,6 @@ export const AppShell = memo(
     onChooseDirectory,
     onDiscardComposer,
     sessionViewActive,
-    debugToolbarVisible,
     activityPanelTurnId,
     onSelectWorkspace,
     onSidePanelCollapse,
@@ -168,7 +165,6 @@ export const AppShell = memo(
         overlayComposer
       )}
       {sessionViewActive && <DropOverlay visible={fileHandlers.dropActive} />}
-      {debugToolbarVisible && surface === 'main' && <DebugToolbar />}
     </main>
   )
 );

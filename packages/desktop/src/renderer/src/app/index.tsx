@@ -22,7 +22,7 @@ export const App = () => {
     textareaRef
   });
   const { attachments, setAttachments, removeAttachment, clearPendingAttachments } = usePendingAttachments();
-  const { composerShortcut, debugToolbarVisible, updateComposerShortcut } = useRendererRuntime();
+  const { composerShortcut, updateComposerShortcut } = useRendererRuntime();
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const {
     activityTurnId,
@@ -259,7 +259,6 @@ export const App = () => {
       onChooseDirectory={chooseWorkspaceFromDock}
       onDiscardComposer={discardComposerOverlay}
       sessionViewActive={sessionViewActive}
-      debugToolbarVisible={debugToolbarVisible}
       onSelectWorkspace={selectWorkspaceFromDock}
       activityPanelTurnId={activityPanelVisible ? activityTurnId : ''}
       onOpenActivityPanel={openActivityPanel}

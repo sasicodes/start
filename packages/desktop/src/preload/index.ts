@@ -182,26 +182,6 @@ export interface WorkspaceInfo {
   path: string;
 }
 
-export interface DebugProcessMetric {
-  pid: number;
-  name: string;
-  type: string;
-  memoryMb: number;
-  cpuPercent: number;
-  children?: DebugProcessMetric[];
-}
-
-export interface DebugMetrics {
-  appMemoryMb: number;
-  cpuPercent: number;
-  processCount: number;
-  processes: DebugProcessMetric[];
-}
-
-export interface AppRuntime {
-  debugToolbar: boolean;
-}
-
 export interface AppFocusState {
   focused: boolean;
 }
@@ -216,7 +196,6 @@ const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload
 
 const api = {
   app: {
-    debugMetrics: (): Promise<DebugMetrics> => ipcRenderer.invoke('app:debug-metrics'),
     focusState: (): Promise<AppFocusState> => ipcRenderer.invoke('app:focus-state'),
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
@@ -225,7 +204,6 @@ const api = {
     workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
-    runtime: (): Promise<AppRuntime> => ipcRenderer.invoke('app:runtime'),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),

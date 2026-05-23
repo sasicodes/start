@@ -1,6 +1,6 @@
-const { notarize } = require('@electron/notarize');
+import { notarize } from '@electron/notarize';
 
-exports.default = async function notarizeMac(context) {
+export default async function notarizeMac(context) {
   if (process.platform !== 'darwin') return;
 
   const { appOutDir, electronPlatformName, packager } = context;
@@ -19,4 +19,4 @@ exports.default = async function notarizeMac(context) {
     appleIdPassword,
     teamId
   });
-};
+}

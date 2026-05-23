@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 export const useRendererRuntime = () => {
-  const [debugToolbarVisible, setDebugToolbarVisible] = useState(false);
   const [composerShortcut, setComposerShortcut] = useState('Control+Space');
 
   useEffect(() => {
@@ -11,12 +10,6 @@ export const useRendererRuntime = () => {
       .settings()
       .then((settings) => {
         if (active) setComposerShortcut(settings.composerShortcut);
-      })
-      .catch(() => {});
-    void window.pi.app
-      .runtime()
-      .then((runtime) => {
-        if (active) setDebugToolbarVisible(runtime.debugToolbar);
       })
       .catch(() => {});
 
@@ -33,7 +26,6 @@ export const useRendererRuntime = () => {
 
   return {
     composerShortcut,
-    debugToolbarVisible,
     updateComposerShortcut
   };
 };

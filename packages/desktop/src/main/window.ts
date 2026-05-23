@@ -298,12 +298,3 @@ export const submitComposerToMainWindow = (prompt: string, attachments: unknown[
   hideComposerWindow({ discard: false, keepAppActive: true });
   sendToMainWindow('app:submit-composer', prompt, attachments);
 };
-
-export const rendererProcessLabels = () => {
-  const labels = new Map<number, string>();
-  if (mainWindow && !mainWindow.isDestroyed()) labels.set(mainWindow.webContents.getOSProcessId(), 'main renderer');
-  if (composerWindow && !composerWindow.isDestroyed()) {
-    labels.set(composerWindow.webContents.getOSProcessId(), 'composer renderer');
-  }
-  return labels;
-};
