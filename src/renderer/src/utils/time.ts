@@ -1,9 +1,9 @@
-const messageTimeFormatter = new Intl.DateTimeFormat([], {
+const turnTimeFormatter = new Intl.DateTimeFormat([], {
   hour: 'numeric',
   minute: '2-digit'
 });
 
-export const formatMessageTime = (timestamp: number) => messageTimeFormatter.format(new Date(timestamp));
+export const formatTurnTime = (timestamp: number) => turnTimeFormatter.format(new Date(timestamp));
 
 export const formatRelativeTime = (timestamp: number) => {
   const minutes = Math.max(1, Math.round((Date.now() - timestamp) / 60000));

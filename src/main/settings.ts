@@ -1,5 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
+import { migrateLegacySettings, updateStartState } from '@main/storage';
 import { app, globalShortcut } from 'electron';
 
 export type AppSettings = {
@@ -24,19 +24,12 @@ const parseSettings = (value: unknown): AppSettings => {
 };
 
 export const readAppSettings = async (): Promise<AppSettings> => {
-  try {
-    const content = await readFile(settingsPath(), 'utf8');
-    return parseSettings(JSON.parse(content));
-  } catch {
-    return defaultAppSettings;
-  }
+  return parseSettings(migrateLegacySettings(settingsPath()));
 };
 
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
   const nextSettings = parseSettings(settings);
-  const path = settingsPath();
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(nextSettings, null, 2)}\n`, 'utf8');
+  updateStartState({ composerShortcut: nextSettings.composerShortcut });
   return nextSettings;
 };
 

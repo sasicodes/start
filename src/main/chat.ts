@@ -1,7 +1,8 @@
 import './environment.js';
 
-import { readFile } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import path from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import {
   type AgentSession,
   AuthStorage,
@@ -10,6 +11,7 @@ import {
   SessionManager
 } from '@earendil-works/pi-coding-agent';
 import { chatEvent } from '@main/events';
+import { historyTurns } from '@main/history';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -20,17 +22,26 @@ import {
   modelLabel,
   providerAuthKind,
   providerAuthLabel,
-  textDelta
+  textDelta,
+  thinkingDelta
 } from '@main/helpers';
+import {
+  type PreparedImageAttachment,
+  prepareClipboardImage as prepareClipboardImageAttachment,
+  prepareDroppedFiles as prepareDroppedFileAttachments,
+  stripAttachmentData
+} from '@main/attachments';
+import { readStartState, type StartState, updateStartState } from '@main/storage';
 import {
   type ChatStatus,
   type CommandResult,
   type EffortLevel,
   effortLevels,
   enabledTools,
-  type HistoryMessage,
+  type ImageAttachment,
   type ModelOption,
   type OpenSessionResult,
+  type PreparedDropFiles,
   type ProviderAuthStatus,
   type ProviderLoginResult,
   type RecentSession,
@@ -40,18 +51,23 @@ import {
 } from '@main/types';
 import { shell, type WebContents } from 'electron';
 
+const maxRecentSessions = 40;
+const attachmentMaxAgeMs = 15 * 60 * 1000;
+
 export class ChatService {
+  private appState = readStartState();
   private readonly authStorage = AuthStorage.create();
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private session: AgentSession | null = null;
   private isGenerating = false;
+  private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
   private activeSessionId: string | undefined;
-  private shouldCreateSession = false;
-  private selectedModelKey: string | null = null;
-  private workspaceCwd = process.cwd();
+  private shouldCreateSession = true;
+  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
+  private workspaceCwd = this.appState.lastWorkspace ?? process.cwd();
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
-  private selectedThinkingLevel: EffortLevel = 'medium';
+  private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
 
   async getStatus(): Promise<ChatStatus> {
     this.refreshAuth();
@@ -60,6 +76,8 @@ export class ChatService {
     if (!model) {
       return {
         ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
         error:
           this.modelRegistry.getError() ??
           'No configured Pi models found. Run pi login or configure ~/.pi/agent/auth.json.'
@@ -125,15 +143,27 @@ export class ChatService {
       this.session = session;
       this.setActiveSession(sessionManager);
       this.workspaceCwd = sessionManager.getCwd() || this.workspaceCwd;
+      this.persistState({ lastWorkspace: this.workspaceCwd });
       this.shouldCreateSession = false;
       return {
         ok: true,
         id: sessionManager.getSessionId(),
-        messages: this.historyMessages(sessionManager.getEntries())
+        turns: historyTurns(sessionManager.getEntries())
       };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Session could not be opened.' };
     }
+  }
+
+  async openSessionId(sessionId: string): Promise<OpenSessionResult> {
+    const id = sessionId.trim();
+    if (!id) return { ok: false, error: 'Session id is empty.' };
+
+    const sessions = await SessionManager.listAll();
+    const session = sessions.find((entry) => entry.id === id);
+    if (!session) return { ok: false, error: 'Session could not be found.' };
+
+    return this.openSession(session.path);
   }
 
   async getRecentSessions(cwd = this.workspaceCwd): Promise<RecentSession[]> {
@@ -144,22 +174,30 @@ export class ChatService {
       uniqueSessions.set(session.id, session);
     }
 
+    const recentSessions = [...uniqueSessions.values()]
+      .sort((a, b) => b.modified.getTime() - a.modified.getTime())
+      .slice(0, maxRecentSessions);
+
     return Promise.all(
-      [...uniqueSessions.values()]
-        .sort((a, b) => b.modified.getTime() - a.modified.getTime())
-        .map(async (session) => ({
-          id: session.id,
-          path: session.path,
-          modified: session.modified.getTime(),
-          messageCount: await this.userMessageCount(session.path),
-          title: session.name || session.firstMessage || 'Untitled session'
-        }))
+      recentSessions.map(async (session) => ({
+        id: session.id,
+        path: session.path,
+        modified: session.modified.getTime(),
+        turnCount: await this.userTurnCount(session.path),
+        title: session.name || session.firstMessage || 'Untitled session'
+      }))
     );
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
+    folders.set(this.workspaceCwd, {
+      modified: Date.now(),
+      path: this.workspaceCwd,
+      sessionCount: 0,
+      name: path.basename(this.workspaceCwd) || this.workspaceCwd
+    });
 
     for (const session of sessions) {
       if (!session.cwd) continue;
@@ -182,6 +220,25 @@ export class ChatService {
     return [...folders.values()].sort((a, b) => b.modified - a.modified);
   }
 
+  async prepareDroppedFiles(paths: string[]): Promise<PreparedDropFiles> {
+    const result = await prepareDroppedFileAttachments(paths);
+    return {
+      pathTokens: result.pathTokens,
+      attachments: result.attachments.map((attachment) => this.storeAttachment(attachment))
+    };
+  }
+
+  async prepareClipboardImage(): Promise<ImageAttachment | null> {
+    const attachment = await prepareClipboardImageAttachment();
+    return attachment ? this.storeAttachment(attachment) : null;
+  }
+
+  releaseAttachments(ids: string[]): void {
+    for (const id of ids) {
+      this.attachments.delete(id);
+    }
+  }
+
   async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
@@ -192,9 +249,11 @@ export class ChatService {
       await this.session?.abort();
       this.session?.dispose();
       this.session = null;
+      this.attachments.clear();
       this.activeSessionId = undefined;
-      this.shouldCreateSession = false;
+      this.shouldCreateSession = true;
       this.workspaceCwd = nextCwd;
+      this.persistState({ lastWorkspace: this.workspaceCwd });
 
       return { ok: true, status: await this.getStatus() };
     } catch (error) {
@@ -288,11 +347,25 @@ export class ChatService {
   }
 
   async selectModel(selectedKey: string): Promise<ChatStatus> {
-    if (this.isGenerating) return { ready: false, error: 'Stop the current response before changing models.' };
+    if (this.isGenerating) {
+      return {
+        ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
+        error: 'Stop the current response before changing models.'
+      };
+    }
 
     this.refreshAuth();
     const model = this.findModelByKey(selectedKey);
-    if (!model) return { ready: false, error: 'Selected model is no longer available.' };
+    if (!model) {
+      return {
+        ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
+        error: 'Selected model is no longer available.'
+      };
+    }
 
     const nextModelKey = modelKey(model);
     this.selectedThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
@@ -301,6 +374,7 @@ export class ChatService {
       this.session?.dispose();
       this.session = null;
     }
+    this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
 
     return {
       ready: true,
@@ -312,15 +386,37 @@ export class ChatService {
   }
 
   async selectThinkingLevel(level: string): Promise<ChatStatus> {
-    if (this.isGenerating) return { ready: false, error: 'Stop the current response before changing thinking level.' };
-    if (!this.isThinkingLevel(level)) return { ready: false, error: 'Unknown thinking level.' };
+    if (this.isGenerating) {
+      return {
+        ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
+        error: 'Stop the current response before changing thinking level.'
+      };
+    }
+    if (!this.isThinkingLevel(level)) {
+      return {
+        ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
+        error: 'Unknown thinking level.'
+      };
+    }
 
     this.refreshAuth();
     const model = this.pickModel();
-    if (!model) return { ready: false, error: this.modelRegistry.getError() ?? 'No configured Pi models found.' };
+    if (!model) {
+      return {
+        ready: false,
+        workspacePath: this.workspaceCwd,
+        thinkingLevel: this.selectedThinkingLevel,
+        error: this.modelRegistry.getError() ?? 'No configured Pi models found.'
+      };
+    }
 
     this.selectedThinkingLevel = clampThinkingLevel(model, level);
     this.session?.setThinkingLevel(this.selectedThinkingLevel);
+    this.persistState({ selectedThinkingLevel: this.selectedThinkingLevel });
 
     return {
       ready: true,
@@ -331,32 +427,44 @@ export class ChatService {
     };
   }
 
-  async send(prompt: string, webContents: WebContents): Promise<SendResult> {
+  async send(prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     if (this.isGenerating) return { ok: false, error: 'A Pi response is already running.' };
 
     this.isGenerating = true;
-    let assistantText = '';
     let endError: string | undefined;
 
     try {
+      const images = await this.resolveAttachments(attachments);
       const session = await this.getSession();
+      const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
-        this.emitEvent(webContents, chatEvent(event));
+        if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {
+          toolArgs.set(event.toolCallId, event.args);
+        }
+
+        const previousToolArgs = 'toolCallId' in event ? toolArgs.get(event.toolCallId) : undefined;
+        const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
+        this.emitEvent(webContents, chatEvent(event, eventContext));
+        if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
-        if (delta) {
-          assistantText += delta;
-          this.emit(webContents, 'delta', delta);
-        }
+        if (delta) this.emit(webContents, 'delta', delta);
+
+        const thought = thinkingDelta(event);
+        if (thought) this.emit(webContents, 'thinking-delta', thought);
 
         const error = agentEndError(event);
         if (error) endError = error;
       });
 
       try {
-        await session.prompt(text);
+        if (images.length > 0) {
+          await session.prompt(text, { images });
+        } else {
+          await session.prompt(text);
+        }
       } finally {
         unsubscribe();
       }
@@ -367,8 +475,8 @@ export class ChatService {
       }
 
       this.setActiveSession(session.sessionManager);
-      this.emit(webContents, 'done', assistantText);
-      return { ok: true, text: assistantText, sessionId: this.activeSessionId };
+      this.emit(webContents, 'done', '');
+      return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Chat failed.';
       this.emit(webContents, 'error', message);
@@ -399,8 +507,12 @@ export class ChatService {
       const output = result.output ?? '';
 
       this.setActiveSession(session.sessionManager);
-      webContents.send('chat:command-done', output);
-      return { ok: true, output, sessionId: this.activeSessionId, exitCode: result.exitCode };
+      webContents.send('chat:command-done', output ? 'done' : '');
+      return {
+        ok: true,
+        ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}),
+        ...(typeof result.exitCode === 'number' ? { exitCode: result.exitCode } : {})
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Command failed.';
       return { ok: false, error: message };
@@ -419,6 +531,7 @@ export class ChatService {
     await this.session?.abort();
     this.session?.dispose();
     this.session = null;
+    this.attachments.clear();
     this.activeSessionId = undefined;
     this.isGenerating = false;
     this.shouldCreateSession = true;
@@ -427,6 +540,44 @@ export class ChatService {
   dispose(): void {
     this.session?.dispose();
     this.session = null;
+    this.attachments.clear();
+  }
+
+  private cleanupAttachments(): void {
+    const cutoff = Date.now() - attachmentMaxAgeMs;
+    for (const [id, attachment] of this.attachments) {
+      if (attachment.createdAt < cutoff) this.attachments.delete(id);
+    }
+  }
+
+  private storeAttachment(attachment: PreparedImageAttachment): ImageAttachment {
+    this.cleanupAttachments();
+    this.attachments.set(attachment.id, {
+      data: attachment.data,
+      createdAt: Date.now(),
+      mimeType: attachment.mimeType
+    });
+    return stripAttachmentData(attachment);
+  }
+
+  private async resolveAttachments(attachments: ImageAttachment[]) {
+    this.cleanupAttachments();
+    const images: { type: 'image'; data: string; mimeType: string }[] = [];
+
+    for (const attachment of attachments) {
+      const stored = this.attachments.get(attachment.id);
+      this.attachments.delete(attachment.id);
+      if (stored) {
+        images.push({ type: 'image', data: stored.data, mimeType: stored.mimeType });
+        continue;
+      }
+
+      const recovered = await prepareDroppedFileAttachments([attachment.path]);
+      const image = recovered.attachments[0];
+      if (image) images.push({ type: 'image', data: image.data, mimeType: image.mimeType });
+    }
+
+    return images;
   }
 
   private setActiveSession(sessionManager: SessionManager): void {
@@ -461,58 +612,27 @@ export class ChatService {
     return session;
   }
 
-  private async userMessageCount(path: string): Promise<number> {
+  private async userTurnCount(path: string): Promise<number> {
+    const lines = createInterface({
+      input: createReadStream(path, { encoding: 'utf8' }),
+      crlfDelay: Number.POSITIVE_INFINITY
+    });
+    let count = 0;
+
     try {
-      const content = await readFile(path, 'utf8');
-      return content
-        .split('\n')
-        .filter((line) => line.trim())
-        .reduce((count, line) => {
-          try {
-            const entry = JSON.parse(line) as { type?: string; message?: { role?: string } };
-            return entry.type === 'message' && entry.message?.role === 'user' ? count + 1 : count;
-          } catch {
-            return count;
-          }
-        }, 0);
+      for await (const line of lines) {
+        if (!line.trim()) continue;
+
+        try {
+          const entry = JSON.parse(line) as { type?: string; message?: { role?: string } };
+          if (entry.type === 'message' && entry.message?.role === 'user') count += 1;
+        } catch {}
+      }
     } catch {
       return 0;
     }
-  }
 
-  private historyMessages(entries: ReturnType<ReturnType<typeof SessionManager.open>['getBranch']>): HistoryMessage[] {
-    return entries.flatMap((entry) => {
-      if (entry.type !== 'message') return [];
-
-      const role = entry.message.role;
-      if (role !== 'user' && role !== 'assistant') return [];
-
-      const text = this.messageText(entry.message.content);
-      if (!text) return [];
-
-      return [
-        {
-          role,
-          text,
-          id: entry.id,
-          createdAt: new Date(entry.timestamp).getTime()
-        }
-      ];
-    });
-  }
-
-  private messageText(content: unknown): string {
-    if (typeof content === 'string') return content;
-    if (!Array.isArray(content)) return '';
-
-    return content
-      .flatMap((part) => {
-        if (!part || typeof part !== 'object') return [];
-        const value = 'text' in part ? part.text : undefined;
-        return typeof value === 'string' ? [value] : [];
-      })
-      .join('\n')
-      .trim();
+    return count;
   }
 
   private refreshAuth(): void {
@@ -541,7 +661,15 @@ export class ChatService {
 
     this.selectedModelKey = model ? modelKey(model) : null;
     if (model) this.selectedThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
+    this.persistState({
+      selectedThinkingLevel: this.selectedThinkingLevel,
+      ...(this.selectedModelKey ? { selectedModelKey: this.selectedModelKey } : {})
+    });
     return model;
+  }
+
+  private persistState(patch: Partial<StartState>): void {
+    this.appState = updateStartState(patch);
   }
 
   private getPickerModels() {
@@ -574,11 +702,12 @@ export class ChatService {
     };
   }
 
-  private emit(webContents: WebContents, event: 'delta' | 'done' | 'error', payload: string): void {
+  private emit(webContents: WebContents, event: 'delta' | 'done' | 'error' | 'thinking-delta', payload: string): void {
     webContents.send(`chat:${event}`, payload);
   }
 
-  private emitEvent(webContents: WebContents, event: { name: string }): void {
+  private emitEvent(webContents: WebContents, event: ReturnType<typeof chatEvent>): void {
+    if (!event) return;
     webContents.send('chat:event', event);
   }
 }

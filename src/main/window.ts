@@ -5,9 +5,12 @@ import { app, BrowserWindow, type BrowserWindowConstructorOptions, screen, shell
 
 const getRendererUrl = () => (app.isPackaged ? null : (environment.rendererUrl ?? null));
 
+const composerIdleDestroyMs = 120000;
+
 let mainWindow: BrowserWindow | null = null;
 let composerWindow: BrowserWindow | null = null;
 let composerVisible = false;
+let composerDestroyTimer: NodeJS.Timeout | undefined;
 
 const openExternalUrl = (url: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
@@ -28,6 +31,21 @@ const loadRenderer = (window: BrowserWindow, surface: 'composer' | 'main') => {
 };
 
 const activeDisplayWorkArea = () => screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+
+const clearComposerDestroyTimer = () => {
+  if (composerDestroyTimer) clearTimeout(composerDestroyTimer);
+  composerDestroyTimer = undefined;
+};
+
+const scheduleComposerDestroy = () => {
+  clearComposerDestroyTimer();
+  composerDestroyTimer = setTimeout(() => {
+    composerDestroyTimer = undefined;
+    if (composerVisible || !composerWindow || composerWindow.isDestroyed()) return;
+    composerWindow.destroy();
+  }, composerIdleDestroyMs);
+  composerDestroyTimer.unref?.();
+};
 
 export const createMainWindow = (): BrowserWindow => {
   if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
@@ -95,6 +113,7 @@ export const createMainWindow = (): BrowserWindow => {
 };
 
 export const createComposerWindow = (): BrowserWindow => {
+  clearComposerDestroyTimer();
   if (composerWindow && !composerWindow.isDestroyed()) return composerWindow;
 
   const window = new BrowserWindow({
@@ -121,7 +140,7 @@ export const createComposerWindow = (): BrowserWindow => {
       webSecurity: true,
       spellcheck: false,
       devTools: !app.isPackaged,
-      backgroundThrottling: false
+      backgroundThrottling: true
     }
   });
 
@@ -132,7 +151,7 @@ export const createComposerWindow = (): BrowserWindow => {
   }
 
   window.once('ready-to-show', () => {
-    window.setIgnoreMouseEvents(true);
+    if (!composerVisible) window.setIgnoreMouseEvents(true);
   });
 
   window.on('blur', () => {
@@ -141,6 +160,7 @@ export const createComposerWindow = (): BrowserWindow => {
 
   window.on('closed', () => {
     if (composerWindow === window) {
+      clearComposerDestroyTimer();
       composerWindow = null;
       composerVisible = false;
     }
@@ -181,6 +201,19 @@ export const sendToMainWindow = (channel: string, ...args: unknown[]) => {
   send();
 };
 
+export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
+  for (const window of [mainWindow, composerWindow]) {
+    if (!window || window.isDestroyed()) continue;
+
+    const send = () => window.webContents.send(channel, ...args);
+    if (window.webContents.isLoading()) {
+      window.webContents.once('did-finish-load', send);
+    } else {
+      send();
+    }
+  }
+};
+
 export const hideComposerWindow = () => {
   if (!composerWindow || composerWindow.isDestroyed() || !composerVisible) return;
 
@@ -188,9 +221,12 @@ export const hideComposerWindow = () => {
   composerWindow.setOpacity(0);
   composerWindow.setIgnoreMouseEvents(true);
   composerWindow.blur();
+  composerWindow.hide();
+  scheduleComposerDestroy();
 };
 
 export const showComposerWindow = () => {
+  clearComposerDestroyTimer();
   const window = createComposerWindow();
   composerVisible = true;
   window.setOpacity(0);
@@ -202,7 +238,16 @@ export const showComposerWindow = () => {
   window.webContents.send('app:show-composer');
 };
 
-export const submitComposerToMainWindow = (prompt: string) => {
+export const submitComposerToMainWindow = (prompt: string, attachments: unknown[] = []) => {
   hideComposerWindow();
-  sendToMainWindow('app:submit-composer', prompt);
+  sendToMainWindow('app:submit-composer', prompt, attachments);
+};
+
+export const rendererProcessLabels = () => {
+  const labels = new Map<number, string>();
+  if (mainWindow && !mainWindow.isDestroyed()) labels.set(mainWindow.webContents.getOSProcessId(), 'main renderer');
+  if (composerWindow && !composerWindow.isDestroyed()) {
+    labels.set(composerWindow.webContents.getOSProcessId(), 'composer renderer');
+  }
+  return labels;
 };

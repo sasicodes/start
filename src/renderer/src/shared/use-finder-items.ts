@@ -3,9 +3,21 @@ import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useState } from 'preact/hooks';
 
 const finderItemsCache = new Map<string, RootItem[]>();
+const finderItemsCacheMaxEntries = 80;
 
 export const clearFinderItemsCache = () => {
   finderItemsCache.clear();
+};
+
+const setFinderItemsCache = (key: string, items: RootItem[]) => {
+  if (finderItemsCache.has(key)) finderItemsCache.delete(key);
+  finderItemsCache.set(key, items);
+
+  while (finderItemsCache.size > finderItemsCacheMaxEntries) {
+    const oldestKey = finderItemsCache.keys().next().value;
+    if (!oldestKey) return;
+    finderItemsCache.delete(oldestKey);
+  }
 };
 
 const finderCacheKey = (token: Pick<FinderToken, 'folderPath' | 'scope'>) => `${token.scope}:${token.folderPath}`;
@@ -16,12 +28,12 @@ export const useFinderItems = (token: FinderToken | undefined) => {
   useEffect(() => {
     window.pi.app
       .listRootItems('', 'workspace')
-      .then((rootItems) => finderItemsCache.set('workspace:', rootItems))
+      .then((rootItems) => setFinderItemsCache('workspace:', rootItems))
       .catch(() => undefined);
 
     window.pi.app
       .listRootItems('', 'root')
-      .then((rootItems) => finderItemsCache.set('root:', rootItems))
+      .then((rootItems) => setFinderItemsCache('root:', rootItems))
       .catch(() => undefined);
   }, []);
 
@@ -40,7 +52,7 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     window.pi.app
       .listRootItems(token.folderPath, token.scope)
       .then((rootItems) => {
-        finderItemsCache.set(cacheKey, rootItems);
+        setFinderItemsCache(cacheKey, rootItems);
         if (!disposed) setItems(rootItems);
       })
       .catch(() => {

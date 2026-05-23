@@ -1,89 +1,50 @@
-import { Menu } from '@base-ui/react/menu';
-import type { EffortLevel, ModelOption, RootItem } from '@preload/index';
-import { GenerateButton, ThinkingButton } from '@renderer/shared/composer-controls';
-import { effortLevels } from '@renderer/shared/effort';
+import type { RootItem } from '@preload/index';
+import { AttachmentStack } from '@renderer/shared/composer/attachment-stack';
+import { GenerateButton } from '@renderer/shared/composer/generate-button';
+import { ComposerModelPicker } from '@renderer/shared/composer/model-picker';
+import type { ComposerProps } from '@renderer/shared/composer/types';
 import { Finder, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
-import { Models } from '@renderer/shared/models';
+import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
-import { selectedModelKeyState } from '@renderer/state/chat';
-import { OpenAIIcon } from '@renderer/ui/icons';
-import { playCycleSound } from '@renderer/ui/sounds';
-import { CommonTooltip } from '@renderer/ui/tooltip';
 import { cn } from '@renderer/utils/cn';
-import type { RefObject } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-
-type ComposerProps = {
-  draft: string;
-  onStop: () => void;
-  onSubmit: () => void;
-  hasMessages: boolean;
-  models: ModelOption[];
-  isGenerating: boolean;
-  previousMessage: string;
-  overlay?: boolean;
-  thinkingLevel: EffortLevel;
-  onRefillPrevious: () => void;
-  selectedModelKey: string | undefined;
-  onDraftChange: (value: string) => void;
-  onSelectModel: (modelKey: string) => void;
-  onOpenSettings: () => void;
-  onSelectThinkingLevel: (level: EffortLevel) => void;
-  textareaRef: RefObject<HTMLTextAreaElement | HTMLInputElement>;
-};
-
-const promptPlaceholder = (hasMessages: boolean, commandMode: boolean) => {
-  if (commandMode) return 'Run a shell command';
-  if (hasMessages) return 'Ask for follow-up changes';
-  return 'Ask to plan or work on something';
-};
 
 export const Composer = ({
   draft,
   models,
+  attachments,
+  modelsLoaded,
   onStop,
+  onPaste,
   onSubmit,
   textareaRef,
-  hasMessages,
+  hasTurns,
   isGenerating,
   thinkingLevel,
   overlay = false,
   onDraftChange,
   onSelectModel,
-  previousMessage,
+  previousTurn,
   onOpenSettings,
   selectedModelKey,
   onRefillPrevious,
+  onOpenAttachment,
+  onRemoveAttachment,
   onSelectThinkingLevel
 }: ComposerProps) => {
   const isCommandMode = commandMode(draft);
-  const activeModelKey = selectedModelKeyState.value ?? selectedModelKey;
-  const selectedModel = useMemo(
-    () => models.find((model) => model.key === activeModelKey) ?? models[0],
-    [models, activeModelKey]
-  );
-  const selectedModelLabel = selectedModel?.name ?? 'Models';
-  const modelEffortLevels = selectedModel?.effortLevels ?? [];
-  const availableEfforts = useMemo(
-    () => effortLevels.filter((effortLevel) => modelEffortLevels.includes(effortLevel.id)),
-    [modelEffortLevels]
-  );
-  const showThinkingPicker = availableEfforts.length > 0;
-  const selectedEffort = useMemo(
-    () => availableEfforts.find((level) => level.id === thinkingLevel) ?? availableEfforts[0] ?? effortLevels[0],
-    [availableEfforts, thinkingLevel]
-  );
   const promptInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const [finderPresent, setFinderPresent] = useState(false);
   const [isMultiline, setIsMultiline] = useState(false);
   const [activeFinderIndex, setActiveFinderIndex] = useState(0);
   const updateTextareaLayout = useCallback((element: HTMLTextAreaElement, value: string) => {
+    const hasText = value.trim().length > 0;
     element.style.height = 'auto';
     const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
     const nextHeight = Math.min(element.scrollHeight, lineHeight * 4.25);
-    element.style.height = `${nextHeight}px`;
-    setIsMultiline(element.scrollHeight > lineHeight * 1.6 || value.includes('\n'));
+    element.style.height = hasText ? `${nextHeight}px` : '';
+    setIsMultiline(hasText && (element.scrollHeight > lineHeight * 1.6 || value.includes('\n')));
   }, []);
   const setPromptInputRef = useCallback(
     (element: HTMLInputElement | HTMLTextAreaElement | null) => {
@@ -102,8 +63,12 @@ export const Composer = ({
     return finderItems.filter((item) => item.name.toLowerCase().includes(finderQuery));
   }, [finderItems, finderQuery]);
   const finderVisible = Boolean(finderToken);
+  const hasAttachments = attachments.length > 0;
   const finderAttached = finderPresent || finderVisible;
   const selectedFinderItem = filteredFinderItems[activeFinderIndex] ?? filteredFinderItems[0];
+  const centered = overlay || !hasTurns;
+  const layered = isMultiline || hasAttachments;
+  const promptPlaceholder = usePromptPlaceholder({ centered, draft, hasTurns, isCommandMode });
 
   useEffect(() => {
     const exactIndex = filteredFinderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
@@ -128,17 +93,9 @@ export const Composer = ({
     onDraftChange(`${draft.slice(0, finderToken.start)}${nextToken}`);
   };
 
-  const nextEffort = () => {
-    if (availableEfforts.length < 2) return;
-    const currentIndex = availableEfforts.findIndex((level) => level.id === thinkingLevel);
-    const nextIndex = (currentIndex + 1) % availableEfforts.length;
-    playCycleSound();
-    onSelectThinkingLevel(availableEfforts[nextIndex]?.id ?? selectedEffort.id);
-  };
-
   const handleSubmit = (event: SubmitEvent) => {
     event.preventDefault();
-    if (!draft.trim() && previousMessage) {
+    if (!draft.trim() && previousTurn) {
       onRefillPrevious();
       return;
     }
@@ -181,7 +138,7 @@ export const Composer = ({
       return;
     }
 
-    if (event.key === 'ArrowUp' && !draft.trim() && previousMessage) {
+    if (event.key === 'ArrowUp' && !draft.trim() && previousTurn) {
       event.preventDefault();
       onRefillPrevious();
       return;
@@ -189,16 +146,21 @@ export const Composer = ({
 
     if (event.key !== 'Enter' || event.shiftKey) return;
     event.preventDefault();
+    if (!draft.trim()) {
+      if (previousTurn) onRefillPrevious();
+      return;
+    }
     onSubmit();
   };
 
   return (
     <div
       class={cn(
-        'fixed inset-x-0 mx-auto w-full max-w-3xl rounded-2xl px-5',
-        overlay && 'top-[calc(50%-28px)]',
-        !overlay && hasMessages && 'bottom-4.5',
-        !overlay && !hasMessages && 'top-[calc(50%-28px)]'
+        'fixed inset-x-0 isolate mx-auto w-full max-w-3xl rounded-2xl px-5',
+        centered && 'top-[calc(50%-28px)]',
+        !overlay && hasTurns && 'bottom-4.5',
+        overlay &&
+          "before:pointer-events-none before:absolute before:inset-x-10 before:-top-5 before:-bottom-5 before:z-10 before:animate-[composer-shortcut-smoke-in_220ms_cubic-bezier(0.16,1,0.3,1)_both] before:rounded-full before:bg-[radial-gradient(ellipse_at_22%_42%,var(--composer-shortcut-smoke-warm),transparent_48%),radial-gradient(ellipse_at_78%_36%,var(--composer-shortcut-smoke-cool),transparent_52%),radial-gradient(ellipse_at_50%_78%,var(--composer-shortcut-smoke-mist),transparent_58%)] before:blur-2xl before:content-[''] after:pointer-events-none after:absolute after:inset-x-20 after:top-1 after:z-20 after:h-12 after:animate-[composer-shortcut-smoke-in_260ms_cubic-bezier(0.16,1,0.3,1)_both] after:rounded-full after:bg-[linear-gradient(90deg,transparent,var(--composer-shortcut-smoke-sheen),transparent)] after:blur-md after:content-['']"
       )}
     >
       <Finder
@@ -210,9 +172,13 @@ export const Composer = ({
       />
       <form
         class={cn(
-          'relative z-30 overflow-hidden rounded-3xl border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
+          'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
+          layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
           finderAttached && !isCommandMode && 'shadow-[0_0_0_1px_transparent,0_16px_22px_-18px_oklch(0%_0_0/0.16)]',
-          !finderAttached && 'shadow-shell'
+          !finderAttached && !overlay && 'shadow-shell',
+          !finderAttached &&
+            overlay &&
+            'shadow-[0_0_0_1px_var(--composer-shortcut-field-ring),0_20px_46px_-28px_var(--composer-shortcut-field-shadow),inset_0_1px_0_var(--composer-shortcut-field-highlight)]'
         )}
         onMouseDown={(event) => {
           if (overlay) event.stopPropagation();
@@ -221,83 +187,76 @@ export const Composer = ({
       >
         <div
           class={cn(
-            'flex min-h-11.5 items-center gap-2 py-1.25 pr-1.5 pl-1.75',
-            isMultiline && 'flex-wrap items-end gap-y-1.5 pt-2 pl-2.5'
+            'flex min-h-11.5 items-center gap-2 py-1.25 pr-1.5 pl-1.25',
+            layered && 'flex-wrap items-end gap-y-1.5 px-2.5 pt-2'
           )}
         >
-          <div class={cn('flex flex-none items-center gap-px', isMultiline && 'order-2')}>
-            <div
-              class={cn(
-                'relative flex h-9.5 items-center bg-control',
-                showThinkingPicker && 'rounded-[20px_3px_3px_20px]',
-                !showThinkingPicker && 'rounded-full'
-              )}
-            >
-              <Menu.Root modal={false}>
-                <CommonTooltip label={selectedModelLabel}>
-                  <Menu.Trigger
-                    aria-label="Choose model"
-                    className="grid h-full w-10 place-items-center rounded-full border-0 bg-transparent text-ink select-none"
+          <ComposerModelPicker
+            models={models}
+            layered={layered}
+            modelsLoaded={modelsLoaded}
+            thinkingLevel={thinkingLevel}
+            onSelectModel={onSelectModel}
+            onOpenSettings={onOpenSettings}
+            selectedModelKey={selectedModelKey}
+            onSelectThinkingLevel={onSelectThinkingLevel}
+          />
+          <div class={cn('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
+            {promptPlaceholder.rotating && (
+              <div
+                aria-hidden="true"
+                class="pointer-events-none absolute inset-0 overflow-hidden px-1 py-0.5 text-sm leading-6 text-soft"
+              >
+                {promptPlaceholder.placeholders.map((text, index) => (
+                  <span
+                    key={text}
+                    style={{
+                      animationDelay: `${index * 10}s`,
+                      animationDuration: `${promptPlaceholder.placeholders.length * 10}s`,
+                      animationIterationCount: 'infinite',
+                      animationName: 'composer-placeholder-cycle',
+                      animationTimingFunction: 'linear'
+                    }}
+                    class="absolute inset-x-1 top-0.5 truncate opacity-0"
                   >
-                    <OpenAIIcon class="size-4 flex-none translate-x-px -translate-y-[0.5px]" />
-                  </Menu.Trigger>
-                </CommonTooltip>
-                <Menu.Portal>
-                  <Menu.Positioner
-                    side="top"
-                    align="start"
-                    sideOffset={12}
-                    alignOffset={-6}
-                    className="z-30"
-                    collisionPadding={12}
-                  >
-                    <Models
-                      models={models}
-                      selectedModel={selectedModel}
-                      onSelectModel={onSelectModel}
-                      onOpenSettings={onOpenSettings}
-                    />
-                  </Menu.Positioner>
-                </Menu.Portal>
-              </Menu.Root>
-            </div>
-            <ThinkingButton
-              label={selectedEffort.label}
-              level={thinkingLevel}
-              visible={showThinkingPicker}
-              onNext={nextEffort}
+                    {text}
+                  </span>
+                ))}
+              </div>
+            )}
+            <textarea
+              rows={1}
+              value={draft}
+              ref={setPromptInputRef}
+              role="combobox"
+              aria-label={promptPlaceholder.label}
+              aria-expanded={Boolean(finderToken)}
+              aria-controls="composer-finder"
+              aria-autocomplete="list"
+              aria-activedescendant={selectedFinderItem ? finderItemId(selectedFinderItem.path) : undefined}
+              spellcheck={false}
+              autoCorrect="off"
+              onInput={handleDraftInput}
+              onPaste={onPaste}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+              autoCapitalize="off"
+              placeholder={promptPlaceholder.placeholder}
+              class="block max-h-25.5 min-h-5.75 w-full min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-1 py-0.5 text-sm leading-6 text-ink outline-0 [scrollbar-color:oklch(70%_0.01_264/0.5)_transparent] [scrollbar-width:thin] placeholder:text-soft"
             />
           </div>
-
-          <textarea
-            rows={1}
-            value={draft}
-            ref={setPromptInputRef}
-            role="combobox"
-            aria-expanded={Boolean(finderToken)}
-            aria-controls="composer-finder"
-            aria-autocomplete="list"
-            aria-activedescendant={selectedFinderItem ? finderItemId(selectedFinderItem.path) : undefined}
-            spellcheck={false}
-            autoCorrect="off"
-            onInput={handleDraftInput}
-            onKeyDown={handleKeyDown}
-            autoComplete="off"
-            autoCapitalize="off"
-            placeholder={promptPlaceholder(hasMessages, isCommandMode)}
-            class={cn(
-              'block max-h-25.5 min-h-5.75 min-w-0 resize-none overflow-y-auto border-0 bg-transparent px-1 py-0.5 text-sm leading-6 text-ink outline-0 [scrollbar-color:oklch(70%_0.01_264/0.5)_transparent] [scrollbar-width:thin] placeholder:text-soft',
-              isMultiline && 'order-1 w-full flex-none rounded-t-3xl',
-              !isMultiline && 'flex-1'
-            )}
-          />
-          <div class={cn('relative flex items-center', isMultiline && 'order-2 ml-auto')}>
+          <div class={cn('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
+            <AttachmentStack
+              attachments={attachments}
+              onOpenAttachment={onOpenAttachment}
+              onRemoveAttachment={onRemoveAttachment}
+            />
             <GenerateButton
               draft={draft}
               onStop={onStop}
               commandMode={isCommandMode}
               isGenerating={isGenerating}
-              previousMessage={previousMessage}
+              previousTurn={previousTurn}
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { getGitBranch, isGitRepository } from '@main/git';
 import { nativeImage } from 'electron';
@@ -7,6 +7,7 @@ export type WorkspaceInfo = {
   branchName?: string;
   folderName: string;
   iconDataUrl: string;
+  path: string;
 };
 
 type IconCandidate = {
@@ -38,7 +39,84 @@ const ignoredDirectories = new Set([
 const maxCandidates = 80;
 const maxDepth = 5;
 const maxEntries = 8000;
+const maxIconBytes = 1_500_000;
+const maxWorkspaceCacheSize = 64;
 const workspaceCache = new Map<string, Promise<WorkspaceInfo>>();
+
+const exactIconNameScores = new Map([
+  ['app-icon', 980],
+  ['appicon', 980],
+  ['application-icon', 970],
+  ['icon', 960],
+  ['favicon', 940],
+  ['apple-touch-icon', 920],
+  ['touch-icon', 910],
+  ['android-chrome', 900],
+  ['web-app-manifest', 880],
+  ['mstile', 860],
+  ['site-icon', 840],
+  ['launcher-icon', 820],
+  ['adaptive-icon', 800],
+  ['logo', 760],
+  ['mark', 720]
+]);
+
+const partialIconNameScores = [
+  { value: 'app-icon', score: 880 },
+  { value: 'appicon', score: 880 },
+  { value: 'application-icon', score: 870 },
+  { value: 'favicon', score: 860 },
+  { value: 'apple-touch-icon', score: 840 },
+  { value: 'touch-icon', score: 830 },
+  { value: 'android-chrome', score: 820 },
+  { value: 'web-app-manifest', score: 800 },
+  { value: 'mstile', score: 780 },
+  { value: 'site-icon', score: 760 },
+  { value: 'launcher-icon', score: 740 },
+  { value: 'adaptive-icon', score: 720 },
+  { value: 'icon', score: 700 },
+  { value: 'logo', score: 580 },
+  { value: 'mark', score: 540 }
+];
+
+const decorativeNameScores = [
+  { value: 'screenshot', score: -300 },
+  { value: 'background', score: -280 },
+  { value: 'banner', score: -240 },
+  { value: 'preview', score: -220 },
+  { value: 'hero', score: -210 },
+  { value: 'tray', score: -190 },
+  { value: 'mask', score: -180 },
+  { value: 'shadow', score: -160 },
+  { value: 'sprite', score: -140 }
+];
+
+const sizeNameScores = [
+  { value: '1024', score: 330 },
+  { value: '512', score: 300 },
+  { value: '256', score: 260 },
+  { value: '192', score: 240 },
+  { value: '180', score: 220 },
+  { value: '128', score: 200 },
+  { value: '64', score: 80 },
+  { value: '48', score: -40 },
+  { value: '32', score: -120 },
+  { value: '16', score: -160 }
+];
+
+const normalizeIconName = (name: string) =>
+  name
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replaceAll('_', '-')
+    .replaceAll(' ', '-')
+    .toLowerCase();
+
+const scoreContains = (name: string, scores: { score: number; value: string }[]) => {
+  for (const entry of scores) {
+    if (name.includes(entry.value)) return entry.score;
+  }
+  return 0;
+};
 
 const directoryScore = (segments: string[]) => {
   const normalized = segments.join('/');
@@ -65,17 +143,15 @@ const extensionScore = (extension: string) => {
 };
 
 const nameScore = (name: string) => {
-  if (name === 'icon' || name === 'app-icon') return 900;
-  if (name === 'logo' || name === 'mark') return 820;
-  if (name === 'apple-touch-icon') return 760;
-  if (name === 'favicon') return 700;
-  if (name.includes('android-chrome-512')) return 660;
-  if (name.includes('512')) return 300;
-  if (name.includes('256') || name.includes('128')) return 240;
-  if (name.includes('32') || name.includes('16')) return -120;
-  if (name.includes('tray') || name.includes('mask')) return -180;
-  if (name.includes('background') || name.includes('screenshot')) return -260;
-  return 0;
+  const normalized = normalizeIconName(name);
+  const exactScore = exactIconNameScores.get(normalized);
+  if (exactScore) return exactScore;
+
+  return (
+    scoreContains(normalized, partialIconNameScores) +
+    scoreContains(normalized, sizeNameScores) +
+    scoreContains(normalized, decorativeNameScores)
+  );
 };
 
 const candidateScore = (root: string, filePath: string) => {
@@ -85,6 +161,11 @@ const candidateScore = (root: string, filePath: string) => {
   const name = parsed.name.toLowerCase();
 
   return directoryScore(segments) + nameScore(name) + extensionScore(parsed.ext.toLowerCase()) - segments.length;
+};
+
+const compareCandidates = (first: IconCandidate, second: IconCandidate) => {
+  if (first.score !== second.score) return second.score - first.score;
+  return first.filePath.localeCompare(second.filePath);
 };
 
 const shouldSkipDirectory = (name: string) => ignoredDirectories.has(name) || name.startsWith('.');
@@ -120,10 +201,13 @@ const scanIconCandidates = async (root: string) => {
     }
   }
 
-  return candidates.sort((first, second) => second.score - first.score).slice(0, maxCandidates);
+  return candidates.sort(compareCandidates).slice(0, maxCandidates);
 };
 
 const svgDataUrl = async (filePath: string) => {
+  const details = await stat(filePath).catch(() => undefined);
+  if (!details || details.size > maxIconBytes) return undefined;
+
   const source = await readFile(filePath, 'utf8').catch(() => '');
   if (!source.trimStart().startsWith('<svg')) return undefined;
   return `data:image/svg+xml;base64,${Buffer.from(source).toString('base64')}`;
@@ -152,6 +236,9 @@ const imageDataUrl = async (filePath: string) => {
   const extension = path.extname(filePath).toLowerCase();
   if (extension === '.svg') return svgDataUrl(filePath);
 
+  const details = await stat(filePath).catch(() => undefined);
+  if (!details || details.size > maxIconBytes) return undefined;
+
   const image = nativeImage.createFromPath(filePath);
   if (image.isEmpty()) return undefined;
 
@@ -165,26 +252,31 @@ const imageDataUrl = async (filePath: string) => {
   return `data:${mimeType};base64,${data.toString('base64')}`;
 };
 
-const workspaceInfo = (folderName: string, iconDataUrl: string, branchName: string | undefined): WorkspaceInfo => ({
+const workspaceInfo = (
+  cwd: string,
+  folderName: string,
+  iconDataUrl: string,
+  branchName: string | undefined
+): WorkspaceInfo => ({
   ...(branchName ? { branchName } : {}),
   folderName,
-  iconDataUrl
+  iconDataUrl,
+  path: cwd
 });
 
 const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
   const folderName = path.basename(cwd) || cwd;
   const isGitWorkspace = await isGitRepository(cwd);
   const branchName = isGitWorkspace ? await getGitBranch(cwd) : undefined;
-  if (!isGitWorkspace) return workspaceInfo(folderName, generatedIconDataUrl(folderName), branchName);
 
   const candidates = await scanIconCandidates(cwd);
 
   for (const candidate of candidates) {
     const iconDataUrl = await imageDataUrl(candidate.filePath);
-    if (iconDataUrl) return workspaceInfo(folderName, iconDataUrl, branchName);
+    if (iconDataUrl) return workspaceInfo(cwd, folderName, iconDataUrl, branchName);
   }
 
-  return workspaceInfo(folderName, generatedIconDataUrl(folderName), branchName);
+  return workspaceInfo(cwd, folderName, generatedIconDataUrl(folderName), branchName);
 };
 
 export const getWorkspace = (cwd = process.cwd()) => {
@@ -192,6 +284,10 @@ export const getWorkspace = (cwd = process.cwd()) => {
   if (cached) return cached;
 
   const workspacePromise = readWorkspace(cwd);
+  if (workspaceCache.size >= maxWorkspaceCacheSize) {
+    const oldestKey = workspaceCache.keys().next().value;
+    if (oldestKey) workspaceCache.delete(oldestKey);
+  }
   workspaceCache.set(cwd, workspacePromise);
   return workspacePromise;
 };

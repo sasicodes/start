@@ -7,7 +7,9 @@
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
 - Keep files small. Split component files before they approach 300 lines.
 - Keep UI smooth: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
+- Keep primary conversational content direct; place diagnostics, metadata, and tool output behind concise collapsed details.
 - Name component files with clear component words only; avoid extra suffixes like `list` or `card` when the component name is already clear.
+- Omit optional object properties when absent instead of serializing `undefined` or placeholder `null` values.
 - Read environment variables only through `src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - The app description is `your coding agent`

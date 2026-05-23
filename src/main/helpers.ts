@@ -9,7 +9,12 @@ import {
 
 export const getSupportedEffortLevels = (model: ThinkingModel): EffortLevel[] => {
   if (!model.reasoning) return [];
-  return effortLevels;
+  return effortLevels.filter((level) => {
+    const mappedLevel = model.thinkingLevelMap?.[level];
+    if (mappedLevel === null) return false;
+    if (level === 'xhigh') return mappedLevel !== undefined;
+    return true;
+  });
 };
 
 export const clampThinkingLevel = (model: ThinkingModel, level: EffortLevel): EffortLevel => {
@@ -110,6 +115,13 @@ export const textDelta = (event: AgentSessionEvent) => {
   if (event.type !== 'message_update') return null;
   const update = event.assistantMessageEvent;
   if (update.type !== 'text_delta') return null;
+  return update.delta;
+};
+
+export const thinkingDelta = (event: AgentSessionEvent) => {
+  if (event.type !== 'message_update') return null;
+  const update = event.assistantMessageEvent;
+  if (update.type !== 'thinking_delta') return null;
   return update.delta;
 };
 

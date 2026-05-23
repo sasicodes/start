@@ -6,14 +6,15 @@
   "type": "module",
   "main": "out/main/index.js",
   "packageManager": "pnpm@10.25.0",
+  "homepage": "https://start.intelligence.one",
   "scripts": {
     "dev": "electron-vite dev",
     "typecheck": "tsc -b --pretty false",
-    "lint": "biome lint .",
-    "format": "biome format . --write",
-    "format:check": "biome format .",
-    "check": "biome check . && pnpm typecheck",
-    "check:fix": "biome check . --write && pnpm typecheck",
+    "lint": "biome lint . --error-on-warnings",
+    "format": "biome ci --linter-enabled=false --assist-enabled=false .",
+    "format:fix": "biome format . --write",
+    "check": "pnpm run lint && pnpm run format && pnpm run typecheck",
+    "check:fix": "biome check . --write && pnpm run typecheck",
     "build": "electron-vite build",
     "package": "pnpm build && electron-builder --dir",
     "dist": "pnpm build && electron-builder"
@@ -27,11 +28,11 @@
   "author": "Intelligence One",
   "license": "UNLICENSED",
   "dependencies": {
-    "@base-ui/react": "^1.4.1",
-    "@earendil-works/pi-coding-agent": "^0.74.1",
+    "@base-ui/react": "^1.5.0",
+    "@earendil-works/pi-coding-agent": "^0.75.3",
     "@preact/signals": "latest",
     "@tanstack/hotkeys": "^0.8.0",
-    "motion": "^12.38.0",
+    "motion": "^12.39.0",
     "preact": "latest"
   },
   "devDependencies": {
@@ -39,8 +40,8 @@
     "@electron/notarize": "latest",
     "@preact/preset-vite": "latest",
     "@tailwindcss/vite": "^4.3.0",
-    "@types/node": "^25.8.0",
-    "electron": "42.1.0",
+    "@types/node": "^25.9.1",
+    "electron": "42.2.0",
     "electron-builder": "latest",
     "electron-vite": "6.0.0-beta.1",
     "tailwindcss": "^4.3.0",
@@ -54,7 +55,7 @@
       "electron-winstaller"
     ],
     "patchedDependencies": {
-      "@earendil-works/pi-ai@0.74.1": "patches/@earendil-works__pi-ai@0.74.1.patch"
+      "@earendil-works/pi-ai@0.75.3": "patches/@earendil-works__pi-ai@0.75.3.patch"
     }
   },
   "build": {

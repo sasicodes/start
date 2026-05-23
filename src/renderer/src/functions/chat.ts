@@ -1,7 +1,7 @@
 import { createId } from '@renderer/utils/id';
-import type { ChatMessage } from '@renderer/utils/types';
+import type { Turn } from '@renderer/utils/types';
 
-export const createMessage = (role: ChatMessage['role'], text: string): ChatMessage => {
+export const createTurn = (role: Turn['role'], text: string): Turn => {
   return {
     id: createId(),
     role,

@@ -3,9 +3,9 @@ import { cn } from '@renderer/utils/cn';
 
 export const effortLevels = [
   { id: 'low', label: 'Low' },
+  { id: 'medium', label: 'Medium' },
   { id: 'high', label: 'High' },
-  { id: 'xhigh', label: 'Extra high' },
-  { id: 'medium', label: 'Medium' }
+  { id: 'xhigh', label: 'Extra high' }
 ] as const;
 
 export const EffortSignal = ({ className, level }: { className?: string; level: EffortLevel }) => {
@@ -17,7 +17,7 @@ export const EffortSignal = ({ className, level }: { className?: string; level: 
         <span
           key={effortLevel.id}
           class={cn(
-            'block h-2.5 w-0.5 min-w-0.5 max-w-0.5 rounded-full bg-current opacity-25',
+            'block h-2.5 w-0.5 shrink-0 rounded-full bg-current opacity-25',
             index < activeCount && 'opacity-80'
           )}
         />

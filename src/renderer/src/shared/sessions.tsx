@@ -1,4 +1,4 @@
-import type { RecentSession } from '@preload/index';
+import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { formatRelativeTime } from '@renderer/utils/time';
@@ -6,22 +6,26 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 const EmptySessions = () => <li class="px-3 py-8 text-center text-sm text-soft">No recent sessions</li>;
-const ICON_EXIT_DELAY = 70;
-const ICON_RETURN_DELAY = 130;
 
-const SessionIcon = ({ hidden }: { hidden: boolean }) => (
+const SessionToggle = ({ hidden, onOpen }: { hidden: boolean; onOpen: () => void }) => (
   <AnimatePresence>
     {!hidden && (
-      <motion.span
-        key="history-icon"
+      <motion.button
+        key="history-button"
+        type="button"
         animate={{ opacity: 1, scale: 1 }}
+        aria-label="Recent sessions"
         exit={{ opacity: 0, scale: 0.82 }}
         initial={{ opacity: 0, scale: 0.82 }}
+        onClick={(event: MouseEvent) => {
+          event.stopPropagation();
+          onOpen();
+        }}
         transition={{ duration: 0.08 }}
-        class="absolute inset-0 grid place-items-center"
+        class="absolute inset-0 grid place-items-center rounded-full border-0 bg-transparent text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control"
       >
         <HistoryIcon class="size-5" />
-      </motion.span>
+      </motion.button>
     )}
   </AnimatePresence>
 );
@@ -33,14 +37,17 @@ const SessionRow = ({
 }: {
   active: boolean;
   session: RecentSession;
-  onOpen: (path: string) => void;
+  onOpen: (session: RecentSession) => void;
 }) => (
   <li>
     <button
       type="button"
-      onClick={() => onOpen(session.path)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen(session);
+      }}
       class={cn(
-        'grid w-full gap-1 rounded-2xl border-0 px-3 py-2.5 text-left text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control',
+        'grid w-full gap-1 rounded-xl border-0 px-3 py-2 text-left text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control',
         active ? 'bg-control text-hover' : 'bg-transparent'
       )}
     >
@@ -59,7 +66,7 @@ const SessionRows = ({
   sessions: RecentSession[];
   loaded: boolean;
   activeSessionId: string | undefined;
-  onOpenSession: (path: string) => Promise<boolean>;
+  onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   if (!loaded) return null;
   if (sessions.length === 0) return <EmptySessions />;
@@ -69,7 +76,7 @@ const SessionRows = ({
       key={session.id}
       session={session}
       active={session.id === activeSessionId}
-      onOpen={(path) => void onOpenSession(path)}
+      onOpen={(session) => void onOpenSession(session)}
     />
   ));
 };
@@ -79,15 +86,13 @@ const SessionContent = ({
   sessions,
   loaded,
   onOpenSession,
-  activeSessionId,
-  expandedHeight
+  activeSessionId
 }: {
   open: boolean;
   sessions: RecentSession[];
   loaded: boolean;
   activeSessionId: string | undefined;
-  expandedHeight: number;
-  onOpenSession: (path: string) => Promise<boolean>;
+  onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => (
   <AnimatePresence>
     {open && (
@@ -96,9 +101,8 @@ const SessionContent = ({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 4, transition: { duration: 0.1, ease: 'easeOut' } }}
         initial={{ opacity: 0, y: 4 }}
-        style={{ width: 360, height: expandedHeight }}
         transition={{ duration: 0.12, delay: 0.05, ease: 'easeOut' }}
-        class="flex h-full flex-col gap-1 overflow-y-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        class="flex h-full w-90 flex-col gap-1 overflow-y-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <SessionRows
           sessions={sessions}
@@ -118,58 +122,66 @@ export const RecentSessions = ({
 }: {
   workspacePath: string | undefined;
   activeSessionId: string | undefined;
-  onOpenSession: (path: string) => Promise<boolean>;
+  onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
-  const openTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const sessionsRequestRef = useRef(0);
-  const [iconHidden, setIconHidden] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<RecentSession[]>([]);
   const expandedHeight = !loaded || sessions.length > 0 ? 520 : 108;
   const panelTransition = { duration: 0.16, ease: [0.22, 1, 0.36, 1] };
 
-  const clearOpenTimer = useCallback(() => {
-    if (!openTimerRef.current) return;
-    clearTimeout(openTimerRef.current);
-    openTimerRef.current = undefined;
-  }, []);
+  const loadSessions = useCallback(
+    async (showLoading = false) => {
+      const requestId = sessionsRequestRef.current + 1;
+      sessionsRequestRef.current = requestId;
+      if (showLoading) setLoaded(false);
 
-  const loadSessions = useCallback(async () => {
-    const requestId = sessionsRequestRef.current + 1;
-    sessionsRequestRef.current = requestId;
-    setLoaded(false);
-
-    try {
-      const nextSessions = await window.pi.chat.recentSessions(workspacePath);
-      if (sessionsRequestRef.current !== requestId) return;
-      setSessions(nextSessions);
-    } catch {
-      if (sessionsRequestRef.current !== requestId) return;
-      setSessions([]);
-    } finally {
-      if (sessionsRequestRef.current === requestId) setLoaded(true);
-    }
-  }, [workspacePath]);
+      try {
+        const nextSessions = await window.pi.chat.recentSessions(workspacePath);
+        if (sessionsRequestRef.current !== requestId) return;
+        setSessions(nextSessions);
+      } catch {
+        if (sessionsRequestRef.current !== requestId) return;
+        setSessions([]);
+      } finally {
+        if (sessionsRequestRef.current === requestId) setLoaded(true);
+      }
+    },
+    [workspacePath]
+  );
 
   const closeSessions = useCallback(() => {
     setOpen(false);
-    clearOpenTimer();
-    openTimerRef.current = setTimeout(() => setIconHidden(false), ICON_RETURN_DELAY);
-  }, [clearOpenTimer]);
+  }, []);
 
   const openSessions = useCallback(() => {
     if (open) return;
     void loadSessions();
-    setIconHidden(true);
-    clearOpenTimer();
-    openTimerRef.current = setTimeout(() => setOpen(true), ICON_EXIT_DELAY);
-  }, [clearOpenTimer, loadSessions, open]);
+    setOpen(true);
+  }, [loadSessions, open]);
+
+  const openSessionAndClose = useCallback(
+    async (session: RecentSession) => {
+      closeSessions();
+      return onOpenSession(session);
+    },
+    [closeSessions, onOpenSession]
+  );
 
   useEffect(() => {
-    void loadSessions();
-  }, [activeSessionId, loadSessions, workspacePath]);
+    void loadSessions(true);
+  }, [loadSessions]);
+
+  useEffect(() => {
+    const refreshOnChange = (event: RecentSessionsChanged) => {
+      if (event.workspacePath && event.workspacePath !== workspacePath) return;
+      void loadSessions();
+    };
+
+    return window.pi.chat.onRecentSessionsChanged(refreshOnChange);
+  }, [loadSessions, workspacePath]);
 
   useEffect(() => {
     if (!open) return;
@@ -191,38 +203,24 @@ export const RecentSessions = ({
     };
   }, [closeSessions, open]);
 
-  useEffect(() => () => clearOpenTimer(), [clearOpenTimer]);
-
   return (
     <div ref={rootRef} class="relative size-11.5">
       <motion.div
         animate={{
           width: open ? 360 : 46,
           height: open ? expandedHeight : 46,
-          borderRadius: 23
+          borderRadius: open ? 16 : 23
         }}
-        aria-expanded={open}
-        aria-label="Recent sessions"
         initial={false}
-        onClick={() => {
-          if (!open) openSessions();
-        }}
-        onKeyDown={(event: KeyboardEvent) => {
-          if (!open && (event.key === 'Enter' || event.key === ' ')) openSessions();
-        }}
-        role="button"
-        tabIndex={0}
         transition={{ width: panelTransition, height: panelTransition, borderRadius: panelTransition }}
-        style={{ transformOrigin: 'bottom left' }}
-        class="absolute bottom-0 left-0 overflow-hidden bg-composer text-ink shadow-shell outline-0 select-none focus-visible:opacity-90"
+        class="absolute bottom-0 left-0 origin-bottom-left overflow-hidden bg-composer text-ink shadow-shell outline-0 select-none focus-visible:opacity-90"
       >
-        <SessionIcon hidden={iconHidden} />
+        <SessionToggle hidden={open} onOpen={openSessions} />
         <SessionContent
           open={open}
           sessions={sessions}
           loaded={loaded}
-          expandedHeight={expandedHeight}
-          onOpenSession={onOpenSession}
+          onOpenSession={openSessionAndClose}
           activeSessionId={activeSessionId}
         />
       </motion.div>

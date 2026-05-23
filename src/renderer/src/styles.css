@@ -25,6 +25,18 @@
 :root {
   color-scheme: light dark;
   background: transparent;
+  --drop-edge-indigo: oklch(63% 0.045 268 / 0.16);
+  --drop-edge-sakura: oklch(74% 0.045 23 / 0.13);
+  --drop-corner-indigo: oklch(62% 0.055 268 / 0.24);
+  --drop-corner-sakura: oklch(74% 0.055 23 / 0.22);
+  --drop-corner-sakura-soft: oklch(78% 0.032 23 / 0.14);
+  --composer-shortcut-field-highlight: oklch(99.2% 0.003 264 / 0.72);
+  --composer-shortcut-field-ring: oklch(58% 0.04 268 / 0.12);
+  --composer-shortcut-field-shadow: oklch(32% 0.02 268 / 0.28);
+  --composer-shortcut-smoke-cool: oklch(70% 0.05 268 / 0.24);
+  --composer-shortcut-smoke-mist: oklch(82% 0.015 264 / 0.2);
+  --composer-shortcut-smoke-sheen: oklch(88% 0.018 264 / 0.24);
+  --composer-shortcut-smoke-warm: oklch(76% 0.045 23 / 0.2);
   font-synthesis: none;
   text-rendering: optimizeSpeed;
   -webkit-font-smoothing: antialiased;
@@ -33,6 +45,18 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-canvas: transparent;
+    --drop-edge-indigo: oklch(68% 0.04 268 / 0.2);
+    --drop-edge-sakura: oklch(72% 0.04 23 / 0.12);
+    --drop-corner-indigo: oklch(67% 0.05 268 / 0.3);
+    --drop-corner-sakura: oklch(72% 0.048 23 / 0.17);
+    --drop-corner-sakura-soft: oklch(76% 0.03 23 / 0.12);
+    --composer-shortcut-field-highlight: oklch(92% 0.008 268 / 0.06);
+    --composer-shortcut-field-ring: oklch(76% 0.035 268 / 0.14);
+    --composer-shortcut-field-shadow: oklch(9% 0.015 285 / 0.58);
+    --composer-shortcut-smoke-cool: oklch(67% 0.05 268 / 0.3);
+    --composer-shortcut-smoke-mist: oklch(70% 0.016 285 / 0.12);
+    --composer-shortcut-smoke-sheen: oklch(82% 0.02 268 / 0.16);
+    --composer-shortcut-smoke-warm: oklch(72% 0.048 23 / 0.18);
     --color-panel: oklch(15% 0.004 285);
     --color-muted: oklch(26% 0.006 285);
     --color-line: oklch(100% 0 0 / 0.06);
@@ -63,4 +87,91 @@ body,
 
 body {
   @apply overflow-hidden bg-transparent;
+}
+
+@keyframes composer-placeholder-cycle {
+  0%,
+  24.99% {
+    opacity: 1;
+  }
+
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes composer-shortcut-smoke-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes drop-corner-drift {
+  0%,
+  100% {
+    transform: translate3d(-1%, 0.8%, 0) scale(1.02);
+  }
+
+  50% {
+    transform: translate3d(1%, -0.8%, 0) scale(1.05);
+  }
+}
+
+@keyframes drop-edge-breathe {
+  0%,
+  100% {
+    opacity: 0.52;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.72;
+    transform: scale(1.03);
+  }
+}
+
+.tooltip-popup {
+  transition:
+    opacity 100ms ease-out,
+    transform 100ms ease-out;
+}
+
+.tooltip-popup[data-starting-style],
+.tooltip-popup[data-ending-style] {
+  opacity: 0;
+}
+
+.tooltip-popup[data-side="top"][data-starting-style],
+.tooltip-popup[data-side="top"][data-ending-style],
+.tooltip-positioner[data-side="top"] .tooltip-popup[data-starting-style],
+.tooltip-positioner[data-side="top"] .tooltip-popup[data-ending-style] {
+  transform: translateY(0.25rem);
+}
+
+.tooltip-popup[data-side="right"][data-starting-style],
+.tooltip-popup[data-side="right"][data-ending-style],
+.tooltip-positioner[data-side="right"] .tooltip-popup[data-starting-style],
+.tooltip-positioner[data-side="right"] .tooltip-popup[data-ending-style] {
+  transform: translateX(-0.25rem);
+}
+
+.tooltip-popup[data-side="bottom"][data-starting-style],
+.tooltip-popup[data-side="bottom"][data-ending-style],
+.tooltip-positioner[data-side="bottom"] .tooltip-popup[data-starting-style],
+.tooltip-positioner[data-side="bottom"] .tooltip-popup[data-ending-style] {
+  transform: translateY(-0.25rem);
+}
+
+.tooltip-popup[data-side="left"][data-starting-style],
+.tooltip-popup[data-side="left"][data-ending-style],
+.tooltip-positioner[data-side="left"] .tooltip-popup[data-starting-style],
+.tooltip-positioner[data-side="left"] .tooltip-popup[data-ending-style] {
+  transform: translateX(0.25rem);
 }

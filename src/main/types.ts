@@ -6,7 +6,7 @@ export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
 export const enabledTools = ['ls', 'read', 'edit', 'find', 'grep', 'bash', 'write'];
 export type ChatStatus = {
   ready: boolean;
-  workspacePath?: string;
+  workspacePath: string;
   modelLabel?: string;
   selectedModelKey?: string;
   sessionId?: string;
@@ -46,26 +46,62 @@ export type ThinkingModel = {
   thinkingLevelMap?: Partial<Record<ThinkingLevel, string | null>>;
 };
 
+export type ImageAttachment = {
+  id: string;
+  name: string;
+  path: string;
+  type: 'image';
+  mimeType: string;
+  previewUrl: string;
+};
+
+export type PreparedDropFiles = {
+  pathTokens: string[];
+  attachments: ImageAttachment[];
+};
+
 export type SendResult = {
   ok: boolean;
   text?: string;
-  sessionId?: string | undefined;
+  sessionId?: string;
   error?: string;
 };
 
 export type CommandResult = {
   ok: boolean;
   output?: string;
-  sessionId?: string | undefined;
-  exitCode?: number | undefined;
+  sessionId?: string;
+  exitCode?: number;
   error?: string;
 };
 
-export type HistoryMessage = {
+export type TurnDetailKind = 'error' | 'metadata' | 'tool';
+export type TurnDetailState = 'active' | 'done' | 'error' | 'queued';
+
+export type ChatEvent = {
+  key: string;
+  kind: TurnDetailKind;
+  title: string;
+  state: TurnDetailState;
+  body?: string;
+  detail?: string;
+  metric?: string;
+};
+
+export type HistoryTurnDetail = ChatEvent & {
   id: string;
-  role: 'user' | 'assistant';
+  count: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type HistoryTurn = {
+  id: string;
+  role: 'user' | 'assistant' | 'terminal' | 'event';
   text: string;
   createdAt: number;
+  details?: HistoryTurnDetail[];
+  thinking?: string;
 };
 
 export type RecentSession = {
@@ -73,7 +109,7 @@ export type RecentSession = {
   title: string;
   path: string;
   modified: number;
-  messageCount: number;
+  turnCount: number;
 };
 
 export type WorkspaceFolder = {
@@ -93,6 +129,6 @@ export type SwitchWorkspaceResult = {
 export type OpenSessionResult = {
   ok: boolean;
   id?: string;
-  messages?: HistoryMessage[];
+  turns?: HistoryTurn[];
   error?: string;
 };

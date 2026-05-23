@@ -17,8 +17,21 @@ type RootItemsCacheEntry = {
 };
 
 const rootItemsCache = new Map<string, RootItemsCacheEntry>();
+const rootItemsCacheMaxEntries = 80;
 const rootItemsCacheMs = 3000;
 const filesystemRoot = homedir();
+
+const pruneRootItemsCache = (now = Date.now()) => {
+  for (const [key, entry] of rootItemsCache) {
+    if (!entry.promise && entry.expiresAt <= now) rootItemsCache.delete(key);
+  }
+
+  while (rootItemsCache.size > rootItemsCacheMaxEntries) {
+    const key = rootItemsCache.keys().next().value;
+    if (!key) return;
+    rootItemsCache.delete(key);
+  }
+};
 
 const readRootItems = async (relativePath: string, scope: RootItemsScope, workspaceRoot: string) => {
   const basePath = scope === 'root' ? filesystemRoot : workspaceRoot;
@@ -60,6 +73,7 @@ export const listRootItems = async (relativePath: string, scope: RootItemsScope,
   const cacheKey = `${scope}:${workspaceRoot}:${relativePath || ''}`;
   const cached = rootItemsCache.get(cacheKey);
   const now = Date.now();
+  pruneRootItemsCache(now);
 
   if (cached?.items && cached.expiresAt > now) return cached.items;
   if (cached?.promise) return cached.promise;
@@ -67,6 +81,7 @@ export const listRootItems = async (relativePath: string, scope: RootItemsScope,
   const promise = readRootItems(relativePath, scope, workspaceRoot)
     .then((items) => {
       rootItemsCache.set(cacheKey, { expiresAt: Date.now() + rootItemsCacheMs, items });
+      pruneRootItemsCache();
       return items;
     })
     .catch((error) => {

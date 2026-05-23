@@ -1,3 +1,3 @@
 export { Composer } from '@renderer/shared/composer';
-export { Messages } from '@renderer/shared/messages';
+export { Turns } from '@renderer/shared/turns';
 export { Settings } from '@renderer/shared/settings';

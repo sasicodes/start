@@ -1,12 +1,20 @@
-import type { EffortLevel, ModelOption, ProviderAuthStatus, SwitchWorkspaceResult } from '@preload/index';
-import { createMessage } from '@renderer/functions/chat';
+import type {
+  EffortLevel,
+  ImageAttachment,
+  ModelOption,
+  OpenSessionResult,
+  ProviderAuthStatus,
+  SwitchWorkspaceResult
+} from '@preload/index';
+import { createTurn } from '@renderer/functions/chat';
 import { commandInput, commandMode } from '@renderer/shared/input';
+import { useChatEvents } from '@renderer/shared/use-chat-events';
 import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
 import { loadWorkspaceFolders } from '@renderer/shared/workspace-folders';
 import { selectedModelKeyState } from '@renderer/state/chat';
-import type { ChatMessage } from '@renderer/utils/types';
+import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 
 type UseChatOptions = {
   onShowChat: () => void;
@@ -14,47 +22,13 @@ type UseChatOptions = {
   textareaRef: RefObject<HTMLTextAreaElement | HTMLInputElement>;
 };
 
-const appendMessageDelta = (
-  setMessages: (updater: (current: ChatMessage[]) => ChatMessage[]) => void,
-  id: string,
-  delta: string
-) => {
-  setMessages((current) =>
-    current.map((message) => (message.id === id ? { ...message, text: message.text + delta } : message))
-  );
-};
-
-const agentActivityLabel = (name: string) => {
-  if (name === 'agent_start' || name === 'turn_start') return 'Thinking...';
-  if (name === 'tool_execution_start') return 'Running tool...';
-  if (name === 'tool_execution_update') return 'Working...';
-  if (name === 'tool_execution_end') return 'Reading results...';
-  if (name === 'auto_retry_start') return 'Retrying...';
-  return undefined;
-};
-
-const updateMessageActivity = (
-  setMessages: (updater: (current: ChatMessage[]) => ChatMessage[]) => void,
-  id: string,
-  activity?: string
-) => {
-  setMessages((current) =>
-    current.map((message) => {
-      if (message.id !== id) return message;
-      if (activity) return { ...message, activity };
-
-      const { activity: _activity, ...rest } = message;
-      return rest;
-    })
-  );
-};
-
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState('Checking Pi auth...');
   const [models, setModels] = useState<ModelOption[]>([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
   const [workspacePath, setWorkspacePath] = useState<string | undefined>();
   const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
@@ -63,10 +37,14 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const assistantIdRef = useRef<string | null>(null);
   const terminalIdRef = useRef<string | null>(null);
   const currentSessionIdRef = useRef<string | undefined>();
-  const previousUserMessage = useMemo(
-    () => [...messages].reverse().find((message) => message.role === 'user')?.text ?? '',
-    [messages]
-  );
+  const previousUserTurn = useMemo(() => {
+    for (let index = turns.length - 1; index >= 0; index--) {
+      const turn = turns[index];
+      if (turn?.role === 'user') return turn.text;
+    }
+
+    return '';
+  }, [turns]);
   const updateActiveSessionId = useCallback((sessionId: string | undefined) => {
     currentSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
@@ -79,101 +57,46 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const loadModels = useCallback(async () => {
     const modelList = await window.pi.chat.models();
     setModels(modelList.models);
+    setModelsLoaded(true);
     selectedModelKeyState.value = modelList.selectedModelKey;
     setSelectedModelKey(modelList.selectedModelKey);
     if (modelList.error) setStatus(modelList.error);
   }, []);
 
+  const syncStatus = useCallback(async () => {
+    const nextStatus = await window.pi.chat.status();
+    setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
+    setWorkspacePath(nextStatus.workspacePath);
+    selectedModelKeyState.value = nextStatus.selectedModelKey;
+    setSelectedModelKey(nextStatus.selectedModelKey);
+    updateActiveSessionId(nextStatus.sessionId);
+    if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+  }, [updateActiveSessionId]);
+
   const clearSession = useCallback(() => {
     assistantIdRef.current = null;
     terminalIdRef.current = null;
     setDraft('');
-    setMessages([]);
+    setTurns([]);
     setIsGenerating(false);
     updateActiveSessionId(undefined);
   }, [updateActiveSessionId]);
 
-  useEffect(() => {
-    void window.pi.chat.status().then((nextStatus) => {
-      setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
-      setWorkspacePath(nextStatus.workspacePath);
-      selectedModelKeyState.value = nextStatus.selectedModelKey;
-      setSelectedModelKey(nextStatus.selectedModelKey);
-      if (nextStatus.sessionId) updateActiveSessionId(nextStatus.sessionId);
-      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-    });
-
-    void loadModels();
-    void loadAuthProviders();
-
-    const offShowSettings = window.pi.app.onShowSettings(onShowSettings);
-    const offNewSession = window.pi.chat.onNewSession(() => {
-      clearSession();
-      onShowChat();
-    });
-
-    const offDelta = window.pi.chat.onDelta((delta) => {
-      const id = assistantIdRef.current;
-      if (id) {
-        updateMessageActivity(setMessages, id);
-        appendMessageDelta(setMessages, id, delta);
-      }
-    });
-
-    const offDone = window.pi.chat.onDone(() => {
-      const id = assistantIdRef.current;
-      if (id) updateMessageActivity(setMessages, id);
-      assistantIdRef.current = null;
-      setIsGenerating(false);
-      textareaRef.current?.focus();
-    });
-
-    const offCommandDelta = window.pi.chat.onCommandDelta((delta) => {
-      const id = terminalIdRef.current;
-      if (id) appendMessageDelta(setMessages, id, delta);
-    });
-
-    const offCommandDone = window.pi.chat.onCommandDone((output) => {
-      const id = terminalIdRef.current;
-      terminalIdRef.current = null;
-      setIsGenerating(false);
-      if (id && !output) {
-        setMessages((current) =>
-          current.map((message) =>
-            message.id === id && !message.text ? { ...message, text: 'Command completed with no output.' } : message
-          )
-        );
-      }
-      textareaRef.current?.focus();
-    });
-
-    const offError = window.pi.chat.onError((message) => {
-      assistantIdRef.current = null;
-      terminalIdRef.current = null;
-      setIsGenerating(false);
-      setMessages((current) => [...current, createMessage('system', message)]);
-    });
-
-    const offEvent = window.pi.chat.onEvent((event) => {
-      const id = assistantIdRef.current;
-      const activity = agentActivityLabel(event.name);
-      if (id && activity) updateMessageActivity(setMessages, id, activity);
-    });
-
-    return () => {
-      offDone();
-      offDelta();
-      offError();
-      offEvent();
-      offNewSession();
-      offShowSettings();
-      offCommandDone();
-      offCommandDelta();
-    };
-  }, [clearSession, loadAuthProviders, loadModels, onShowChat, onShowSettings, textareaRef, updateActiveSessionId]);
+  useChatEvents({
+    onShowChat,
+    setTurns,
+    syncStatus,
+    loadModels,
+    textareaRef,
+    clearSession,
+    terminalIdRef,
+    assistantIdRef,
+    onShowSettings,
+    setIsGenerating
+  });
 
   const sendText = useCallback(
-    async (value: string) => {
+    async (value: string, attachments: ImageAttachment[] = []) => {
       const text = value.trim();
       if (!text || isGenerating) return;
 
@@ -181,12 +104,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       if (commandMode(text)) {
         if (!command) return;
 
-        const terminalMessage = createMessage('terminal', '');
-        const userMessage = createMessage('user', text);
-        terminalIdRef.current = terminalMessage.id;
+        const terminalTurn = createTurn('terminal', '');
+        const userTurn = createTurn('user', text);
+        terminalIdRef.current = terminalTurn.id;
         setDraft('');
         setIsGenerating(true);
-        setMessages((current) => [...current, userMessage, terminalMessage]);
+        setTurns((current) => [...current, userTurn, terminalTurn]);
 
         const result = await window.pi.chat.command(command.command, command.excludeFromContext);
         if (result.sessionId) updateActiveSessionId(result.sessionId);
@@ -194,39 +117,47 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
           const terminalId = terminalIdRef.current;
           terminalIdRef.current = null;
           setIsGenerating(false);
-          setMessages((current) => [
-            ...current.filter((message) => message.id !== terminalId),
-            createMessage('system', result.error ?? 'Command failed.')
+          setTurns((current) => [
+            ...current.filter((turn) => turn.id !== terminalId),
+            createTurn('system', result.error ?? 'Command failed.')
           ]);
         }
         return;
       }
 
-      const assistantMessage = createMessage('assistant', '');
-      const userMessage = createMessage('user', text);
-      assistantIdRef.current = assistantMessage.id;
+      const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
+      const userTurn = createTurn('user', text);
+      assistantIdRef.current = assistantTurn.id;
       setDraft('');
       setIsGenerating(true);
-      setMessages((current) => [...current, userMessage, assistantMessage]);
+      setTurns((current) => [...current, userTurn, assistantTurn]);
 
-      const result = await window.pi.chat.send(text);
+      const result = await window.pi.chat.send(text, attachments);
       if (result.sessionId) updateActiveSessionId(result.sessionId);
       if (!result.ok) {
+        const assistantId = assistantIdRef.current;
+        if (!assistantId) return;
+
         assistantIdRef.current = null;
         setIsGenerating(false);
-        setMessages((current) => [...current, createMessage('system', result.error ?? 'Pi failed.')]);
+        setTurns((current) => [
+          ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
+          createTurn('system', result.error ?? 'Pi failed.')
+        ]);
       }
     },
     [isGenerating]
   );
 
-  const send = useCallback(async () => {
-    await sendText(draft);
-  }, [draft, sendText]);
+  const send = useCallback(
+    async (attachments: ImageAttachment[] = []) => {
+      await sendText(draft, attachments);
+    },
+    [draft, sendText]
+  );
 
-  const openSession = useCallback(
-    async (path: string) => {
-      const result = await window.pi.chat.openSession(path);
+  const applyOpenSession = useCallback(
+    async (result: OpenSessionResult) => {
       if (!result.ok) {
         setStatus(result.error ?? 'Session could not be opened.');
         return false;
@@ -236,14 +167,28 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       setDraft('');
       setIsGenerating(false);
-      setMessages(result.messages ?? []);
-      updateActiveSessionId(result.id);
+      setTurns(result.turns ?? []);
       const nextStatus = await window.pi.chat.status();
       setWorkspacePath(nextStatus.workspacePath);
+      selectedModelKeyState.value = nextStatus.selectedModelKey;
+      setSelectedModelKey(nextStatus.selectedModelKey);
+      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+      setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
+      updateActiveSessionId(result.id);
       textareaRef.current?.focus();
       return true;
     },
     [textareaRef, updateActiveSessionId]
+  );
+
+  const openSession = useCallback(
+    async (path: string) => applyOpenSession(await window.pi.chat.openSession(path)),
+    [applyOpenSession]
+  );
+
+  const openSessionId = useCallback(
+    async (sessionId: string) => applyOpenSession(await window.pi.chat.openSessionId(sessionId)),
+    [applyOpenSession]
   );
 
   const applyWorkspaceSwitch = useCallback(
@@ -257,6 +202,9 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       clearFinderItemsCache();
       clearSession();
       setWorkspacePath(result.status.workspacePath);
+      selectedModelKeyState.value = result.status.selectedModelKey;
+      setSelectedModelKey(result.status.selectedModelKey);
+      if (result.status.thinkingLevel) setThinkingLevel(result.status.thinkingLevel);
       setStatus(
         result.status.ready ? `Using ${result.status.modelLabel}` : (result.status.error ?? 'Pi is not ready.')
       );
@@ -340,12 +288,14 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     send,
     draft,
     models,
+    modelsLoaded,
     status,
     sendText,
     setDraft,
-    messages,
+    turns,
     saveApiKey,
     openSession,
+    openSessionId,
     isGenerating,
     workspacePath,
     selectModel,
@@ -356,7 +306,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     selectedModelKey,
     activeSessionId,
     loginSubscription,
-    previousUserMessage,
+    previousUserTurn,
     chooseWorkspaceDirectory,
     selectThinkingLevel
   };

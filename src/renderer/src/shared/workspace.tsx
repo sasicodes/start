@@ -37,42 +37,43 @@ export const Workspace = ({
   const [folders, setFolders] = useState<WorkspaceFolder[]>(cachedWorkspaceFolders() ?? []);
   const [open, setOpen] = useState(false);
 
-  const updateOpen = useCallback((nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (!nextOpen) return;
-
-    const cachedFolders = cachedWorkspaceFolders();
-    if (cachedFolders) setFolders(cachedFolders);
+  const refreshFolders = useCallback(() => {
     void loadWorkspaceFolders()
       .then(setFolders)
       .catch(() => setFolders(cachedWorkspaceFolders() ?? []));
   }, []);
 
+  const updateOpen = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) return;
+
+      const cachedFolders = cachedWorkspaceFolders();
+      if (cachedFolders) setFolders(cachedFolders);
+      refreshFolders();
+    },
+    [refreshFolders]
+  );
+
   useEffect(() => {
-    if (cachedWorkspaceFolders()) return;
-    void loadWorkspaceFolders()
-      .then(setFolders)
-      .catch(() => undefined);
-  }, []);
+    refreshFolders();
+  }, [refreshFolders, workspacePath]);
+
+  useEffect(() => window.pi.chat.onRecentSessionsChanged(refreshFolders), [refreshFolders]);
 
   if (!workspace) return null;
 
   return (
-    <div ref={rootRef} class="flex h-11.5 max-w-64 min-w-0 items-center gap-px text-soft select-none">
-      <span class="flex h-full min-w-0 items-center gap-2 rounded-[23px_3px_3px_23px] bg-composer py-1.5 pr-3 pl-1.5 shadow-shell">
+    <div ref={rootRef} class="flex h-11.5 min-w-48 max-w-64 items-center gap-px text-soft select-none">
+      <span class="flex h-full min-w-0 flex-1 items-center gap-2 rounded-[23px_3px_3px_23px] bg-composer py-1.5 pr-3 pl-1.5 shadow-shell">
         <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
-          <img
-            src={workspace.iconDataUrl}
-            alt=""
-            class="size-full min-h-full min-w-full rounded-full object-cover"
-            draggable={false}
-          />
+          <img src={workspace.iconDataUrl} alt="" class="size-full rounded-full object-cover" draggable={false} />
         </span>
         <span class="flex min-w-0 max-w-40 flex-col justify-center gap-0.5">
           <span class="truncate text-sm leading-4 font-medium text-ink">{workspace.folderName}</span>
-          {workspace.branchName && (
-            <span class="truncate text-[11px] leading-3 font-medium text-soft">{workspace.branchName}</span>
-          )}
+          <span class="truncate text-[11px] leading-3 font-medium text-soft">
+            {workspace.branchName ?? workspace.path}
+          </span>
         </span>
       </span>
       <AppMenu.Root open={open} onOpenChange={updateOpen}>
@@ -103,7 +104,7 @@ export const Workspace = ({
                 className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
               >
                 <FolderIcon class="size-4.5" />
-                <span class="leading-5">Choose a directory</span>
+                <span class="text-xs leading-5">Choose a directory</span>
               </AppMenu.Item>
             </MenuPanel>
           </AppMenu.Positioner>
