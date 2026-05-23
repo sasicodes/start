@@ -118,12 +118,15 @@ export type HistoryTurn = {
   thinking?: string;
 };
 
+export type SessionNoticeKind = 'completed' | 'failed';
+
 export type RecentSession = {
   id: string;
-  title: string;
   path: string;
+  title: string;
   modified: number;
   turnCount: number;
+  noticeKind?: SessionNoticeKind;
 };
 
 export type WorkspaceFolder = {
@@ -131,6 +134,7 @@ export type WorkspaceFolder = {
   path: string;
   modified: number;
   sessionCount: number;
+  noticeKind?: SessionNoticeKind;
 };
 
 export type SwitchWorkspaceResult = {

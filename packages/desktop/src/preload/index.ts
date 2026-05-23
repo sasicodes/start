@@ -130,12 +130,15 @@ export interface HistoryTurn {
   thinking?: string;
 }
 
+export type SessionNoticeKind = 'completed' | 'failed';
+
 export interface RecentSession {
   id: string;
   title: string;
   path: string;
   modified: number;
   turnCount: number;
+  noticeKind?: SessionNoticeKind;
 }
 
 export interface RecentSessionsChanged {
@@ -165,6 +168,7 @@ export interface WorkspaceFolder {
   path: string;
   modified: number;
   sessionCount: number;
+  noticeKind?: SessionNoticeKind;
 }
 
 export interface SwitchWorkspaceResult {

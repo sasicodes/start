@@ -55,13 +55,19 @@ import {
 } from '@main/types';
 import { shell, type WebContents } from 'electron';
 
-const maxRecentSessions = 40;
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 
 type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
 
 type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
+};
+
+type SessionNotice = {
+  createdAt: number;
+  kind: 'completed' | 'failed';
+  sessionId: string;
+  workspacePath: string;
 };
 
 export class ChatService {
@@ -84,6 +90,8 @@ export class ChatService {
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
+  private readonly backgroundSessions = new Map<string, AgentSession>();
+  private readonly notices = new Map<string, SessionNotice>();
 
   async getStatus(): Promise<ChatStatus> {
     this.refreshAuth();
@@ -170,6 +178,7 @@ export class ChatService {
 
       this.session = session;
       this.setActiveSession(sessionManager);
+      this.markNoticeSeen(sessionManager.getSessionId());
       this.workspaceCwd = sessionManager.getCwd() || this.workspaceCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
@@ -203,18 +212,20 @@ export class ChatService {
       uniqueSessions.set(session.id, session);
     }
 
-    const recentSessions = [...uniqueSessions.values()]
-      .sort((a, b) => b.modified.getTime() - a.modified.getTime())
-      .slice(0, maxRecentSessions);
+    const recentSessions = [...uniqueSessions.values()].sort((a, b) => b.modified.getTime() - a.modified.getTime());
 
     return Promise.all(
-      recentSessions.map(async (session) => ({
-        id: session.id,
-        path: session.path,
-        modified: session.modified.getTime(),
-        turnCount: await this.userTurnCount(session.path),
-        title: session.name || session.firstMessage || 'Untitled session'
-      }))
+      recentSessions.map(async (session) => {
+        const notice = this.notices.get(session.id);
+        return {
+          id: session.id,
+          path: session.path,
+          modified: session.modified.getTime(),
+          turnCount: await this.userTurnCount(session.path),
+          title: session.name || session.firstMessage || 'Untitled session',
+          ...(notice ? { noticeKind: notice.kind } : {})
+        };
+      })
     );
   }
 
@@ -225,7 +236,8 @@ export class ChatService {
       modified: Date.now(),
       path: this.workspaceCwd,
       sessionCount: 0,
-      name: workspaceDisplayName(this.workspaceCwd)
+      name: workspaceDisplayName(this.workspaceCwd),
+      ...(this.workspaceHasNotice(this.workspaceCwd) ? { noticeKind: 'completed' as const } : {})
     });
 
     for (const session of sessions) {
@@ -236,12 +248,14 @@ export class ChatService {
       if (current) {
         current.modified = Math.max(current.modified, modified);
         current.sessionCount += 1;
+        if (this.workspaceHasNotice(session.cwd)) current.noticeKind = 'completed';
       } else {
         folders.set(session.cwd, {
           modified,
           path: session.cwd,
           sessionCount: 1,
-          name: workspaceDisplayName(session.cwd)
+          name: workspaceDisplayName(session.cwd),
+          ...(this.workspaceHasNotice(session.cwd) ? { noticeKind: 'completed' as const } : {})
         });
       }
     }
@@ -271,18 +285,17 @@ export class ChatService {
   async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (this.isGenerating) return { ok: false, error: 'Stop the current response before switching workspaces.' };
 
     try {
       this.sessionOpenSequence += 1;
-      this.session?.abortBash();
-      await this.session?.abort();
-      this.session?.dispose();
-      this.session = null;
+      if (this.session) this.backgroundSessions.set(this.workspaceCwd, this.session);
+      this.session = this.backgroundSessions.get(nextCwd) ?? null;
       this.clearQueuedMessages();
       this.attachments.clear();
-      this.activeSessionId = undefined;
-      this.shouldCreateSession = true;
+      this.activeSessionId = this.session?.sessionManager.getSessionId();
+      if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
+      this.isGenerating = Boolean(this.session?.isStreaming || this.session?.isBashRunning);
+      this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
@@ -472,19 +485,24 @@ export class ChatService {
     const sendAbortSequence = this.abortSequence;
     let endError: string | undefined;
     let activeSession: AgentSession | undefined;
+    let sessionId = '';
+    let workspacePath = this.workspaceCwd;
 
     try {
       const images = await this.resolveAttachments(attachments);
       activeSession = await this.getSession();
       const session = activeSession;
+      sessionId = session.sessionManager.getSessionId();
+      workspacePath = this.workspaceCwd;
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
+        const active = this.isActiveSession(sessionId, workspacePath);
         if (event.type === 'queue_update') {
-          this.syncQueuedMessages(event.steering, event.followUp, webContents);
+          if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);
           return;
         }
 
-        if (event.type === 'message_start' && event.message.role === 'user') {
+        if (active && event.type === 'message_start' && event.message.role === 'user') {
           this.emitQueuedTurnStart(textContent(event.message.content), webContents);
         }
 
@@ -495,14 +513,14 @@ export class ChatService {
         let previousToolArgs: unknown;
         if ('toolCallId' in event) previousToolArgs = toolArgs.get(event.toolCallId);
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
-        this.emitEvent(webContents, chatEvent(event, eventContext));
+        if (active) this.emitEvent(webContents, chatEvent(event, eventContext));
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
-        if (delta) this.emit(webContents, 'delta', delta);
+        if (active && delta) this.emit(webContents, 'delta', delta);
 
         const thought = thinkingDelta(event);
-        if (thought) this.emit(webContents, 'thinking-delta', thought);
+        if (active && thought) this.emit(webContents, 'thinking-delta', thought);
 
         const error = agentEndError(event);
         if (error) endError = error;
@@ -520,32 +538,48 @@ export class ChatService {
 
       if (endError) {
         if (this.abortSequence !== sendAbortSequence) {
-          this.setActiveSession(session.sessionManager);
-          this.emit(webContents, 'done', '');
-          return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            this.setActiveSession(session.sessionManager);
+            this.emit(webContents, 'done', '');
+          }
+          return { ok: true, sessionId };
         }
 
-        this.clearQueuedMessages(webContents);
-        this.emit(webContents, 'error', endError);
+        if (this.isActiveSession(sessionId, workspacePath)) {
+          this.clearQueuedMessages(webContents);
+          this.emit(webContents, 'error', endError);
+        } else {
+          this.setNotice(sessionId, workspacePath, 'failed', webContents);
+        }
         return { ok: false, error: endError };
       }
 
-      this.setActiveSession(session.sessionManager);
-      this.emit(webContents, 'done', '');
-      return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+      if (this.isActiveSession(sessionId, workspacePath)) {
+        this.setActiveSession(session.sessionManager);
+        this.emit(webContents, 'done', '');
+      } else {
+        this.setNotice(sessionId, workspacePath, 'completed', webContents);
+      }
+      return { ok: true, sessionId };
     } catch (error) {
       if (this.abortSequence !== sendAbortSequence) {
-        if (activeSession) this.setActiveSession(activeSession.sessionManager);
-        this.emit(webContents, 'done', '');
-        return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+        if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
+          this.setActiveSession(activeSession.sessionManager);
+          this.emit(webContents, 'done', '');
+        }
+        return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
       const message = error instanceof Error ? error.message : 'Chat failed.';
-      this.clearQueuedMessages(webContents);
-      this.emit(webContents, 'error', message);
+      if (this.isActiveSession(sessionId, workspacePath)) {
+        this.clearQueuedMessages(webContents);
+        this.emit(webContents, 'error', message);
+      } else if (sessionId) {
+        this.setNotice(sessionId, workspacePath, 'failed', webContents);
+      }
       return { ok: false, error: message };
     } finally {
-      this.isGenerating = false;
+      if (this.isActiveSession(sessionId, workspacePath)) this.isGenerating = false;
     }
   }
 
@@ -619,9 +653,7 @@ export class ChatService {
 
   async newSession(): Promise<void> {
     this.sessionOpenSequence += 1;
-    this.session?.abortBash();
-    await this.session?.abort();
-    this.session?.dispose();
+    if (this.session) this.backgroundSessions.set(this.workspaceCwd, this.session);
     this.session = null;
     this.clearQueuedMessages();
     this.attachments.clear();
@@ -636,6 +668,8 @@ export class ChatService {
     this.clearSubscriptionAuthInput();
     this.session?.dispose();
     this.session = null;
+    for (const session of this.backgroundSessions.values()) session.dispose();
+    this.backgroundSessions.clear();
     this.clearQueuedMessages();
     this.attachments.clear();
   }
@@ -809,6 +843,38 @@ export class ChatService {
 
   private setActiveSession(sessionManager: SessionManager): void {
     this.activeSessionId = sessionManager.getSessionId();
+    this.markNoticeSeen(this.activeSessionId);
+  }
+
+  private isActiveSession(sessionId: string, workspacePath: string): boolean {
+    return Boolean(sessionId && this.activeSessionId === sessionId && this.workspaceCwd === workspacePath);
+  }
+
+  private markNoticeSeen(sessionId: string): void {
+    this.notices.delete(sessionId);
+  }
+
+  private setNotice(
+    sessionId: string,
+    workspacePath: string,
+    kind: SessionNotice['kind'],
+    webContents?: WebContents
+  ): void {
+    this.notices.set(sessionId, {
+      kind,
+      sessionId,
+      workspacePath,
+      createdAt: Date.now()
+    });
+    webContents?.send('chat:recent-sessions-changed', { workspacePath });
+  }
+
+  private workspaceHasNotice(workspacePath: string): boolean {
+    for (const notice of this.notices.values()) {
+      if (notice.workspacePath === workspacePath) return true;
+    }
+
+    return false;
   }
 
   private async getSession(): Promise<AgentSession> {

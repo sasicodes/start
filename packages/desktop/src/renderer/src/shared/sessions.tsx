@@ -6,7 +6,13 @@ import { formatRelativeTime } from '@renderer/utils/time';
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
+const sessionPageSize = 15;
+
 const EmptySessions = () => <div class="px-3 py-8 text-center text-sm text-soft">No recent sessions</div>;
+
+const NoticeDot = () => (
+  <span aria-hidden="true" class="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_2px_var(--color-composer)]" />
+);
 
 const SessionRow = ({
   active,
@@ -20,12 +26,15 @@ const SessionRow = ({
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
-      'grid w-full gap-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
       active ? 'bg-control text-hover' : 'bg-transparent'
     )}
   >
-    <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
-    <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
+    <span class="flex min-w-0 flex-col gap-1">
+      <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
+      <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
+    </span>
+    {session.noticeKind && <NoticeDot />}
   </AppMenu.Item>
 );
 
@@ -64,6 +73,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   const sessionsRequestRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(sessionPageSize);
   const [sessions, setSessions] = useState<RecentSession[]>([]);
 
   const loadSessions = useCallback(
@@ -76,6 +86,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
         const nextSessions = await window.pi.chat.recentSessions(workspacePath || undefined);
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
         setSessions(nextSessions);
+        setVisibleCount((count) => Math.max(sessionPageSize, Math.min(count, nextSessions.length)));
       } catch {
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
         setSessions([]);
@@ -95,6 +106,27 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   );
 
   const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
+
+  const visibleSessions = sessions.slice(0, visibleCount);
+  const hasMoreSessions = visibleCount < sessions.length;
+  const hasNotice = sessions.some((session) => session.noticeKind);
+
+  const loadMoreSessions = useCallback(() => {
+    setVisibleCount((count) => Math.min(count + sessionPageSize, sessions.length));
+  }, [sessions.length]);
+
+  const handleSessionsScroll = useCallback(
+    (event: Event) => {
+      if (!hasMoreSessions) return;
+
+      const element = event.currentTarget;
+      if (!(element instanceof HTMLElement)) return;
+      if (element.scrollHeight - element.scrollTop - element.clientHeight > 80) return;
+
+      loadMoreSessions();
+    },
+    [hasMoreSessions, loadMoreSessions]
+  );
 
   useEffect(() => {
     return () => {
@@ -120,17 +152,25 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
     <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
       <AppMenu.Trigger
         aria-label="Recent sessions"
-        className="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
+        className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
       >
         <HistoryIcon class="size-5" />
+        {hasNotice && (
+          <span class="absolute top-1.5 right-1.5">
+            <NoticeDot />
+          </span>
+        )}
       </AppMenu.Trigger>
       <AppMenu.Portal>
         <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
           <MenuPanel className="w-90">
-            <div class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+            <div
+              class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
+              onScroll={handleSessionsScroll}
+            >
               <SessionRows
                 loaded={loaded}
-                sessions={sessions}
+                sessions={visibleSessions}
                 activeSessionId={activeSessionId}
                 onOpenSession={openSessionAndClose}
               />
