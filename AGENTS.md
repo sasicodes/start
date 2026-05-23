@@ -38,6 +38,7 @@
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
+- Avoid placeholder ternaries such as `condition ? '' : value`; split branches or extract helpers so each path computes only what it uses.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
 - The app description is `your coding assistant`

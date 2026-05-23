@@ -35,25 +35,26 @@ export const TurnDetails = ({ createdAt, details, panelOpen, thinking, working, 
   const hasDetails = hasActivityDetails(details, thinking);
   if (!working && !hasDetails) return null;
 
-  const label = working ? '' : activityLabel({ createdAt, details, working });
+  const buttonClass = tw(
+    'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-xs text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
+    panelOpen && 'text-hover',
+    working && 'animate-pulse'
+  );
+
+  if (working) {
+    return (
+      <div class="mb-1.5 max-w-full text-xs text-soft">
+        <button type="button" aria-expanded={panelOpen} onClick={onOpenPanel} class={buttonClass}>
+          <WorkingActivityLabel createdAt={createdAt} details={details} />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div class="mb-1.5 max-w-full text-xs text-soft">
-      <button
-        type="button"
-        aria-expanded={panelOpen}
-        onClick={onOpenPanel}
-        class={tw(
-          'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-xs text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
-          panelOpen && 'text-hover',
-          working && 'animate-pulse'
-        )}
-      >
-        {working ? (
-          <WorkingActivityLabel createdAt={createdAt} details={details} />
-        ) : (
-          <span class="truncate">{label}</span>
-        )}
+      <button type="button" aria-expanded={panelOpen} onClick={onOpenPanel} class={buttonClass}>
+        <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
       </button>
     </div>
   );
