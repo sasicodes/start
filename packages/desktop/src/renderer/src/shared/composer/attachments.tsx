@@ -11,7 +11,7 @@ const ClearIcon = () => (
   </svg>
 );
 
-export const AttachmentStack = ({
+export const Attachments = ({
   attachments,
   onOpenAttachment,
   onRemoveAttachment

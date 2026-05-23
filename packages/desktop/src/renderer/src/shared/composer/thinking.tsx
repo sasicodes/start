@@ -2,7 +2,7 @@ import type { EffortLevel } from '@preload/index';
 import { EffortSignal } from '@renderer/shared/effort';
 import { Tooltip } from '@renderer/ui/tooltip';
 
-interface ThinkingButtonProps {
+interface ThinkingProps {
   disabled: boolean;
   level: EffortLevel;
   label: string;
@@ -10,7 +10,7 @@ interface ThinkingButtonProps {
   onNext: () => void;
 }
 
-export const ThinkingButton = ({ disabled, label, level, visible, onNext }: ThinkingButtonProps) => {
+export const Thinking = ({ disabled, label, level, visible, onNext }: ThinkingProps) => {
   if (!visible) return null;
 
   return (

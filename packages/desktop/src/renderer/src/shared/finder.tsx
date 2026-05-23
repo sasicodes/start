@@ -1,4 +1,4 @@
-import { ComposerAttachedPanel } from '@renderer/shared/composer/panel';
+import { Attached } from '@renderer/shared/composer/attached';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
@@ -33,7 +33,7 @@ export const Finder = ({ activePath, ariaLabel, emptyLabel, items, onSelect, vis
   if (!visible) return null;
 
   return (
-    <ComposerAttachedPanel>
+    <Attached>
       <div
         {...(activeOptionId ? { 'aria-activedescendant': activeOptionId } : {})}
         ref={scrollRef}
@@ -80,6 +80,6 @@ export const Finder = ({ activePath, ariaLabel, emptyLabel, items, onSelect, vis
           <div class="px-3 py-5 text-center text-sm text-soft">{emptyLabel}</div>
         )}
       </div>
-    </ComposerAttachedPanel>
+    </Attached>
   );
 };

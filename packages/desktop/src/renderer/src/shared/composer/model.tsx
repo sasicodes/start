@@ -1,6 +1,6 @@
 import { Menu } from '@base-ui/react/menu';
 import type { EffortLevel, ModelOption } from '@preload/index';
-import { ThinkingButton } from '@renderer/shared/composer/thinking-button';
+import { Thinking } from '@renderer/shared/composer/thinking';
 import { effortLevels } from '@renderer/shared/effort';
 import { Models } from '@renderer/shared/models';
 import { selectedModelKeyState } from '@renderer/state/chat';
@@ -10,17 +10,7 @@ import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { useMemo } from 'preact/hooks';
 
-export const ComposerModelPicker = ({
-  models,
-  layered,
-  disabled,
-  modelsLoaded,
-  thinkingLevel,
-  onSelectModel,
-  onOpenSettings,
-  selectedModelKey,
-  onSelectThinkingLevel
-}: {
+interface ModelProps {
   layered: boolean;
   disabled: boolean;
   models: ModelOption[];
@@ -30,7 +20,19 @@ export const ComposerModelPicker = ({
   selectedModelKey: string;
   onSelectModel: (modelKey: string) => void;
   onSelectThinkingLevel: (level: EffortLevel) => void;
-}) => {
+}
+
+export const Model = ({
+  models,
+  layered,
+  disabled,
+  modelsLoaded,
+  thinkingLevel,
+  onSelectModel,
+  onOpenSettings,
+  selectedModelKey,
+  onSelectThinkingLevel
+}: ModelProps) => {
   const activeModelKey = selectedModelKeyState.value || selectedModelKey;
   const selectedModel = useMemo(
     () => models.find((model) => model.key === activeModelKey) ?? models[0],
@@ -99,7 +101,7 @@ export const ComposerModelPicker = ({
           </Menu.Portal>
         </Menu.Root>
       </div>
-      <ThinkingButton
+      <Thinking
         disabled={disabled}
         label={selectedEffort.label}
         level={thinkingLevel}

@@ -5,15 +5,13 @@ import { AppMenu } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { useCallback, useState } from 'preact/hooks';
 
-export const ComposerWorkspacePicker = ({
-  workspacePath,
-  onChooseDirectory,
-  onSelectWorkspace
-}: {
+interface WorkspaceProps {
   workspacePath: string;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
-}) => {
+}
+
+export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace }: WorkspaceProps) => {
   const workspace = useWorkspace(workspacePath);
   const [open, setOpen] = useState(false);
   const { folders } = useWorkspaceFolders({ workspacePath });

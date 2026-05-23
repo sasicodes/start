@@ -10,12 +10,12 @@ import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
-interface SettingsButtonProps {
+interface SettingsTriggerProps {
   active: boolean;
   onOpenSettings: () => void;
 }
 
-export const SettingsButton = memo(({ active, onOpenSettings }: SettingsButtonProps) => {
+export const SettingsTrigger = memo(({ active, onOpenSettings }: SettingsTriggerProps) => {
   const appFocused = useAppFocusState();
 
   return (

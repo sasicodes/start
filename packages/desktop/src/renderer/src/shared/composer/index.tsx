@@ -1,10 +1,10 @@
-import { AttachmentStack } from '@renderer/shared/composer/attachment-stack';
-import { GenerateButton } from '@renderer/shared/composer/generate-button';
-import { ComposerModelPicker } from '@renderer/shared/composer/model-picker';
-import { PromptControl } from '@renderer/shared/composer/prompt-control';
+import { Attachments } from '@renderer/shared/composer/attachments';
+import { Generate } from '@renderer/shared/composer/generate';
+import { Model } from '@renderer/shared/composer/model';
+import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
 import type { ComposerProps } from '@renderer/shared/composer/types';
-import { ComposerWorkspacePicker } from '@renderer/shared/composer/workspace-picker';
+import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
@@ -212,7 +212,7 @@ export const Composer = memo(
         )}
       >
         {overlay && (
-          <ComposerWorkspacePicker
+          <Workspace
             workspacePath={workspacePath}
             onSelectWorkspace={onSelectWorkspace}
             onChooseDirectory={onChooseWorkspaceDirectory}
@@ -251,7 +251,7 @@ export const Composer = memo(
               layered && 'flex-wrap items-end gap-y-1.5 px-2.5 pt-2'
             )}
           >
-            <ComposerModelPicker
+            <Model
               models={models}
               layered={layered}
               disabled={isGenerating}
@@ -263,7 +263,7 @@ export const Composer = memo(
               onSelectThinkingLevel={onSelectThinkingLevel}
             />
             <div class={tw('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
-              <PromptControl
+              <Prompt
                 draft={draft}
                 label={promptPlaceholder.label}
                 onPaste={onPaste}
@@ -278,12 +278,12 @@ export const Composer = memo(
               />
             </div>
             <div class={tw('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
-              <AttachmentStack
+              <Attachments
                 attachments={attachments}
                 onOpenAttachment={onOpenAttachment}
                 onRemoveAttachment={onRemoveAttachment}
               />
-              <GenerateButton draft={draft} onStop={onStop} commandMode={isCommandMode} isGenerating={isGenerating} />
+              <Generate draft={draft} onStop={onStop} commandMode={isCommandMode} isGenerating={isGenerating} />
             </div>
           </div>
         </form>

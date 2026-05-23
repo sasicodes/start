@@ -1,5 +1,5 @@
 import type { QueuedMessage } from '@preload/index';
-import { ComposerAttachedPanel } from '@renderer/shared/composer/panel';
+import { Attached } from '@renderer/shared/composer/attached';
 import { TrashIcon } from '@renderer/ui/icons';
 
 interface QueueProps {
@@ -13,7 +13,7 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
   if (!visible || messages.length === 0) return null;
 
   return (
-    <ComposerAttachedPanel contentClass="max-h-56 overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden">
+    <Attached contentClass="max-h-56 overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden">
       <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
         {messages.map((message) => {
           const steering = message.kind === 'steer';
@@ -49,6 +49,6 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
           );
         })}
       </ul>
-    </ComposerAttachedPanel>
+    </Attached>
   );
 };

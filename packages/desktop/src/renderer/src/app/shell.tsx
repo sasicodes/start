@@ -1,7 +1,7 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
-import { SettingsButton } from '@renderer/shared/settings/button';
+import { SettingsTrigger } from '@renderer/shared/settings/trigger';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
 import { GitChangesBadge } from '@renderer/shared/workspace/changes';
@@ -100,7 +100,7 @@ const MainSessionSurface = memo(
       />
       <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
         <GitChangesBadge workspacePath={workspacePath} expanded={gitPanelVisible} onTogglePanel={onToggleGitPanel} />
-        <SettingsButton active={settingsPanelVisible} onOpenSettings={onOpenSettings} />
+        <SettingsTrigger active={settingsPanelVisible} onOpenSettings={onOpenSettings} />
       </div>
       {mainComposer}
     </SidePanelLayout>

@@ -1,6 +1,6 @@
 import { tw } from '@renderer/utils/tw';
 
-interface PromptControlProps {
+interface PromptProps {
   draft: string;
   label: string;
   expanded: boolean;
@@ -14,7 +14,7 @@ interface PromptControlProps {
   inputRef: (element: HTMLTextAreaElement | null) => void;
 }
 
-export const PromptControl = ({
+export const Prompt = ({
   draft,
   label,
   onPaste,
@@ -26,7 +26,7 @@ export const PromptControl = ({
   layered,
   placeholder,
   activeDescendant
-}: PromptControlProps) => (
+}: PromptProps) => (
   <textarea
     rows={1}
     value={draft}
