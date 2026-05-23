@@ -14,6 +14,8 @@
 - Use camelCase for variables, functions, hooks, and local constants; use PascalCase for types and components; use kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
 - Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
+- Keep side effects audited and singular: clean up every timer, animation frame, listener, watcher, subscription, and observer; avoid duplicate polling/listeners for the same source; batch high-frequency updates with animation frames when UI-bound.
+- Prefer `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
 - Keep files small. Split component files before they approach 300 lines.
 - Keep UI highly performant and snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
 - Do not show loaders, spinners, or hidden status text while session messages hydrate; keep the session surface empty and layout-stable until content arrives.
@@ -38,7 +40,7 @@
 - The app description is `your coding agent`
 - The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.
 - The application window, html, body, and root backgrounds must stay transparent in light and dark mode.
-- The renderer runs in Electron Chromium; avoid browser fallback CSS for non-Chromium engines.
+- The renderer runs in Electron Chromium; avoid Safari, Firefox, and legacy Edge fallback CSS. Keep only Chromium/Electron-required prefixed CSS such as `-webkit-app-region` or `::-webkit-scrollbar`.
 - The prompt send button icon must remain visible in all themes and use a 2 px stroke.
 - Tooltips must use Base UI side data attributes for direction-aware transform/opacity animations.
 - Use system UI fonts only. Do not add external fonts.

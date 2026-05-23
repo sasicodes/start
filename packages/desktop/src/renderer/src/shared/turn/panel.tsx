@@ -1,12 +1,20 @@
+import { hasActivityDetails } from '@renderer/shared/turn/activity';
 import { ActivityItems } from '@renderer/shared/turn/items';
-import type { TurnDetail } from '@renderer/utils/types';
+import { turnSignal } from '@renderer/state/chat';
+import { memo } from 'preact/compat';
 
-type ActivityPanelProps = {
-  details: TurnDetail[];
-  thinking: string;
-};
+interface ActivityPanelProps {
+  turnId: string;
+}
 
-export const ActivityPanel = ({ details, thinking }: ActivityPanelProps) => {
+export const ActivityPanel = memo(({ turnId }: ActivityPanelProps) => {
+  const signal = turnSignal(turnId);
+  const turn = signal?.value;
+  const details = turn?.details ?? [];
+  const thinking = turn?.thinking ?? '';
+
+  if (!hasActivityDetails(details, thinking)) return null;
+
   return (
     <div class="min-h-full outline-0">
       <div class="p-4">
@@ -14,4 +22,4 @@ export const ActivityPanel = ({ details, thinking }: ActivityPanelProps) => {
       </div>
     </div>
   );
-};
+});

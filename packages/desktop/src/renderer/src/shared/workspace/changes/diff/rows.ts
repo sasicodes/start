@@ -2,11 +2,11 @@ import type { PatchLine } from '@renderer/shared/workspace/changes/diff/parser';
 
 export type SplitDiffTone = 'add' | 'context' | 'empty-add' | 'empty-remove' | 'remove';
 
-export type SplitDiffCell = {
+export interface SplitDiffCell {
   content: string;
   tone: SplitDiffTone;
   lineNumber?: number;
-};
+}
 
 export type SplitDiffRow =
   | {
@@ -19,10 +19,10 @@ export type SplitDiffRow =
       kind: 'meta';
     };
 
-type CollectedLines = {
+interface CollectedLines {
   end: number;
   items: PatchLine[];
-};
+}
 
 const emptyCell = (tone: Extract<SplitDiffTone, 'empty-add' | 'empty-remove'>): SplitDiffCell => ({
   content: '',

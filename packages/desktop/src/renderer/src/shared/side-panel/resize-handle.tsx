@@ -2,10 +2,10 @@ import { cn } from '@renderer/utils/cn';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 
-type ResizeHandleProps = {
+interface ResizeHandleProps {
   resizing: boolean;
   onPointerDown: (event: JSX.TargetedPointerEvent<HTMLDivElement>) => void;
-};
+}
 
 export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => {
   const [hovered, setHovered] = useState(false);

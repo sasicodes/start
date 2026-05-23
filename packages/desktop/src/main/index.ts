@@ -69,7 +69,12 @@ const showSettings = () => {
 };
 
 const startNewSession = async () => {
-  await chat.newSession();
+  try {
+    await chat.newSession();
+  } catch {
+    return;
+  }
+
   watchRecentSessions();
   notifyRecentSessionsChanged();
   sendToMainWindow('chat:new-session');

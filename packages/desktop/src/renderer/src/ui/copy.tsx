@@ -2,12 +2,12 @@ import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { useState } from 'preact/hooks';
 
-type CopyButtonProps = {
+interface CopyButtonProps {
   ariaLabel: string;
   class?: string;
   iconClass?: string;
   text: string;
-};
+}
 
 export const CopyButton = ({ ariaLabel, class: className, iconClass = 'size-3.5', text }: CopyButtonProps) => {
   const [copied, setCopied] = useState(false);

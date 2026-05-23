@@ -1,6 +1,6 @@
 import { cn } from '@renderer/utils/cn';
 
-type PromptControlProps = {
+interface PromptControlProps {
   draft: string;
   label: string;
   expanded: boolean;
@@ -11,7 +11,7 @@ type PromptControlProps = {
   onInput: (event: InputEvent) => void;
   onKeyDown: (event: KeyboardEvent) => void;
   inputRef: (element: HTMLTextAreaElement | null) => void;
-};
+}
 
 export const PromptControl = ({
   draft,

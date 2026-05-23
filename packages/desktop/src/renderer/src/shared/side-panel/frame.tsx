@@ -4,7 +4,7 @@ import { cn } from '@renderer/utils/cn';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ComponentChildren, JSX } from 'preact';
 
-type SidePanelFrameProps = {
+interface SidePanelFrameProps {
   children: ComponentChildren;
   initialWidth: number;
   label: string;
@@ -12,7 +12,7 @@ type SidePanelFrameProps = {
   settling: boolean;
   visible: boolean;
   onResizePointerDown: (event: JSX.TargetedPointerEvent<HTMLDivElement>) => void;
-};
+}
 
 const sidePanelHiddenState = { opacity: 0, transition: closeMotionTransition, x: '100%' };
 const sidePanelVisibleState = { opacity: 1, transition: openMotionTransition, x: 0 };

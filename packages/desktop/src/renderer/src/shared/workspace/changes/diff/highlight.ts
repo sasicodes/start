@@ -1,12 +1,12 @@
 import type { DiffEntry } from '@renderer/shared/workspace/changes/diff/types';
 
-type CodeHighlightModule = typeof import('@renderer/markdown/highlight');
+type CodeHighlightModule = typeof import('@renderer/shared/workspace/changes/diff/syntax');
 
-type DiffHighlightItem = {
+interface DiffHighlightItem {
   content: string;
   key: string;
   language: string;
-};
+}
 
 export const diffHighlightBatchSize = 200;
 export const diffHighlightRevisionBatchCount = 4;
@@ -19,7 +19,7 @@ let codeHighlightModulePromise: Promise<CodeHighlightModule> | undefined;
 const diffHighlightKey = (language: string, content: string) => `${language}\0${content}`;
 
 export const loadCodeHighlighter = () => {
-  codeHighlightModulePromise ??= import('@renderer/markdown/highlight');
+  codeHighlightModulePromise ??= import('@renderer/shared/workspace/changes/diff/syntax');
   return codeHighlightModulePromise;
 };
 

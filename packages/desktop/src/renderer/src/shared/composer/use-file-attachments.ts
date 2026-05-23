@@ -1,9 +1,16 @@
-import type { ImageAttachment } from '@preload/index';
+import type { ImageAttachment, PreparedDropFiles } from '@preload/index';
 import type { RefObject } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 type DraftSetter = (value: string | ((current: string) => string)) => void;
 type AttachmentSetter = (value: ImageAttachment[] | ((current: ImageAttachment[]) => ImageAttachment[])) => void;
+
+interface UseFileAttachmentsOptions {
+  enabled: boolean;
+  setDraft: DraftSetter;
+  textareaRef: RefObject<HTMLTextAreaElement>;
+  setAttachments: AttachmentSetter;
+}
 
 const supportedClipboardImageTypes = new Set(['image/gif', 'image/jpeg', 'image/png', 'image/webp']);
 
@@ -18,7 +25,9 @@ const appendPaths = (draft: string, paths: string[]) => {
 const distinctPaths = (paths: string[]) => [...new Set(paths.filter((path) => path.length > 0))];
 
 const releaseAttachments = (attachments: ImageAttachment[]) => {
-  if (attachments.length > 0) void window.pi.chat.releaseAttachments(attachments.map((attachment) => attachment.id));
+  if (attachments.length > 0) {
+    void window.pi.chat.releaseAttachments(attachments.map((attachment) => attachment.id)).catch(() => {});
+  }
 };
 
 const filePath = (file: File) => {
@@ -52,17 +61,7 @@ const clipboardHasSupportedImage = (event: ClipboardEvent) => {
   );
 };
 
-export const useFileAttachments = ({
-  enabled,
-  setDraft,
-  textareaRef,
-  setAttachments
-}: {
-  enabled: boolean;
-  setDraft: DraftSetter;
-  textareaRef: RefObject<HTMLTextAreaElement>;
-  setAttachments: AttachmentSetter;
-}) => {
+export const useFileAttachments = ({ enabled, setDraft, textareaRef, setAttachments }: UseFileAttachmentsOptions) => {
   const dragDepthRef = useRef(0);
   const enabledRef = useRef(enabled);
   const [dropActive, setDropActive] = useState(false);
@@ -97,6 +96,12 @@ export const useFileAttachments = ({
   }, []);
 
   useEffect(() => {
+    return () => {
+      enabledRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!enabled) resetDrop();
   }, [enabled, resetDrop]);
 
@@ -107,7 +112,13 @@ export const useFileAttachments = ({
       const nextPaths = distinctPaths(paths);
       if (nextPaths.length === 0) return;
 
-      const result = await window.pi.chat.prepareDroppedFiles(nextPaths);
+      let result: PreparedDropFiles;
+      try {
+        result = await window.pi.chat.prepareDroppedFiles(nextPaths);
+      } catch {
+        return;
+      }
+
       if (!enabledRef.current) {
         releaseAttachments(result.attachments);
         return;
@@ -123,7 +134,13 @@ export const useFileAttachments = ({
   const prepareClipboardImage = useCallback(async () => {
     if (!enabledRef.current) return;
 
-    const attachment = await window.pi.chat.prepareClipboardImage();
+    let attachment: ImageAttachment | null;
+    try {
+      attachment = await window.pi.chat.prepareClipboardImage();
+    } catch {
+      return;
+    }
+
     if (!enabledRef.current) {
       if (attachment) releaseAttachments([attachment]);
       return;

@@ -2,22 +2,22 @@ import type { DebugMetrics, DebugProcessMetric } from '@preload/index';
 import { cn } from '@renderer/utils/cn';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
-type ToolbarPosition = {
+interface ToolbarPosition {
   x: number;
   y: number;
-};
+}
 
-type RendererMemory = {
+interface RendererMemory {
   jsHeapLimitMb: number;
   jsHeapUsedMb: number;
-};
+}
 
-type PerformanceWithMemory = Performance & {
+interface PerformanceWithMemory extends Performance {
   memory?: {
     jsHeapSizeLimit: number;
     usedJSHeapSize: number;
   };
-};
+}
 
 const debugToolbarPositionStorageKey = 'start:debug-toolbar-position';
 const toolbarMargin = 20;
@@ -144,14 +144,23 @@ export const DebugToolbar = () => {
   useEffect(() => {
     if (collapsed) return;
 
+    let active = true;
     const refresh = () => {
-      void window.pi.app.debugMetrics().then(setMetrics);
+      void window.pi.app
+        .debugMetrics()
+        .then((nextMetrics) => {
+          if (active) setMetrics(nextMetrics);
+        })
+        .catch(() => {});
       setRendererMemory(readRendererMemory());
     };
 
     refresh();
     const interval = window.setInterval(refresh, 1000);
-    return () => window.clearInterval(interval);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [collapsed]);
 
   useEffect(() => {

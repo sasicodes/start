@@ -22,11 +22,15 @@ export class WorkspaceSessionWatcher {
     const sessionDirectory = workspaceSessionDirectory(cwd);
     if (!existsSync(sessionDirectory)) mkdirSync(sessionDirectory, { recursive: true });
 
-    this.watcher = watch(sessionDirectory, { persistent: false }, (_event, filename) => {
-      if (filename && !filename.toString().endsWith('.jsonl')) return;
-      this.schedule(onChange);
-    });
-    this.watcher.on('error', () => this.close());
+    try {
+      this.watcher = watch(sessionDirectory, { persistent: false }, (_event, filename) => {
+        if (filename && !filename.toString().endsWith('.jsonl')) return;
+        this.schedule(onChange);
+      });
+      this.watcher.on('error', () => this.close());
+    } catch {
+      this.close();
+    }
   }
 
   close(): void {

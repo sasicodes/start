@@ -4,10 +4,10 @@ import type { ComponentChildren } from 'preact';
 
 export type MenuPanelWidth = 'provider' | 'model' | 'workspaceBubble';
 
-type MenuPanelProps = {
+interface MenuPanelProps {
   children: ComponentChildren;
   width: MenuPanelWidth;
-};
+}
 
 export const AppMenu = Menu;
 

@@ -6,18 +6,18 @@ import { useMemo } from 'preact/hooks';
 
 type ProviderId = 'anthropic' | 'openai';
 
-type ProviderGroup = {
+interface ProviderGroup {
   id: ProviderId;
   name: string;
   models: ModelOption[];
-};
+}
 
-type ModelsProps = {
+interface ModelsProps {
   models: ModelOption[];
   selectedModel: ModelOption | undefined;
   onSelectModel: (modelKey: string) => void;
   onOpenSettings: () => void;
-};
+}
 
 const isAnthropicModel = (model: ModelOption) => {
   const haystack = `${model.provider} ${model.id} ${model.name}`.toLowerCase();

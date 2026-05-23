@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 
-export type SidePanelLayoutProps = {
+export interface SidePanelLayoutProps {
   children: ComponentChildren;
   sidePanel: ComponentChildren;
   sidePanelLabel: string;
@@ -9,4 +9,4 @@ export type SidePanelLayoutProps = {
   maxSidePanelWidthRatio?: number;
   minSidePanelWidthRatio?: number;
   onSidePanelCollapse?: () => void;
-};
+}

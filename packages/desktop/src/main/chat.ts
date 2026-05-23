@@ -297,6 +297,7 @@ export class ChatService {
 
   async loginSubscription(provider: string, webContents: WebContents): Promise<ProviderLoginResult> {
     const providerId = provider === 'openai' ? 'openai-codex' : provider;
+    this.authInputReject?.(new Error('Login restarted.'));
     this.clearSubscriptionAuthInput();
 
     try {
@@ -308,7 +309,7 @@ export class ChatService {
             instructions: info.instructions,
             message: 'Complete login in your browser, or paste the redirect URL/code below.'
           });
-          void shell.openExternal(info.url);
+          void shell.openExternal(info.url).catch(() => {});
         },
         onManualCodeInput: () => this.createSubscriptionAuthInput(),
         onProgress: (progress) => {
@@ -544,6 +545,8 @@ export class ChatService {
   }
 
   dispose(): void {
+    this.authInputReject?.(new Error('Chat service disposed.'));
+    this.clearSubscriptionAuthInput();
     this.session?.dispose();
     this.session = null;
     this.attachments.clear();
@@ -652,6 +655,8 @@ export class ChatService {
   }
 
   private createSubscriptionAuthInput(): Promise<string> {
+    this.authInputReject?.(new Error('Login prompt was replaced.'));
+
     return new Promise<string>((resolve, reject) => {
       this.authInputReject = reject;
       this.authInputResolve = resolve;

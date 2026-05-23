@@ -13,13 +13,13 @@ import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-type DetailItemProps = {
+interface DetailItemProps {
   detail: TurnDetail;
-};
+}
 
-type DetailTitleProps = DetailItemProps & {
+interface DetailTitleProps extends DetailItemProps {
   interactive: boolean;
-};
+}
 
 const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
   const target = detailTarget(detail);

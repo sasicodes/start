@@ -1,19 +1,19 @@
 export type PatchFileStatus = 'added' | 'copied' | 'deleted' | 'modified' | 'renamed';
 export type PatchLineKind = 'add' | 'context' | 'meta' | 'remove';
 
-export type PatchLine = {
+export interface PatchLine {
   content: string;
   kind: PatchLineKind;
   newLine?: number;
   oldLine?: number;
-};
+}
 
-export type PatchHunk = {
+export interface PatchHunk {
   header: string;
   lines: PatchLine[];
-};
+}
 
-export type PatchFile = {
+export interface PatchFile {
   added: number;
   displayPath: string;
   hunks: PatchHunk[];
@@ -22,12 +22,12 @@ export type PatchFile = {
   oldPath: string;
   removed: number;
   status: PatchFileStatus;
-};
+}
 
-type PatchPathPair = {
+interface PatchPathPair {
   newPath: string;
   oldPath: string;
-};
+}
 
 const diffGitPrefix = 'diff --git ';
 const hunkHeaderPattern = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;

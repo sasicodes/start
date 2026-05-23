@@ -1,10 +1,10 @@
 import { getHotkeyManager, type HotkeyCallbackContext, type RegisterableHotkey } from '@tanstack/hotkeys';
 import { useEffect, useRef } from 'preact/hooks';
 
-type AppHotkey = {
+interface AppHotkey {
   name: string;
   shortcut: RegisterableHotkey;
-};
+}
 
 type AppHotkeyCallback = (event: KeyboardEvent, context: HotkeyCallbackContext) => void;
 

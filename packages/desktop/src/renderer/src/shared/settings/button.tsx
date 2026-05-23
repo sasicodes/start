@@ -1,6 +1,7 @@
 import { SettingsIcon } from '@renderer/ui/icons';
+import { memo } from 'preact/compat';
 
-export const SettingsButton = ({ onOpenSettings }: { onOpenSettings: () => void }) => (
+export const SettingsButton = memo(({ onOpenSettings }: { onOpenSettings: () => void }) => (
   <button
     type="button"
     aria-label="Open settings"
@@ -9,4 +10,4 @@ export const SettingsButton = ({ onOpenSettings }: { onOpenSettings: () => void 
   >
     <SettingsIcon class="size-5" />
   </button>
-);
+));

@@ -1,11 +1,11 @@
 export type ResizeCursor = 'e-resize' | 'ew-resize' | 'w-resize';
 
-type ResizeCursorState = {
+interface ResizeCursorState {
   canCollapse: boolean;
   maxWidth: number;
   minWidth: number;
   width: number;
-};
+}
 
 const maxSidePanelCollapseWidth = 128;
 const minSidePanelCollapseWidth = 80;

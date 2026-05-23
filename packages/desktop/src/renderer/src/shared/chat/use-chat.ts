@@ -1,37 +1,35 @@
 import type {
   EffortLevel,
-  ImageAttachment,
   ModelOption,
   OpenSessionResult,
   ProviderAuthStatus,
+  ChatStatus,
   SwitchWorkspaceResult
 } from '@preload/index';
-import { createTurn } from '@renderer/functions/chat';
-import { commandInput, commandMode } from '@renderer/shared/input';
 import { useChatEvents } from '@renderer/shared/chat/events';
+import { useChatSend } from '@renderer/shared/chat/send';
+import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { selectedModelKeyState } from '@renderer/state/chat';
-import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
-import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useRef, useState } from 'preact/hooks';
 
-type UseChatOptions = {
+interface UseChatOptions {
   onShowChat: () => void;
   onShowSettings: () => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
-};
+}
 
-type ClearSessionOptions = {
+interface ClearSessionOptions {
   preserveDraft?: boolean;
-};
+}
 
-type WorkspaceSwitchOptions = ClearSessionOptions;
+interface WorkspaceSwitchOptions extends ClearSessionOptions {}
 
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
-  const [turns, setTurns] = useState<Turn[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -41,54 +39,82 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const [activeSessionId, setActiveSessionId] = useState('');
   const [loadedSessionId, setLoadedSessionId] = useState('');
   const [selectedModelKey, setSelectedModelKey] = useState('');
+  const statusRequestRef = useRef(0);
+  const sessionRequestRef = useRef(0);
   const terminalIdRef = useRef<string | null>(null);
   const assistantIdRef = useRef<string | null>(null);
-  const previousUserTurn = useMemo(() => {
-    for (let index = turns.length - 1; index >= 0; index--) {
-      const turn = turns[index];
-      if (turn?.role === 'user') return turn.text;
-    }
+  const newSessionRequestRef = useRef(0);
+  const { setTurns, turnCount, previousUserTurn } = useTurnSummary();
 
-    return '';
-  }, [turns]);
   const updateActiveSessionId = useCallback((sessionId: string | undefined) => {
     setActiveSessionId(sessionId ?? '');
   }, []);
 
   const loadAuthProviders = useCallback(async () => {
-    setAuthProviders(await window.pi.chat.authProviders());
+    try {
+      setAuthProviders(await window.pi.chat.authProviders());
+    } catch {}
   }, []);
 
   const loadModels = useCallback(async () => {
-    const modelList = await window.pi.chat.models();
-    setModels(modelList.models);
-    setModelsLoaded(true);
-    selectedModelKeyState.value = modelList.selectedModelKey ?? '';
-    setSelectedModelKey(modelList.selectedModelKey ?? '');
+    try {
+      const modelList = await window.pi.chat.models();
+      setModels(modelList.models);
+      setModelsLoaded(true);
+      selectedModelKeyState.value = modelList.selectedModelKey ?? '';
+      setSelectedModelKey(modelList.selectedModelKey ?? '');
+    } catch {
+      setModelsLoaded(true);
+    }
   }, []);
 
+  const applyStatus = useCallback(
+    (nextStatus: ChatStatus) => {
+      primeWorkspaceFolders(nextStatus.workspacePath);
+      setWorkspacePath(nextStatus.workspacePath);
+      selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
+      setSelectedModelKey(nextStatus.selectedModelKey ?? '');
+      updateActiveSessionId(nextStatus.sessionId);
+      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+    },
+    [updateActiveSessionId]
+  );
+
   const syncStatus = useCallback(async () => {
+    const requestId = statusRequestRef.current + 1;
+    statusRequestRef.current = requestId;
     const nextStatus = await window.pi.chat.status();
-    primeWorkspaceFolders(nextStatus.workspacePath);
-    setWorkspacePath(nextStatus.workspacePath);
-    selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
-    setSelectedModelKey(nextStatus.selectedModelKey ?? '');
-    updateActiveSessionId(nextStatus.sessionId);
-    if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-  }, [updateActiveSessionId]);
+    if (statusRequestRef.current !== requestId) return;
+    if (newSessionRequestRef.current > 0 && nextStatus.sessionId) return;
+    applyStatus(nextStatus);
+  }, [applyStatus]);
 
   const clearSession = useCallback(
     ({ preserveDraft = false }: ClearSessionOptions = {}) => {
+      sessionRequestRef.current += 1;
+      statusRequestRef.current += 1;
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       if (!preserveDraft) setDraft('');
-      setTurns([]);
+      setTurns(() => []);
       setIsGenerating(false);
       setLoadedSessionId('');
       updateActiveSessionId('');
     },
-    [updateActiveSessionId]
+    [setTurns, updateActiveSessionId]
   );
+
+  const newSession = useCallback(async () => {
+    const requestId = newSessionRequestRef.current + 1;
+    newSessionRequestRef.current = requestId;
+    clearSession();
+    try {
+      await window.pi.chat.newSession();
+    } catch {
+    } finally {
+      if (newSessionRequestRef.current === requestId) newSessionRequestRef.current = 0;
+    }
+  }, [clearSession]);
 
   useChatEvents({
     onShowChat,
@@ -103,102 +129,67 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     setIsGenerating
   });
 
-  const sendText = useCallback(
-    async (value: string, attachments: ImageAttachment[] = []) => {
-      const text = value.trim();
-      if (!text || isGenerating) return;
-
-      const command = commandInput(text);
-      if (commandMode(text)) {
-        if (!command) return;
-
-        const terminalTurn = createTurn('terminal', '');
-        const userTurn = createTurn('user', text);
-        terminalIdRef.current = terminalTurn.id;
-        setDraft('');
-        setIsGenerating(true);
-        setTurns((current) => [...current, userTurn, terminalTurn]);
-
-        const result = await window.pi.chat.command(command.command, command.excludeFromContext);
-        if (result.sessionId) {
-          setLoadedSessionId(result.sessionId);
-          updateActiveSessionId(result.sessionId);
-        }
-        if (!result.ok) {
-          const terminalId = terminalIdRef.current;
-          terminalIdRef.current = null;
-          setIsGenerating(false);
-          setTurns((current) => [
-            ...current.filter((turn) => turn.id !== terminalId),
-            createTurn('system', result.error ?? 'Command failed.')
-          ]);
-        }
-        return;
-      }
-
-      const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
-      const userTurn = createTurn('user', text);
-      assistantIdRef.current = assistantTurn.id;
-      setDraft('');
-      setIsGenerating(true);
-      setTurns((current) => [...current, userTurn, assistantTurn]);
-
-      const result = await window.pi.chat.send(text, attachments);
-      if (result.sessionId) {
-        setLoadedSessionId(result.sessionId);
-        updateActiveSessionId(result.sessionId);
-      }
-      if (!result.ok) {
-        const assistantId = assistantIdRef.current;
-        if (!assistantId) return;
-
-        assistantIdRef.current = null;
-        setIsGenerating(false);
-        setTurns((current) => [
-          ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
-          createTurn('system', result.error ?? 'Pi failed.')
-        ]);
-      }
-    },
-    [isGenerating, updateActiveSessionId]
-  );
-
-  const send = useCallback(
-    async (attachments: ImageAttachment[] = []) => {
-      await sendText(draft, attachments);
-    },
-    [draft, sendText]
-  );
+  const { send, sendText } = useChatSend({
+    draft,
+    setDraft,
+    setTurns,
+    isGenerating,
+    terminalIdRef,
+    assistantIdRef,
+    setIsGenerating,
+    sessionRequestRef,
+    setLoadedSessionId,
+    updateActiveSessionId
+  });
 
   const applyOpenSession = useCallback(
-    async (result: OpenSessionResult) => {
+    async (result: OpenSessionResult, requestId: number) => {
       if (!result.ok) return false;
 
+      let nextStatus: ChatStatus;
+      try {
+        nextStatus = await window.pi.chat.status();
+      } catch {
+        return false;
+      }
+      if (sessionRequestRef.current !== requestId) return false;
+      applyStatus(nextStatus);
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       setDraft('');
       setIsGenerating(false);
-      setTurns(result.turns ?? []);
-      const nextStatus = await window.pi.chat.status();
-      setWorkspacePath(nextStatus.workspacePath);
-      selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
-      setSelectedModelKey(nextStatus.selectedModelKey ?? '');
-      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+      setTurns(() => result.turns ?? []);
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
       textareaRef.current?.focus();
       return true;
     },
-    [textareaRef, updateActiveSessionId]
+    [applyStatus, setTurns, textareaRef, updateActiveSessionId]
   );
 
   const openSession = useCallback(
-    async (path: string) => applyOpenSession(await window.pi.chat.openSession(path)),
+    async (path: string) => {
+      const requestId = sessionRequestRef.current + 1;
+      sessionRequestRef.current = requestId;
+      try {
+        return await applyOpenSession(await window.pi.chat.openSession(path), requestId);
+      } catch {
+        return false;
+      }
+    },
     [applyOpenSession]
   );
 
   const openSessionId = useCallback(
-    async (sessionId: string) => applyOpenSession(await window.pi.chat.openSessionId(sessionId)),
+    async (sessionId: string) => {
+      const requestId = sessionRequestRef.current + 1;
+      sessionRequestRef.current = requestId;
+      try {
+        return await applyOpenSession(await window.pi.chat.openSessionId(sessionId), requestId);
+      } catch {
+        return false;
+      }
+    },
     [applyOpenSession]
   );
 
@@ -226,30 +217,44 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   );
 
   const switchWorkspace = useCallback(
-    async (path: string, options?: WorkspaceSwitchOptions) =>
-      applyWorkspaceSwitch(await window.pi.chat.switchWorkspace(path), options),
+    async (path: string, options?: WorkspaceSwitchOptions) => {
+      try {
+        return applyWorkspaceSwitch(await window.pi.chat.switchWorkspace(path), options);
+      } catch {
+        return false;
+      }
+    },
     [applyWorkspaceSwitch]
   );
 
   const chooseWorkspaceDirectory = useCallback(
-    async (options?: WorkspaceSwitchOptions) =>
-      applyWorkspaceSwitch(await window.pi.chat.chooseWorkspaceDirectory(), options),
+    async (options?: WorkspaceSwitchOptions) => {
+      try {
+        return applyWorkspaceSwitch(await window.pi.chat.chooseWorkspaceDirectory(), options);
+      } catch {
+        return false;
+      }
+    },
     [applyWorkspaceSwitch]
   );
 
   const loginSubscription = useCallback(
     async (provider: string) => {
-      const result = await window.pi.chat.loginSubscription(provider);
-      setAuthProviders(result.providers);
-      await loadModels();
+      try {
+        const result = await window.pi.chat.loginSubscription(provider);
+        setAuthProviders(result.providers);
+        await loadModels();
+      } catch {}
     },
     [loadModels]
   );
 
   const saveApiKey = useCallback(
     async (provider: string, apiKey: string) => {
-      setAuthProviders(await window.pi.chat.setRuntimeApiKey(provider, apiKey));
-      await loadModels();
+      try {
+        setAuthProviders(await window.pi.chat.setRuntimeApiKey(provider, apiKey));
+        await loadModels();
+      } catch {}
     },
     [loadModels]
   );
@@ -261,38 +266,47 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       selectedModelKeyState.value = modelKey;
       setSelectedModelKey(modelKey);
 
-      void window.pi.chat.selectModel(modelKey).then((nextStatus) => {
-        if (nextStatus.ready) {
-          selectedModelKeyState.value = nextStatus.selectedModelKey ?? modelKey;
-          setSelectedModelKey(nextStatus.selectedModelKey ?? modelKey);
-          if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-          return;
-        }
+      void window.pi.chat
+        .selectModel(modelKey)
+        .then((nextStatus) => {
+          if (nextStatus.ready) {
+            selectedModelKeyState.value = nextStatus.selectedModelKey ?? modelKey;
+            setSelectedModelKey(nextStatus.selectedModelKey ?? modelKey);
+            if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+            return;
+          }
 
-        selectedModelKeyState.value = previousModelKey;
-        setSelectedModelKey(previousModelKey);
-      });
+          selectedModelKeyState.value = previousModelKey;
+          setSelectedModelKey(previousModelKey);
+        })
+        .catch(() => {
+          selectedModelKeyState.value = previousModelKey;
+          setSelectedModelKey(previousModelKey);
+        });
     },
     [selectedModelKey]
   );
 
   const selectThinkingLevel = useCallback(async (level: EffortLevel) => {
-    const nextStatus = await window.pi.chat.selectThinkingLevel(level);
-    if (nextStatus.ready && nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+    try {
+      const nextStatus = await window.pi.chat.selectThinkingLevel(level);
+      if (nextStatus.ready && nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+    } catch {}
   }, []);
 
   const refreshSettings = useCallback(() => {
-    void loadModels();
-    void loadAuthProviders();
+    void loadModels().catch(() => {});
+    void loadAuthProviders().catch(() => {});
   }, [loadAuthProviders, loadModels]);
 
   return {
     send,
     draft,
-    turns,
     models,
+    turnCount,
     sendText,
     setDraft,
+    newSession,
     saveApiKey,
     selectModel,
     openSession,

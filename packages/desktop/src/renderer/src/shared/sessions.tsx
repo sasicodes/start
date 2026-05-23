@@ -4,6 +4,7 @@ import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion
 import { cn } from '@renderer/utils/cn';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { AnimatePresence, motion } from 'motion/react';
+import { memo } from 'preact/compat';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 const EmptySessions = () => <li class="px-3 py-8 text-center text-sm text-soft">No recent sessions</li>;
@@ -116,16 +117,15 @@ const SessionContent = ({
   </AnimatePresence>
 );
 
-export const RecentSessions = ({
-  onOpenSession,
-  workspacePath,
-  activeSessionId
-}: {
+interface RecentSessionsProps {
   workspacePath: string;
   activeSessionId: string;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
-}) => {
+}
+
+export const RecentSessions = memo(({ onOpenSession, workspacePath, activeSessionId }: RecentSessionsProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
   const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
@@ -141,13 +141,13 @@ export const RecentSessions = ({
 
       try {
         const nextSessions = await window.pi.chat.recentSessions(workspacePath || undefined);
-        if (sessionsRequestRef.current !== requestId) return;
+        if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
         setSessions(nextSessions);
       } catch {
-        if (sessionsRequestRef.current !== requestId) return;
+        if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
         setSessions([]);
       } finally {
-        if (sessionsRequestRef.current === requestId) setLoaded(true);
+        if (mountedRef.current && sessionsRequestRef.current === requestId) setLoaded(true);
       }
     },
     [workspacePath]
@@ -170,6 +170,13 @@ export const RecentSessions = ({
     },
     [closeSessions, onOpenSession]
   );
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      sessionsRequestRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     void loadSessions(true);
@@ -227,4 +234,4 @@ export const RecentSessions = ({
       </motion.div>
     </div>
   );
-};
+});

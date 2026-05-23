@@ -2,17 +2,16 @@ import type { RootItem } from '@preload/index';
 import { cn } from '@renderer/utils/cn';
 import { useEffect, useRef } from 'preact/hooks';
 
-type FinderProps = {
+interface FinderProps {
   items: RootItem[];
   visible: boolean;
   activePath: string | undefined;
-  onPresentChange: (present: boolean) => void;
   onSelect: (item: RootItem) => void;
-};
+}
 
 export const finderItemId = (path: string) => `finder-${encodeURIComponent(path)}`;
 
-export const Finder = ({ activePath, items, onPresentChange, onSelect, visible }: FinderProps) => {
+export const Finder = ({ activePath, items, onSelect, visible }: FinderProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeOptionId = activePath ? finderItemId(activePath) : '';
 
@@ -21,10 +20,6 @@ export const Finder = ({ activePath, items, onPresentChange, onSelect, visible }
 
     scrollRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [activePath]);
-
-  useEffect(() => {
-    onPresentChange(visible);
-  }, [visible, onPresentChange]);
 
   if (!visible) return null;
 

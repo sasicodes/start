@@ -1,5 +1,5 @@
 {
-  "name": "@intelligence-one/start-desktop",
+  "name": "@start/desktop",
   "private": true,
   "productName": "Start",
   "version": "0.1.0-alpha.1",
@@ -27,10 +27,16 @@
     "@base-ui/react": "1.5.0",
     "@earendil-works/pi-coding-agent": "0.75.4",
     "@preact/signals": "2.9.0",
+    "@streamdown/cjk": "1.0.3",
+    "@streamdown/code": "1.1.1",
+    "@streamdown/math": "1.0.2",
+    "@streamdown/mermaid": "1.0.2",
     "@tanstack/hotkeys": "0.8.0",
     "highlight.js": "11.11.1",
+    "katex": "0.16.46",
     "motion": "12.39.0",
-    "preact": "10.29.2"
+    "preact": "10.29.2",
+    "streamdown": "2.5.0"
   },
   "devDependencies": {
     "@electron/notarize": "3.1.1",

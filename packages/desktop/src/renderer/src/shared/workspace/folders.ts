@@ -3,10 +3,10 @@ import { useCallback, useEffect, useState } from 'preact/hooks';
 
 type WorkspaceFoldersListener = () => void;
 
-type UseWorkspaceFoldersOptions = {
+interface UseWorkspaceFoldersOptions {
   active?: boolean;
   workspacePath: string | undefined;
-};
+}
 
 let workspaceFoldersCache: WorkspaceFolder[] | undefined;
 let workspaceFoldersRequest: Promise<WorkspaceFolder[]> | undefined;
@@ -101,7 +101,6 @@ export const useWorkspaceFolders = ({ active = true, workspacePath }: UseWorkspa
     primeWorkspaceFolders(workspacePath);
   }, [workspacePath]);
 
-  useEffect(syncFolders, [syncFolders]);
   useEffect(() => {
     if (!active) return;
     return subscribeWorkspaceFolders(syncFolders);

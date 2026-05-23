@@ -11,9 +11,12 @@ export const useAppFocusState = (enabled = true) => {
 
     let mounted = true;
 
-    void window.pi.app.focusState().then((state) => {
-      if (mounted) setFocused(state.focused);
-    });
+    void window.pi.app
+      .focusState()
+      .then((state) => {
+        if (mounted) setFocused(state.focused);
+      })
+      .catch(() => {});
 
     const offFocusStateChanged = window.pi.app.onFocusStateChanged((state) => {
       setFocused(state.focused);

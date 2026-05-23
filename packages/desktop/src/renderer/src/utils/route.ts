@@ -17,7 +17,13 @@ const routeFromPath = (path: string): AppRoute => {
   if (clean === '/settings') return { name: 'settings' };
 
   const sessionMatch = /^\/sessions\/([^/]+)$/u.exec(clean);
-  if (sessionMatch?.[1]) return { name: 'session', sessionId: decodeURIComponent(sessionMatch[1]) };
+  if (sessionMatch?.[1]) {
+    try {
+      return { name: 'session', sessionId: decodeURIComponent(sessionMatch[1]) };
+    } catch {
+      return { name: 'chat' };
+    }
+  }
 
   return { name: 'chat' };
 };
@@ -46,15 +52,12 @@ export const routeUrl = (route: AppRoute) => {
       : route.name === 'session'
         ? `/sessions/${encodeURIComponent(route.sessionId)}`
         : '/';
+  const url = new URL(window.location.href);
 
-  if (window.location.protocol === 'file:') {
-    const url = new URL(window.location.href);
-    url.hash = path === '/' ? '' : path;
-    url.searchParams.delete('session');
-    return url.toString();
-  }
-
-  return path;
+  if (url.protocol !== 'file:') url.pathname = '/';
+  url.hash = path === '/' ? '' : path;
+  url.searchParams.delete('session');
+  return url.toString();
 };
 
 export const sameRoute = (first: AppRoute, second: AppRoute) => {

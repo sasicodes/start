@@ -13,7 +13,7 @@ let composerBlurSuppressionDepth = 0;
 
 const openExternalUrl = (url: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
-    void shell.openExternal(url);
+    void shell.openExternal(url).catch(() => {});
   }
 };
 
@@ -23,9 +23,9 @@ const loadRenderer = (window: BrowserWindow, surface: 'composer' | 'main') => {
   if (rendererUrl) {
     const url = new URL(rendererUrl);
     url.searchParams.set('surface', surface);
-    void window.loadURL(url.toString());
+    void window.loadURL(url.toString()).catch(() => {});
   } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'), { query: { surface } });
+    void window.loadFile(join(__dirname, '../renderer/index.html'), { query: { surface } }).catch(() => {});
   }
 };
 

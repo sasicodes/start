@@ -1,12 +1,23 @@
 @import "tailwindcss";
+@import "streamdown/styles.css";
+
+@source "../../../node_modules/streamdown/dist/*.js";
+@source "../../../node_modules/@streamdown/code/dist/*.js";
+@source "../../../node_modules/@streamdown/mermaid/dist/*.js";
+@source "../../../node_modules/@streamdown/math/dist/*.js";
+@source "../../../node_modules/@streamdown/cjk/dist/*.js";
 
 @theme {
+  --color-background: var(--color-panel);
   --color-canvas: transparent;
-  --color-panel: oklch(100% 0 0);
+  --color-panel: oklch(99.8% 0.002 264);
   --color-muted: oklch(96.8% 0.003 264);
   --color-line: oklch(0% 0 0 / 0.06);
+  --color-border: var(--color-line);
   --color-ink: oklch(20% 0.01 255);
+  --color-foreground: var(--color-ink);
   --color-soft: oklch(20% 0.01 255 / 0.62);
+  --color-muted-foreground: var(--color-soft);
   --color-hover: oklch(20% 0.01 255 / 0.86);
   --color-brand: oklch(0% 0 0);
   --color-danger: oklch(55% 0.18 27);
@@ -14,10 +25,11 @@
   --color-brand-ink: oklch(100% 0 0);
   --color-composer: oklch(98.8% 0.001 264);
   --color-control: oklch(94.8% 0.004 264);
+  --color-sidebar: var(--color-composer);
   --color-tooltip: oklch(100% 0 0);
   --container-bottom-controls: 64rem;
   --container-workspace-dock: 91rem;
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: system-ui;
   --drop-shadow-drop-overlay-label: 0 12px 28px oklch(0% 0 0 / 0.18);
   --animate-composer-overlay-shell-in: composer-floating-shell-in 132ms linear both;
   --animate-composer-overlay-shell-out: composer-floating-shell-out 120ms linear both;
@@ -58,7 +70,6 @@
   --syntax-tag: oklch(50% 0.15 27);
   font-synthesis: none;
   text-rendering: optimizeSpeed;
-  -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -191,6 +202,126 @@ body {
 
 .hljs-strong {
   font-weight: 600;
+}
+
+.streamdown-default,
+.streamdown-compact {
+  @apply max-w-full text-ink [overflow-wrap:anywhere];
+}
+
+.streamdown-default {
+  @apply text-sm leading-6;
+}
+
+.streamdown-compact {
+  @apply text-sm leading-6 text-soft;
+}
+
+.streamdown-compact > :not(:first-child) {
+  margin-top: 0.25rem;
+}
+
+.streamdown-default p,
+.streamdown-compact p {
+  @apply my-1 whitespace-pre-wrap;
+}
+
+.streamdown-default [data-streamdown^="heading-"],
+.streamdown-compact [data-streamdown^="heading-"] {
+  @apply mb-1 font-semibold tracking-normal text-ink;
+}
+
+.streamdown-default [data-streamdown="heading-1"] {
+  @apply mt-1 text-base leading-6;
+}
+
+.streamdown-default [data-streamdown="heading-2"],
+.streamdown-default [data-streamdown="heading-3"],
+.streamdown-default [data-streamdown="heading-4"],
+.streamdown-default [data-streamdown="heading-5"],
+.streamdown-default [data-streamdown="heading-6"],
+.streamdown-compact [data-streamdown^="heading-"] {
+  @apply mt-1 text-sm leading-6;
+}
+
+.streamdown-default [data-streamdown="link"],
+.streamdown-compact [data-streamdown="link"] {
+  @apply text-hover underline decoration-line underline-offset-3 transition-colors hover:text-ink;
+}
+
+.streamdown-default [data-streamdown="inline-code"],
+.streamdown-compact [data-streamdown="inline-code"] {
+  @apply rounded-md bg-ink/[0.055] px-1 py-0.5 font-mono text-[0.92em] text-ink dark:bg-white/[0.075];
+}
+
+.streamdown-default [data-streamdown="blockquote"],
+.streamdown-compact [data-streamdown="blockquote"] {
+  @apply my-2 border-l border-line pl-3 text-soft not-italic;
+}
+
+.streamdown-default [data-streamdown="ordered-list"],
+.streamdown-default [data-streamdown="unordered-list"],
+.streamdown-compact [data-streamdown="ordered-list"],
+.streamdown-compact [data-streamdown="unordered-list"] {
+  @apply my-1 grid gap-1 pl-5;
+}
+
+.streamdown-default [data-streamdown="list-item"],
+.streamdown-compact [data-streamdown="list-item"] {
+  @apply pl-1;
+}
+
+.streamdown-default [data-streamdown="code-block"],
+.streamdown-compact [data-streamdown="code-block"],
+.streamdown-default [data-streamdown="mermaid-block"],
+.streamdown-compact [data-streamdown="mermaid-block"],
+.streamdown-default [data-streamdown="table-wrapper"],
+.streamdown-compact [data-streamdown="table-wrapper"] {
+  @apply my-2 overflow-hidden rounded-lg border border-line bg-ink/[0.035] p-1.5 dark:bg-white/[0.055];
+}
+
+.streamdown-default [data-streamdown="code-block-header"],
+.streamdown-compact [data-streamdown="code-block-header"] {
+  @apply h-7 border-b border-line px-2 text-[11px] leading-4 text-soft;
+}
+
+.streamdown-default [data-streamdown="code-block-body"],
+.streamdown-compact [data-streamdown="code-block-body"] {
+  @apply rounded-md border-0 bg-transparent p-2 text-xs leading-5;
+}
+
+.streamdown-default [data-streamdown$="actions"],
+.streamdown-compact [data-streamdown$="actions"] {
+  @apply border-line bg-panel/90 shadow-none;
+}
+
+.streamdown-default [data-streamdown="code-block-copy-button"],
+.streamdown-default [data-streamdown="code-block-download-button"],
+.streamdown-compact [data-streamdown="code-block-copy-button"],
+.streamdown-compact [data-streamdown="code-block-download-button"] {
+  @apply grid size-6 place-items-center rounded-md p-0 text-soft transition-colors hover:bg-line hover:text-hover;
+}
+
+.streamdown-default [data-streamdown="table"],
+.streamdown-compact [data-streamdown="table"] {
+  @apply w-full border-collapse text-sm;
+}
+
+.streamdown-default [data-streamdown="table-header"],
+.streamdown-compact [data-streamdown="table-header"] {
+  @apply bg-transparent;
+}
+
+.streamdown-default [data-streamdown="table-header-cell"],
+.streamdown-default [data-streamdown="table-cell"],
+.streamdown-compact [data-streamdown="table-header-cell"],
+.streamdown-compact [data-streamdown="table-cell"] {
+  @apply border-line px-3 py-2 align-top;
+}
+
+.streamdown-default [data-streamdown="mermaid"] svg,
+.streamdown-compact [data-streamdown="mermaid"] svg {
+  @apply max-w-full;
 }
 
 @keyframes composer-placeholder-cycle {

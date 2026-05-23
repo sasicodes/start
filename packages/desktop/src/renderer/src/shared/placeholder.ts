@@ -8,12 +8,12 @@ const emptyPromptPlaceholders = [
   'Type ~/ to attach files from home'
 ];
 
-type PromptPlaceholderOptions = {
+interface PromptPlaceholderOptions {
   centered: boolean;
   draft: string;
   hasTurns: boolean;
   isCommandMode: boolean;
-};
+}
 
 export const promptPlaceholder = (hasTurns: boolean, isCommandMode: boolean, index = 0) => {
   if (isCommandMode) return 'Run a shell command';

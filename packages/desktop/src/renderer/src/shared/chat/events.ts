@@ -1,22 +1,22 @@
 import type { ChatEvent } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
 import {
-  turnActivityLabel,
   appendTurnDelta,
   appendTurnDetails,
   appendTurnThinking,
   setTurnActivity,
-  setTurnStreaming
+  setTurnStreaming,
+  turnActivityLabel
 } from '@renderer/shared/turn/state';
 import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef } from 'preact/hooks';
 
-type MutableRef<T> = {
+interface MutableRef<T> {
   current: T;
-};
+}
 
-type UseChatEventsOptions = {
+interface UseChatEventsOptions {
   onShowChat: () => void;
   clearSession: () => void;
   loadModels: () => Promise<void>;
@@ -27,23 +27,22 @@ type UseChatEventsOptions = {
   textareaRef: RefObject<HTMLTextAreaElement>;
   assistantIdRef: MutableRef<string | null>;
   terminalIdRef: MutableRef<string | null>;
-};
+}
 
-export const useChatEvents = ({
-  onShowChat,
-  setTurns,
-  syncStatus,
-  loadModels,
-  textareaRef,
-  clearSession,
-  terminalIdRef,
-  assistantIdRef,
-  onShowSettings,
-  setIsGenerating
-}: UseChatEventsOptions) => {
+export const useChatEvents = (options: UseChatEventsOptions) => {
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   useEffect(() => {
-    void syncStatus();
-    void loadModels();
+    const refreshChatState = () => {
+      void optionsRef.current.syncStatus().catch(() => {});
+      void optionsRef.current.loadModels().catch(() => {});
+    };
+    const setTurns = (updater: (current: Turn[]) => Turn[]) => optionsRef.current.setTurns(updater);
+    const setIsGenerating = (value: boolean) => optionsRef.current.setIsGenerating(value);
+    const focusTextarea = () => optionsRef.current.textareaRef.current?.focus();
+
+    refreshChatState();
 
     let detailBuffer: ChatEvent[] = [];
     let assistantBuffer = '';
@@ -57,7 +56,7 @@ export const useChatEvents = ({
 
     const flushDetails = () => {
       detailFrame = 0;
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       const details = detailBuffer;
       detailBuffer = [];
       if (id && details.length > 0) appendTurnDetails(setTurns, id, details);
@@ -65,7 +64,7 @@ export const useChatEvents = ({
 
     const flushAssistantDelta = () => {
       assistantFrame = 0;
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       const delta = assistantBuffer;
       assistantBuffer = '';
       if (id && delta) appendTurnDelta(setTurns, id, delta);
@@ -73,7 +72,7 @@ export const useChatEvents = ({
 
     const flushTerminalDelta = () => {
       terminalFrame = 0;
-      const id = terminalIdRef.current;
+      const id = optionsRef.current.terminalIdRef.current;
       const delta = terminalBuffer;
       terminalBuffer = '';
       if (id && delta) appendTurnDelta(setTurns, id, delta);
@@ -81,7 +80,7 @@ export const useChatEvents = ({
 
     const flushThinkingDelta = () => {
       thinkingFrame = 0;
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       const delta = thinkingBuffer;
       thinkingBuffer = '';
       if (id && delta) appendTurnThinking(setTurns, id, delta);
@@ -107,14 +106,14 @@ export const useChatEvents = ({
       if (!thinkingFrame) thinkingFrame = requestAnimationFrame(flushThinkingDelta);
     };
 
-    const offShowSettings = window.pi.app.onShowSettings(onShowSettings);
+    const offShowSettings = window.pi.app.onShowSettings(() => optionsRef.current.onShowSettings());
     const offNewSession = window.pi.chat.onNewSession(() => {
-      clearSession();
-      onShowChat();
+      optionsRef.current.clearSession();
+      optionsRef.current.onShowChat();
     });
 
     const offDelta = window.pi.chat.onDelta((delta) => {
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       if (id) {
         if (activityClearedAssistantId !== id) {
           setTurnActivity(setTurns, id);
@@ -125,11 +124,11 @@ export const useChatEvents = ({
     });
 
     const offThinkingDelta = window.pi.chat.onThinkingDelta((delta) => {
-      if (assistantIdRef.current) queueThinkingDelta(delta);
+      if (optionsRef.current.assistantIdRef.current) queueThinkingDelta(delta);
     });
 
     const offDone = window.pi.chat.onDone(() => {
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       if (detailFrame) cancelAnimationFrame(detailFrame);
       if (assistantFrame) cancelAnimationFrame(assistantFrame);
       if (thinkingFrame) cancelAnimationFrame(thinkingFrame);
@@ -141,20 +140,20 @@ export const useChatEvents = ({
         setTurnStreaming(setTurns, id, false);
       }
       activityClearedAssistantId = null;
-      assistantIdRef.current = null;
+      optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
-      textareaRef.current?.focus();
+      focusTextarea();
     });
 
     const offCommandDelta = window.pi.chat.onCommandDelta((delta) => {
-      if (terminalIdRef.current) queueTerminalDelta(delta);
+      if (optionsRef.current.terminalIdRef.current) queueTerminalDelta(delta);
     });
 
     const offCommandDone = window.pi.chat.onCommandDone((output) => {
-      const id = terminalIdRef.current;
+      const id = optionsRef.current.terminalIdRef.current;
       if (terminalFrame) cancelAnimationFrame(terminalFrame);
       flushTerminalDelta();
-      terminalIdRef.current = null;
+      optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
       if (id && !output) {
         setTurns((current) =>
@@ -163,11 +162,11 @@ export const useChatEvents = ({
           )
         );
       }
-      textareaRef.current?.focus();
+      focusTextarea();
     });
 
     const offError = window.pi.chat.onError((turn) => {
-      const assistantId = assistantIdRef.current;
+      const assistantId = optionsRef.current.assistantIdRef.current;
       if (detailFrame) cancelAnimationFrame(detailFrame);
       if (assistantFrame) cancelAnimationFrame(assistantFrame);
       if (terminalFrame) cancelAnimationFrame(terminalFrame);
@@ -178,14 +177,14 @@ export const useChatEvents = ({
       flushThinkingDelta();
       if (assistantId) setTurnStreaming(setTurns, assistantId, false);
       activityClearedAssistantId = null;
-      assistantIdRef.current = null;
-      terminalIdRef.current = null;
+      optionsRef.current.assistantIdRef.current = null;
+      optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
       setTurns((current) => [...current, createTurn('system', turn)]);
     });
 
     const offEvent = window.pi.chat.onEvent((event) => {
-      const id = assistantIdRef.current;
+      const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
       queueDetail(event);
@@ -193,16 +192,10 @@ export const useChatEvents = ({
       if (activity) setTurnActivity(setTurns, id, activity);
     });
 
-    const offStatusChanged = window.pi.chat.onStatusChanged(() => {
-      void syncStatus();
-      void loadModels();
-    });
+    const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
 
     const offFocusStateChanged = window.pi.app.onFocusStateChanged((state) => {
-      if (!state.focused) return;
-
-      void syncStatus();
-      void loadModels();
+      if (state.focused) refreshChatState();
     });
 
     return () => {
@@ -222,16 +215,5 @@ export const useChatEvents = ({
       if (terminalFrame) cancelAnimationFrame(terminalFrame);
       if (thinkingFrame) cancelAnimationFrame(thinkingFrame);
     };
-  }, [
-    onShowChat,
-    loadModels,
-    setTurns,
-    syncStatus,
-    textareaRef,
-    clearSession,
-    terminalIdRef,
-    assistantIdRef,
-    onShowSettings,
-    setIsGenerating
-  ]);
+  }, []);
 };

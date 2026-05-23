@@ -1,6 +1,7 @@
 import { cn } from '@renderer/utils/cn';
+import { memo } from 'preact/compat';
 
-export const DropOverlay = ({ visible }: { visible: boolean }) => (
+export const DropOverlay = memo(({ visible }: { visible: boolean }) => (
   <div
     aria-hidden={!visible}
     class={cn(
@@ -20,4 +21,4 @@ export const DropOverlay = ({ visible }: { visible: boolean }) => (
       <span class="text-sm leading-5 font-semibold">Drop to attach</span>
     </div>
   </div>
-);
+));

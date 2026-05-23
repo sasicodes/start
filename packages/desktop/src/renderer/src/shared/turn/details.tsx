@@ -3,14 +3,14 @@ import { activityLabel } from '@renderer/shared/turn/label';
 import { cn } from '@renderer/utils/cn';
 import type { TurnDetail } from '@renderer/utils/types';
 
-type TurnDetailsProps = {
+interface TurnDetailsProps {
   createdAt: number;
   details: TurnDetail[];
   panelOpen: boolean;
   streaming: boolean;
   thinking: string;
   onOpenPanel: () => void;
-};
+}
 
 export const TurnDetails = ({ details, thinking, createdAt, streaming, panelOpen, onOpenPanel }: TurnDetailsProps) => {
   if (!hasActivityDetails(details, thinking)) return null;

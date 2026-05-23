@@ -3,11 +3,11 @@ import { useEffect } from 'preact/hooks';
 
 type DismissRef = RefObject<HTMLElement>;
 
-type UseDismissOptions = {
+interface UseDismissOptions {
   refs: DismissRef[];
   enabled?: boolean;
   onDismiss: () => void;
-};
+}
 
 const containsTarget = (refs: DismissRef[], target: Node) => refs.some((ref) => ref.current?.contains(target));
 

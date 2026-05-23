@@ -1,7 +1,7 @@
 import type { EffortLevel, ImageAttachment, ModelOption } from '@preload/index';
 import type { RefObject } from 'preact';
 
-export type ComposerProps = {
+export interface ComposerProps {
   draft: string;
   onStop: () => void;
   onPaste: (event: ClipboardEvent) => void;
@@ -30,4 +30,4 @@ export type ComposerProps = {
   onSelectWorkspace: (path: string) => void;
   onSelectThinkingLevel: (level: EffortLevel) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
-};
+}

@@ -11,13 +11,13 @@ import {
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
-type UseSidePanelResizeOptions = {
+interface UseSidePanelResizeOptions {
   fallbackWidth: number;
   sidePanelVisible: boolean;
   maxSidePanelWidthRatio: number;
   minSidePanelWidthRatio: number;
   onSidePanelCollapse?: () => void;
-};
+}
 
 export const useSidePanelResize = ({
   fallbackWidth,
@@ -258,12 +258,12 @@ export const useSidePanelResize = ({
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root) return;
+    if (!root || !sidePanelVisible) return;
 
     const observer = new ResizeObserver(() => applyWidth(preferredWidthRef.current));
     observer.observe(root);
     return () => observer.disconnect();
-  }, [applyWidth]);
+  }, [applyWidth, sidePanelVisible]);
 
   useEffect(() => {
     if (!sidePanelVisible) {

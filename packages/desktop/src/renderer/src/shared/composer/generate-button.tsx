@@ -1,13 +1,13 @@
 import { commandInput } from '@renderer/shared/input';
 import { ArrowUpIcon, CodeIcon, StopIcon } from '@renderer/ui/icons';
 
-type GenerateButtonProps = {
+interface GenerateButtonProps {
   draft: string;
   onStop: () => void;
   commandMode: boolean;
   isGenerating: boolean;
   previousTurn: string;
-};
+}
 
 export const GenerateButton = ({ draft, onStop, commandMode, isGenerating, previousTurn }: GenerateButtonProps) => {
   if (isGenerating) {
