@@ -1,0 +1,224 @@
+.markdown-default,
+.markdown-compact {
+  @apply max-w-full text-ink [overflow-wrap:anywhere];
+}
+
+.markdown-default {
+  @apply text-sm leading-6;
+}
+
+.markdown-compact {
+  @apply text-sm leading-6 text-soft;
+}
+
+.markdown-default > :not(:first-child) {
+  margin-top: 0.5rem;
+}
+
+.markdown-compact > :not(:first-child) {
+  margin-top: 0.25rem;
+}
+
+.markdown-default > :not(:last-child),
+.markdown-compact > :not(:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-default p,
+.markdown-compact p {
+  @apply my-1 whitespace-pre-wrap;
+}
+
+.markdown-default [data-streamdown^="heading-"],
+.markdown-compact [data-streamdown^="heading-"] {
+  @apply mb-1 font-semibold tracking-normal text-ink;
+}
+
+.markdown-default [data-streamdown="heading-1"] {
+  @apply mt-1 text-base leading-6;
+}
+
+.markdown-default [data-streamdown="heading-2"],
+.markdown-default [data-streamdown="heading-3"],
+.markdown-default [data-streamdown="heading-4"],
+.markdown-default [data-streamdown="heading-5"],
+.markdown-default [data-streamdown="heading-6"],
+.markdown-compact [data-streamdown^="heading-"] {
+  @apply mt-1 text-sm leading-6;
+}
+
+.markdown-default [data-streamdown="link"],
+.markdown-compact [data-streamdown="link"] {
+  @apply text-hover underline decoration-line underline-offset-3 transition-colors hover:text-ink;
+}
+
+.markdown-default [data-streamdown="inline-code"],
+.markdown-compact [data-streamdown="inline-code"] {
+  @apply rounded-md bg-ink/[0.055] px-1 py-0.5 font-mono text-[0.92em] text-ink dark:bg-white/[0.075];
+}
+
+.markdown-default [data-streamdown="blockquote"],
+.markdown-compact [data-streamdown="blockquote"] {
+  @apply my-2 border-l border-line pl-3 text-soft not-italic;
+}
+
+.markdown-default [data-streamdown="horizontal-rule"],
+.markdown-compact [data-streamdown="horizontal-rule"] {
+  @apply my-3 border-line;
+}
+
+.markdown-default [data-streamdown="ordered-list"],
+.markdown-default [data-streamdown="unordered-list"],
+.markdown-compact [data-streamdown="ordered-list"],
+.markdown-compact [data-streamdown="unordered-list"] {
+  @apply my-1 grid gap-1 pl-5;
+}
+
+.markdown-default [data-streamdown="list-item"],
+.markdown-compact [data-streamdown="list-item"] {
+  @apply pl-1;
+}
+
+.markdown-default [data-streamdown="code-block"],
+.markdown-compact [data-streamdown="code-block"] {
+  @apply my-2 gap-0 overflow-hidden rounded-xl border border-line bg-ink/[0.035] p-0 dark:bg-white/[0.055];
+}
+
+.markdown-default [data-streamdown="mermaid-block"],
+.markdown-compact [data-streamdown="mermaid-block"] {
+  @apply my-2 overflow-hidden rounded-xl border border-line bg-ink/[0.035] dark:bg-white/[0.055];
+}
+
+.markdown-default [data-streamdown="mermaid-block"],
+.markdown-compact [data-streamdown="mermaid-block"] {
+  @apply p-1.5;
+}
+
+.markdown-default [data-streamdown="table-wrapper"],
+.markdown-compact [data-streamdown="table-wrapper"] {
+  @apply my-2 overflow-x-auto rounded-xl border border-line bg-transparent p-0;
+
+  scrollbar-width: none;
+}
+
+.markdown-default [data-streamdown="code-block-header"],
+.markdown-compact [data-streamdown="code-block-header"] {
+  @apply h-7 border-b border-line bg-ink/[0.025] px-3 py-1 text-[11px] leading-4 text-soft dark:bg-white/[0.035];
+}
+
+.markdown-default [data-streamdown="code-block-header"] > span,
+.markdown-compact [data-streamdown="code-block-header"] > span {
+  @apply m-0 min-w-0 truncate font-sans normal-case leading-4;
+}
+
+.markdown-default [data-streamdown="code-block-header"] + div,
+.markdown-compact [data-streamdown="code-block-header"] + div {
+  @apply top-0 -mt-7 h-7 px-2;
+}
+
+.markdown-default [data-streamdown="code-block-body"],
+.markdown-compact [data-streamdown="code-block-body"] {
+  @apply overflow-hidden rounded-none border-0 bg-transparent px-3 py-2 text-ink;
+}
+
+.markdown-default [data-streamdown="code-block-body"] {
+  @apply text-xs leading-5;
+}
+
+.markdown-compact [data-streamdown="code-block-body"] {
+  @apply text-sm leading-6;
+}
+
+.markdown-default [data-streamdown="code-block-body"] pre,
+.markdown-compact [data-streamdown="code-block-body"] pre {
+  @apply m-0 max-w-full overflow-x-auto;
+
+  scrollbar-width: none;
+}
+
+.markdown-default [data-streamdown="code-block-body"] pre::-webkit-scrollbar,
+.markdown-compact [data-streamdown="code-block-body"] pre::-webkit-scrollbar {
+  display: none;
+}
+
+.markdown-default [data-streamdown$="actions"],
+.markdown-compact [data-streamdown$="actions"] {
+  @apply border-line bg-panel/90 shadow-none;
+}
+
+.markdown-default [data-streamdown="code-block-actions"],
+.markdown-compact [data-streamdown="code-block-actions"] {
+  @apply h-7 gap-0 border-0 bg-transparent p-0 shadow-none backdrop-blur-none;
+}
+
+.markdown-default [data-streamdown="code-block-copy-button"],
+.markdown-default [data-streamdown="code-block-download-button"],
+.markdown-compact [data-streamdown="code-block-copy-button"],
+.markdown-compact [data-streamdown="code-block-download-button"] {
+  @apply grid size-5 cursor-default place-items-center rounded-md border-0 bg-transparent p-0 text-soft opacity-0 transition-[background-color,color,opacity] ease-in hover:bg-line hover:text-hover;
+}
+
+.markdown-default [data-streamdown="code-block"]:hover [data-streamdown="code-block-copy-button"],
+.markdown-default [data-streamdown="code-block"]:focus-within [data-streamdown="code-block-copy-button"],
+.markdown-compact [data-streamdown="code-block"]:hover [data-streamdown="code-block-copy-button"],
+.markdown-compact [data-streamdown="code-block"]:focus-within [data-streamdown="code-block-copy-button"] {
+  @apply opacity-100;
+}
+
+.markdown-default > :last-child::after,
+.markdown-compact > :last-child::after {
+  font-size: 0.55em;
+  line-height: 1;
+  vertical-align: 0.08em;
+}
+
+.markdown-default [data-streamdown="table"],
+.markdown-compact [data-streamdown="table"] {
+  @apply w-max min-w-full border-collapse text-sm;
+}
+
+.markdown-default [data-streamdown="table-header"],
+.markdown-compact [data-streamdown="table-header"] {
+  @apply border-b border-line bg-transparent;
+}
+
+.markdown-default [data-streamdown="table-row"],
+.markdown-compact [data-streamdown="table-row"] {
+  @apply border-t border-line first:border-t-0;
+}
+
+.markdown-default [data-streamdown="table-header-cell"],
+.markdown-default [data-streamdown="table-cell"],
+.markdown-compact [data-streamdown="table-header-cell"],
+.markdown-compact [data-streamdown="table-cell"] {
+  @apply border-line px-3 py-1.5 align-top;
+}
+
+.markdown-default [data-streamdown="table-header-cell"],
+.markdown-compact [data-streamdown="table-header-cell"] {
+  @apply text-left font-medium text-soft;
+}
+
+.markdown-default [data-streamdown="table-cell"],
+.markdown-compact [data-streamdown="table-cell"] {
+  @apply text-ink;
+}
+
+.markdown-default [data-streamdown="table-wrapper"]::-webkit-scrollbar,
+.markdown-compact [data-streamdown="table-wrapper"]::-webkit-scrollbar {
+  display: none;
+}
+
+.markdown-default [data-streamdown="mermaid"] svg,
+.markdown-compact [data-streamdown="mermaid"] svg {
+  @apply max-w-full;
+}
+
+.markdown-default [data-footnotes],
+.markdown-compact [data-footnotes],
+.markdown-default sup:empty,
+.markdown-compact sup:empty,
+.markdown-default sup:has([data-footnote-ref]),
+.markdown-compact sup:has([data-footnote-ref]) {
+  display: none;
+}
