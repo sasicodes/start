@@ -8,6 +8,7 @@ import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
+import { useComposerHeightVariable } from '@renderer/shared/composer/use-composer-height-variable';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
 import { composerDockTransition } from '@renderer/ui/motion';
@@ -116,20 +117,7 @@ export const Composer = memo(
       [defaultFinderIndex, finderItems, finderQuery]
     );
 
-    useLayoutEffect(() => {
-      if (overlay) return;
-
-      const element = composerRef.current;
-      if (!element) return;
-
-      const syncHeight = () => {
-        document.documentElement.style.setProperty('--main-composer-height', `${Math.ceil(element.offsetHeight)}px`);
-      };
-      const observer = new ResizeObserver(syncHeight);
-      syncHeight();
-      observer.observe(element);
-      return () => observer.disconnect();
-    }, [overlay]);
+    useComposerHeightVariable({ ref: composerRef, enabled: !overlay });
 
     useLayoutEffect(() => {
       const element = promptInputRef.current;
