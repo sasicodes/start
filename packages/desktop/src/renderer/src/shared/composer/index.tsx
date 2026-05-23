@@ -8,12 +8,10 @@ import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
-import { latestScrollButtonVisibleState, scrollSessionToBottom } from '@renderer/shared/turn/scroll';
+import { LatestButton } from '@renderer/shared/turn/latest-button';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
-import { ArrowUpIcon } from '@renderer/ui/icons';
 import { composerDockTransition } from '@renderer/ui/motion';
-import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
@@ -101,7 +99,6 @@ export const Composer = memo(
     const selectedFinderItem = finderItems[activeFinderIndex] ?? finderItems[0];
     const centered = overlay || !hasTurns;
     const layered = hasAttachments || (!singleLine && isMultiline);
-    const latestButtonVisible = !centered && latestScrollButtonVisibleState.value;
     const promptPlaceholder = usePromptPlaceholder({ centered, draft, hasTurns, isCommandMode });
 
     const moveFinderSelection = useCallback(
@@ -222,20 +219,7 @@ export const Composer = memo(
             onChooseDirectory={onChooseWorkspaceDirectory}
           />
         )}
-        {latestButtonVisible && (
-          <div class="pointer-events-none absolute -top-12 inset-x-0 z-10 flex justify-center">
-            <Tooltip label="Scroll to latest">
-              <button
-                type="button"
-                onClick={scrollSessionToBottom}
-                aria-label="Scroll to latest"
-                class="pointer-events-auto grid size-8 place-items-center rounded-full border border-line bg-composer/80 text-soft shadow-shell backdrop-blur-md transition-colors hover:bg-control hover:text-hover focus-visible:bg-control focus-visible:text-hover focus-visible:outline-0"
-              >
-                <ArrowUpIcon class="size-4 rotate-180" strokeWidth={2} />
-              </button>
-            </Tooltip>
-          </div>
-        )}
+        <LatestButton centered={centered} />
         <Finder
           items={finderItems}
           emptyLabel={skillToken ? 'No matching skills' : 'No matching items'}

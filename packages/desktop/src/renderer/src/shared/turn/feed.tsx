@@ -1,4 +1,4 @@
-import { TurnArticleById } from '@renderer/shared/turn/article';
+import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
 import { latestScrollButtonVisibleState } from '@renderer/shared/turn/scroll';
 import { turnIdsState } from '@renderer/state/chat';
@@ -13,21 +13,6 @@ interface TurnFeedProps {
 
 const hasPageBelow = (element: HTMLElement) =>
   element.scrollHeight - element.clientHeight - element.scrollTop > element.clientHeight;
-
-const TurnArticles = memo(({ activityPanelTurnId, onOpenActivityPanel }: TurnFeedProps) => {
-  const turnIds = turnIdsState.value;
-
-  if (turnIds.length === 0) return null;
-
-  return turnIds.map((turnId) => (
-    <TurnArticleById
-      key={turnId}
-      turnId={turnId}
-      activityPanelOpen={turnId === activityPanelTurnId}
-      onOpenActivityPanel={onOpenActivityPanel}
-    />
-  ));
-});
 
 export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: TurnFeedProps) => {
   const turnIds = turnIdsState.value;
