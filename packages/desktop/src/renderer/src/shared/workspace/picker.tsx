@@ -2,7 +2,7 @@ import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { ChevronDownIcon } from '@renderer/ui/icons';
-import { AppMenu } from '@renderer/ui/menu';
+import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -76,13 +76,14 @@ export const Workspace = memo(
               className="z-50"
               collisionPadding={12}
             >
-              <WorkspaceMenu
-                folders={folders}
-                panelClassName="w-64"
-                workspacePath={workspacePath}
-                onChooseDirectory={onChooseDirectory}
-                onSelectWorkspace={onSelectWorkspace}
-              />
+              <MenuPanel className="w-64">
+                <WorkspaceMenu
+                  folders={folders}
+                  workspacePath={workspacePath}
+                  onChooseDirectory={onChooseDirectory}
+                  onSelectWorkspace={onSelectWorkspace}
+                />
+              </MenuPanel>
             </AppMenu.Positioner>
           </AppMenu.Portal>
         </AppMenu.Root>

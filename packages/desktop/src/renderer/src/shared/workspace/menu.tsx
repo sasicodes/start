@@ -1,6 +1,6 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { FolderIcon } from '@renderer/ui/icons';
-import { AppMenu, MenuPanel } from '@renderer/ui/menu';
+import { AppMenu } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 
 const WorkspaceOption = ({
@@ -27,35 +27,31 @@ const WorkspaceOption = ({
 
 export const WorkspaceMenu = ({
   folders,
-  panelClassName,
   workspacePath,
   onChooseDirectory,
   onSelectWorkspace
 }: {
   folders: WorkspaceFolder[];
-  panelClassName: string;
   workspacePath: string | undefined;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
 }) => (
-  <MenuPanel className={panelClassName}>
-    <div class="flex flex-col gap-1">
-      {folders.map((folder) => (
-        <WorkspaceOption
-          key={folder.path}
-          folder={folder}
-          selected={folder.path === workspacePath}
-          onSelectWorkspace={onSelectWorkspace}
-        />
-      ))}
-      <AppMenu.Item
-        closeOnClick
-        onClick={onChooseDirectory}
-        className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control"
-      >
-        <FolderIcon class="size-4.5" />
-        <span class="text-xs leading-5">Choose a directory</span>
-      </AppMenu.Item>
-    </div>
-  </MenuPanel>
+  <div class="flex flex-col gap-1">
+    {folders.map((folder) => (
+      <WorkspaceOption
+        key={folder.path}
+        folder={folder}
+        selected={folder.path === workspacePath}
+        onSelectWorkspace={onSelectWorkspace}
+      />
+    ))}
+    <AppMenu.Item
+      closeOnClick
+      onClick={onChooseDirectory}
+      className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control"
+    >
+      <FolderIcon class="size-4.5" />
+      <span class="text-xs leading-5">Choose a directory</span>
+    </AppMenu.Item>
+  </div>
 );
