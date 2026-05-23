@@ -3,10 +3,10 @@ import { ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ScreenProps {
-  children?: ReactNode;
-  eyebrow?: string;
-  paragraphs?: string[];
   title?: string;
+  eyebrow?: string;
+  children?: ReactNode;
+  paragraphs?: string[];
 }
 
 const defaultBody = [
@@ -14,12 +14,12 @@ const defaultBody = [
   'Controls use platform navigation so the shell feels native before deeper session views arrive.'
 ];
 
-export function Screen({
+export const Screen = ({
   children,
   eyebrow = 'Start',
   paragraphs = defaultBody,
   title = 'Your coding assistant'
-}: ScreenProps) {
+}: ScreenProps) => {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const dark = colorScheme === 'dark';
@@ -27,8 +27,6 @@ export function Screen({
   return (
     <ScrollView
       bounces
-      contentInsetAdjustmentBehavior="never"
-      style={[styles.screen, dark && styles.screenDark]}
       contentContainerStyle={[
         styles.content,
         {
@@ -37,6 +35,8 @@ export function Screen({
         }
       ]}
       showsVerticalScrollIndicator={false}
+      contentInsetAdjustmentBehavior="never"
+      style={[styles.screen, dark && styles.screenDark]}
     >
       <View style={styles.header}>
         <Text style={[styles.eyebrow, dark && styles.eyebrowDark]}>{eyebrow}</Text>
@@ -52,7 +52,7 @@ export function Screen({
       </View>
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   screen: {
@@ -64,28 +64,28 @@ const styles = StyleSheet.create({
   },
   content: {
     gap: 30,
-    paddingRight: 24,
-    paddingLeft: 24
+    paddingLeft: 24,
+    paddingRight: 24
   },
   header: {
     gap: 8,
     maxWidth: 340
   },
   eyebrow: {
-    color: 'rgba(21, 25, 31, 0.58)',
     fontSize: 13,
     lineHeight: 18,
     fontWeight: '700',
     letterSpacing: 0.8,
-    textTransform: 'uppercase'
+    textTransform: 'uppercase',
+    color: 'rgba(21, 25, 31, 0.58)'
   },
   eyebrowDark: {
     color: 'rgba(244, 246, 248, 0.58)'
   },
   title: {
-    color: '#15191f',
     fontSize: 38,
     lineHeight: 42,
+    color: '#15191f',
     fontWeight: '700',
     letterSpacing: -1.2
   },
@@ -97,10 +97,10 @@ const styles = StyleSheet.create({
     maxWidth: 360
   },
   paragraph: {
-    color: 'rgba(21, 25, 31, 0.72)',
     fontSize: 17,
     lineHeight: 26,
-    fontWeight: '400'
+    fontWeight: '400',
+    color: 'rgba(21, 25, 31, 0.72)'
   },
   paragraphDark: {
     color: 'rgba(244, 246, 248, 0.74)'

@@ -1,5 +1,5 @@
 import { Menu } from '@base-ui/react/menu';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 
 export type MenuPanelWidth = 'provider' | 'model' | 'workspaceBubble';
@@ -15,7 +15,7 @@ export const MenuPanel = ({ children, width }: MenuPanelProps) => {
   return (
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
-      className={cn(
+      className={tw(
         'origin-bottom rounded-2xl bg-panel p-1 shadow-panel outline-0 transition-[opacity,transform] duration-100 ease-out data-[ending-style]:scale-[0.96] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.96] data-[starting-style]:opacity-0',
         width === 'provider' && 'w-44',
         width === 'model' && 'w-56',

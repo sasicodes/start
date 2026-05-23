@@ -1,7 +1,7 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, type MenuPanelWidth } from '@renderer/ui/menu';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 
 const WorkspaceOption = ({
   folder,
@@ -15,7 +15,7 @@ const WorkspaceOption = ({
   <AppMenu.Item
     closeOnClick
     onClick={() => onSelectWorkspace(folder.path)}
-    className={cn(
+    className={tw(
       'grid w-full gap-0.5 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
       selected ? 'bg-control text-hover' : 'bg-transparent'
     )}

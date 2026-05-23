@@ -1,7 +1,7 @@
 import type { QueuedMessage } from '@preload/index';
 import { ComposerAttachedPanel } from '@renderer/shared/composer/attached-panel';
 import { ArrowUpIcon } from '@renderer/ui/icons';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 
 interface QueuePanelProps {
   messages: QueuedMessage[];
@@ -28,7 +28,7 @@ export const QueuePanel = ({ messages, visible, onSteer }: QueuePanelProps) => {
             <li key={message.id} class="group/queue flex min-w-0 items-center gap-2 rounded-xl px-2 py-1.5">
               <div class="min-w-0 flex-1 px-1">
                 <div class="truncate text-sm leading-5 font-medium text-ink">{message.text}</div>
-                <div class={cn('mt-0.5 text-xs leading-4', steering ? 'text-hover' : 'text-soft')}>
+                <div class={tw('mt-0.5 text-xs leading-4', steering ? 'text-hover' : 'text-soft')}>
                   {queueLabel(message.kind)}
                 </div>
               </div>

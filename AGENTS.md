@@ -1,7 +1,7 @@
 # Project Rules
 
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
-- Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `cn` only for conditional inline classes.
+- Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `tw` only for conditional inline classes.
 - Prefer Tailwind utilities over custom CSS. Keep `styles.css` limited to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states that Tailwind cannot express cleanly.
 - Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
 - Do not add theme tokens that duplicate Tailwind defaults such as `--color-white`; use built-in utilities like `bg-white` directly unless the value is a real app-specific semantic token.
@@ -12,6 +12,7 @@
 - Do not add TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces instead.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
 - Use camelCase for variables, functions, hooks, and local constants; use PascalCase for types and components; use kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
+- Prefer arrow functions for components, helpers, callbacks, and async functions; avoid function declarations unless a framework, class prototype, or external API requires them. Use modern JavaScript and TypeScript syntax when it improves clarity.
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
 - Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
 - Keep side effects audited and singular: clean up every timer, animation frame, listener, watcher, subscription, and observer; avoid duplicate polling/listeners for the same source; batch high-frequency updates with animation frames when UI-bound.
@@ -33,7 +34,7 @@
 - Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; reserve `undefined` for optional API boundaries and omitted object properties.
 - For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose `value === undefined ? {}` branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
-- Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
+- Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
@@ -45,4 +46,5 @@
 - Tooltips must use Base UI side data attributes for direction-aware transform/opacity animations.
 - Use system UI fonts only. Do not add external fonts.
 - Use Tailwind `size-*` instead of matching `w-*` and `h-*` utilities for square elements.
+- In markdown and third-party selector CSS, prefer Tailwind `@apply` utilities for expressible styles; use raw CSS only for pseudo-elements, browser-specific selectors, data attributes, or values Tailwind cannot express cleanly.
 - Keep `packages/desktop/build/icons` and `packages/desktop/src/renderer/public` icons in sync.

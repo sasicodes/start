@@ -3,7 +3,7 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { DynamicColorIOS, Platform, useColorScheme } from 'react-native';
 
-export default function RootLayout() {
+const RootLayout = () => {
   const colorScheme = useColorScheme();
   const dark = colorScheme === 'dark';
   const tabBarBlurEffect = dark ? 'systemThinMaterialDark' : 'systemThinMaterialLight';
@@ -22,11 +22,11 @@ export default function RootLayout() {
     <ThemeProvider value={dark ? DarkTheme : DefaultTheme}>
       <StatusBar style="auto" />
       <NativeTabs
+        sidebarAdaptable={false}
         blurEffect={tabBarBlurEffect}
+        disableTransparentOnScrollEdge
         shadowColor={tabBarShadowColor}
         backgroundColor={tabBarBackgroundColor}
-        sidebarAdaptable={false}
-        disableTransparentOnScrollEdge
       >
         <NativeTabs.Trigger name="index">
           <NativeTabs.Trigger.Icon
@@ -52,4 +52,6 @@ export default function RootLayout() {
       </NativeTabs>
     </ThemeProvider>
   );
-}
+};
+
+export default RootLayout;

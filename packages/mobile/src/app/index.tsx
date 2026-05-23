@@ -6,6 +6,6 @@ const homeParagraphs = [
   'Use New to start a thread. Settings keeps account, model, and workflow choices nearby.'
 ];
 
-export default function HomeScreen() {
-  return <Screen eyebrow="Home" paragraphs={homeParagraphs} title="Build from anywhere" />;
-}
+const HomeScreen = () => <Screen eyebrow="Home" paragraphs={homeParagraphs} title="Build from anywhere" />;
+
+export default HomeScreen;

@@ -3,7 +3,7 @@ import type { PatchFile, PatchLine } from '@renderer/shared/workspace/changes/di
 import type { SplitDiffCell, SplitDiffRow, SplitDiffTone } from '@renderer/shared/workspace/changes/diff/rows';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { splitDiffRows } from '@renderer/shared/workspace/changes/diff/rows';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useMemo } from 'preact/hooks';
 
@@ -69,7 +69,7 @@ const DiffPane = ({
 
   return (
     <div
-      class={cn(
+      class={tw(
         'grid min-w-0 grid-cols-[0.25rem_3rem_minmax(0,1fr)]',
         side === 'right' && 'border-l border-line/70',
         addition && 'bg-success/[0.045]',
@@ -78,7 +78,7 @@ const DiffPane = ({
       )}
     >
       <span
-        class={cn(
+        class={tw(
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           cell.tone === 'add' && 'text-success',
@@ -87,7 +87,7 @@ const DiffPane = ({
         )}
       />
       <span
-        class={cn(
+        class={tw(
           'select-none px-2 py-0.5 text-right tabular-nums',
           cell.tone === 'add' && 'text-success',
           cell.tone === 'remove' && 'text-danger',
@@ -98,7 +98,7 @@ const DiffPane = ({
       </span>
       <pre
         {...(highlightedHtml ? { dangerouslySetInnerHTML: { __html: highlightedHtml } } : {})}
-        class={cn(
+        class={tw(
           'm-0 min-w-0 whitespace-pre-wrap break-words py-0.5 pr-2',
           highlightedHtml && 'text-ink',
           !highlightedHtml && cell.tone === 'add' && 'text-success',
@@ -153,7 +153,7 @@ const UnifiedLineRow = ({
 
   return (
     <div
-      class={cn(
+      class={tw(
         'grid min-w-0 grid-cols-[0.25rem_3rem_3rem_minmax(0,1fr)] text-sm leading-6',
         addition && 'bg-success/[0.045]',
         removal && 'bg-danger/[0.045]'
@@ -161,7 +161,7 @@ const UnifiedLineRow = ({
     >
       <span
         aria-hidden="true"
-        class={cn(
+        class={tw(
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           addition && 'text-success',
@@ -171,13 +171,13 @@ const UnifiedLineRow = ({
       />
       <span
         title="old line"
-        class={cn('select-none px-2 py-0.5 text-right tabular-nums', removal && 'text-danger', !removal && 'text-soft')}
+        class={tw('select-none px-2 py-0.5 text-right tabular-nums', removal && 'text-danger', !removal && 'text-soft')}
       >
         {lineNumberText(line.oldLine)}
       </span>
       <span
         title="new line"
-        class={cn(
+        class={tw(
           'select-none px-2 py-0.5 text-right tabular-nums',
           addition && 'text-success',
           !addition && 'text-soft'
@@ -187,7 +187,7 @@ const UnifiedLineRow = ({
       </span>
       <pre
         {...(highlightedHtml ? { dangerouslySetInnerHTML: { __html: highlightedHtml } } : {})}
-        class={cn(
+        class={tw(
           'm-0 min-w-0 whitespace-pre-wrap break-words py-0.5 pr-2',
           highlightedHtml && 'text-ink',
           !highlightedHtml && addition && 'text-success',
@@ -241,7 +241,7 @@ const DiffHunk = memo(
     const splitRows = useMemo(() => (viewMode === 'split' ? splitDiffRows(hunk.lines) : []), [hunk.lines, viewMode]);
 
     return (
-      <div class={cn('min-w-0', padded && 'pt-2')}>
+      <div class={tw('min-w-0', padded && 'pt-2')}>
         {viewMode === 'split'
           ? splitRows.map((row, index) => (
               <SplitRow

@@ -1,12 +1,12 @@
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import type { StreamdownProps } from 'streamdown';
 
 interface MarkdownTableProps {
-  children?: ComponentChildren;
   className?: string;
+  children?: ComponentChildren;
 }
 
 interface TableCopyButtonProps {
@@ -25,8 +25,8 @@ const tableText = (table: HTMLTableElement) =>
     .join('\n');
 
 const TableCopyButton = ({ tableRef }: TableCopyButtonProps) => {
-  const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(0);
+  const [copied, setCopied] = useState(false);
   const Icon = copied ? CheckIcon : CopyIcon;
   const copyTable = useCallback(() => {
     const table = tableRef.current;
@@ -52,27 +52,27 @@ const TableCopyButton = ({ tableRef }: TableCopyButtonProps) => {
   return (
     <button
       type="button"
+      onClick={copyTable}
       aria-label="Copy table"
       class="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-md border-0 bg-transparent p-0 text-soft opacity-0 transition-[background-color,color,opacity] ease-in hover:bg-line hover:text-hover group-hover/table:opacity-100 focus-visible:opacity-100"
-      onClick={copyTable}
     >
       <Icon class="size-3" />
     </button>
   );
 };
 
-const MarkdownTable = ({ children, className }: MarkdownTableProps) => {
+const MarkdownTable = ({ className, children }: MarkdownTableProps) => {
   const tableRef = useRef<HTMLTableElement>(null);
 
   return (
     <div
-      class={cn(
-        'group/table relative my-2 max-w-full overflow-x-auto rounded-lg border border-line bg-transparent [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+      data-streamdown="table-wrapper"
+      class={tw(
+        'group/table relative my-2 max-w-full overflow-x-auto rounded-lg border border-line bg-transparent [&::-webkit-scrollbar]:hidden',
         className
       )}
-      data-streamdown="table-wrapper"
     >
-      <table ref={tableRef} class="w-max min-w-full border-collapse text-sm" data-streamdown="table">
+      <table ref={tableRef} data-streamdown="table" class="w-max min-w-full border-collapse text-sm">
         {children}
       </table>
       <TableCopyButton tableRef={tableRef} />

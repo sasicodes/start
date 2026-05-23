@@ -7,7 +7,7 @@ import { selectedModelKeyState } from '@renderer/state/chat';
 import { OpenAIIcon } from '@renderer/ui/icons';
 import { playCycleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { useMemo } from 'preact/hooks';
 
 export const ComposerModelPicker = ({
@@ -56,9 +56,9 @@ export const ComposerModelPicker = ({
   };
 
   return (
-    <div class={cn('flex flex-none items-center gap-px', layered && 'order-2')}>
+    <div class={tw('flex flex-none items-center gap-px', layered && 'order-2')}>
       <div
-        class={cn(
+        class={tw(
           'relative flex items-center bg-control',
           showThinkingPicker && 'h-9.5 rounded-[20px_3px_3px_20px]',
           !showThinkingPicker && 'size-9.5 rounded-full'
@@ -68,7 +68,7 @@ export const ComposerModelPicker = ({
           <Tooltip label={selectedModelLabel}>
             <Menu.Trigger
               aria-label="Choose model"
-              className={cn(
+              className={tw(
                 'grid place-items-center rounded-full border-0 bg-transparent text-ink select-none',
                 showThinkingPicker && 'h-full w-10',
                 !showThinkingPicker && 'size-9.5'

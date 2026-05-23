@@ -1,7 +1,7 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
@@ -48,7 +48,7 @@ const SessionRow = ({
         event.stopPropagation();
         onOpen(session);
       }}
-      class={cn(
+      class={tw(
         'grid w-full gap-1 rounded-xl border-0 px-3 py-2 text-left text-ink outline-0 transition-colors hover:bg-control focus-visible:bg-control',
         active ? 'bg-control text-hover' : 'bg-transparent'
       )}

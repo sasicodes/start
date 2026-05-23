@@ -1,6 +1,6 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import { AnthropicIcon, OpenAIIcon } from '@renderer/ui/icons';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -127,7 +127,7 @@ export const Settings = memo(
           const authDetail = auth?.connected ? connectionDetail(auth.label) : '';
 
           return (
-            <div class={cn('py-4', index > 0 && 'border-t border-line')} key={provider.key}>
+            <div class={tw('py-4', index > 0 && 'border-t border-line')} key={provider.key}>
               <div class="flex min-w-0 items-center gap-3">
                 <div class="grid size-10 flex-none place-items-center rounded-full bg-[linear-gradient(145deg,var(--color-panel),var(--color-control))] text-ink">
                   <ProviderIcon provider={provider.key} />

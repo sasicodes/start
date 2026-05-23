@@ -5,6 +5,8 @@ const settingsParagraphs = [
   'Keep mobile choices quiet by default. Start should only interrupt when a session needs your decision.'
 ];
 
-export default function SettingsScreen() {
-  return <Screen eyebrow="Settings" paragraphs={settingsParagraphs} title="Tune Start for your workflow" />;
-}
+const SettingsScreen = () => (
+  <Screen eyebrow="Settings" paragraphs={settingsParagraphs} title="Tune Start for your workflow" />
+);
+
+export default SettingsScreen;

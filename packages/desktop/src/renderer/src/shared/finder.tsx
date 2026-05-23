@@ -1,6 +1,6 @@
 import type { RootItem } from '@preload/index';
 import { ComposerAttachedPanel } from '@renderer/shared/composer/attached-panel';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
 interface FinderProps {
@@ -52,7 +52,7 @@ export const Finder = ({ activePath, items, onSelect, visible }: FinderProps) =>
                   event.preventDefault();
                   onSelect(item);
                 }}
-                class={cn(
+                class={tw(
                   'flex w-full items-center rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
                   selected && 'bg-control',
                   !selected && 'bg-transparent'

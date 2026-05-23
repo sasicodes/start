@@ -16,7 +16,7 @@ const deleteInfoKey = async (plistPath, keyPath) => {
   await execFileAsync('/usr/libexec/PlistBuddy', ['-c', `Delete ${keyPath}`, plistPath]).catch(() => {});
 };
 
-export default async function sanitizeMacInfo(context) {
+const sanitizeMacInfo = async (context) => {
   if (context.electronPlatformName !== 'darwin') return;
 
   const plistPath = path.join(
@@ -31,4 +31,6 @@ export default async function sanitizeMacInfo(context) {
   }
 
   await deleteInfoKey(plistPath, ':NSAppTransportSecurity');
-}
+};
+
+export default sanitizeMacInfo;

@@ -1,4 +1,4 @@
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 
@@ -20,7 +20,7 @@ export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => 
       class="absolute inset-y-0 left-0 z-20 w-3 -translate-x-1/2 touch-none select-none [cursor:var(--side-panel-resize-cursor,ew-resize)] [-webkit-app-region:no-drag]"
     >
       <div
-        class={cn(
+        class={tw(
           'absolute inset-y-0 left-1/2 w-0 opacity-0 transition-opacity',
           active && 'border-l border-dashed border-ink/10 opacity-100'
         )}

@@ -1,6 +1,6 @@
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { lazy, memo, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import {
@@ -119,7 +119,7 @@ export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) =>
             type="button"
             disabled={!canCycle}
             onClick={() => setViewMode((current) => nextViewMode(current, patch.patch.sections))}
-            class={cn(
+            class={tw(
               'inline-flex min-w-0 items-center gap-1.5 truncate border-0 bg-transparent p-0 text-left text-soft outline-0',
               canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
             )}
@@ -139,7 +139,7 @@ export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) =>
               onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
               class="group/diff-view inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
             >
-              <DiffSplitIcon class={cn('transition-transform duration-100 ease-out', !splitDiffView && 'rotate-90')} />
+              <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', !splitDiffView && 'rotate-90')} />
             </button>
           </div>
         </header>

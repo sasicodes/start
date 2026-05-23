@@ -1,5 +1,5 @@
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { MermaidConfig } from '@streamdown/mermaid';
 import type { AllowElement, StreamdownProps } from 'streamdown';
 
@@ -7,13 +7,13 @@ interface MarkdownIconProps {
   className?: string;
 }
 
-const footnoteProperties = ['dataFootnotes', 'data-footnotes', 'dataFootnoteRef', 'data-footnote-ref'] as const;
-
 const EmptyIcon = () => null;
 
-const MarkdownCheckIcon = ({ className }: MarkdownIconProps) => <CheckIcon class={cn('size-3', className)} />;
+const footnoteProperties = ['dataFootnotes', 'data-footnotes', 'dataFootnoteRef', 'data-footnote-ref'] as const;
 
-const MarkdownCopyIcon = ({ className }: MarkdownIconProps) => <CopyIcon class={cn('size-3', className)} />;
+const MarkdownCopyIcon = ({ className }: MarkdownIconProps) => <CopyIcon class={tw('size-3', className)} />;
+
+const MarkdownCheckIcon = ({ className }: MarkdownIconProps) => <CheckIcon class={tw('size-3', className)} />;
 
 const hasFootnoteProperty = (properties: unknown) =>
   typeof properties === 'object' &&
@@ -25,32 +25,32 @@ export const allowMarkdownElement: AllowElement = (element) => !hasFootnotePrope
 export const codeThemes: NonNullable<StreamdownProps['shikiTheme']> = ['github-light', 'github-dark'];
 
 export const markdownAnimation = {
-  animation: 'blurIn',
+  stagger: 0,
+  sep: 'word',
   duration: 140,
   easing: 'ease-out',
-  sep: 'word',
-  stagger: 0
+  animation: 'blurIn'
 } as const;
 
 export const markdownControls = {
-  code: { copy: true, download: false },
+  table: false,
   mermaid: false,
-  table: false
+  code: { copy: true, download: false }
 } as const;
 
 export const markdownDisallowedElements = ['img'] as const;
 
 export const markdownIcons = {
-  CheckIcon: MarkdownCheckIcon,
-  CopyIcon: MarkdownCopyIcon,
-  DownloadIcon: EmptyIcon,
-  ExternalLinkIcon: EmptyIcon,
-  Loader2Icon: EmptyIcon,
-  Maximize2Icon: EmptyIcon,
-  RotateCcwIcon: EmptyIcon,
   XIcon: EmptyIcon,
   ZoomInIcon: EmptyIcon,
-  ZoomOutIcon: EmptyIcon
+  Loader2Icon: EmptyIcon,
+  ZoomOutIcon: EmptyIcon,
+  DownloadIcon: EmptyIcon,
+  RotateCcwIcon: EmptyIcon,
+  Maximize2Icon: EmptyIcon,
+  CopyIcon: MarkdownCopyIcon,
+  ExternalLinkIcon: EmptyIcon,
+  CheckIcon: MarkdownCheckIcon
 } as unknown as NonNullable<StreamdownProps['icons']>;
 
 export const markdownLinkSafety = {
@@ -62,25 +62,25 @@ export const markdownRepair = {
 } as const;
 
 export const diagramConfig = {
+  theme: 'base',
+  startOnLoad: false,
   fontFamily: 'system-ui',
   securityLevel: 'strict',
-  startOnLoad: false,
   suppressErrorRendering: true,
-  theme: 'base',
   themeVariables: {
-    background: 'transparent',
     fontFamily: 'system-ui',
-    lineColor: 'var(--color-soft)',
-    mainBkg: 'var(--color-composer)',
-    nodeBorder: 'var(--color-line)',
-    primaryBorderColor: 'var(--color-line)',
-    primaryColor: 'var(--color-composer)',
-    primaryTextColor: 'var(--color-ink)',
-    secondaryBorderColor: 'var(--color-line)',
-    secondaryColor: 'var(--color-muted)',
-    secondaryTextColor: 'var(--color-ink)',
-    tertiaryBorderColor: 'var(--color-line)',
+    background: 'transparent',
     tertiaryColor: 'transparent',
-    tertiaryTextColor: 'var(--color-soft)'
+    lineColor: 'var(--color-soft)',
+    nodeBorder: 'var(--color-line)',
+    mainBkg: 'var(--color-composer)',
+    primaryTextColor: 'var(--color-ink)',
+    secondaryColor: 'var(--color-muted)',
+    primaryColor: 'var(--color-composer)',
+    tertiaryTextColor: 'var(--color-soft)',
+    secondaryTextColor: 'var(--color-ink)',
+    primaryBorderColor: 'var(--color-line)',
+    tertiaryBorderColor: 'var(--color-line)',
+    secondaryBorderColor: 'var(--color-line)'
   }
 } satisfies MermaidConfig;

@@ -8,7 +8,7 @@ import {
   isCodeMeta,
   splitDiffMetric
 } from '@renderer/shared/turn/activity';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
@@ -32,7 +32,7 @@ const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
     <>
       {before}
       <span
-        class={cn('text-ink', interactive && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover')}
+        class={tw('text-ink', interactive && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover')}
       >
         {target}
       </span>
@@ -63,7 +63,7 @@ const DetailContent = ({ detail, meta }: DetailItemProps & { meta: string }) => 
         <p class="m-0 text-sm leading-6 text-soft">{meta}</p>
       ))}
     {detail.body && (
-      <div class={cn('max-w-full text-sm leading-6 text-soft [overflow-wrap:anywhere]', meta && 'mt-1')}>
+      <div class={tw('max-w-full text-sm leading-6 text-soft [overflow-wrap:anywhere]', meta && 'mt-1')}>
         <Markdown source={detail.body} density="compact" />
       </div>
     )}
@@ -89,7 +89,7 @@ export const DetailItem = ({ detail }: DetailItemProps) => {
   const expandable = Boolean(meta || detail.body);
   const title = (
     <span
-      class={cn(
+      class={tw(
         'min-w-0 whitespace-pre-wrap leading-5',
         error && 'text-danger',
         active && 'text-hover',

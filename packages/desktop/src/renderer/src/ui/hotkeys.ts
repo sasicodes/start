@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'preact/hooks';
 
 interface AppHotkey {
   name: string;
-  shortcut: RegisterableHotkey;
+  shortcuts: readonly RegisterableHotkey[];
 }
 
 type AppHotkeyCallback = (event: KeyboardEvent, context: HotkeyCallbackContext) => void;
@@ -11,11 +11,11 @@ type AppHotkeyCallback = (event: KeyboardEvent, context: HotkeyCallbackContext) 
 export const appHotkeys = {
   newChat: {
     name: 'New Session',
-    shortcut: 'Mod+N'
+    shortcuts: ['Mod+N', 'Mod+T']
   },
   settings: {
     name: 'Settings',
-    shortcut: 'Mod+,'
+    shortcuts: ['Mod+,']
   }
 } satisfies Record<string, AppHotkey>;
 
@@ -24,18 +24,18 @@ export const useAppHotkey = (hotkey: AppHotkey, callback: AppHotkeyCallback) => 
   callbackRef.current = callback;
 
   useEffect(() => {
-    const handle = getHotkeyManager().register(
-      hotkey.shortcut,
-      (event, context) => callbackRef.current(event, context),
-      {
+    const handles = hotkey.shortcuts.map((shortcut) =>
+      getHotkeyManager().register(shortcut, (event, context) => callbackRef.current(event, context), {
         meta: {
           name: hotkey.name
         },
         preventDefault: true,
         stopPropagation: true
-      }
+      })
     );
 
-    return () => handle.unregister();
+    return () => {
+      for (const handle of handles) handle.unregister();
+    };
   }, [hotkey]);
 };

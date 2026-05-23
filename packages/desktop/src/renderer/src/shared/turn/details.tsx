@@ -1,6 +1,6 @@
 import { hasActivityDetails } from '@renderer/shared/turn/activity';
 import { activityLabel } from '@renderer/shared/turn/label';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 
 interface TurnDetailsProps {
@@ -23,7 +23,7 @@ export const TurnDetails = ({ details, thinking, createdAt, streaming, panelOpen
         type="button"
         aria-expanded={panelOpen}
         onClick={onOpenPanel}
-        class={cn(
+        class={tw(
           'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-xs text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
           panelOpen && 'text-hover'
         )}

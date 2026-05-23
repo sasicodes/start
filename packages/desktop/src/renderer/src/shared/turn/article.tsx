@@ -1,9 +1,8 @@
 import { Markdown } from '@renderer/markdown';
-import { ActiveIndicator } from '@renderer/shared/turn/active-indicator';
 import { TurnDetails } from '@renderer/shared/turn/details';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { formatTurnTime } from '@renderer/utils/time';
 import type { Turn } from '@renderer/utils/types';
 import { memo } from 'preact/compat';
@@ -28,11 +27,12 @@ const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(t
 
 const TurnActions = memo(({ turn }: { turn: Turn }) => {
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
+  if (turn.role === 'assistant' && turn.streaming) return null;
   if (!turn.text) return null;
 
   return (
     <div
-      class={cn(
+      class={tw(
         'mt-1.5 flex items-center gap-1 text-soft opacity-0 transition-opacity ease-in group-hover/turn:opacity-100 group-focus-within/turn:opacity-100',
         turn.role === 'user' && 'flex-row-reverse justify-start self-end',
         turn.role !== 'user' && 'justify-start self-start'
@@ -59,11 +59,11 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
   const useMarkdown = shouldUseMarkdown(turn);
   const isTerminal = turn.role === 'terminal';
   const isAssistantActivity = turn.role === 'assistant' && !turn.text;
-  const showActiveIndicator = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
+  const showRequesting = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
 
   return (
     <div
-      class={cn(
+      class={tw(
         'rounded-[18px] text-sm leading-6 [overflow-wrap:anywhere]',
         !useMarkdown && 'whitespace-pre-wrap',
         isUser && 'w-fit max-w-full rounded-br-md bg-composer px-4 py-2',
@@ -74,8 +74,8 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         isAssistantActivity && 'text-soft'
       )}
     >
-      {showActiveIndicator ? (
-        <ActiveIndicator />
+      {showRequesting ? (
+        <span role="status">Requesting</span>
       ) : useMarkdown ? (
         <Markdown source={turn.text} streaming={Boolean(turn.streaming)} />
       ) : (
@@ -106,7 +106,7 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
   return (
     <article
       data-turn-id={turn.id}
-      class={cn(
+      class={tw(
         'group/turn [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
         isUser &&
           'flex w-fit max-w-[min(38rem,82%)] flex-col items-end self-end @max-chat-narrow/chat:w-full @max-chat-narrow/chat:max-w-full',

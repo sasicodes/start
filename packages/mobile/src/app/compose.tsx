@@ -5,6 +5,8 @@ const composeParagraphs = [
   'This shell reserves space for workspace and model controls before the composer connects to live sessions.'
 ];
 
-export default function ComposeScreen() {
-  return <Screen eyebrow="New session" paragraphs={composeParagraphs} title="Start a focused thread" />;
-}
+const ComposeScreen = () => (
+  <Screen eyebrow="New session" paragraphs={composeParagraphs} title="Start a focused thread" />
+);
+
+export default ComposeScreen;

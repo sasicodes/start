@@ -12,16 +12,16 @@
 }
 
 .markdown-default > :not(:first-child) {
-  margin-top: 0.5rem;
+  @apply mt-2;
 }
 
 .markdown-compact > :not(:first-child) {
-  margin-top: 0.25rem;
+  @apply mt-1;
 }
 
 .markdown-default > :not(:last-child),
 .markdown-compact > :not(:last-child) {
-  margin-bottom: 0;
+  @apply mb-0;
 }
 
 .markdown-default p,
@@ -97,8 +97,6 @@
 .markdown-default [data-streamdown="table-wrapper"],
 .markdown-compact [data-streamdown="table-wrapper"] {
   @apply my-2 overflow-x-auto rounded-xl border border-line bg-transparent p-0;
-
-  scrollbar-width: none;
 }
 
 .markdown-default [data-streamdown="code-block-header"],
@@ -131,14 +129,17 @@
 
 .markdown-default [data-streamdown="code-block-body"] pre,
 .markdown-compact [data-streamdown="code-block-body"] pre {
-  @apply m-0 max-w-full overflow-x-auto;
+  @apply m-0 max-w-full overflow-x-auto whitespace-pre break-normal;
+}
 
-  scrollbar-width: none;
+.markdown-default [data-streamdown="code-block-body"] pre code > span,
+.markdown-compact [data-streamdown="code-block-body"] pre code > span {
+  @apply block;
 }
 
 .markdown-default [data-streamdown="code-block-body"] pre::-webkit-scrollbar,
 .markdown-compact [data-streamdown="code-block-body"] pre::-webkit-scrollbar {
-  display: none;
+  @apply hidden;
 }
 
 .markdown-default [data-streamdown$="actions"],
@@ -165,11 +166,22 @@
   @apply opacity-100;
 }
 
+@keyframes markdown-caret-pulse {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 .markdown-default > :last-child::after,
 .markdown-compact > :last-child::after {
-  font-size: 0.55em;
-  line-height: 1;
-  vertical-align: 0.08em;
+  @apply inline-block align-[-0.06em] text-[0.9em] leading-none text-ink;
+
+  animation: markdown-caret-pulse 1200ms ease-in-out infinite;
 }
 
 .markdown-default [data-streamdown="table"],
@@ -206,7 +218,7 @@
 
 .markdown-default [data-streamdown="table-wrapper"]::-webkit-scrollbar,
 .markdown-compact [data-streamdown="table-wrapper"]::-webkit-scrollbar {
-  display: none;
+  @apply hidden;
 }
 
 .markdown-default [data-streamdown="mermaid"] svg,
@@ -220,5 +232,5 @@
 .markdown-compact sup:empty,
 .markdown-default sup:has([data-footnote-ref]),
 .markdown-compact sup:has([data-footnote-ref]) {
-  display: none;
+  @apply hidden;
 }

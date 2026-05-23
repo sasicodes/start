@@ -10,7 +10,7 @@ import { Finder, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
@@ -198,7 +198,7 @@ export const Composer = memo(
         onAnimationEnd={(event) => {
           if (event.animationName === 'composer-floating-shell-out') onExitComplete();
         }}
-        class={cn(
+        class={tw(
           'inset-x-0 isolate mx-auto w-full max-w-3xl rounded-2xl px-5',
           overlay ? 'fixed' : 'absolute',
           centered && 'top-[calc(50%-28px)]',
@@ -222,7 +222,7 @@ export const Composer = memo(
         />
         <QueuePanel messages={queuedMessages} visible={queueVisible} onSteer={onSteerQueuedMessage} />
         <form
-          class={cn(
+          class={tw(
             'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
             layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
             overlay && 'shadow-composer-overlay',
@@ -235,7 +235,7 @@ export const Composer = memo(
           onSubmit={handleSubmit}
         >
           <div
-            class={cn(
+            class={tw(
               'flex min-h-11.5 items-center gap-2 py-1.25 pr-1.5 pl-1.25',
               layered && 'flex-wrap items-end gap-y-1.5 px-2.5 pt-2'
             )}
@@ -250,7 +250,7 @@ export const Composer = memo(
               selectedModelKey={selectedModelKey}
               onSelectThinkingLevel={onSelectThinkingLevel}
             />
-            <div class={cn('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
+            <div class={tw('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
               {promptPlaceholder.rotating && (
                 <div
                   aria-hidden="true"
@@ -287,7 +287,7 @@ export const Composer = memo(
                 {...(selectedFinderItem ? { activeDescendant: finderItemId(selectedFinderItem.path) } : {})}
               />
             </div>
-            <div class={cn('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
+            <div class={tw('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
               <AttachmentStack
                 attachments={attachments}
                 onOpenAttachment={onOpenAttachment}

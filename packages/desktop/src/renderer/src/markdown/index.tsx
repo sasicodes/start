@@ -4,8 +4,8 @@ export type MarkdownDensity = 'compact' | 'default';
 
 export interface MarkdownProps {
   source: string;
-  density?: MarkdownDensity;
   streaming?: boolean;
+  density?: MarkdownDensity;
 }
 
 const MarkdownRenderer = lazy(() =>

@@ -1,6 +1,6 @@
 import { ResizeHandle } from '@renderer/shared/side-panel/resize-handle';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import type { ComponentChildren, JSX } from 'preact';
 
@@ -36,14 +36,14 @@ export const SidePanelFrame = ({
           exit={sidePanelHiddenState}
           initial={sidePanelHiddenState}
           style={{ width: `var(--side-panel-width, ${initialWidth}px)` }}
-          class={cn(
+          class={tw(
             'relative h-full min-h-0 shrink-0 transform-gpu overflow-visible outline-0 [-webkit-app-region:no-drag]',
             settling && 'transition-[width] duration-150 ease-out'
           )}
         >
           <div
             style={{ transform: 'translate3d(var(--side-panel-offset, 0px), 0, 0)' }}
-            class={cn(
+            class={tw(
               'absolute inset-0 transform-gpu shadow-[-10px_0_24px_-18px_oklch(0%_0_0_/_0.16)]',
               settling && 'transition-transform duration-150 ease-out'
             )}

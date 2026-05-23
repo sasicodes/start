@@ -2,7 +2,7 @@ import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { ChevronDownIcon } from '@renderer/ui/icons';
-import { cn } from '@renderer/utils/cn';
+import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useState } from 'preact/hooks';
 
@@ -38,7 +38,7 @@ const StatusMark = ({ status }: StatusMarkProps) => (
     viewBox="0 0 24 24"
     title={statusLabels[status]}
     aria-label={statusLabels[status]}
-    class={cn(
+    class={tw(
       'size-4 flex-none',
       status === 'added' && 'text-success',
       status === 'deleted' && 'text-danger',
@@ -97,7 +97,7 @@ export const DiffFile = memo(({ file, highlightRevision, language, status, viewM
         <div class="flex flex-none items-center gap-3">
           <FileStats file={file} />
           <ChevronDownIcon
-            class={cn(
+            class={tw(
               'size-3.5 flex-none text-soft transition-[color,transform] duration-100 ease-out group-hover/file:text-hover group-focus-visible/file:text-hover',
               !open && '-rotate-90'
             )}
