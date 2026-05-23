@@ -6,7 +6,7 @@
 - Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
 - Do not add theme tokens that duplicate Tailwind defaults such as `--color-white`; use built-in utilities like `bg-white` directly unless the value is a real app-specific semantic token.
 - Revalidate custom classes before adding or keeping them; remove custom class hooks when inline Tailwind utilities or component props can express the same styling.
-- Follow commit style: use lowercase, precise commit titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
+- Follow commit and PR title style: use lowercase, precise titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
 - Do not add TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces instead.
