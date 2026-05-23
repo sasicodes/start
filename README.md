@@ -8,7 +8,7 @@ your coding agent
 pnpm install
 ```
 
-Sign in to Pi or configure your API keys before running the app.
+Sign in with your subscription or configure your API keys before running the app.
 
 ## Run
 

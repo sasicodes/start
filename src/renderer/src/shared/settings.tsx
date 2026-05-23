@@ -1,5 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, ChevronLeftIcon, OpenAIIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { cn } from '@renderer/utils/cn';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -113,19 +113,6 @@ export const Settings = ({
 
   return (
     <section class="mx-auto size-full max-w-3xl overflow-y-auto px-5 pt-20 pb-16">
-      <div class="mb-8 flex items-center">
-        <button
-          type="button"
-          onClick={onClose}
-          class="flex h-9 items-center gap-2 rounded-full border-0 bg-transparent text-sm font-medium text-soft transition-colors duration-100 ease-in hover:text-ink"
-        >
-          <span class="grid size-10 flex-none place-items-center rounded-full bg-transparent">
-            <ChevronLeftIcon class="size-5" />
-          </span>
-          <span class="leading-none">Back to app</span>
-        </button>
-      </div>
-
       {providers.map((provider, index) => {
         const auth = providerStatus(authProviders, provider.key);
         const draftKey = apiKeys[provider.key];
