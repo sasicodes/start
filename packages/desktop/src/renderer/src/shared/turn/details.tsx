@@ -13,27 +13,29 @@ interface TurnDetailsProps {
   onOpenPanel: () => void;
 }
 
-const useWorkingTime = (working: boolean) => {
+const useWorkingTime = () => {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!working) return;
-
     setNow(Date.now());
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
 
     return () => window.clearInterval(interval);
-  }, [working]);
+  }, []);
 
   return now;
 };
 
+const WorkingActivityLabel = ({ createdAt, details }: Pick<TurnDetailsProps, 'createdAt' | 'details'>) => {
+  const now = useWorkingTime();
+  return <span class="truncate">{activityLabel({ createdAt, details, now, working: true })}</span>;
+};
+
 export const TurnDetails = ({ createdAt, details, panelOpen, thinking, working, onOpenPanel }: TurnDetailsProps) => {
   const hasDetails = hasActivityDetails(details, thinking);
-  const now = useWorkingTime(working);
   if (!working && !hasDetails) return null;
 
-  const label = activityLabel({ createdAt, details, now, working });
+  const label = working ? '' : activityLabel({ createdAt, details, working });
 
   return (
     <div class="mb-1.5 max-w-full text-xs text-soft">
@@ -47,7 +49,11 @@ export const TurnDetails = ({ createdAt, details, panelOpen, thinking, working, 
           working && 'animate-pulse'
         )}
       >
-        <span class="truncate">{label}</span>
+        {working ? (
+          <WorkingActivityLabel createdAt={createdAt} details={details} />
+        ) : (
+          <span class="truncate">{label}</span>
+        )}
       </button>
     </div>
   );
