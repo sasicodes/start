@@ -25,18 +25,18 @@
 :root {
   color-scheme: light dark;
   background: transparent;
-  --drop-edge-indigo: oklch(63% 0.045 268 / 0.16);
-  --drop-edge-sakura: oklch(74% 0.045 23 / 0.13);
-  --drop-corner-indigo: oklch(62% 0.055 268 / 0.24);
-  --drop-corner-sakura: oklch(74% 0.055 23 / 0.22);
-  --drop-corner-sakura-soft: oklch(78% 0.032 23 / 0.14);
-  --composer-floating-field-highlight: oklch(99.4% 0.004 264 / 0.82);
-  --composer-floating-field-ring: oklch(60% 0.05 268 / 0.2);
-  --composer-floating-field-shadow: oklch(30% 0.025 268 / 0.38);
-  --composer-floating-halo-indigo: oklch(67% 0.07 268 / 0.38);
-  --composer-floating-halo-mist: oklch(88% 0.02 264 / 0.36);
-  --composer-floating-halo-rose: oklch(75% 0.06 23 / 0.32);
-  --composer-floating-sheen: oklch(98% 0.006 264 / 0.92);
+  --overlay-edge-indigo: oklch(63% 0.045 268 / 0.16);
+  --overlay-edge-sakura: oklch(74% 0.045 23 / 0.13);
+  --overlay-corner-indigo: oklch(62% 0.055 268 / 0.24);
+  --overlay-corner-sakura: oklch(74% 0.055 23 / 0.22);
+  --overlay-corner-sakura-soft: oklch(78% 0.032 23 / 0.14);
+  --overlay-field-highlight: oklch(99.4% 0.004 264 / 0.82);
+  --overlay-field-ring: oklch(60% 0.05 268 / 0.2);
+  --overlay-field-shadow: oklch(30% 0.025 268 / 0.38);
+  --overlay-halo-indigo: oklch(67% 0.07 268 / 0.38);
+  --overlay-halo-mist: oklch(88% 0.02 264 / 0.36);
+  --overlay-halo-sakura: oklch(75% 0.06 23 / 0.32);
+  --overlay-sheen: oklch(98% 0.006 264 / 0.92);
   font-synthesis: none;
   text-rendering: optimizeSpeed;
   -webkit-font-smoothing: antialiased;
@@ -45,18 +45,18 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-canvas: transparent;
-    --drop-edge-indigo: oklch(68% 0.04 268 / 0.2);
-    --drop-edge-sakura: oklch(72% 0.04 23 / 0.12);
-    --drop-corner-indigo: oklch(67% 0.05 268 / 0.3);
-    --drop-corner-sakura: oklch(72% 0.048 23 / 0.17);
-    --drop-corner-sakura-soft: oklch(76% 0.03 23 / 0.12);
-    --composer-floating-field-highlight: oklch(95% 0.01 268 / 0.12);
-    --composer-floating-field-ring: oklch(78% 0.04 268 / 0.22);
-    --composer-floating-field-shadow: oklch(4% 0.012 285 / 0.72);
-    --composer-floating-halo-indigo: oklch(68% 0.07 268 / 0.42);
-    --composer-floating-halo-mist: oklch(74% 0.02 285 / 0.2);
-    --composer-floating-halo-rose: oklch(72% 0.055 23 / 0.24);
-    --composer-floating-sheen: oklch(92% 0.02 268 / 0.2);
+    --overlay-edge-indigo: oklch(68% 0.04 268 / 0.2);
+    --overlay-edge-sakura: oklch(72% 0.04 23 / 0.12);
+    --overlay-corner-indigo: oklch(67% 0.05 268 / 0.3);
+    --overlay-corner-sakura: oklch(72% 0.048 23 / 0.17);
+    --overlay-corner-sakura-soft: oklch(76% 0.03 23 / 0.12);
+    --overlay-field-highlight: oklch(95% 0.01 268 / 0.12);
+    --overlay-field-ring: oklch(78% 0.04 268 / 0.22);
+    --overlay-field-shadow: oklch(4% 0.012 285 / 0.72);
+    --overlay-halo-indigo: oklch(68% 0.07 268 / 0.42);
+    --overlay-halo-mist: oklch(74% 0.02 285 / 0.2);
+    --overlay-halo-sakura: oklch(72% 0.055 23 / 0.24);
+    --overlay-sheen: oklch(92% 0.02 268 / 0.2);
     --color-panel: oklch(15% 0.004 285);
     --color-muted: oklch(26% 0.006 285);
     --color-line: oklch(100% 0 0 / 0.06);
@@ -110,12 +110,13 @@ body {
 }
 
 .composer-floating-shell::before {
-  inset: -5.5rem -3.5rem -4.75rem;
+  inset: -5.5rem -3.5rem -5.5rem;
   z-index: 0;
   background:
-    radial-gradient(ellipse at 20% 42%, var(--composer-floating-halo-rose), transparent 48%),
-    radial-gradient(ellipse at 80% 36%, var(--composer-floating-halo-indigo), transparent 52%),
-    radial-gradient(ellipse at 50% 82%, var(--composer-floating-halo-mist), transparent 58%);
+    radial-gradient(ellipse at 20% 42%, var(--overlay-halo-sakura), transparent 48%),
+    radial-gradient(ellipse at 80% 36%, var(--overlay-halo-indigo), transparent 52%),
+    radial-gradient(ellipse at 50% 82%, var(--overlay-halo-mist), transparent 58%),
+    radial-gradient(ellipse at 50% 112%, var(--overlay-halo-mist), transparent 64%);
   filter: blur(28px);
   opacity: 0.95;
   animation: composer-floating-halo-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -125,8 +126,8 @@ body {
   inset: -1.2rem 2.75rem -1.8rem;
   z-index: 20;
   background:
-    linear-gradient(90deg, transparent, var(--composer-floating-sheen), transparent),
-    radial-gradient(ellipse at 50% 40%, var(--composer-floating-halo-mist), transparent 58%);
+    linear-gradient(90deg, transparent, var(--overlay-sheen), transparent),
+    radial-gradient(ellipse at 50% 40%, var(--overlay-halo-mist), transparent 58%);
   filter: blur(12px);
   opacity: 0.78;
   animation: composer-floating-sheen-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -134,10 +135,10 @@ body {
 
 .composer-floating-field {
   box-shadow:
-    0 0 0 1px var(--composer-floating-field-ring),
-    0 26px 72px -30px var(--composer-floating-field-shadow),
-    0 10px 32px -22px var(--composer-floating-halo-indigo),
-    inset 0 1px 0 var(--composer-floating-field-highlight);
+    0 0 0 1px var(--overlay-field-ring),
+    0 26px 72px -30px var(--overlay-field-shadow),
+    0 10px 32px -22px var(--overlay-halo-indigo),
+    inset 0 1px 0 var(--overlay-field-highlight);
   animation: composer-floating-field-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -147,8 +148,8 @@ body {
   inset: 0;
   border-radius: inherit;
   background:
-    linear-gradient(180deg, var(--composer-floating-sheen), transparent 42%),
-    radial-gradient(ellipse at 50% -12%, var(--composer-floating-halo-mist), transparent 55%);
+    linear-gradient(180deg, var(--overlay-sheen), transparent 42%),
+    radial-gradient(ellipse at 50% -12%, var(--overlay-halo-mist), transparent 55%);
   content: "";
 }
 

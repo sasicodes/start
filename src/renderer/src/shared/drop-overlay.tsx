@@ -9,8 +9,8 @@ export const DropOverlay = ({ visible }: { visible: boolean }) => (
     )}
   >
     <div class="absolute inset-0 bg-composer/84" />
-    <div class="absolute -inset-24 animate-[drop-corner-drift_3.8s_ease-in-out_infinite] bg-[radial-gradient(circle_at_8%_6%,var(--drop-corner-sakura),transparent_34%),radial-gradient(circle_at_92%_8%,var(--drop-corner-indigo),transparent_36%),radial-gradient(circle_at_86%_92%,var(--drop-corner-sakura-soft),transparent_38%)]" />
-    <div class="absolute inset-0 animate-[drop-edge-breathe_4.6s_ease-in-out_infinite] bg-[linear-gradient(90deg,var(--drop-edge-sakura),transparent_22%,transparent_78%,var(--drop-edge-indigo)),linear-gradient(180deg,var(--drop-edge-indigo),transparent_18%,transparent_88%,var(--drop-edge-sakura))]" />
+    <div class="absolute -inset-24 animate-[drop-corner-drift_3.8s_ease-in-out_infinite] bg-[radial-gradient(circle_at_8%_6%,var(--overlay-corner-sakura),transparent_34%),radial-gradient(circle_at_92%_8%,var(--overlay-corner-indigo),transparent_36%),radial-gradient(circle_at_86%_92%,var(--overlay-corner-sakura-soft),transparent_38%)]" />
+    <div class="absolute inset-0 animate-[drop-edge-breathe_4.6s_ease-in-out_infinite] bg-[linear-gradient(90deg,var(--overlay-edge-sakura),transparent_22%,transparent_78%,var(--overlay-edge-indigo)),linear-gradient(180deg,var(--overlay-edge-indigo),transparent_18%,transparent_88%,var(--overlay-edge-sakura))]" />
     <div
       class={cn(
         'relative grid gap-1 text-center text-ink drop-shadow-[0_12px_28px_oklch(0%_0_0/0.18)] transition-transform duration-150 ease-out',
