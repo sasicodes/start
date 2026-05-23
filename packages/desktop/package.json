@@ -76,9 +76,11 @@
     "extraMetadata": {
       "homepage": "https://start.intelligence.one"
     },
+    "afterPack": "scripts/sanitize-mac-info.js",
     "afterSign": "scripts/notarize.js",
     "electronFuses": {
       "runAsNode": false,
+      "enableCookieEncryption": false,
       "onlyLoadAppFromAsar": true,
       "enableNodeCliInspectArguments": false,
       "enableNodeOptionsEnvironmentVariable": false,

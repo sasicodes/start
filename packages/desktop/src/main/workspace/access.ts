@@ -36,7 +36,7 @@ const workspaceBookmarksWith = (workspacePath: string, bookmark: string) => {
 
 export const openWorkspaceDialogOptions = (): Pick<OpenDialogOptions, 'properties' | 'securityScopedBookmarks'> => ({
   properties: ['openDirectory'],
-  ...(process.platform === 'darwin' ? { securityScopedBookmarks: true } : {})
+  ...(supportsSecurityScopedBookmarks() ? { securityScopedBookmarks: true } : {})
 });
 
 export const rememberWorkspaceBookmark = (workspacePath: string, bookmark: string | undefined) => {
