@@ -1,7 +1,7 @@
 # Project Rules
 
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
-- Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `tw` only for conditional inline classes.
+- Do not put Tailwind class lists in constants. Tailwind classes and conditional styling logic belong inline in `class` or `className` attributes. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component instead of a class constant.
 - Centralize reusable logic in clearly named utility modules: if a helper or parser is needed in more than one file, extract it to a domain `utils` folder instead of duplicating it.
 - Prefer Tailwind utilities over custom CSS. Keep `styles.css` limited to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states that Tailwind cannot express cleanly.
 - Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
