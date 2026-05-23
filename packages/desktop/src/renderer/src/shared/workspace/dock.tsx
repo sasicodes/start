@@ -9,7 +9,7 @@ import {
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
 interface WorkspaceDockProps {
@@ -31,14 +31,16 @@ export const WorkspaceDock = memo(
           !appFocused && 'pointer-events-none'
         )}
       >
-        <motion.div
-          animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
-          class="flex h-full items-center gap-2"
-          initial={false}
-          transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
-        >
+        <AnimatePresence initial={false}>
           {appFocused && (
-            <>
+            <motion.div
+              key="workspace-dock-controls"
+              animate={bottomBubbleVisibleMotion}
+              class="flex h-full items-center gap-2"
+              exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
+              initial={bottomBubbleHiddenMotion}
+              transition={bottomBubbleRevealTransition}
+            >
               <Workspace
                 workspacePath={workspacePath}
                 onChooseDirectory={onChooseDirectory}
@@ -49,9 +51,9 @@ export const WorkspaceDock = memo(
                 onOpenSession={onOpenSession}
                 activeSessionId={activeSessionId}
               />
-            </>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
       </div>
     );
   }
