@@ -20,6 +20,7 @@
     "dev": "pnpm run desktop",
     "dist": "pnpm --filter @start/desktop dist",
     "format": "biome ci --linter-enabled=false --assist-enabled=false .",
+    "release:desktop": "pnpm --filter @start/desktop run release --",
     "format:fix": "biome format . --write",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome lint . --error-on-warnings",

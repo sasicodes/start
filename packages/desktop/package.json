@@ -18,7 +18,8 @@
     "dist": "pnpm run clean && pnpm run build:prod && electron-builder",
     "dist:mac": "pnpm run clean && pnpm run build:prod && electron-builder --mac dmg",
     "package": "pnpm run clean && pnpm run build:prod && electron-builder --dir",
-    "package:mac": "pnpm run clean && pnpm run build:prod && electron-builder --mac --dir"
+    "package:mac": "pnpm run clean && pnpm run build:prod && electron-builder --mac --dir",
+    "release": "node ../../scripts/release-desktop.mjs"
   },
   "keywords": [
     "vite",
