@@ -171,7 +171,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
     listRootItems(relativePath, scope, chat.getWorkspaceCwd())
   );
-  ipcMain.handle('app:workspace', () => getWorkspace(chat.getWorkspaceCwd()));
+  ipcMain.handle('app:workspace', (_event, workspacePath?: string) =>
+    getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
+  );
   ipcMain.handle('app:settings', () => appSettings);
   ipcMain.handle('app:hide-composer', () => {
     hideComposerWindow();
@@ -204,7 +206,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('chat:status', () => chat.getStatus());
   ipcMain.handle('chat:models', () => chat.getModels());
-  ipcMain.handle('chat:recent-sessions', () => chat.getRecentSessions());
+  ipcMain.handle('chat:recent-sessions', (_event, workspacePath?: string) => chat.getRecentSessions(workspacePath));
   ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
   ipcMain.handle('chat:switch-workspace', (_event, path: string) => chat.switchWorkspace(path));
   ipcMain.handle('chat:choose-workspace-directory', async () => {

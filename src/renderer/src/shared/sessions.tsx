@@ -139,9 +139,10 @@ export const RecentSessions = ({
   const loadSessions = useCallback(async () => {
     const requestId = sessionsRequestRef.current + 1;
     sessionsRequestRef.current = requestId;
+    setLoaded(false);
 
     try {
-      const nextSessions = await window.pi.chat.recentSessions();
+      const nextSessions = await window.pi.chat.recentSessions(workspacePath);
       if (sessionsRequestRef.current !== requestId) return;
       setSessions(nextSessions);
     } catch {
@@ -150,7 +151,7 @@ export const RecentSessions = ({
     } finally {
       if (sessionsRequestRef.current === requestId) setLoaded(true);
     }
-  }, []);
+  }, [workspacePath]);
 
   const closeSessions = useCallback(() => {
     setOpen(false);

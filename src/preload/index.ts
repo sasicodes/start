@@ -129,7 +129,7 @@ const api = {
   app: {
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
-    workspace: (): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace'),
+    workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
@@ -156,7 +156,8 @@ const api = {
     status: (): Promise<ChatStatus> => ipcRenderer.invoke('chat:status'),
     models: (): Promise<{ models: ModelOption[]; selectedModelKey: string | undefined; error: string | undefined }> =>
       ipcRenderer.invoke('chat:models'),
-    recentSessions: (): Promise<RecentSession[]> => ipcRenderer.invoke('chat:recent-sessions'),
+    recentSessions: (workspacePath?: string): Promise<RecentSession[]> =>
+      ipcRenderer.invoke('chat:recent-sessions', workspacePath),
     workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
     switchWorkspace: (path: string): Promise<SwitchWorkspaceResult> =>
       ipcRenderer.invoke('chat:switch-workspace', path),

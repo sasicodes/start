@@ -136,11 +136,16 @@ export class ChatService {
     }
   }
 
-  async getRecentSessions(): Promise<RecentSession[]> {
-    const sessions = await SessionManager.list(this.workspaceCwd);
+  async getRecentSessions(cwd = this.workspaceCwd): Promise<RecentSession[]> {
+    const sessions = await SessionManager.list(cwd);
+    const uniqueSessions = new Map<string, (typeof sessions)[number]>();
+
+    for (const session of sessions) {
+      uniqueSessions.set(session.id, session);
+    }
 
     return Promise.all(
-      sessions
+      [...uniqueSessions.values()]
         .sort((a, b) => b.modified.getTime() - a.modified.getTime())
         .map(async (session) => ({
           id: session.id,

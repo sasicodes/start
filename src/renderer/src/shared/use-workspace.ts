@@ -7,7 +7,7 @@ export const useWorkspace = (refreshKey: string | undefined) => {
   useEffect(() => {
     let active = true;
 
-    void window.pi.app.workspace().then((nextWorkspace) => {
+    void window.pi.app.workspace(refreshKey).then((nextWorkspace) => {
       if (active) setWorkspace(nextWorkspace);
     });
 

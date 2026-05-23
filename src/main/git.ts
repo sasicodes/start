@@ -25,3 +25,11 @@ export const getGitBranch = async (cwd: string) => {
     return undefined;
   }
 };
+
+export const isGitRepository = async (cwd: string) => {
+  try {
+    return (await git(cwd, ['rev-parse', '--is-inside-work-tree'])) === 'true';
+  } catch {
+    return false;
+  }
+};

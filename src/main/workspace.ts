@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { getGitBranch } from '@main/git';
+import { getGitBranch, isGitRepository } from '@main/git';
 import { nativeImage } from 'electron';
 
 export type WorkspaceInfo = {
@@ -138,22 +138,13 @@ const hashString = (value: string) => {
   return Math.abs(hash);
 };
 
-const escapeSvgText = (value: string) =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
-
 const generatedIconDataUrl = (folderName: string) => {
   const hash = hashString(folderName);
-  const hue = hash % 360;
-  const nextHue = (hue + 42) % 360;
-  const mark = escapeSvgText(folderName.slice(0, 2).toUpperCase());
-  const patterns = ['/', '.', ':', '+', '#'];
-  const pattern = patterns[hash % patterns.length] ?? '/';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="hsl(${hue} 68% 58%)"/><stop offset="1" stop-color="hsl(${nextHue} 62% 38%)"/></linearGradient><clipPath id="c"><circle cx="32" cy="32" r="32"/></clipPath></defs><g clip-path="url(#c)"><circle cx="32" cy="32" r="32" fill="url(#g)"/><text x="8" y="18" fill="rgba(255,255,255,.34)" font-family="monospace" font-size="10">${pattern.repeat(8)}</text><text x="8" y="34" fill="rgba(255,255,255,.22)" font-family="monospace" font-size="10">${pattern.repeat(6)}</text><text x="32" y="41" text-anchor="middle" fill="white" font-family="system-ui, sans-serif" font-size="18" font-weight="700">${mark}</text></g></svg>`;
+  const coldHues = [198, 206, 214, 222, 230, 238];
+  const firstHue = coldHues[hash % coldHues.length] ?? 214;
+  const secondHue = coldHues[Math.floor(hash / coldHues.length) % coldHues.length] ?? 230;
+  const angle = 120 + (hash % 18);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" gradientTransform="rotate(${angle} .5 .5)"><stop stop-color="hsl(${firstHue} 48% 68%)"/><stop offset="1" stop-color="hsl(${secondHue} 46% 46%)"/></linearGradient></defs><circle cx="32" cy="32" r="32" fill="url(#g)"/></svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 };
 
@@ -182,7 +173,10 @@ const workspaceInfo = (folderName: string, iconDataUrl: string, branchName: stri
 
 const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
   const folderName = path.basename(cwd) || cwd;
-  const branchName = await getGitBranch(cwd);
+  const isGitWorkspace = await isGitRepository(cwd);
+  const branchName = isGitWorkspace ? await getGitBranch(cwd) : undefined;
+  if (!isGitWorkspace) return workspaceInfo(folderName, generatedIconDataUrl(folderName), branchName);
+
   const candidates = await scanIconCandidates(cwd);
 
   for (const candidate of candidates) {
