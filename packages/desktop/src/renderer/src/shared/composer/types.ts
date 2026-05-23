@@ -4,10 +4,10 @@ import type { RefObject } from 'preact';
 export interface ComposerProps {
   draft: string;
   onStop: () => void;
-  onPaste: (event: ClipboardEvent) => void;
+  hasTurns: boolean;
   onSubmit: () => void;
   onCancel?: () => void;
-  hasTurns: boolean;
+  onPaste: (event: ClipboardEvent) => void;
   attachments: ImageAttachment[];
   queuedMessages: QueuedMessage[];
   models: ModelOption[];
@@ -19,18 +19,18 @@ export interface ComposerProps {
   revealKey?: number;
   workspacePath: string;
   thinkingLevel: EffortLevel;
+  onOpenSettings: () => void;
   onExitComplete: () => void;
   onRefillPrevious: () => void;
   selectedModelKey: string;
   onDraftChange: (value: string) => void;
-  onSelectModel: (modelKey: string) => void;
   onRemoveAttachment: (id: string) => void;
-  onOpenSettings: () => void;
+  onSelectModel: (modelKey: string) => void;
+  onOpenAttachment: (path: string) => void;
+  onSelectWorkspace: (path: string) => void;
   onSteerQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
-  onOpenAttachment: (path: string) => void;
   onChooseWorkspaceDirectory: () => void;
-  onSelectWorkspace: (path: string) => void;
   onSelectThinkingLevel: (level: EffortLevel) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
 }

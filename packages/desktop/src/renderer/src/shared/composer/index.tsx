@@ -8,7 +8,6 @@ import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
-import { useComposerHeightVariable } from '@renderer/shared/composer/use-composer-height-variable';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
 import { composerDockTransition } from '@renderer/ui/motion';
@@ -59,7 +58,6 @@ export const Composer = memo(
   }: ComposerProps) => {
     const isCommandMode = commandMode(draft);
     const singleLine = overlay;
-    const composerRef = useRef<HTMLDivElement | null>(null);
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const [isMultiline, setIsMultiline] = useState(false);
     const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
@@ -116,8 +114,6 @@ export const Composer = memo(
       },
       [defaultFinderIndex, finderItems, finderQuery]
     );
-
-    useComposerHeightVariable({ ref: composerRef, enabled: !overlay });
 
     useLayoutEffect(() => {
       const element = promptInputRef.current;
@@ -199,7 +195,6 @@ export const Composer = memo(
 
     return (
       <motion.div
-        ref={composerRef}
         {...(overlay ? { key: revealKey } : {})}
         {...(!overlay
           ? { layout: 'position' as const, layoutDependency: centered, transition: { layout: composerDockTransition } }

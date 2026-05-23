@@ -2,7 +2,7 @@ import { TurnArticleById } from '@renderer/shared/turn/article';
 import { useTurnRoom } from '@renderer/shared/turn/room';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { turnIdsState } from '@renderer/state/chat';
-import { ChevronDownIcon } from '@renderer/ui/icons';
+import { ArrowUpIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -79,15 +79,15 @@ export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: Turn
         </div>
       </section>
       {latestButtonVisible && (
-        <div class="pointer-events-none absolute right-0 left-0 z-30 flex justify-center [bottom:calc(var(--main-composer-height,2.875rem)+1.25rem)]">
+        <div class="pointer-events-none absolute inset-x-0 bottom-17.5 z-30 flex justify-center">
           <Tooltip label="Scroll to latest">
             <button
               type="button"
               onClick={scrollToLatest}
               aria-label="Scroll to latest"
-              class="pointer-events-auto grid size-8 place-items-center rounded-full border border-line bg-composer text-soft shadow-shell transition-colors hover:bg-control hover:text-hover focus-visible:bg-control focus-visible:text-hover focus-visible:outline-0"
+              class="pointer-events-auto grid size-8 place-items-center rounded-full border border-line bg-composer/82 text-soft shadow-shell backdrop-blur-md transition-colors hover:bg-control/88 hover:text-hover focus-visible:bg-control/88 focus-visible:text-hover focus-visible:outline-0"
             >
-              <ChevronDownIcon class="size-4" />
+              <ArrowUpIcon class="size-4 rotate-180" strokeWidth={2} />
             </button>
           </Tooltip>
         </div>
