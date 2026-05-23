@@ -115,9 +115,8 @@ body {
 }
 
 .activity-shimmer-text {
-  display: inline-block;
-  max-width: 100%;
-  color: transparent;
+  @apply inline-block max-w-full text-transparent;
+
   background: linear-gradient(
     100deg,
     var(--color-soft) 0 42%,
@@ -133,7 +132,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .activity-shimmer-text {
-    color: var(--color-soft);
+    @apply text-soft;
+
     background: none;
     animation: none;
   }

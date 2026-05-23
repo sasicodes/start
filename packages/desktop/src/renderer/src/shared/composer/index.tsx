@@ -58,6 +58,7 @@ export const Composer = memo(
   }: ComposerProps) => {
     const isCommandMode = commandMode(draft);
     const singleLine = overlay;
+    const composerRef = useRef<HTMLDivElement | null>(null);
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const [isMultiline, setIsMultiline] = useState(false);
     const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
@@ -114,6 +115,21 @@ export const Composer = memo(
       },
       [defaultFinderIndex, finderItems, finderQuery]
     );
+
+    useLayoutEffect(() => {
+      if (overlay) return;
+
+      const element = composerRef.current;
+      if (!element) return;
+
+      const syncHeight = () => {
+        document.documentElement.style.setProperty('--main-composer-height', `${Math.ceil(element.offsetHeight)}px`);
+      };
+      const observer = new ResizeObserver(syncHeight);
+      syncHeight();
+      observer.observe(element);
+      return () => observer.disconnect();
+    }, [overlay]);
 
     useLayoutEffect(() => {
       const element = promptInputRef.current;
@@ -195,6 +211,7 @@ export const Composer = memo(
 
     return (
       <motion.div
+        ref={composerRef}
         {...(overlay ? { key: revealKey } : {})}
         {...(!overlay
           ? { layout: 'position' as const, layoutDependency: centered, transition: { layout: composerDockTransition } }

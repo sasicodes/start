@@ -587,7 +587,11 @@ export class ChatService {
   async steerQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
     const session = this.session;
     const message = this.queuedMessages.find((item) => item.id === id);
-    if (!session || !message || !this.isGenerating || !session.isStreaming) return this.visibleQueuedMessages();
+    if (!session) return this.visibleQueuedMessages();
+    if (!message) return this.visibleQueuedMessages();
+
+    const canSteerQueuedMessage = this.isGenerating && session.isStreaming;
+    if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
 
     this.queuedMessages = this.queuedMessages.map((item) => (item.id === id ? { ...item, kind: 'steer' } : item));
     await this.rebuildSessionQueue(session);
