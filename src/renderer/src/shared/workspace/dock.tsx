@@ -15,7 +15,7 @@ export const WorkspaceDock = ({
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => (
-  <div class="absolute bottom-4.5 left-4.5 z-40 flex items-end gap-2 [-webkit-app-region:no-drag]">
+  <div class="absolute bottom-4.5 left-4.5 z-40 flex items-end gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
     <Workspace
       workspacePath={workspacePath}
       onChooseDirectory={onChooseDirectory}

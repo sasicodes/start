@@ -19,7 +19,7 @@ type PerformanceWithMemory = Performance & {
   };
 };
 
-const debugToolbarPositionStorageKey = 'start-debug-toolbar-position';
+const debugToolbarPositionStorageKey = 'start:debug-toolbar-position';
 const toolbarMargin = 20;
 const toolbarWidth = 312;
 

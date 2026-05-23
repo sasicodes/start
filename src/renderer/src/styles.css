@@ -15,7 +15,7 @@
   --color-composer: oklch(98.8% 0.001 264);
   --color-control: oklch(94.8% 0.004 264);
   --color-tooltip: oklch(100% 0 0);
-  --color-white: oklch(100% 0 0);
+  --container-bottom-controls: 64rem;
   --container-workspace-dock: 91rem;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shadow-shell: 0 0 0 1px oklch(0% 0 0 / 0.025), 0 0 18px oklch(0% 0 0 / 0.055);

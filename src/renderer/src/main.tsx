@@ -5,7 +5,7 @@ import { DropOverlay } from '@renderer/shared/drop-overlay';
 import { SettingsButton } from '@renderer/shared/settings/button';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
-import { SideLayout } from '@renderer/shared/side/layout';
+import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { hasActivityDetails } from '@renderer/shared/turn/activity';
 import { ActivityPanel } from '@renderer/shared/turn/panel';
 import { WorkspaceDock } from '@renderer/shared/workspace/dock';
@@ -359,11 +359,11 @@ const App = () => {
           onLoginSubscription={loginSubscription}
         />
       ) : surface === 'main' ? (
-        <SideLayout
-          sidebarLabel="Agent activity"
-          sidebarVisible={activityPanelVisible}
-          onSidebarCollapse={collapseActivityPanel}
-          sidebar={<ActivityPanel details={activityDetails} thinking={activityThinking} />}
+        <SidePanelLayout
+          sidePanelLabel="Agent activity"
+          sidePanelVisible={activityPanelVisible}
+          onSidePanelCollapse={collapseActivityPanel}
+          sidePanel={<ActivityPanel details={activityDetails} thinking={activityThinking} />}
         >
           <Turns
             status={status}
@@ -380,7 +380,7 @@ const App = () => {
           />
           <SettingsButton onOpenSettings={showSettings} />
           {renderComposer(false, turns.length > 0)}
-        </SideLayout>
+        </SidePanelLayout>
       ) : (
         renderComposer(true, false)
       )}

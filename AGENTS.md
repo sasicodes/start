@@ -4,6 +4,7 @@
 - Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `cn` only for conditional inline classes.
 - Prefer Tailwind utilities over custom CSS. Keep `styles.css` limited to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states that Tailwind cannot express cleanly.
 - Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
+- Do not add theme tokens that duplicate Tailwind defaults such as `--color-white`; use built-in utilities like `bg-white` directly unless the value is a real app-specific semantic token.
 - Revalidate custom classes before adding or keeping them; remove custom class hooks when inline Tailwind utilities or component props can express the same styling.
 - Follow commit style: use lowercase, precise commit titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
@@ -11,7 +12,7 @@
 - Do not add TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces instead.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
 - Use camelCase for variables, functions, hooks, and local constants; use PascalCase for types and components; use kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
-- Prefix persisted browser storage keys with `start-`, keep key values kebab-case, and name the constant with a clear `StorageKey` suffix.
+- Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
 - Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
 - Keep files small. Split component files before they approach 300 lines.
 - Keep UI highly performant and snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
