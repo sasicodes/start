@@ -1,4 +1,6 @@
-# start — your coding assistant
+# start
+
+your coding assistant
 
 Install dependencies with `pnpm install`.
 
