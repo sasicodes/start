@@ -25,11 +25,11 @@ export const ComposerModelPicker = ({
   modelsLoaded: boolean;
   thinkingLevel: EffortLevel;
   onOpenSettings: () => void;
-  selectedModelKey: string | undefined;
+  selectedModelKey: string;
   onSelectModel: (modelKey: string) => void;
   onSelectThinkingLevel: (level: EffortLevel) => void;
 }) => {
-  const activeModelKey = selectedModelKeyState.value ?? selectedModelKey;
+  const activeModelKey = selectedModelKeyState.value || selectedModelKey;
   const selectedModel = useMemo(
     () => models.find((model) => model.key === activeModelKey) ?? models[0],
     [models, activeModelKey]
@@ -83,7 +83,7 @@ export const ComposerModelPicker = ({
               align="start"
               sideOffset={12}
               alignOffset={-6}
-              className="z-30"
+              className="z-50"
               collisionPadding={12}
             >
               <Models

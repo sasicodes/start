@@ -14,10 +14,10 @@ export type ComposerProps = {
   isGenerating: boolean;
   previousTurn: string;
   overlay?: boolean;
-  workspacePath: string | undefined;
+  workspacePath: string;
   thinkingLevel: EffortLevel;
   onRefillPrevious: () => void;
-  selectedModelKey: string | undefined;
+  selectedModelKey: string;
   onDraftChange: (value: string) => void;
   onSelectModel: (modelKey: string) => void;
   onRemoveAttachment: (id: string) => void;

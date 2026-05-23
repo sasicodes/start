@@ -9,8 +9,8 @@ export const WorkspaceDock = ({
   onChooseDirectory,
   onSelectWorkspace
 }: {
-  workspacePath: string | undefined;
-  activeSessionId: string | undefined;
+  workspacePath: string;
+  activeSessionId: string;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;

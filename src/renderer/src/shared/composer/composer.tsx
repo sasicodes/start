@@ -186,8 +186,8 @@ export const Composer = ({
         class={cn(
           'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
           layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
-          overlay && 'composer-floating-field',
-          finderAttached && !isCommandMode && 'shadow-[0_0_0_1px_transparent,0_16px_22px_-18px_oklch(0%_0_0/0.16)]',
+          overlay && 'animate-composer-overlay-field-in shadow-composer-overlay',
+          finderAttached && !isCommandMode && 'shadow-composer-attached',
           !finderAttached && !overlay && 'shadow-shell'
         )}
         onMouseDown={(event) => {

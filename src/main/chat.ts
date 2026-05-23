@@ -1,4 +1,4 @@
-import './environment.js';
+import '@main/environment';
 
 import { createReadStream } from 'node:fs';
 import path from 'node:path';

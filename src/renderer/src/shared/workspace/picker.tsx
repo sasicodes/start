@@ -16,7 +16,7 @@ export const Workspace = ({
 }: {
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
-  workspacePath: string | undefined;
+  workspacePath: string;
 }) => {
   const workspace = useWorkspace(workspacePath);
   const rootRef = useRef<HTMLDivElement>(null);

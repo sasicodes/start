@@ -25,7 +25,7 @@ const installRendererIcon = () => {
 const initialSurface = (): AppSurface =>
   new URLSearchParams(window.location.search).get('surface') === 'composer' ? 'composer' : 'main';
 
-const routeForSession = (sessionId: string | undefined): AppRoute =>
+const routeForSession = (sessionId: string): AppRoute =>
   sessionId ? { name: 'session', sessionId } : { name: 'chat' };
 
 installRendererIcon();
@@ -34,10 +34,10 @@ const App = () => {
   const [route, setRoute] = useState<AppRoute>(currentRoute);
   const [surface, setSurface] = useState<AppSurface>(initialSurface);
   const [attachments, setAttachments] = useState<ImageAttachment[]>([]);
-  const [activityTurnId, setActivityTurnId] = useState<string | undefined>();
+  const [activityTurnId, setActivityTurnId] = useState('');
   const [debugToolbarVisible, setDebugToolbarVisible] = useState(false);
   const [composerShortcut, setComposerShortcut] = useState('Control+Space');
-  const openingRouteSessionRef = useRef<string | undefined>();
+  const openingRouteSessionRef = useRef('');
   const selectingSessionRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null);
 
@@ -85,28 +85,28 @@ const App = () => {
   const {
     send,
     draft,
+    turns,
     models,
-    status,
     sendText,
     setDraft,
-    turns,
-    modelsLoaded,
     saveApiKey,
     selectModel,
     openSession,
-    openSessionId,
+    modelsLoaded,
     isGenerating,
     workspacePath,
     thinkingLevel,
     authProviders,
+    openSessionId,
+    activeSessionId,
+    loadedSessionId,
     switchWorkspace,
     refreshSettings,
     selectedModelKey,
-    activeSessionId,
-    loginSubscription,
     previousUserTurn,
-    chooseWorkspaceDirectory,
-    selectThinkingLevel
+    loginSubscription,
+    selectThinkingLevel,
+    chooseWorkspaceDirectory
   } = useChat({ onShowChat: showChat, onShowSettings: showSettings, textareaRef });
 
   const discardComposerDraft = useCallback(() => {
@@ -176,15 +176,15 @@ const App = () => {
     if (surface === 'composer') return;
     if (route.name !== 'session') return;
     if (selectingSessionRef.current) return;
-    if (route.sessionId === activeSessionId) return;
+    if (route.sessionId === loadedSessionId) return;
     if (openingRouteSessionRef.current === route.sessionId) return;
 
     openingRouteSessionRef.current = route.sessionId;
     void openSessionId(route.sessionId).then((opened) => {
-      openingRouteSessionRef.current = undefined;
+      openingRouteSessionRef.current = '';
       if (!opened && sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
     });
-  }, [activeSessionId, navigate, openSessionId, route, surface]);
+  }, [loadedSessionId, navigate, openSessionId, route, surface]);
 
   const updateComposerShortcut = useCallback(async (shortcut: string) => {
     const result = await window.pi.app.setComposerShortcut(shortcut);
@@ -286,9 +286,10 @@ const App = () => {
     void window.pi.app.openPath(path);
   }, []);
 
-  const collapseActivityPanel = useCallback(() => setActivityTurnId(undefined), []);
+  const collapseActivityPanel = useCallback(() => setActivityTurnId(''), []);
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const activityTurn = useMemo(() => turns.find((turn) => turn.id === activityTurnId), [activityTurnId, turns]);
+  const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const activityDetails = activityTurn?.details ?? [];
   const activityThinking = activityTurn?.thinking ?? '';
   const activityPanelVisible =
@@ -347,7 +348,7 @@ const App = () => {
       class="relative block h-full min-h-screen w-full overflow-hidden bg-transparent"
     >
       {surface === 'main' && (
-        <div aria-hidden="true" class="absolute inset-x-0 top-0 z-[1000] h-7 [-webkit-app-region:drag]" />
+        <div aria-hidden="true" class="absolute inset-x-0 top-0 z-60 h-7 [-webkit-app-region:drag]" />
       )}
       {route.name === 'settings' ? (
         <Settings
@@ -366,9 +367,8 @@ const App = () => {
           sidePanel={<ActivityPanel details={activityDetails} thinking={activityThinking} />}
         >
           <Turns
-            status={status}
             turns={turns}
-            activityPanelTurnId={activityPanelVisible ? activityTurnId : undefined}
+            activityPanelTurnId={activityPanelVisible ? activityTurnId : ''}
             onOpenActivityPanel={setActivityTurnId}
           />
           <WorkspaceDock
@@ -379,7 +379,7 @@ const App = () => {
             onSelectWorkspace={(path) => void switchWorkspace(path)}
           />
           <SettingsButton onOpenSettings={showSettings} />
-          {renderComposer(false, turns.length > 0)}
+          {renderComposer(false, turns.length > 0 || sessionRoutePending)}
         </SidePanelLayout>
       ) : (
         renderComposer(true, false)

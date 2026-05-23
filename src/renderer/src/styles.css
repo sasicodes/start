@@ -18,6 +18,16 @@
   --container-bottom-controls: 64rem;
   --container-workspace-dock: 91rem;
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --drop-shadow-drop-overlay-label: 0 12px 28px oklch(0% 0 0 / 0.18);
+  --animate-composer-overlay-field-in: composer-floating-field-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-drop-overlay-corner-drift: drop-corner-drift 3.8s ease-in-out infinite;
+  --animate-drop-overlay-edge-breathe: drop-edge-breathe 4.6s ease-in-out infinite;
+  --shadow-composer-overlay:
+    0 0 0 1px var(--overlay-field-ring),
+    0 26px 72px -30px var(--overlay-field-shadow),
+    0 10px 32px -22px var(--overlay-halo-indigo),
+    inset 0 1px 0 var(--overlay-field-highlight);
+  --shadow-composer-attached: 0 0 0 1px transparent, 0 16px 22px -18px oklch(0% 0 0 / 0.16);
   --shadow-shell: 0 0 0 1px oklch(0% 0 0 / 0.025), 0 0 18px oklch(0% 0 0 / 0.055);
   --shadow-panel: 0 0 0 1px oklch(0% 0 0 / 0.035), 0 0 18px oklch(0% 0 0 / 0.1);
   --shadow-nav: 0 0 0 1px oklch(0% 0 0 / 0.025), 0 0 16px oklch(0% 0 0 / 0.055);
@@ -104,15 +114,14 @@ body {
 
 .composer-floating-shell::before,
 .composer-floating-shell::after {
-  pointer-events: none;
-  position: absolute;
-  border-radius: 9999px;
+  @apply pointer-events-none absolute rounded-full;
+
   content: "";
 }
 
 .composer-floating-shell::before {
   inset: -5.5rem -3.5rem -5.5rem;
-  z-index: 0;
+  z-index: -20;
   background:
     radial-gradient(ellipse at 20% 42%, var(--overlay-halo-sakura), transparent 48%),
     radial-gradient(ellipse at 80% 36%, var(--overlay-halo-indigo), transparent 52%),
@@ -125,33 +134,13 @@ body {
 
 .composer-floating-shell::after {
   inset: -1.2rem 2.75rem -1.8rem;
-  z-index: 20;
+  z-index: -10;
   background:
     linear-gradient(90deg, transparent, var(--overlay-sheen), transparent),
     radial-gradient(ellipse at 50% 40%, var(--overlay-halo-mist), transparent 58%);
   filter: blur(12px);
   opacity: 0.78;
   animation: composer-floating-sheen-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.composer-floating-field {
-  box-shadow:
-    0 0 0 1px var(--overlay-field-ring),
-    0 26px 72px -30px var(--overlay-field-shadow),
-    0 10px 32px -22px var(--overlay-halo-indigo),
-    inset 0 1px 0 var(--overlay-field-highlight);
-  animation: composer-floating-field-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.composer-floating-field::before {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    linear-gradient(180deg, var(--overlay-sheen), transparent 42%),
-    radial-gradient(ellipse at 50% -12%, var(--overlay-halo-mist), transparent 55%);
-  content: "";
 }
 
 @keyframes composer-floating-field-in {
@@ -214,41 +203,22 @@ body {
   }
 }
 
-.tooltip-popup {
-  transition:
-    opacity 100ms ease-out,
-    transform 100ms ease-out;
-}
-
-.tooltip-popup[data-starting-style],
-.tooltip-popup[data-ending-style] {
-  opacity: 0;
-}
-
-.tooltip-popup[data-side="top"][data-starting-style],
-.tooltip-popup[data-side="top"][data-ending-style],
-.tooltip-positioner[data-side="top"] .tooltip-popup[data-starting-style],
-.tooltip-positioner[data-side="top"] .tooltip-popup[data-ending-style] {
+.tooltip-popup[data-side="top"]:is([data-starting-style], [data-ending-style]),
+.tooltip-positioner[data-side="top"] .tooltip-popup:is([data-starting-style], [data-ending-style]) {
   transform: translateY(0.25rem);
 }
 
-.tooltip-popup[data-side="right"][data-starting-style],
-.tooltip-popup[data-side="right"][data-ending-style],
-.tooltip-positioner[data-side="right"] .tooltip-popup[data-starting-style],
-.tooltip-positioner[data-side="right"] .tooltip-popup[data-ending-style] {
+.tooltip-popup[data-side="right"]:is([data-starting-style], [data-ending-style]),
+.tooltip-positioner[data-side="right"] .tooltip-popup:is([data-starting-style], [data-ending-style]) {
   transform: translateX(-0.25rem);
 }
 
-.tooltip-popup[data-side="bottom"][data-starting-style],
-.tooltip-popup[data-side="bottom"][data-ending-style],
-.tooltip-positioner[data-side="bottom"] .tooltip-popup[data-starting-style],
-.tooltip-positioner[data-side="bottom"] .tooltip-popup[data-ending-style] {
+.tooltip-popup[data-side="bottom"]:is([data-starting-style], [data-ending-style]),
+.tooltip-positioner[data-side="bottom"] .tooltip-popup:is([data-starting-style], [data-ending-style]) {
   transform: translateY(-0.25rem);
 }
 
-.tooltip-popup[data-side="left"][data-starting-style],
-.tooltip-popup[data-side="left"][data-ending-style],
-.tooltip-positioner[data-side="left"] .tooltip-popup[data-starting-style],
-.tooltip-positioner[data-side="left"] .tooltip-popup[data-ending-style] {
+.tooltip-popup[data-side="left"]:is([data-starting-style], [data-ending-style]),
+.tooltip-positioner[data-side="left"] .tooltip-popup:is([data-starting-style], [data-ending-style]) {
   transform: translateX(0.25rem);
 }

@@ -3,19 +3,12 @@ import type { Turn } from '@renderer/utils/types';
 import { useLayoutEffect, useMemo, useRef } from 'preact/hooks';
 
 type TurnContentProps = {
-  activityPanelTurnId: string | undefined;
-  status: string;
   turns: Turn[];
+  activityPanelTurnId: string;
   onOpenActivityPanel: (turnId: string) => void;
 };
 
 type TurnsProps = TurnContentProps;
-
-const EmptyTurns = ({ status }: { status: string }) => {
-  return (
-    <p class="m-0 grid min-h-full place-items-center text-center text-sm leading-6 text-soft opacity-0">{status}</p>
-  );
-};
 
 const detailKey = (turn: Turn) => {
   return (turn.details ?? [])
@@ -27,8 +20,8 @@ const turnKey = (turn: Turn) => {
   return [turn.id, turn.text.length, turn.thinking?.length ?? 0, detailKey(turn)].join(':');
 };
 
-const TurnContent = ({ activityPanelTurnId, onOpenActivityPanel, status, turns }: TurnContentProps) => {
-  if (turns.length === 0) return <EmptyTurns status={status} />;
+const TurnContent = ({ turns, activityPanelTurnId, onOpenActivityPanel }: TurnContentProps) => {
+  if (turns.length === 0) return null;
 
   return turns.map((turn) => (
     <TurnArticle
@@ -40,7 +33,7 @@ const TurnContent = ({ activityPanelTurnId, onOpenActivityPanel, status, turns }
   ));
 };
 
-export const Turns = ({ activityPanelTurnId, onOpenActivityPanel, status, turns }: TurnsProps) => {
+export const Turns = ({ turns, activityPanelTurnId, onOpenActivityPanel }: TurnsProps) => {
   const scrollRef = useRef<HTMLElement>(null);
   const turnPositionKey = useMemo(() => turns.map(turnKey).join('|'), [turns]);
 
@@ -59,7 +52,6 @@ export const Turns = ({ activityPanelTurnId, onOpenActivityPanel, status, turns 
     >
       <div class="mx-auto flex min-h-full max-w-3xl flex-col justify-end gap-3 px-5">
         <TurnContent
-          status={status}
           turns={turns}
           activityPanelTurnId={activityPanelTurnId}
           onOpenActivityPanel={onOpenActivityPanel}

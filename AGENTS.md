@@ -16,6 +16,7 @@
 - Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
 - Keep files small. Split component files before they approach 300 lines.
 - Keep UI highly performant and snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
+- Do not show loaders, spinners, or hidden status text while session messages hydrate; keep the session surface empty and layout-stable until content arrives.
 - Keep primary conversational content direct; place diagnostics, metadata, and tool output behind concise collapsed details.
 - Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files.
 - Inside domain folders, keep child filenames short and precise; avoid repeating the folder/domain name unless it improves clarity.
@@ -23,6 +24,7 @@
 - Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
 - Prefer optimistic cached UI data for popovers, pickers, and frequently opened surfaces; refresh in the background and update only when real data changes.
 - Omit optional object properties when absent instead of serializing `undefined` or placeholder `null` values.
+- Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; reserve `undefined` for optional API boundaries and omitted object properties.
 - For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose `value === undefined ? {}` branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
 - Read environment variables only through `src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort props, variables, hooks, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.

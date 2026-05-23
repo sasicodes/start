@@ -120,7 +120,7 @@ const ProviderSubmenu = ({
         <ChevronRightIcon class="size-2.5 text-hover" />
       </MenuSubmenuTrigger>
       <AppMenu.Portal>
-        <AppMenu.Positioner side="right" align="end" sideOffset={8} className="z-30" collisionPadding={12}>
+        <AppMenu.Positioner side="right" align="end" sideOffset={8} className="z-50" collisionPadding={12}>
           <MenuPanel width="model">
             <ModelMenuContent
               name={name}

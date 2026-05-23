@@ -30,20 +30,19 @@ type ClearSessionOptions = {
 type WorkspaceSwitchOptions = ClearSessionOptions;
 
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
-  const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [status, setStatus] = useState('Checking Pi auth...');
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [activeSessionId, setActiveSessionId] = useState<string | undefined>();
-  const [workspacePath, setWorkspacePath] = useState<string | undefined>();
-  const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
-  const [selectedModelKey, setSelectedModelKey] = useState<string | undefined>();
+  const [workspacePath, setWorkspacePath] = useState('');
   const [thinkingLevel, setThinkingLevel] = useState<EffortLevel>('medium');
-  const assistantIdRef = useRef<string | null>(null);
+  const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState('');
+  const [loadedSessionId, setLoadedSessionId] = useState('');
+  const [selectedModelKey, setSelectedModelKey] = useState('');
   const terminalIdRef = useRef<string | null>(null);
-  const currentSessionIdRef = useRef<string | undefined>();
+  const assistantIdRef = useRef<string | null>(null);
   const previousUserTurn = useMemo(() => {
     for (let index = turns.length - 1; index >= 0; index--) {
       const turn = turns[index];
@@ -53,8 +52,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     return '';
   }, [turns]);
   const updateActiveSessionId = useCallback((sessionId: string | undefined) => {
-    currentSessionIdRef.current = sessionId;
-    setActiveSessionId(sessionId);
+    setActiveSessionId(sessionId ?? '');
   }, []);
 
   const loadAuthProviders = useCallback(async () => {
@@ -65,17 +63,15 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     const modelList = await window.pi.chat.models();
     setModels(modelList.models);
     setModelsLoaded(true);
-    selectedModelKeyState.value = modelList.selectedModelKey;
-    setSelectedModelKey(modelList.selectedModelKey);
-    if (modelList.error) setStatus(modelList.error);
+    selectedModelKeyState.value = modelList.selectedModelKey ?? '';
+    setSelectedModelKey(modelList.selectedModelKey ?? '');
   }, []);
 
   const syncStatus = useCallback(async () => {
     const nextStatus = await window.pi.chat.status();
-    setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
     setWorkspacePath(nextStatus.workspacePath);
-    selectedModelKeyState.value = nextStatus.selectedModelKey;
-    setSelectedModelKey(nextStatus.selectedModelKey);
+    selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
+    setSelectedModelKey(nextStatus.selectedModelKey ?? '');
     updateActiveSessionId(nextStatus.sessionId);
     if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
   }, [updateActiveSessionId]);
@@ -87,7 +83,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       if (!preserveDraft) setDraft('');
       setTurns([]);
       setIsGenerating(false);
-      updateActiveSessionId(undefined);
+      setLoadedSessionId('');
+      updateActiveSessionId('');
     },
     [updateActiveSessionId]
   );
@@ -122,7 +119,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
         setTurns((current) => [...current, userTurn, terminalTurn]);
 
         const result = await window.pi.chat.command(command.command, command.excludeFromContext);
-        if (result.sessionId) updateActiveSessionId(result.sessionId);
+        if (result.sessionId) {
+          setLoadedSessionId(result.sessionId);
+          updateActiveSessionId(result.sessionId);
+        }
         if (!result.ok) {
           const terminalId = terminalIdRef.current;
           terminalIdRef.current = null;
@@ -143,7 +143,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setTurns((current) => [...current, userTurn, assistantTurn]);
 
       const result = await window.pi.chat.send(text, attachments);
-      if (result.sessionId) updateActiveSessionId(result.sessionId);
+      if (result.sessionId) {
+        setLoadedSessionId(result.sessionId);
+        updateActiveSessionId(result.sessionId);
+      }
       if (!result.ok) {
         const assistantId = assistantIdRef.current;
         if (!assistantId) return;
@@ -156,7 +159,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
         ]);
       }
     },
-    [isGenerating]
+    [isGenerating, updateActiveSessionId]
   );
 
   const send = useCallback(
@@ -168,10 +171,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applyOpenSession = useCallback(
     async (result: OpenSessionResult) => {
-      if (!result.ok) {
-        setStatus(result.error ?? 'Session could not be opened.');
-        return false;
-      }
+      if (!result.ok) return false;
 
       assistantIdRef.current = null;
       terminalIdRef.current = null;
@@ -180,10 +180,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setTurns(result.turns ?? []);
       const nextStatus = await window.pi.chat.status();
       setWorkspacePath(nextStatus.workspacePath);
-      selectedModelKeyState.value = nextStatus.selectedModelKey;
-      setSelectedModelKey(nextStatus.selectedModelKey);
+      selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
+      setSelectedModelKey(nextStatus.selectedModelKey ?? '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-      setStatus(nextStatus.ready ? `Using ${nextStatus.modelLabel}` : (nextStatus.error ?? 'Pi is not ready.'));
+      setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
       textareaRef.current?.focus();
       return true;
@@ -204,10 +204,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const applyWorkspaceSwitch = useCallback(
     (result: SwitchWorkspaceResult, options: WorkspaceSwitchOptions = {}) => {
       if (result.cancelled) return false;
-      if (!result.ok || !result.status) {
-        setStatus(result.error ?? 'Workspace could not be switched.');
-        return false;
-      }
+      if (!result.ok || !result.status) return false;
 
       if (result.workspace) {
         rememberWorkspace(result.workspace);
@@ -217,12 +214,9 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       clearFinderItemsCache();
       clearSession(options);
       setWorkspacePath(result.status.workspacePath);
-      selectedModelKeyState.value = result.status.selectedModelKey;
-      setSelectedModelKey(result.status.selectedModelKey);
+      selectedModelKeyState.value = result.status.selectedModelKey ?? '';
+      setSelectedModelKey(result.status.selectedModelKey ?? '');
       if (result.status.thinkingLevel) setThinkingLevel(result.status.thinkingLevel);
-      setStatus(
-        result.status.ready ? `Using ${result.status.modelLabel}` : (result.status.error ?? 'Pi is not ready.')
-      );
       primeWorkspaceFolders(result.status.workspacePath);
       textareaRef.current?.focus();
       return true;
@@ -247,7 +241,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       const result = await window.pi.chat.loginSubscription(provider);
       setAuthProviders(result.providers);
       await loadModels();
-      if (result.error) setStatus(result.error);
     },
     [loadModels]
   );
@@ -262,39 +255,29 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const selectModel = useCallback(
     (modelKey: string) => {
-      const model = models.find((entry) => entry.key === modelKey);
       const previousModelKey = selectedModelKey;
 
       selectedModelKeyState.value = modelKey;
       setSelectedModelKey(modelKey);
-      if (model) setStatus(`Using ${model.name}`);
 
       void window.pi.chat.selectModel(modelKey).then((nextStatus) => {
         if (nextStatus.ready) {
           selectedModelKeyState.value = nextStatus.selectedModelKey ?? modelKey;
           setSelectedModelKey(nextStatus.selectedModelKey ?? modelKey);
           if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-          setStatus(`Using ${nextStatus.modelLabel}`);
           return;
         }
 
         selectedModelKeyState.value = previousModelKey;
         setSelectedModelKey(previousModelKey);
-        setStatus(nextStatus.error ?? 'Pi model could not be selected.');
       });
     },
-    [models, selectedModelKey]
+    [selectedModelKey]
   );
 
   const selectThinkingLevel = useCallback(async (level: EffortLevel) => {
     const nextStatus = await window.pi.chat.selectThinkingLevel(level);
-    if (nextStatus.ready) {
-      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-      setStatus(`Using ${nextStatus.modelLabel}`);
-      return;
-    }
-
-    setStatus(nextStatus.error ?? 'Pi thinking level could not be selected.');
+    if (nextStatus.ready && nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
   }, []);
 
   const refreshSettings = useCallback(() => {
@@ -305,27 +288,27 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   return {
     send,
     draft,
+    turns,
     models,
-    modelsLoaded,
-    status,
     sendText,
     setDraft,
-    turns,
     saveApiKey,
+    selectModel,
     openSession,
-    openSessionId,
+    modelsLoaded,
     isGenerating,
     workspacePath,
-    selectModel,
     thinkingLevel,
     authProviders,
+    openSessionId,
+    activeSessionId,
+    loadedSessionId,
     switchWorkspace,
     refreshSettings,
     selectedModelKey,
-    activeSessionId,
-    loginSubscription,
     previousUserTurn,
-    chooseWorkspaceDirectory,
-    selectThinkingLevel
+    loginSubscription,
+    selectThinkingLevel,
+    chooseWorkspaceDirectory
   };
 };

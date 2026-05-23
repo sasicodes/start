@@ -66,7 +66,7 @@ const SessionRows = ({
 }: {
   sessions: RecentSession[];
   loaded: boolean;
-  activeSessionId: string | undefined;
+  activeSessionId: string;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   if (!loaded) return null;
@@ -92,7 +92,7 @@ const SessionContent = ({
   open: boolean;
   sessions: RecentSession[];
   loaded: boolean;
-  activeSessionId: string | undefined;
+  activeSessionId: string;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => (
   <AnimatePresence>
@@ -121,8 +121,8 @@ export const RecentSessions = ({
   workspacePath,
   activeSessionId
 }: {
-  workspacePath: string | undefined;
-  activeSessionId: string | undefined;
+  workspacePath: string;
+  activeSessionId: string;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -140,7 +140,7 @@ export const RecentSessions = ({
       if (showLoading) setLoaded(false);
 
       try {
-        const nextSessions = await window.pi.chat.recentSessions(workspacePath);
+        const nextSessions = await window.pi.chat.recentSessions(workspacePath || undefined);
         if (sessionsRequestRef.current !== requestId) return;
         setSessions(nextSessions);
       } catch {
@@ -177,7 +177,7 @@ export const RecentSessions = ({
 
   useEffect(() => {
     const refreshOnChange = (event: RecentSessionsChanged) => {
-      if (event.workspacePath && event.workspacePath !== workspacePath) return;
+      if (workspacePath && event.workspacePath && event.workspacePath !== workspacePath) return;
       void loadSessions();
     };
 
