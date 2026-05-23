@@ -46,13 +46,13 @@ export const ComposerWorkspacePicker = ({
   if (!workspace) return null;
 
   return (
-    <div class="absolute top-0 left-5 z-40 -translate-x-[calc(100%+0.5rem)] [-webkit-app-region:no-drag]">
+    <div class="absolute top-0 bottom-0 left-5 z-40 -translate-x-[calc(100%+0.5rem)] [-webkit-app-region:no-drag]">
       <AppMenu.Root modal={false} open={open} onOpenChange={updateOpen}>
         <CommonTooltip label={workspace.folderName}>
           <AppMenu.Trigger
             aria-label="Workspace folders"
             onMouseDown={(event: MouseEvent) => event.stopPropagation()}
-            className="composer-floating-field relative grid size-11.5 place-items-center overflow-hidden rounded-full border-0 bg-composer p-1.25 text-ink outline-0 transition-transform duration-150 ease-out select-none hover:scale-[0.98] focus-visible:scale-[0.98]"
+            className="composer-floating-field relative grid h-full aspect-square place-items-center overflow-hidden rounded-full border-0 bg-composer p-1.25 text-ink outline-0 transition-transform duration-150 ease-out select-none hover:scale-[0.98] focus-visible:scale-[0.98]"
           >
             <img
               alt=""
