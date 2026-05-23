@@ -15,9 +15,9 @@ interface TurnDetailsProps {
 }
 
 interface ActivityTriggerProps {
+  open: boolean;
   children: ComponentChildren;
-  panelOpen: boolean;
-  onOpenPanel: () => void;
+  onOpen: () => void;
 }
 
 const useWorkingTime = () => {
@@ -43,14 +43,14 @@ const WorkingActivityLabel = ({ createdAt, details }: Pick<TurnDetailsProps, 'cr
   );
 };
 
-const ActivityTrigger = ({ children, panelOpen, onOpenPanel }: ActivityTriggerProps) => (
+const ActivityTrigger = ({ open, children, onOpen }: ActivityTriggerProps) => (
   <button
     type="button"
-    aria-expanded={panelOpen}
-    onClick={onOpenPanel}
+    aria-expanded={open}
+    onClick={onOpen}
     class={tw(
       'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-xs text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
-      panelOpen && 'text-hover'
+      open && 'text-hover'
     )}
   >
     {children}
@@ -64,7 +64,7 @@ export const TurnDetails = ({ createdAt, details, panelOpen, thinking, working, 
   if (working) {
     return (
       <div class="mb-1.5 max-w-full text-xs text-soft">
-        <ActivityTrigger panelOpen={panelOpen} onOpenPanel={onOpenPanel}>
+        <ActivityTrigger open={panelOpen} onOpen={onOpenPanel}>
           <WorkingActivityLabel createdAt={createdAt} details={details} />
         </ActivityTrigger>
       </div>
@@ -73,7 +73,7 @@ export const TurnDetails = ({ createdAt, details, panelOpen, thinking, working, 
 
   return (
     <div class="mb-1.5 max-w-full text-xs text-soft">
-      <ActivityTrigger panelOpen={panelOpen} onOpenPanel={onOpenPanel}>
+      <ActivityTrigger open={panelOpen} onOpen={onOpenPanel}>
         <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
       </ActivityTrigger>
     </div>
