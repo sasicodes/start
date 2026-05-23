@@ -6,6 +6,7 @@ import { useSessionPanels } from '@renderer/app/panels';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionRouting } from '@renderer/app/session-routing';
 import { AppShell } from '@renderer/app/shell';
+import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { Composer, Settings } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
@@ -73,6 +74,10 @@ export const App = () => {
     navigate(routeForSession(activeSessionId));
     textareaRef.current?.focus();
   }, [activeSessionId, navigate]);
+
+  useEffect(() => {
+    prewarmMarkdownRenderer();
+  }, []);
 
   useEffect(() => {
     return window.pi.app.onDiscardComposer(discardComposerDraft);

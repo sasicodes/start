@@ -59,7 +59,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
   const useMarkdown = shouldUseMarkdown(turn);
   const isTerminal = turn.role === 'terminal';
   const isAssistantActivity = turn.role === 'assistant' && !turn.text;
-  const showRequesting = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
+  const showWorking = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
 
   return (
     <div
@@ -74,8 +74,8 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         isAssistantActivity && 'text-soft'
       )}
     >
-      {showRequesting ? (
-        <span role="status">Requesting</span>
+      {showWorking ? (
+        <span role="status">Working</span>
       ) : useMarkdown ? (
         <Markdown source={turn.text} streaming={Boolean(turn.streaming)} />
       ) : (

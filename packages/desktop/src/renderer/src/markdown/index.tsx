@@ -8,9 +8,24 @@ export interface MarkdownProps {
   density?: MarkdownDensity;
 }
 
-const MarkdownRenderer = lazy(() =>
-  import('@renderer/markdown/renderer').then(({ MarkdownRenderer }) => ({ default: MarkdownRenderer }))
-);
+const importMarkdownRenderer = () =>
+  import('@renderer/markdown/renderer').then(({ MarkdownRenderer }) => ({ default: MarkdownRenderer }));
+
+let markdownRendererPromise: ReturnType<typeof importMarkdownRenderer> | null = null;
+
+const loadMarkdownRenderer = () => {
+  markdownRendererPromise ??= importMarkdownRenderer().catch((error: unknown) => {
+    markdownRendererPromise = null;
+    throw error;
+  });
+  return markdownRendererPromise;
+};
+
+const MarkdownRenderer = lazy(loadMarkdownRenderer);
+
+export const prewarmMarkdownRenderer = () => {
+  void loadMarkdownRenderer().catch(() => {});
+};
 
 export const Markdown = (props: MarkdownProps) => (
   <Suspense fallback={null}>
