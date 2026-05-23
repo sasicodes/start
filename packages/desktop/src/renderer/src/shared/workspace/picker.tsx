@@ -78,7 +78,7 @@ export const Workspace = memo(
             >
               <WorkspaceMenu
                 folders={folders}
-                panelWidth="workspaceBubble"
+                panelClassName="w-64"
                 workspacePath={workspacePath}
                 onChooseDirectory={onChooseDirectory}
                 onSelectWorkspace={onSelectWorkspace}

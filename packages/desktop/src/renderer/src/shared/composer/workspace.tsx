@@ -43,7 +43,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
           <AppMenu.Positioner side="top" align="start" sideOffset={12} className="z-50" collisionPadding={12}>
             <WorkspaceMenu
               folders={folders}
-              panelWidth="workspaceBubble"
+              panelClassName="w-64"
               workspacePath={workspacePath}
               onChooseDirectory={onChooseDirectory}
               onSelectWorkspace={onSelectWorkspace}

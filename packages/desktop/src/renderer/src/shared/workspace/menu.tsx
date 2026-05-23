@@ -1,6 +1,6 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { FolderIcon } from '@renderer/ui/icons';
-import { AppMenu, MenuPanel, type MenuPanelWidth } from '@renderer/ui/menu';
+import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 
 const WorkspaceOption = ({
@@ -27,18 +27,18 @@ const WorkspaceOption = ({
 
 export const WorkspaceMenu = ({
   folders,
-  panelWidth,
+  panelClassName,
   workspacePath,
   onChooseDirectory,
   onSelectWorkspace
 }: {
   folders: WorkspaceFolder[];
-  panelWidth: MenuPanelWidth;
+  panelClassName: string;
   workspacePath: string | undefined;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
 }) => (
-  <MenuPanel width={panelWidth}>
+  <MenuPanel className={panelClassName}>
     <div class="flex flex-col gap-1">
       {folders.map((folder) => (
         <WorkspaceOption

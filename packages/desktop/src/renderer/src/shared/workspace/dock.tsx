@@ -37,16 +37,20 @@ export const WorkspaceDock = memo(
           initial={false}
           transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         >
-          <Workspace
-            workspacePath={workspacePath}
-            onChooseDirectory={onChooseDirectory}
-            onSelectWorkspace={onSelectWorkspace}
-          />
-          <RecentSessions
-            workspacePath={workspacePath}
-            onOpenSession={onOpenSession}
-            activeSessionId={activeSessionId}
-          />
+          {appFocused && (
+            <>
+              <Workspace
+                workspacePath={workspacePath}
+                onChooseDirectory={onChooseDirectory}
+                onSelectWorkspace={onSelectWorkspace}
+              />
+              <RecentSessions
+                workspacePath={workspacePath}
+                onOpenSession={onOpenSession}
+                activeSessionId={activeSessionId}
+              />
+            </>
+          )}
         </motion.div>
       </div>
     );

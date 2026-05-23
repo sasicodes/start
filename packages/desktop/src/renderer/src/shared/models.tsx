@@ -121,7 +121,7 @@ const ProviderSubmenu = ({
       </MenuSubmenuTrigger>
       <AppMenu.Portal>
         <AppMenu.Positioner side="right" align="end" sideOffset={8} className="z-50" collisionPadding={12}>
-          <MenuPanel width="model">
+          <MenuPanel className="w-56">
             <ModelMenuContent
               name={name}
               models={models}
@@ -148,7 +148,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
   }, [models]);
 
   return (
-    <MenuPanel width="provider">
+    <MenuPanel className="w-44">
       {providers.map((provider) => (
         <ProviderSubmenu
           key={provider.id}
