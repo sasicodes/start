@@ -606,8 +606,9 @@ export class ChatService {
     return this.visibleQueuedMessages();
   }
 
-  async abort(): Promise<void> {
+  async abort(webContents?: WebContents): Promise<void> {
     this.abortSequence += 1;
+    this.clearQueuedMessages(webContents);
     this.session?.abortBash();
     await this.session?.abort();
   }

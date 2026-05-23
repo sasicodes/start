@@ -265,7 +265,7 @@ app.whenReady().then(async () => {
     if (result.ok) notifyRecentSessionsChanged();
     return result;
   });
-  ipcMain.handle('chat:abort', () => chat.abort());
+  ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
   ipcMain.handle('chat:new-session', () => startNewSession());
 
   app.on('browser-window-blur', scheduleAppFocusStateChanged);
