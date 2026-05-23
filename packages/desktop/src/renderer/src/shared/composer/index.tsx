@@ -196,7 +196,9 @@ export const Composer = memo(
     return (
       <motion.div
         {...(overlay ? { key: revealKey } : {})}
-        {...(!overlay ? { layout: 'position' as const, transition: { layout: composerDockTransition } } : {})}
+        {...(!overlay
+          ? { layout: 'position' as const, layoutDependency: centered, transition: { layout: composerDockTransition } }
+          : {})}
         onAnimationEnd={(event) => {
           if (event.animationName === 'composer-floating-shell-out') onExitComplete();
         }}
