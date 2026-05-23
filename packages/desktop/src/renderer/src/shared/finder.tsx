@@ -62,14 +62,16 @@ export const Finder = ({ activePath, ariaLabel, emptyLabel, items, onSelect, vis
                   onSelect(item);
                 }}
                 class={tw(
-                  'flex w-full min-w-0 flex-col rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
+                  'flex w-full min-w-0 items-center gap-3 rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
                   selected && 'bg-control',
                   !selected && 'bg-transparent'
                 )}
               >
-                <span class="max-w-full truncate">{label}</span>
+                <span class="min-w-0 flex-1 truncate">{label}</span>
                 {item.description && (
-                  <span class="max-w-full truncate text-xs leading-4 text-soft">{item.description}</span>
+                  <span class="min-w-0 max-w-[68%] flex-none truncate text-right text-xs leading-5 font-medium text-soft">
+                    [{item.description}]
+                  </span>
                 )}
               </button>
             );
