@@ -2,6 +2,7 @@
 
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
 - Do not put Tailwind class lists in constants. Tailwind classes belong inline in `class` or `className` attributes. Use `tw` only for conditional inline classes.
+- Centralize reusable logic in clearly named utility modules: if a helper or parser is needed in more than one file, extract it to a domain `utils` folder instead of duplicating it.
 - Prefer Tailwind utilities over custom CSS. Keep `styles.css` limited to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states that Tailwind cannot express cleanly.
 - Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
 - Do not add theme tokens that duplicate Tailwind defaults such as `--color-white`; use built-in utilities like `bg-white` directly unless the value is a real app-specific semantic token.
@@ -23,6 +24,7 @@
 - Keep primary conversational content direct; place diagnostics, metadata, and tool output behind concise collapsed details.
 - Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files.
 - Inside domain folders, keep child filenames short and precise; avoid repeating the folder/domain name unless it improves clarity.
+- Prefer descriptive file names over generic ones (`items`, `panels`, etc.) so module purpose is obvious from filename.
 - Name component files with clear component words only; avoid extra suffixes like `list` or `card` when the component name is already clear.
 - Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
 - Prefer optimistic cached UI data for popovers, pickers, and frequently opened surfaces; refresh in the background and update only when real data changes.

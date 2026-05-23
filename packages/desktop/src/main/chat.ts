@@ -2,7 +2,6 @@ import '@main/environment';
 
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import {
   type AgentSession,
@@ -33,6 +32,7 @@ import {
   prepareDroppedFiles as prepareDroppedFileAttachments,
   stripAttachmentData
 } from '@main/attachments';
+import { workspaceDisplayName } from '@main/utils/workspace';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import {
@@ -225,7 +225,7 @@ export class ChatService {
       modified: Date.now(),
       path: this.workspaceCwd,
       sessionCount: 0,
-      name: path.basename(this.workspaceCwd) || this.workspaceCwd
+      name: workspaceDisplayName(this.workspaceCwd)
     });
 
     for (const session of sessions) {
@@ -241,7 +241,7 @@ export class ChatService {
           modified,
           path: session.cwd,
           sessionCount: 1,
-          name: path.basename(session.cwd) || session.cwd
+          name: workspaceDisplayName(session.cwd)
         });
       }
     }

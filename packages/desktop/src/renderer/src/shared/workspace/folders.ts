@@ -1,4 +1,5 @@
 import type { WorkspaceFolder } from '@preload/index';
+import { workspaceDisplayName } from '@renderer/shared/workspace/utils';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 type WorkspaceFoldersListener = () => void;
@@ -14,16 +15,11 @@ let stopWorkspaceFolderEvents: (() => void) | undefined;
 
 const workspaceFoldersListeners = new Set<WorkspaceFoldersListener>();
 
-const workspaceName = (workspacePath: string) => {
-  const cleanPath = workspacePath.replace(/[/\\]+$/, '');
-  return cleanPath.split(/[/\\]/).at(-1) || workspacePath;
-};
-
 const currentWorkspaceFolder = (workspacePath: string): WorkspaceFolder => ({
   modified: Date.now(),
   path: workspacePath,
   sessionCount: 0,
-  name: workspaceName(workspacePath)
+  name: workspaceDisplayName(workspacePath)
 });
 
 const withCurrentWorkspace = (folders: WorkspaceFolder[], workspacePath: string | undefined) => {

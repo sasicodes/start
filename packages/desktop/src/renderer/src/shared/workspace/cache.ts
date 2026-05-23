@@ -1,11 +1,7 @@
 import type { WorkspaceInfo } from '@preload/index';
+import { workspaceDisplayName } from '@renderer/shared/workspace/utils';
 
 const workspaceCache = new Map<string, WorkspaceInfo>();
-
-const workspaceName = (workspacePath: string) => {
-  const cleanPath = workspacePath.replace(/[/\\]+$/, '');
-  return cleanPath.split(/[/\\]/).at(-1) || workspacePath;
-};
 
 const hashString = (value: string) => {
   let hash = 0;
@@ -27,7 +23,7 @@ const generatedIconDataUrl = (folderName: string) => {
 };
 
 export const optimisticWorkspace = (workspacePath: string): WorkspaceInfo => {
-  const folderName = workspaceName(workspacePath);
+  const folderName = workspaceDisplayName(workspacePath);
   return {
     path: workspacePath,
     folderName,

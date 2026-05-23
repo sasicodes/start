@@ -1,5 +1,6 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { workspaceDisplayName } from '@main/utils/workspace';
 import { type GitChangeSummary, getGitBranch, getGitChangeSummary, isGitRepository } from '@main/git';
 import { startCacheDir } from '@main/storage';
 import { generatedWorkspaceIconDataUrl, workspaceIconDataUrl } from '@main/workspace/icons';
@@ -155,7 +156,7 @@ const storeWorkspace = (workspace: WorkspaceInfo) => {
 };
 
 const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
-  const folderName = path.basename(cwd) || cwd;
+  const folderName = workspaceDisplayName(cwd);
   if (!(await workspaceExists(cwd))) {
     return workspaceInfo(cwd, folderName, generatedWorkspaceIconDataUrl(folderName));
   }

@@ -2,7 +2,7 @@ import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
-import { useSessionPanels } from '@renderer/app/panels';
+import { useSessionPanels } from '@renderer/app/session-panels';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionRouting } from '@renderer/app/session-routing';
 import { AppShell } from '@renderer/app/shell';
