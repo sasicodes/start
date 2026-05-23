@@ -48,7 +48,7 @@ export const Workspace = ({
                   {workspace.branchName ?? workspace.path}
                 </span>
               </span>
-              <span aria-hidden="true" class="h-full w-px shrink-0 bg-line @max-workspace-dock/chat:hidden" />
+              <span aria-hidden="true" class="h-full w-0.5 shrink-0 bg-line @max-workspace-dock/chat:hidden" />
               <span class="grid h-full w-8 shrink-0 place-items-center rounded-r-full text-ink @max-workspace-dock/chat:hidden">
                 <ChevronDownIcon
                   class={cn('size-4 -translate-x-px transition-transform duration-150 ease-out', open && 'rotate-180')}
