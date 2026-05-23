@@ -242,7 +242,7 @@ export const Composer = memo(
         >
           <div
             class={tw(
-              'flex min-h-11.5 items-center gap-2 py-1.25 pr-1.5 pl-1.25',
+              'flex min-h-11.5 items-center gap-2 py-1 pr-1.5 pl-1.25',
               layered && 'flex-wrap items-end gap-y-1.5 px-2.5 pt-2'
             )}
           >
