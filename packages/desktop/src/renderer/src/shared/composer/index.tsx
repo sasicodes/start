@@ -141,10 +141,7 @@ export const Composer = memo(
 
     const handleSubmit = (event: SubmitEvent) => {
       event.preventDefault();
-      if (!draft.trim() && previousTurn) {
-        onRefillPrevious();
-        return;
-      }
+      if (!draft.trim()) return;
       onSubmit();
     };
 
@@ -192,10 +189,7 @@ export const Composer = memo(
 
       if (event.key !== 'Enter' || (event.shiftKey && !singleLine)) return;
       event.preventDefault();
-      if (!draft.trim()) {
-        if (previousTurn) onRefillPrevious();
-        return;
-      }
+      if (!draft.trim()) return;
       onSubmit();
     };
 
@@ -286,13 +280,7 @@ export const Composer = memo(
                 onOpenAttachment={onOpenAttachment}
                 onRemoveAttachment={onRemoveAttachment}
               />
-              <GenerateButton
-                draft={draft}
-                onStop={onStop}
-                commandMode={isCommandMode}
-                isGenerating={isGenerating}
-                previousTurn={previousTurn}
-              />
+              <GenerateButton draft={draft} onStop={onStop} commandMode={isCommandMode} isGenerating={isGenerating} />
             </div>
           </div>
         </form>
