@@ -61,6 +61,32 @@ export const CycleVerticalIcon = ({ strokeWidth = 1.5, ...props }: IconProps & {
   </svg>
 );
 
+export const ChangesIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M9.25 10.5H14.75M12 7.75V13.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M9.25 16L14.75 16"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M20.25 17.25V6.75C20.25 5.09315 18.9069 3.75 17.25 3.75H6.75C5.09315 3.75 3.75 5.09315 3.75 6.75V17.25C3.75 18.9069 5.09315 20.25 6.75 20.25H17.25C18.9069 20.25 20.25 18.9069 20.25 17.25Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const AnthropicIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path

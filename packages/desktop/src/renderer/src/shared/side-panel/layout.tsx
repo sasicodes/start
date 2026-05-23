@@ -1,9 +1,10 @@
 import { SidePanelFrame } from '@renderer/shared/side-panel/frame';
 import { useSidePanelResize } from '@renderer/shared/side-panel/resize';
 import type { SidePanelLayoutProps } from '@renderer/shared/side-panel/types';
+import { defaultMaxSidePanelWidthRatio } from '@renderer/shared/side-panel/width';
 
-const defaultMinSidePanelWidth = 320;
 const defaultSidePanelWidth = 480;
+const defaultMinSidePanelWidthRatio = 0.3;
 
 export const SidePanelLayout = ({
   children,
@@ -11,15 +12,15 @@ export const SidePanelLayout = ({
   sidePanelLabel,
   sidePanelVisible,
   onSidePanelCollapse,
-  maxSidePanelWidth,
-  minSidePanelWidth = defaultMinSidePanelWidth,
+  maxSidePanelWidthRatio = defaultMaxSidePanelWidthRatio,
+  minSidePanelWidthRatio = defaultMinSidePanelWidthRatio,
   defaultSidePanelWidth: fallbackWidth = defaultSidePanelWidth
 }: SidePanelLayoutProps) => {
   const { initialWidth, resizing, rootRef, settling, startResize } = useSidePanelResize({
     fallbackWidth,
-    minSidePanelWidth,
     sidePanelVisible,
-    ...(maxSidePanelWidth ? { maxSidePanelWidth } : {}),
+    maxSidePanelWidthRatio,
+    minSidePanelWidthRatio,
     ...(onSidePanelCollapse ? { onSidePanelCollapse } : {})
   });
 

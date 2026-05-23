@@ -12,7 +12,7 @@ const minSidePanelCollapseWidth = 80;
 const sidePanelCollapseWidthRatio = 0.35;
 const sidePanelWidthStorageKey = 'start:side-panel-width';
 
-export const maxSidePanelWindowRatio = 0.6;
+export const defaultMaxSidePanelWidthRatio = 0.7;
 export const sidePanelSettleDurationMs = 180;
 
 export const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);

@@ -1,4 +1,4 @@
-import { CycleVerticalIcon } from '@renderer/ui/icons';
+import { ChangesIcon, CycleVerticalIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { cn } from '@renderer/utils/cn';
 import { lazy, Suspense } from 'preact/compat';
@@ -16,6 +16,7 @@ import {
   useGitPatch
 } from '@renderer/shared/workspace/changes/state';
 
+const gitChangesBadgeMaxWidthRatio = 0.7;
 const loadGitDiffViewer = () =>
   import('@renderer/shared/workspace/changes/diff').then((module) => ({ default: module.GitDiffViewer }));
 const GitDiffViewer = lazy(loadGitDiffViewer);
@@ -33,6 +34,7 @@ export const GitChangesBadge = ({
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
   const label = gitChangesLabel(git.summary.filesChanged);
+  const summary = git.summary;
 
   return (
     <Tooltip label={label}>
@@ -41,10 +43,14 @@ export const GitChangesBadge = ({
         aria-expanded={expanded}
         aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
         onClick={onTogglePanel}
-        class="absolute right-18 bottom-4.5 z-40 flex h-11.5 items-center gap-2 rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0"
+        style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}%` }}
+        class="absolute right-18 bottom-4.5 z-40 flex h-11.5 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,opacity,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control [-webkit-app-region:no-drag] @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0"
       >
-        <span class="tabular-nums text-success">+{git.summary.insertions}</span>
-        <span class="tabular-nums text-danger">-{git.summary.deletions}</span>
+        <ChangesIcon class="hidden size-5 flex-none @max-workspace-dock/chat:block" />
+        <span class="flex min-w-0 items-center gap-2 @max-workspace-dock/chat:hidden">
+          <span class="tabular-nums text-success">+{summary.insertions}</span>
+          <span class="tabular-nums text-danger">-{summary.deletions}</span>
+        </span>
       </button>
     </Tooltip>
   );

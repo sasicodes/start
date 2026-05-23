@@ -1,8 +1,8 @@
 import {
   clamp,
+  defaultMaxSidePanelWidthRatio,
   getResizeCursor,
   getSidePanelCollapseWidth,
-  maxSidePanelWindowRatio,
   readStoredSidePanelWidth,
   sidePanelSettleDurationMs,
   type ResizeCursor,
@@ -13,20 +13,18 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preac
 
 type UseSidePanelResizeOptions = {
   fallbackWidth: number;
-  maxSidePanelWidth?: number;
-  minSidePanelWidth: number;
   sidePanelVisible: boolean;
+  maxSidePanelWidthRatio: number;
+  minSidePanelWidthRatio: number;
   onSidePanelCollapse?: () => void;
 };
 
-const defaultMinContentWidth = 320;
-
 export const useSidePanelResize = ({
   fallbackWidth,
-  maxSidePanelWidth,
-  minSidePanelWidth,
+  maxSidePanelWidthRatio,
   onSidePanelCollapse,
-  sidePanelVisible
+  sidePanelVisible,
+  minSidePanelWidthRatio
 }: UseSidePanelResizeOptions) => {
   const [resizing, setResizing] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -45,13 +43,17 @@ export const useSidePanelResize = ({
   const preferredWidthRef = useRef(initialWidth);
   const interactionStyleRef = useRef({ bodyCursor: '', htmlCursor: '', userSelect: '' });
 
-  const getMaxWidth = useCallback(() => {
-    const rootWidth = rootRef.current?.clientWidth ?? window.innerWidth;
-    const maxContentWidth = rootWidth - defaultMinContentWidth;
-    const maxWindowWidth = rootWidth * maxSidePanelWindowRatio;
-    const maxConfiguredWidth = maxSidePanelWidth ?? Number.POSITIVE_INFINITY;
-    return Math.max(minSidePanelWidth, Math.min(maxConfiguredWidth, maxContentWidth, maxWindowWidth));
-  }, [maxSidePanelWidth, minSidePanelWidth]);
+  const getRootWidth = useCallback(() => rootRef.current?.clientWidth ?? window.innerWidth, []);
+
+  const getMaxWidth = useCallback(
+    () => getRootWidth() * clamp(maxSidePanelWidthRatio || defaultMaxSidePanelWidthRatio, 0, 1),
+    [getRootWidth, maxSidePanelWidthRatio]
+  );
+
+  const getMinWidth = useCallback(
+    () => Math.min(getMaxWidth(), getRootWidth() * clamp(minSidePanelWidthRatio, 0, 1)),
+    [getMaxWidth, getRootWidth, minSidePanelWidthRatio]
+  );
 
   const setOffset = useCallback((offset: number) => {
     rootRef.current?.style.setProperty('--side-panel-offset', `${offset}px`);
@@ -66,33 +68,34 @@ export const useSidePanelResize = ({
     (width: number) => {
       const cursor = getResizeCursor({
         width,
-        minWidth: minSidePanelWidth,
         maxWidth: getMaxWidth(),
+        minWidth: getMinWidth(),
         canCollapse: Boolean(onSidePanelCollapse)
       });
       rootRef.current?.style.setProperty('--side-panel-resize-cursor', cursor);
       return cursor;
     },
-    [getMaxWidth, minSidePanelWidth, onSidePanelCollapse]
+    [getMaxWidth, getMinWidth, onSidePanelCollapse]
   );
 
   const applyWidth = useCallback(
     (width: number, savePreference = false) => {
-      const nextWidth = clamp(width, minSidePanelWidth, getMaxWidth());
+      const nextWidth = clamp(width, getMinWidth(), getMaxWidth());
       setWidth(nextWidth);
       setResizeCursor(nextWidth);
       if (savePreference) preferredWidthRef.current = nextWidth;
     },
-    [getMaxWidth, minSidePanelWidth, setResizeCursor, setWidth]
+    [getMaxWidth, getMinWidth, setResizeCursor, setWidth]
   );
 
   const applyDragWidth = useCallback(
     (width: number) => {
+      const minWidth = getMinWidth();
       const cursor = setResizeCursor(width);
 
-      if (width < minSidePanelWidth) {
-        setWidth(minSidePanelWidth);
-        setOffset(Math.min(minSidePanelWidth, minSidePanelWidth - width));
+      if (width < minWidth) {
+        setWidth(minWidth);
+        setOffset(Math.min(minWidth, minWidth - width));
         return cursor;
       }
 
@@ -100,7 +103,7 @@ export const useSidePanelResize = ({
       applyWidth(width, true);
       return cursor;
     },
-    [applyWidth, minSidePanelWidth, setOffset, setResizeCursor, setWidth]
+    [applyWidth, getMinWidth, setOffset, setResizeCursor, setWidth]
   );
 
   const setDocumentCursor = useCallback((cursor: ResizeCursor) => {
@@ -163,36 +166,38 @@ export const useSidePanelResize = ({
     stopResize();
 
     settleFrameRef.current = requestAnimationFrame(() => {
+      const minWidth = getMinWidth();
       settleFrameRef.current = undefined;
-      setWidth(minSidePanelWidth);
-      setOffset(minSidePanelWidth);
+      setWidth(minWidth);
+      setOffset(minWidth);
       settleTimeoutRef.current = window.setTimeout(() => {
         settleTimeoutRef.current = undefined;
         onSidePanelCollapse?.();
         setSettling(false);
       }, sidePanelSettleDurationMs);
     });
-  }, [clearSettle, minSidePanelWidth, onSidePanelCollapse, setOffset, setWidth, stopResize]);
+  }, [clearSettle, getMinWidth, onSidePanelCollapse, setOffset, setWidth, stopResize]);
 
   const finishResize = useCallback(() => {
     const rawWidth = rawWidthRef.current;
-    const nextWidth = rawWidth < minSidePanelWidth ? minSidePanelWidth : preferredWidthRef.current;
+    const minWidth = getMinWidth();
+    const nextWidth = rawWidth < minWidth ? minWidth : preferredWidthRef.current;
 
-    if (rawWidth <= getSidePanelCollapseWidth(minSidePanelWidth)) {
+    if (rawWidth <= getSidePanelCollapseWidth(minWidth)) {
       collapse();
       return;
     }
 
     writeStoredSidePanelWidth(nextWidth);
 
-    if (rawWidth < minSidePanelWidth) {
+    if (rawWidth < minWidth) {
       preferredWidthRef.current = nextWidth;
       settleWidth(nextWidth);
       return;
     }
 
     stopResize();
-  }, [collapse, minSidePanelWidth, settleWidth, stopResize]);
+  }, [collapse, getMinWidth, settleWidth, stopResize]);
 
   const scheduleResize = useCallback(
     (event: PointerEvent) => {

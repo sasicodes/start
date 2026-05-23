@@ -6,7 +6,7 @@ export type SidePanelLayoutProps = {
   sidePanelLabel: string;
   sidePanelVisible: boolean;
   defaultSidePanelWidth?: number;
-  maxSidePanelWidth?: number;
-  minSidePanelWidth?: number;
+  maxSidePanelWidthRatio?: number;
+  minSidePanelWidthRatio?: number;
   onSidePanelCollapse?: () => void;
 };
