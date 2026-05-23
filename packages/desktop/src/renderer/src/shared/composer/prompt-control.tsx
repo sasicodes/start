@@ -6,7 +6,7 @@ interface PromptControlProps {
   expanded: boolean;
   singleLine: boolean;
   placeholder: string;
-  showScrollbar: boolean;
+  layered: boolean;
   activeDescendant?: string;
   onPaste: (event: ClipboardEvent) => void;
   onInput: (event: InputEvent) => void;
@@ -23,7 +23,7 @@ export const PromptControl = ({
   inputRef,
   singleLine,
   onKeyDown,
-  showScrollbar,
+  layered,
   placeholder,
   activeDescendant
 }: PromptControlProps) => (
@@ -47,10 +47,11 @@ export const PromptControl = ({
     placeholder={placeholder}
     {...(singleLine ? { wrap: 'off' } : {})}
     class={tw(
-      'block min-h-5.75 w-full min-w-0 resize-none border-0 bg-transparent px-1 py-0.5 text-sm leading-6 text-ink outline-0 placeholder:text-soft [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-soft/25 [&::-webkit-scrollbar-track]:bg-transparent',
+      'block min-h-5.75 w-full min-w-0 resize-none border-0 bg-transparent py-0.5 text-sm leading-6 text-ink outline-0 placeholder:text-soft [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-soft/25 [&::-webkit-scrollbar-track]:bg-transparent',
+      layered ? 'px-2.5' : 'px-1',
       singleLine && 'overflow-hidden',
       !singleLine && 'max-h-25.5 overflow-y-auto',
-      !showScrollbar && '[&::-webkit-scrollbar]:hidden'
+      !layered && '[&::-webkit-scrollbar]:hidden'
     )}
   />
 );

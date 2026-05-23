@@ -69,7 +69,9 @@ export class ChatService {
   private readonly authStorage = AuthStorage.create();
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private session: AgentSession | null = null;
+  private abortSequence = 0;
   private isGenerating = false;
+  private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
   private queuedMessages: PendingQueuedMessage[] = [];
   private queueDeliveryCandidates: QueuedMessage[] = [];
@@ -467,11 +469,14 @@ export class ChatService {
     if (this.isGenerating) return this.queueFollowUp(text, webContents, attachments);
 
     this.isGenerating = true;
+    const sendAbortSequence = this.abortSequence;
     let endError: string | undefined;
+    let activeSession: AgentSession | undefined;
 
     try {
       const images = await this.resolveAttachments(attachments);
-      const session = await this.getSession();
+      activeSession = await this.getSession();
+      const session = activeSession;
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
         if (event.type === 'queue_update') {
@@ -514,6 +519,12 @@ export class ChatService {
       }
 
       if (endError) {
+        if (this.abortSequence !== sendAbortSequence) {
+          this.setActiveSession(session.sessionManager);
+          this.emit(webContents, 'done', '');
+          return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+        }
+
         this.clearQueuedMessages(webContents);
         this.emit(webContents, 'error', endError);
         return { ok: false, error: endError };
@@ -523,6 +534,12 @@ export class ChatService {
       this.emit(webContents, 'done', '');
       return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
     } catch (error) {
+      if (this.abortSequence !== sendAbortSequence) {
+        if (activeSession) this.setActiveSession(activeSession.sessionManager);
+        this.emit(webContents, 'done', '');
+        return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+      }
+
       const message = error instanceof Error ? error.message : 'Chat failed.';
       this.clearQueuedMessages(webContents);
       this.emit(webContents, 'error', message);
@@ -572,15 +589,25 @@ export class ChatService {
     const message = this.queuedMessages.find((item) => item.id === id);
     if (!session || !message) return this.visibleQueuedMessages();
 
-    const nextMessage: PendingQueuedMessage = { ...message, kind: 'steer' };
-    this.queuedMessages = [nextMessage, ...this.queuedMessages.filter((item) => item.id !== id)];
+    this.queuedMessages = this.queuedMessages.map((item) => (item.id === id ? { ...item, kind: 'steer' } : item));
     await this.rebuildSessionQueue(session);
     this.emitQueueUpdate(webContents);
     return this.visibleQueuedMessages();
   }
 
-  async abort(webContents?: WebContents): Promise<void> {
-    this.clearQueuedMessages(webContents);
+  async deleteQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
+    const session = this.session;
+    const nextMessages = this.queuedMessages.filter((message) => message.id !== id);
+    if (nextMessages.length === this.queuedMessages.length) return this.visibleQueuedMessages();
+
+    this.queuedMessages = nextMessages;
+    if (session) await this.rebuildSessionQueue(session);
+    this.emitQueueUpdate(webContents);
+    return this.visibleQueuedMessages();
+  }
+
+  async abort(): Promise<void> {
+    this.abortSequence += 1;
     this.session?.abortBash();
     await this.session?.abort();
   }
@@ -654,7 +681,12 @@ export class ChatService {
   }
 
   private emitQueueUpdate(webContents: WebContents): void {
-    webContents.send('chat:queue-update', this.visibleQueuedMessages());
+    const messages = this.visibleQueuedMessages();
+    const signature = JSON.stringify(messages);
+    if (this.queueUpdateSignatures.get(webContents) === signature) return;
+
+    this.queueUpdateSignatures.set(webContents, signature);
+    webContents.send('chat:queue-update', messages);
   }
 
   private consumeQueuedText(messages: string[], text: string): boolean {
@@ -714,11 +746,11 @@ export class ChatService {
         ...(images.length > 0 ? { images } : {})
       };
       this.queuedMessages.push(message);
-      await session.prompt(text, {
-        streamingBehavior: 'followUp',
-        ...(images.length > 0 ? { images } : {})
-      });
-      this.emitQueueUpdate(webContents);
+      if (images.length > 0) {
+        await session.followUp(text, images);
+      } else {
+        await session.followUp(text);
+      }
       return { ok: true, queued: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
     } catch (error) {
       this.queuedMessages = this.queuedMessages.filter((message) => message.id !== id);

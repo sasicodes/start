@@ -30,6 +30,14 @@ interface ClearSessionOptions {
 
 interface WorkspaceSwitchOptions extends ClearSessionOptions {}
 
+const sameQueuedMessages = (first: QueuedMessage[], second: QueuedMessage[]) =>
+  first.length === second.length &&
+  first.every((message, index) => {
+    const nextMessage = second[index];
+    if (!nextMessage) return false;
+    return nextMessage.id === message.id && nextMessage.kind === message.kind && nextMessage.text === message.text;
+  });
+
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -92,6 +100,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     applyStatus(nextStatus);
   }, [applyStatus]);
 
+  const updateQueuedMessages = useCallback((messages: QueuedMessage[]) => {
+    setQueuedMessages((current) => (sameQueuedMessages(current, messages) ? current : messages));
+  }, []);
+
+  const clearQueuedMessages = useCallback(() => updateQueuedMessages([]), [updateQueuedMessages]);
+
   const clearSession = useCallback(
     ({ preserveDraft = false }: ClearSessionOptions = {}) => {
       sessionRequestRef.current += 1;
@@ -100,12 +114,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       if (!preserveDraft) setDraft('');
       setTurns(() => []);
-      setQueuedMessages([]);
+      clearQueuedMessages();
       setIsGenerating(false);
       setLoadedSessionId('');
       updateActiveSessionId('');
     },
-    [setTurns, updateActiveSessionId]
+    [clearQueuedMessages, setTurns, updateActiveSessionId]
   );
 
   const newSession = useCallback(async () => {
@@ -131,7 +145,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     assistantIdRef,
     onShowSettings,
     setIsGenerating,
-    setQueuedMessages
+    setQueuedMessages: updateQueuedMessages
   });
 
   const { send, sendText } = useChatSend({
@@ -147,11 +161,23 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     updateActiveSessionId
   });
 
-  const steerQueuedMessage = useCallback(async (id: string) => {
-    try {
-      setQueuedMessages(await window.pi.chat.steerQueuedMessage(id));
-    } catch {}
-  }, []);
+  const steerQueuedMessage = useCallback(
+    async (id: string) => {
+      try {
+        updateQueuedMessages(await window.pi.chat.steerQueuedMessage(id));
+      } catch {}
+    },
+    [updateQueuedMessages]
+  );
+
+  const deleteQueuedMessage = useCallback(
+    async (id: string) => {
+      try {
+        updateQueuedMessages(await window.pi.chat.deleteQueuedMessage(id));
+      } catch {}
+    },
+    [updateQueuedMessages]
+  );
 
   const applyOpenSession = useCallback(
     async (result: OpenSessionResult, requestId: number) => {
@@ -169,7 +195,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       setDraft('');
       setIsGenerating(false);
-      setQueuedMessages([]);
+      clearQueuedMessages();
       setTurns(() => result.turns ?? []);
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
@@ -177,7 +203,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       textareaRef.current?.focus();
       return true;
     },
-    [applyStatus, setTurns, textareaRef, updateActiveSessionId]
+    [applyStatus, clearQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
   );
 
   const openSession = useCallback(
@@ -338,6 +364,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     previousUserTurn,
     loginSubscription,
     steerQueuedMessage,
+    deleteQueuedMessage,
     selectThinkingLevel,
     chooseWorkspaceDirectory
   };

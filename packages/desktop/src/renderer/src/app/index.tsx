@@ -60,6 +60,7 @@ export const App = () => {
     previousUserTurn,
     loginSubscription,
     steerQueuedMessage,
+    deleteQueuedMessage,
     selectThinkingLevel,
     chooseWorkspaceDirectory
   } = useChat({ onShowChat: showChat, onShowSettings: showSettings, textareaRef });
@@ -242,6 +243,7 @@ export const App = () => {
       onOpenAttachment={openAttachment}
       onRemoveAttachment={removeAttachment}
       onSteerQueuedMessage={steerQueuedMessage}
+      onDeleteQueuedMessage={deleteQueuedMessage}
       onSelectModel={selectModelFromComposer}
       onOpenSettings={showSettings}
       onExitComplete={completeComposerExit}

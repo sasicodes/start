@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { EffortLevel } from '@main/types';
@@ -77,19 +77,3 @@ export const writeStartState = (state: StartState): StartState => {
 
 export const updateStartState = (patch: Partial<StartState>): StartState =>
   writeStartState({ ...readStartState(), ...patch });
-
-export const migrateLegacySettings = (legacyPath: string): StartState => {
-  const current = readStartState();
-  if (existsSync(startStatePath())) return current;
-
-  try {
-    const legacySettings = JSON.parse(readFileSync(legacyPath, 'utf8')) as { composerShortcut?: unknown };
-    const composerShortcut = cleanString(legacySettings.composerShortcut);
-    return writeStartState({
-      ...current,
-      ...(composerShortcut ? { composerShortcut } : {})
-    });
-  } catch {
-    return writeStartState(current);
-  }
-};

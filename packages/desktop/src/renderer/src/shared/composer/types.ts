@@ -27,6 +27,7 @@ export interface ComposerProps {
   onRemoveAttachment: (id: string) => void;
   onOpenSettings: () => void;
   onSteerQueuedMessage: (id: string) => void;
+  onDeleteQueuedMessage: (id: string) => void;
   onOpenAttachment: (path: string) => void;
   onChooseWorkspaceDirectory: () => void;
   onSelectWorkspace: (path: string) => void;

@@ -1,5 +1,5 @@
 import type { RootItem } from '@preload/index';
-import { ComposerAttachedPanel } from '@renderer/shared/composer/attached-panel';
+import { ComposerAttachedPanel } from '@renderer/shared/composer/panel';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 

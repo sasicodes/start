@@ -3,7 +3,7 @@ import { AttachmentStack } from '@renderer/shared/composer/attachment-stack';
 import { GenerateButton } from '@renderer/shared/composer/generate-button';
 import { ComposerModelPicker } from '@renderer/shared/composer/model-picker';
 import { PromptControl } from '@renderer/shared/composer/prompt-control';
-import { QueuePanel } from '@renderer/shared/composer/queue-panel';
+import { Queue } from '@renderer/shared/composer/queue';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { ComposerWorkspacePicker } from '@renderer/shared/composer/workspace-picker';
 import { Finder, finderItemId } from '@renderer/shared/finder';
@@ -45,6 +45,7 @@ export const Composer = memo(
     onOpenSettings,
     onExitComplete,
     onSteerQueuedMessage,
+    onDeleteQueuedMessage,
     selectedModelKey,
     onRefillPrevious,
     onOpenAttachment,
@@ -220,7 +221,12 @@ export const Composer = memo(
           visible={finderVisible}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
         />
-        <QueuePanel messages={queuedMessages} visible={queueVisible} onSteer={onSteerQueuedMessage} />
+        <Queue
+          messages={queuedMessages}
+          visible={queueVisible}
+          onSteer={onSteerQueuedMessage}
+          onDelete={onDeleteQueuedMessage}
+        />
         <form
           class={tw(
             'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
@@ -254,7 +260,10 @@ export const Composer = memo(
               {promptPlaceholder.rotating && (
                 <div
                   aria-hidden="true"
-                  class="pointer-events-none absolute inset-0 overflow-hidden px-1 py-0.5 text-sm leading-6 text-soft"
+                  class={tw(
+                    'pointer-events-none absolute overflow-hidden py-0.5 text-sm leading-6 text-soft',
+                    layered ? 'inset-x-0 inset-y-1 px-2.5' : 'inset-0 px-1'
+                  )}
                 >
                   {promptPlaceholder.placeholders.map((text, index) => (
                     <span
@@ -266,7 +275,7 @@ export const Composer = memo(
                         animationName: 'composer-placeholder-cycle',
                         animationTimingFunction: 'linear'
                       }}
-                      class="absolute inset-x-1 top-0.5 truncate opacity-0"
+                      class={tw('absolute top-0.5 truncate opacity-0', layered ? 'inset-x-2.5' : 'inset-x-1')}
                     >
                       {text}
                     </span>
@@ -282,7 +291,7 @@ export const Composer = memo(
                 inputRef={setPromptInputRef}
                 singleLine={singleLine}
                 onKeyDown={handleKeyDown}
-                showScrollbar={layered}
+                layered={layered}
                 placeholder={promptPlaceholder.placeholder}
                 {...(selectedFinderItem ? { activeDescendant: finderItemId(selectedFinderItem.path) } : {})}
               />

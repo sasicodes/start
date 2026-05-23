@@ -233,6 +233,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('chat:steer-queued-message', (event, id: string) =>
     chat.steerQueuedMessage(id, event.sender as WebContents)
   );
+  ipcMain.handle('chat:delete-queued-message', (event, id: string) =>
+    chat.deleteQueuedMessage(id, event.sender as WebContents)
+  );
   ipcMain.handle('chat:select-model', async (_event, modelKey: string) => {
     const status = await chat.selectModel(modelKey);
     notifyStatusChanged();
@@ -253,7 +256,7 @@ app.whenReady().then(async () => {
     if (result.ok) notifyRecentSessionsChanged();
     return result;
   });
-  ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
+  ipcMain.handle('chat:abort', () => chat.abort());
   ipcMain.handle('chat:new-session', () => startNewSession());
 
   app.on('browser-window-blur', scheduleAppFocusStateChanged);

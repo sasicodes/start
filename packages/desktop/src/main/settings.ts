@@ -1,6 +1,5 @@
-import { join } from 'node:path';
-import { migrateLegacySettings, updateStartState } from '@main/storage';
-import { app, globalShortcut } from 'electron';
+import { readStartState, updateStartState } from '@main/storage';
+import { globalShortcut } from 'electron';
 
 export type AppSettings = {
   composerShortcut: string;
@@ -9,8 +8,6 @@ export type AppSettings = {
 export const defaultAppSettings = {
   composerShortcut: 'Control+Space'
 } satisfies AppSettings;
-
-const settingsPath = () => join(app.getPath('userData'), 'settings.json');
 
 const parseSettings = (value: unknown): AppSettings => {
   if (!value || typeof value !== 'object') return defaultAppSettings;
@@ -23,9 +20,7 @@ const parseSettings = (value: unknown): AppSettings => {
   };
 };
 
-export const readAppSettings = async (): Promise<AppSettings> => {
-  return parseSettings(migrateLegacySettings(settingsPath()));
-};
+export const readAppSettings = async (): Promise<AppSettings> => parseSettings(readStartState());
 
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
   const nextSettings = parseSettings(settings);

@@ -269,6 +269,7 @@ const api = {
     submitSubscriptionAuthInput: (value: string): Promise<void> =>
       ipcRenderer.invoke('chat:submit-subscription-auth-input', value),
     steerQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:steer-queued-message', id),
+    deleteQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:delete-queued-message', id),
     selectModel: (modelKey: string): Promise<ChatStatus> => ipcRenderer.invoke('chat:select-model', modelKey),
     selectThinkingLevel: (level: EffortLevel): Promise<ChatStatus> =>
       ipcRenderer.invoke('chat:select-thinking-level', level),
