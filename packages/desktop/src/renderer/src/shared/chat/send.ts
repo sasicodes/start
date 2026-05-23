@@ -119,7 +119,7 @@ export const useChatSend = ({
         setIsGenerating(false);
         setTurns((current) => [
           ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
-          createTurn('system', 'Pi failed.')
+          createTurn('system', 'Request failed.')
         ]);
         return;
       }
@@ -136,7 +136,7 @@ export const useChatSend = ({
         setIsGenerating(false);
         setTurns((current) => [
           ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
-          createTurn('system', result.error ?? 'Pi failed.')
+          createTurn('system', result.error ?? 'Request failed.')
         ]);
       }
     },

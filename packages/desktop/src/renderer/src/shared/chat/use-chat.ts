@@ -233,6 +233,19 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [applyOpenSession]
   );
 
+  const activateTab = useCallback(
+    async (id: string) => {
+      const requestId = sessionRequestRef.current + 1;
+      sessionRequestRef.current = requestId;
+      try {
+        return await applyOpenSession(await window.pi.chat.activateTab(id), requestId);
+      } catch {
+        return false;
+      }
+    },
+    [applyOpenSession]
+  );
+
   const applyWorkspaceSwitch = useCallback(
     (result: SwitchWorkspaceResult, options: WorkspaceSwitchOptions = {}) => {
       if (result.cancelled) return false;
@@ -358,6 +371,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     queuedMessages,
     authProviders,
     openSessionId,
+    activateTab,
     activeSessionId,
     loadedSessionId,
     switchWorkspace,

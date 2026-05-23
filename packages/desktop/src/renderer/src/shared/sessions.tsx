@@ -1,6 +1,7 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
+import { NoticeDot } from '@renderer/ui/notice-dot';
 import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { memo } from 'preact/compat';
@@ -9,10 +10,6 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 const sessionPageSize = 15;
 
 const EmptySessions = () => <div class="px-3 py-8 text-center text-sm text-soft">No recent sessions</div>;
-
-const NoticeDot = () => (
-  <span aria-hidden="true" class="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_2px_var(--color-composer)]" />
-);
 
 const SessionRow = ({
   active,

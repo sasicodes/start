@@ -46,9 +46,9 @@ AgentTab
   status: idle | generating | aborting | completed | failed | disposed
   selectedModelKey: string
   thinkingLevel: EffortLevel
-  queuedMessages: QueuedMessage[]
-  queueDeliveryCandidates: QueuedMessage[]
-  attachments: Map<AttachmentId, AttachmentRecord>
+  queuedMessages: QueuedMessage[] for the visible active run
+  queueDeliveryCandidates: QueuedMessage[] for the visible active run
+  attachments: Map<AttachmentId, AttachmentRecord> for pending composer attachments
   webContentsIds: Set<number>
 
 SessionNotice
@@ -59,7 +59,7 @@ SessionNotice
   seenAt?: number
 ```
 
-A tab owns its own `AgentSession`, queue, abort state, and subscriptions. Switching workspaces changes the visible workspace context only; it must not abort running tabs in other workspaces.
+A tab owns its own `AgentSession`, abort state, and streaming lifecycle. The compatibility UI keeps queue and attachment controls scoped to the visible active run while background runs continue isolated. Switching workspaces changes the visible workspace context only; it must not abort running tabs in other workspaces.
 
 ## SDK choice
 
@@ -67,14 +67,9 @@ Use `AgentSession` as the per-tab primitive. Do not use one global `AgentSession
 
 Reasoning:
 
-- `AgentSessionRuntime` owns one active `runtime.session` and replaces it for new, resume, fork, clone, and import flows.
+- `AgentSessionRuntime` owns one active `runtime.session` and replaces it for new, resume, and import flows.
 - The app needs many concurrent active sessions, often in different workspaces.
 - A global runtime would fight the multitasking model.
-
-Forking can be added later in one of two ways:
-
-1. direct `SessionManager` tree APIs for maximum UI control
-2. optional runtime-like helper per tab if SDK replacement behavior is needed
 
 ## compatibility rule
 
@@ -96,7 +91,7 @@ Current IPC behavior should map as follows:
 
 Introduce an internal `AgentTab` controller while preserving all current IPC signatures.
 
-- Extract single-session fields from `ChatService` into `AgentTabState`.
+- Model single-session fields as tab state and expose orchestration types.
 - Keep one active tab by default.
 - Make existing methods delegate to the active tab.
 - Ensure `newSession()` creates a new tab instead of disposing unrelated tabs.
@@ -163,7 +158,6 @@ Build user-facing multitasking features on top of tab sessions.
 - workspace-level activity summary
 - complete infinite session history in Recents
 - optional agent labels
-- fork/clone UI
 - reusable commands to spawn agents from another agent when explicitly requested
 
 ## session list loading
@@ -266,8 +260,8 @@ This prevents background agents from corrupting the visible transcript.
 
 - Never call `dispose()` on a session because the user switches workspace.
 - Never use one global `isGenerating` to block work in another tab.
-- Every tab must own and clean up its own subscription.
-- Every tab close must abort bash, abort model streaming, dispose the session, clear queue, and release attachments.
+- Every running tab must clean up its own subscription.
+- Every tab close must abort bash, abort model streaming, dispose the session, clear queue, and release attachments for the visible active tab when applicable.
 - Auth/model changes should not silently destroy running sessions. If a model change applies globally, new tabs use it while existing running tabs finish with their current model.
 - Workspace access should be activated for each workspace that has a live tab.
 - Completion notices are session-scoped. Do not clear a workspace's notices as a side effect of opening Recents.
@@ -275,4 +269,4 @@ This prevents background agents from corrupting the visible transcript.
 
 ## first implementation target
 
-The safest first code change is to extract an `AgentTabController` from `ChatService` without changing renderer behavior. Once the existing app is internally tab-shaped, adding actual tab UI and parallel execution is much lower risk.
+The implementation keeps legacy chat behavior compatible while adding tab-shaped orchestration APIs, scoped events, persisted notices, incremental Recents loading, and a renderer tab strip.

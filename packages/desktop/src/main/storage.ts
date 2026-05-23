@@ -1,12 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { EffortLevel } from '@main/types';
+import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {
   composerShortcut: string;
   lastWorkspace?: string;
   selectedModelKey?: string;
+  sessionNotices?: Record<string, SessionNotice>;
   workspaceBookmarks?: Record<string, string>;
   selectedThinkingLevel: EffortLevel;
 };
@@ -39,6 +40,31 @@ const cleanStringRecord = (value: unknown) => {
   return;
 };
 
+const cleanSessionNotices = (value: unknown) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+
+  const notices: Record<string, SessionNotice> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const notice = entry as Partial<SessionNotice>;
+    const sessionId = cleanString(notice.sessionId) ?? cleanString(key);
+    const workspacePath = cleanString(notice.workspacePath);
+    const seenAt = typeof notice.seenAt === 'number' ? notice.seenAt : undefined;
+    const createdAt = typeof notice.createdAt === 'number' ? notice.createdAt : Date.now();
+    if (!sessionId || !workspacePath) continue;
+    if (notice.kind !== 'completed' && notice.kind !== 'failed') continue;
+    notices[sessionId] = {
+      sessionId,
+      createdAt,
+      workspacePath,
+      kind: notice.kind,
+      ...(seenAt ? { seenAt } : {})
+    };
+  }
+
+  return Object.keys(notices).length > 0 ? notices : undefined;
+};
+
 const cleanThinkingLevel = (value: unknown): EffortLevel => {
   if (value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh') return value;
   return defaultStartState.selectedThinkingLevel;
@@ -49,12 +75,14 @@ export const parseStartState = (value: unknown): StartState => {
   const state = value as Partial<StartState>;
   const lastWorkspace = cleanString(state.lastWorkspace);
   const selectedModelKey = cleanString(state.selectedModelKey);
+  const sessionNotices = cleanSessionNotices(state.sessionNotices);
   const workspaceBookmarks = cleanStringRecord(state.workspaceBookmarks);
   return {
     composerShortcut: cleanString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     selectedThinkingLevel: cleanThinkingLevel(state.selectedThinkingLevel),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
+    ...(sessionNotices ? { sessionNotices } : {}),
     ...(workspaceBookmarks ? { workspaceBookmarks } : {})
   };
 };

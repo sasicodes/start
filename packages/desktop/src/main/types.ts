@@ -129,12 +129,46 @@ export type RecentSession = {
   noticeKind?: SessionNoticeKind;
 };
 
+export type RecentSessionsOptions = {
+  cursor?: string;
+  limit?: number;
+  workspacePath?: string;
+};
+
+export type RecentSessionsPage = {
+  hasMore: boolean;
+  sessions: RecentSession[];
+};
+
+export type ScopedChatEvent<T> = {
+  tabId: string;
+  payload: T;
+  workspacePath: string;
+};
+
 export type WorkspaceFolder = {
   name: string;
   path: string;
   modified: number;
   sessionCount: number;
   noticeKind?: SessionNoticeKind;
+};
+
+export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
+
+export type AgentTab = {
+  id: string;
+  status: AgentTabStatus;
+  sessionId?: string;
+  workspacePath: string;
+};
+
+export type SessionNotice = {
+  seenAt?: number;
+  createdAt: number;
+  sessionId: string;
+  workspacePath: string;
+  kind: SessionNoticeKind;
 };
 
 export type SwitchWorkspaceResult = {

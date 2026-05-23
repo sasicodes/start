@@ -1,9 +1,8 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
+import { NoticeDot } from '@renderer/ui/notice-dot';
 import { tw } from '@renderer/utils/tw';
-
-const NoticeDot = () => <span aria-hidden="true" class="size-2 rounded-full bg-emerald-500" />;
 
 const WorkspaceOption = ({
   folder,

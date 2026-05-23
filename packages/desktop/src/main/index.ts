@@ -2,6 +2,7 @@ import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/applic
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitPatch } from '@main/git';
+import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
 import { WorkspaceSessionWatcher } from '@main/session-watcher';
@@ -24,23 +25,8 @@ import {
   withComposerBlurSuppressed
 } from '@main/window';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
-import {
-  activateWorkspaceAccess,
-  deactivateWorkspaceAccess,
-  openWorkspaceDialogOptions,
-  rememberWorkspaceBookmark
-} from '@main/workspace/access';
-import {
-  app,
-  BrowserWindow,
-  dialog,
-  globalShortcut,
-  ipcMain,
-  nativeImage,
-  nativeTheme,
-  shell,
-  type WebContents
-} from 'electron';
+import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
+import { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
 
 app.setName(appMenuName);
 
@@ -174,99 +160,15 @@ app.whenReady().then(async () => {
       ? { ok: true, settings: nextSettings }
       : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
   });
-  ipcMain.handle('chat:status', () => chat.getStatus());
-  ipcMain.handle('chat:models', () => chat.getModels());
-  ipcMain.handle('chat:recent-sessions', (_event, workspacePath?: string) => chat.getRecentSessions(workspacePath));
-  ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
-  ipcMain.handle('chat:prepare-clipboard-image', () => chat.prepareClipboardImage());
-  ipcMain.handle('chat:prepare-dropped-files', (_event, paths: string[]) => chat.prepareDroppedFiles(paths));
-  ipcMain.handle('chat:release-attachments', (_event, ids: string[]) => chat.releaseAttachments(ids));
-  ipcMain.handle('chat:switch-workspace', async (_event, path: string) => {
-    const result = await chat.switchWorkspace(path);
-    if (result.ok) {
-      watchRecentSessions(result.status?.workspacePath);
-      notifyStatusChanged();
-      notifyRecentSessionsChanged(result.status?.workspacePath);
-    }
-    return withCachedWorkspace(result);
+  registerChatIpc({
+    chat,
+    startNewSession,
+    notifyStatusChanged,
+    watchRecentSessions,
+    withCachedWorkspace,
+    withComposerBlurSuppressed,
+    notifyRecentSessionsChanged
   });
-  ipcMain.handle('chat:choose-workspace-directory', async (event) => {
-    const window = BrowserWindow.fromWebContents(event.sender as WebContents);
-    const dialogOptions = {
-      defaultPath: chat.getWorkspaceCwd(),
-      ...openWorkspaceDialogOptions()
-    };
-    const result = await withComposerBlurSuppressed(() =>
-      window ? dialog.showOpenDialog(window, dialogOptions) : dialog.showOpenDialog(dialogOptions)
-    );
-    const path = result.filePaths[0];
-    if (result.canceled || !path) return { ok: true, cancelled: true, status: await chat.getStatus() };
-    rememberWorkspaceBookmark(path, result.bookmarks?.[0]);
-    const nextResult = await chat.switchWorkspace(path);
-    if (nextResult.ok) {
-      watchRecentSessions(nextResult.status?.workspacePath);
-      notifyStatusChanged();
-      notifyRecentSessionsChanged(nextResult.status?.workspacePath);
-    }
-    return withCachedWorkspace(nextResult);
-  });
-  ipcMain.handle('chat:open-session', async (_event, path: string) => {
-    const result = await chat.openSession(path);
-    if (result.ok) {
-      watchRecentSessions();
-      notifyStatusChanged();
-      notifyRecentSessionsChanged();
-    }
-    return result;
-  });
-  ipcMain.handle('chat:open-session-id', async (_event, sessionId: string) => {
-    const result = await chat.openSessionId(sessionId);
-    if (result.ok) {
-      watchRecentSessions();
-      notifyStatusChanged();
-      notifyRecentSessionsChanged();
-    }
-    return result;
-  });
-  ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());
-  ipcMain.handle('chat:set-runtime-api-key', (_event, provider: string, apiKey: string) =>
-    chat.setRuntimeApiKey(provider, apiKey)
-  );
-  ipcMain.handle('chat:login-subscription', (event, provider: string) =>
-    chat.loginSubscription(provider, event.sender as WebContents)
-  );
-  ipcMain.handle('chat:cancel-subscription-login', () => chat.cancelSubscriptionLogin());
-  ipcMain.handle('chat:submit-subscription-auth-input', (_event, value: string) =>
-    chat.submitSubscriptionAuthInput(value)
-  );
-  ipcMain.handle('chat:steer-queued-message', (event, id: string) =>
-    chat.steerQueuedMessage(id, event.sender as WebContents)
-  );
-  ipcMain.handle('chat:delete-queued-message', (event, id: string) =>
-    chat.deleteQueuedMessage(id, event.sender as WebContents)
-  );
-  ipcMain.handle('chat:select-model', async (_event, modelKey: string) => {
-    const status = await chat.selectModel(modelKey);
-    notifyStatusChanged();
-    return status;
-  });
-  ipcMain.handle('chat:select-thinking-level', async (_event, level: string) => {
-    const status = await chat.selectThinkingLevel(level);
-    notifyStatusChanged();
-    return status;
-  });
-  ipcMain.handle('chat:send', async (event, prompt: string, attachments = []) => {
-    const result = await chat.send(prompt, event.sender as WebContents, attachments);
-    if (result.ok) notifyRecentSessionsChanged();
-    return result;
-  });
-  ipcMain.handle('chat:command', async (event, command: string, excludeFromContext: boolean) => {
-    const result = await chat.command(command, excludeFromContext, event.sender as WebContents);
-    if (result.ok) notifyRecentSessionsChanged();
-    return result;
-  });
-  ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
-  ipcMain.handle('chat:new-session', () => startNewSession());
 
   app.on('browser-window-blur', scheduleAppFocusStateChanged);
   app.on('browser-window-focus', scheduleAppFocusStateChanged);
