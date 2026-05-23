@@ -19,9 +19,7 @@ const supplementOnlyRoles = new Set<Turn['role']>(['event', 'terminal', 'assista
 const hasSupplement = (turn: Turn) => Boolean(turn.thinking) || Boolean(turn.details?.length);
 
 const shouldShowBody = (turn: Turn) =>
-  Boolean(turn.text) ||
-  (turn.role === 'assistant' && Boolean(turn.streaming)) ||
-  (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
+  Boolean(turn.text) || (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
 
@@ -58,8 +56,6 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
   const isSystem = turn.role === 'system';
   const useMarkdown = shouldUseMarkdown(turn);
   const isTerminal = turn.role === 'terminal';
-  const isAssistantActivity = turn.role === 'assistant' && !turn.text;
-  const showWorking = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
 
   return (
     <div
@@ -70,17 +66,10 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         !isUser && 'py-2',
         isEvent && 'py-0.5 text-xs leading-none text-soft',
         isSystem && 'text-danger',
-        isTerminal && 'text-xs leading-5 text-ink',
-        isAssistantActivity && 'text-soft'
+        isTerminal && 'text-xs leading-5 text-ink'
       )}
     >
-      {showWorking ? (
-        <span role="status">Working</span>
-      ) : useMarkdown ? (
-        <Markdown source={turn.text} streaming={Boolean(turn.streaming)} />
-      ) : (
-        fallbackText(turn)
-      )}
+      {useMarkdown ? <Markdown source={turn.text} streaming={Boolean(turn.streaming)} /> : fallbackText(turn)}
     </div>
   );
 });
@@ -100,6 +89,7 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
   const thinking = turn.thinking ?? '';
   const isUser = turn.role === 'user';
   const isEvent = turn.role === 'event';
+  const activityWorking = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
   const fullWidth = turn.role === 'assistant' || hasSupplement(turn) || turn.role === 'terminal';
   const openActivityPanel = useCallback(() => onOpenActivityPanel(turn.id), [onOpenActivityPanel, turn.id]);
 
@@ -119,8 +109,8 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
         createdAt={turn.createdAt}
         details={details}
         panelOpen={activityPanelOpen}
-        streaming={Boolean(turn.streaming)}
         thinking={thinking}
+        working={activityWorking}
         onOpenPanel={openActivityPanel}
       />
       <TurnBody turn={turn} />
