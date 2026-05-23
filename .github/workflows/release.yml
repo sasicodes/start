@@ -8,21 +8,8 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macOS
-            os: macos-latest
-            command: cd packages/desktop && pnpm dist --mac
-          - platform: Windows
-            os: windows-latest
-            command: cd packages/desktop && pnpm dist --win
-          - platform: Linux
-            os: ubuntu-latest
-            command: cd packages/desktop && pnpm dist --linux
+    name: Build macOS
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v6
@@ -36,36 +23,28 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install Linux packaging dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libarchive-tools rpm
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Check
         run: pnpm check
 
-      - name: Build distributables
+      - name: Build distributable
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: ${{ matrix.command }}
+        run: cd packages/desktop && pnpm dist --mac
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: start-${{ matrix.platform }}
+          name: start-macos
           path: |
             packages/desktop/release/*.dmg
             packages/desktop/release/*.zip
-            packages/desktop/release/*.exe
-            packages/desktop/release/*.AppImage
-            packages/desktop/release/*.deb
-            packages/desktop/release/*.rpm
             packages/desktop/release/*.blockmap
             packages/desktop/release/latest*.yml
           if-no-files-found: error
