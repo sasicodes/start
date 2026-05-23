@@ -19,7 +19,6 @@ const SessionRow = ({
   onOpen: (session: RecentSession) => void;
 }) => (
   <AppMenu.Item
-    closeOnClick
     onClick={() => onOpen(session)}
     className={tw(
       'grid w-full gap-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',

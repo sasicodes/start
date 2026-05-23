@@ -13,7 +13,6 @@ const WorkspaceOption = ({
   onSelectWorkspace: (path: string) => void;
 }) => (
   <AppMenu.Item
-    closeOnClick
     onClick={() => onSelectWorkspace(folder.path)}
     className={tw(
       'grid w-full gap-0.5 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
@@ -46,7 +45,6 @@ export const WorkspaceMenu = ({
       />
     ))}
     <AppMenu.Item
-      closeOnClick
       onClick={onChooseDirectory}
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control"
     >

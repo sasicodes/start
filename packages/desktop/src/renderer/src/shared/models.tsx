@@ -50,7 +50,6 @@ const ModelOptionItem = ({
 
   return (
     <AppMenu.Item
-      closeOnClick
       onClick={selectModel}
       onPointerDown={selectModel}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
@@ -81,7 +80,6 @@ const ModelOptions = ({
 const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<ModelsProps, 'onOpenSettings'>) => {
   return (
     <AppMenu.Item
-      closeOnClick
       onClick={onOpenSettings}
       onPointerDown={onOpenSettings}
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
