@@ -12,6 +12,7 @@ export const ComposerAttachedPanel = ({ children, contentClass }: ComposerAttach
     animate={attachedPanelVisibleMotion}
     class="absolute right-24 bottom-[calc(100%-0.125rem)] left-24 z-20 origin-bottom overflow-visible rounded-t-2xl bg-composer p-1 will-change-transform [-webkit-app-region:no-drag]"
     initial={attachedPanelHiddenMotion}
+    layout="size"
     transition={attachedPanelTransition}
   >
     <div class="absolute inset-0 -z-10 rounded-t-2xl bg-composer shadow-shell" />

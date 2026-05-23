@@ -5,6 +5,7 @@ export const attachedPanelVisibleMotion = { scaleX: 1, scaleY: 1 } as const;
 export const bottomBubbleHiddenMotion = { opacity: 0, scale: 0.98 } as const;
 export const bottomBubbleVisibleMotion = { opacity: 1, scale: 1 } as const;
 export const attachedPanelTransition = {
+  layout: { type: 'spring', duration: 0.18, bounce: 0.28 },
   scaleX: { type: 'spring', duration: 0.16, bounce: 0.18 },
   scaleY: { type: 'spring', duration: 0.18, bounce: 0.34 }
 } as const satisfies Transition;
