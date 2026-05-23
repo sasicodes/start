@@ -1,32 +1,20 @@
-# Releasing
+Release a desktop version by running the release helper:
 
-## Releasing a new desktop version
+`node scripts/release-desktop.js patch --push`
 
-Release is done by this single command:
+Preview first:
+`node scripts/release-desktop.js patch --dry-run`
 
-```bash
-node scripts/release-desktop.js patch --push
-```
-
-You can preview first with:
-
-```bash
-node scripts/release-desktop.js patch --dry-run
-```
-
-The command:
+The command does:
 - updates `packages/desktop/package.json` version
-- creates the Git tag `v<version>`
-- pushes commit + tag with `--push`
+- creates tag `v<version>`
+- pushes commit + tag when `--push` is included
 
-## Versioning examples
+Version options:
+- `patch`: `0.1.0-alpha.1 -> 0.1.1`
+- `minor`: `0.1.0-alpha.1 -> 0.2.0`
+- `major`: `0.1.0-alpha.1 -> 1.0.0`
+- explicit version: `node scripts/release-desktop.js v0.1.0-beta.1 --push`
+- stable explicit: `node scripts/release-desktop.js 1.0.0 --push`
 
-- `patch` → increments the patch number (`0.1.0-alpha.1` -> `0.1.1`)
-- `minor` → increments minor (`0.1.0-alpha.1` -> `0.2.0`)
-- `major` → increments major (`0.1.0-alpha.1` -> `1.0.0`)
-- `v0.1.0-beta.1` or `0.1.0-beta.1` → sets an explicit version
-- `v0.1.0` → stable release tag
-
-## Taging rule
-
-The release workflow runs on any tag that starts with `v`, so use this helper command to keep the git tag aligned with `packages/desktop/package.json`.
+Release tags are picked up by workflow when they start with `v`, so use the helper to keep the tag and package version aligned.
