@@ -16,9 +16,17 @@ const parseArgs = () => {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const push = args.includes('--push');
-  const releaseVersion = args.find((arg) => !arg.startsWith('--')) ?? 'patch';
+  const positional = args.filter((arg) => !arg.startsWith('--'));
 
-  return { releaseVersion, dryRun, push };
+  if (positional.length > 1) {
+    throw new Error('Only one version argument is supported.');
+  }
+
+  return {
+    releaseVersion: positional[0] ?? 'patch',
+    dryRun,
+    push
+  };
 };
 
 const bumpVersion = (version, releaseVersion) => {
@@ -49,6 +57,32 @@ const bumpVersion = (version, releaseVersion) => {
   }
 };
 
+const listWorkspaceChanges = () => {
+  const status = runCapture('git status --short', { cwd: workspaceRoot });
+  return status
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.slice(3));
+};
+
+const ensureWorkingTreeClean = () => {
+  const statusLines = listWorkspaceChanges();
+  const unexpected = statusLines.filter((path) => path !== 'packages/desktop/package.json');
+
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Working tree is dirty: ${statusLines.join(', ')}. Keep only desktop package.json changes for this release.`
+    );
+  }
+
+  if (statusLines.includes('packages/desktop/package.json')) {
+    throw new Error(
+      'Unexpected pre-existing change in packages/desktop/package.json. Commit or discard it before releasing.'
+    );
+  }
+};
+
 const { releaseVersion, dryRun, push } = parseArgs();
 const packageJson = JSON.parse(readFileSync(desktopPackagePath, 'utf8'));
 const currentVersion = String(packageJson.version ?? '').trim();
@@ -63,32 +97,33 @@ if (currentVersion === nextVersion) {
   throw new Error(`No version change needed for ${nextVersion}.`);
 }
 
-if (dryRun) {
-  process.stdout.write(`Would update desktop version from ${currentVersion} to ${nextVersion}\n`);
-  process.stdout.write(`Would create tag v${nextVersion}\n`);
-  if (push) {
-    process.stdout.write('Would push commit and tag\n');
-  }
-  process.exit(0);
-}
-
-packageJson.version = nextVersion;
-writeFileSync(desktopPackagePath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
-
-const status = runCapture('git status --short', { cwd: workspaceRoot });
-if (status && !status.includes('packages/desktop/package.json')) {
-  throw new Error('Working tree is dirty; keep only the desktop version bump in this release step.');
-}
-
-run('git add packages/desktop/package.json', { cwd: workspaceRoot });
-run(`git commit -m "chore: bump desktop version to ${nextVersion}"`, { cwd: workspaceRoot });
-
 const tag = `v${nextVersion}`;
 const existingTag = runCapture(`git tag --list ${tag}`, { cwd: workspaceRoot });
 if (existingTag) {
   throw new Error(`Tag ${tag} already exists.`);
 }
 
+if (dryRun) {
+  process.stdout.write(`Would update desktop version from ${currentVersion} to ${nextVersion}\n`);
+  process.stdout.write(`Would create tag ${tag}\n`);
+  if (push) {
+    process.stdout.write('Would push commit and tag\n');
+  }
+  process.exit(0);
+}
+
+ensureWorkingTreeClean();
+
+packageJson.version = nextVersion;
+writeFileSync(desktopPackagePath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+
+const statusAfterWrite = listWorkspaceChanges();
+if (statusAfterWrite.length !== 1 || statusAfterWrite[0] !== 'packages/desktop/package.json') {
+  throw new Error(`Release edit failed: unexpected changes after version bump (${statusAfterWrite.join(', ')}).`);
+}
+
+run('git add packages/desktop/package.json', { cwd: workspaceRoot });
+run(`git commit -m "chore: bump desktop version to ${nextVersion}"`, { cwd: workspaceRoot });
 run(`git tag -a ${tag} -m "${tag}"`, { cwd: workspaceRoot });
 
 if (push) {
