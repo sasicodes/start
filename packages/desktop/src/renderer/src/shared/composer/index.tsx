@@ -8,7 +8,7 @@ import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
 import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
-import { LatestButton } from '@renderer/shared/turn/latest-button';
+import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
 import { useSkillItems } from '@renderer/shared/skills';
 import { composerDockTransition } from '@renderer/ui/motion';
@@ -219,7 +219,7 @@ export const Composer = memo(
             onChooseDirectory={onChooseWorkspaceDirectory}
           />
         )}
-        <LatestButton centered={centered} />
+        {!centered && <ScrollToBottom />}
         <Finder
           items={finderItems}
           emptyLabel={skillToken ? 'No matching skills' : 'No matching items'}

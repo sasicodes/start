@@ -1,6 +1,6 @@
 import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
-import { latestScrollButtonVisibleState } from '@renderer/shared/turn/scroll';
+import { scrollToBottomButtonState } from '@renderer/shared/turn/scroll';
 import { turnIdsState } from '@renderer/state/chat';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -20,24 +20,17 @@ export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: Turn
 
   const syncLatestButton = useCallback(() => {
     const element = scrollRef.current;
-    latestScrollButtonVisibleState.value = Boolean(element && hasPageBelow(element));
+    scrollToBottomButtonState.value = Boolean(element && hasPageBelow(element));
   }, [scrollRef]);
 
   useEffect(() => {
     const element = scrollRef.current;
-    const content = contentRef.current;
-    if (!element || !content) return;
+    if (!element) return;
 
-    const observer = new ResizeObserver(syncLatestButton);
-    observer.observe(element);
-    observer.observe(content);
     element.addEventListener('scroll', syncLatestButton, { passive: true });
     syncLatestButton();
-    return () => {
-      observer.disconnect();
-      element.removeEventListener('scroll', syncLatestButton);
-    };
-  }, [scrollRef, contentRef, syncLatestButton]);
+    return () => element.removeEventListener('scroll', syncLatestButton);
+  }, [turnIds.length, scrollRef, syncLatestButton]);
 
   return (
     <section

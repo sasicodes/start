@@ -1,13 +1,9 @@
-import { latestScrollButtonVisibleState, scrollSessionToBottom } from '@renderer/shared/turn/scroll';
+import { scrollSessionToBottom, scrollToBottomButtonState } from '@renderer/shared/turn/scroll';
 import { ArrowUpIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 
-interface LatestButtonProps {
-  centered: boolean;
-}
-
-export const LatestButton = ({ centered }: LatestButtonProps) => {
-  if (centered || !latestScrollButtonVisibleState.value) return null;
+export const ScrollToBottom = () => {
+  if (!scrollToBottomButtonState.value) return null;
 
   return (
     <div class="pointer-events-none absolute -top-12 inset-x-0 z-10 flex justify-center">
