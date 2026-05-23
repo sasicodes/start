@@ -16,8 +16,8 @@ export const TurnArticles = memo(({ activityPanelTurnId, onOpenActivityPanel }: 
     <TurnArticleById
       key={turnId}
       turnId={turnId}
-      activityPanelOpen={turnId === activityPanelTurnId}
       onOpenActivityPanel={onOpenActivityPanel}
+      activityPanelOpen={turnId === activityPanelTurnId}
     />
   ));
 });

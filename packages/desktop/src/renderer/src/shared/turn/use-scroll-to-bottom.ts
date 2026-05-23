@@ -22,5 +22,5 @@ export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, turnCount: 
     element.addEventListener('scroll', sync, { passive: true });
     sync();
     return () => element.removeEventListener('scroll', sync);
-  }, [turnCount, sync, scrollRef]);
+  }, [scrollRef, sync, turnCount]);
 };
