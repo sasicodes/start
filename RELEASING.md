@@ -1,40 +1,12 @@
 # Releasing
 
-```text
-.
-├── .github/workflows/
-│   ├── release-desktop.yml
-│   └── quality-and-security.yml
-├── scripts/
-│   └── release-desktop.js
-└── packages/
-    └── desktop/package.json
-```
-
-Release is split into two paths:
-
-- PR workflow: `.github/workflows/quality-and-security.yml`
-  - runs on pull requests
-  - only checks quality + security
-
-- Desktop release workflow: `.github/workflows/release-desktop.yml`
-  - runs on tag push where tag starts with `v`
-  - builds mac artifacts and publishes a GitHub release
-
 ## Releasing a new desktop version
 
-1. Make sure your branch work is already merged to `main`.
-2. Run this from repo root:
+Release is done by this single command:
 
 ```bash
 node scripts/release-desktop.js patch --push
 ```
-
-3. The command:
-
-- updates `packages/desktop/package.json` version
-- creates the Git tag `v<version>`
-- pushes commit + tag with `--push`
 
 You can preview first with:
 
@@ -42,30 +14,19 @@ You can preview first with:
 node scripts/release-desktop.js patch --dry-run
 ```
 
-## Version and tag examples
+The command:
+- updates `packages/desktop/package.json` version
+- creates the Git tag `v<version>`
+- pushes commit + tag with `--push`
 
-Current desktop `package.json` version is currently `0.1.0-alpha.1`, so your tags can be:
+## Versioning examples
 
-- `v0.1.0-alpha.1` (or `v0.1.0-alpha.2`) for alpha
-- `v0.1.0-beta.1` for beta
-- `v0.1.0` for first stable
+- `patch` → increments the patch number (`0.1.0-alpha.1` -> `0.1.1`)
+- `minor` → increments minor (`0.1.0-alpha.1` -> `0.2.0`)
+- `major` → increments major (`0.1.0-alpha.1` -> `1.0.0`)
+- `v0.1.0-beta.1` or `0.1.0-beta.1` → sets an explicit version
+- `v0.1.0` → stable release tag
 
-To let the script compute numbers:
+## Taging rule
 
-- `patch` -> `0.1.1`
-- `minor` -> `0.2.0`
-- `major` -> `1.0.0`
-
-You can also pass a full version:
-
-```bash
-node scripts/release-desktop.js v0.1.0-beta.1 --push
-# or
-node scripts/release-desktop.js 1.0.0 --push
-```
-
-## Note on tag matching
-
-Any tag that starts with `v` (for example `vrandom`) will trigger the workflow.
-
-Use the release helper so the tag and `packages/desktop/package.json` stay aligned.
+The release workflow runs on any tag that starts with `v`, so use this helper command to keep the git tag aligned with `packages/desktop/package.json`.
