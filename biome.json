@@ -6,7 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/out", "!**/release", "!**/dist", "!**/*.tsbuildinfo"]
+    "includes": [
+      "**",
+      "!**/.expo",
+      "!**/node_modules",
+      "!**/out",
+      "!**/release",
+      "!**/dist",
+      "!**/*.tsbuildinfo",
+      "!packages/mobile/expo-env.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,

@@ -8,21 +8,20 @@
   "packageManager": "pnpm@10.25.0",
   "homepage": "https://start.intelligence.one",
   "scripts": {
-    "format:fix": "biome format . --write",
-    "lint": "biome lint . --error-on-warnings",
-    "check:pins": "node scripts/check-dependency-pins.js",
-    "hooks:install": "git config core.hooksPath .githooks",
-    "dev": "pnpm --filter @start/desktop dev",
     "audit": "pnpm run audit:deps && pnpm run audit:signatures",
-    "dist": "pnpm --filter @start/desktop dist",
-    "build": "pnpm --filter @start/desktop build",
     "audit:deps": "pnpm audit && pnpm --dir packages/desktop audit",
-    "package": "pnpm --filter @start/desktop package",
-    "format": "biome ci --linter-enabled=false --assist-enabled=false .",
-    "typecheck": "pnpm --filter @start/desktop typecheck",
-    "check:fix": "pnpm run check:pins && biome check . --write && pnpm run typecheck",
+    "audit:signatures": "npm audit signatures && npm --prefix packages/desktop audit signatures",
+    "build:desktop": "pnpm --filter @start/desktop build",
     "check": "pnpm run check:pins && pnpm run lint && pnpm run format && pnpm run typecheck",
-    "audit:signatures": "npm audit signatures && npm --prefix packages/desktop audit signatures"
+    "check:fix": "pnpm run check:pins && biome check . --write && pnpm run typecheck",
+    "check:pins": "node scripts/check-dependency-pins.js",
+    "desktop": "pnpm --filter @start/desktop dev",
+    "format": "biome ci --linter-enabled=false --assist-enabled=false .",
+    "format:fix": "biome format . --write",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "lint": "biome lint . --error-on-warnings",
+    "mobile": "pnpm --filter @start/mobile dev",
+    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15"

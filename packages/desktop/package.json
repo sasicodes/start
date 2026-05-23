@@ -79,7 +79,6 @@
     "afterSign": "scripts/notarize.js",
     "electronFuses": {
       "runAsNode": false,
-      "enableCookieEncryption": true,
       "onlyLoadAppFromAsar": true,
       "enableNodeCliInspectArguments": false,
       "enableNodeOptionsEnvironmentVariable": false,

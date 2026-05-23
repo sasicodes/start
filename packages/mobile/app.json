@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Start",
+    "slug": "start",
+    "scheme": "start",
+    "icon": "./assets/icon.png",
+    "version": "0.1.0-alpha.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "one.intelligence.start",
+      "supportsTablet": true
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "26.0"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 64,
+          "resizeMode": "contain",
+          "backgroundColor": "#f7f8fa",
+          "dark": {
+            "backgroundColor": "#101214"
+          }
+        }
+      ],
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

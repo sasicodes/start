@@ -1,5 +1,7 @@
 node_modules
 .DS_Store
+.expo
+packages/mobile/expo-env.d.ts
 dist
 out
 release
