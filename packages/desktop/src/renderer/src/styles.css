@@ -114,6 +114,37 @@ body {
   @apply overflow-hidden bg-transparent;
 }
 
+.activity-shimmer-text {
+  display: inline-block;
+  max-width: 100%;
+  color: transparent;
+  background: linear-gradient(
+    100deg,
+    var(--color-soft) 0 42%,
+    oklch(48% 0.16 35 / 0.92) 49%,
+    oklch(70% 0.19 35 / 0.72) 52%,
+    var(--color-soft) 59% 100%
+  );
+  background-size: 240% 100%;
+  background-clip: text;
+  animation: activity-text-shimmer 1.8s linear infinite;
+  -webkit-background-clip: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-shimmer-text {
+    color: var(--color-soft);
+    background: none;
+    animation: none;
+  }
+}
+
+@keyframes activity-text-shimmer {
+  100% {
+    background-position: -240% 0;
+  }
+}
+
 .composer-floating-shell::before,
 .composer-floating-shell::after {
   @apply pointer-events-none absolute rounded-full;
