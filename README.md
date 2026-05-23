@@ -5,10 +5,10 @@ Start is a desktop and mobile coding assistant.
 ```text
 .
 ├── packages/
-│   ├── desktop/   Electron app
-│   └── mobile/    Expo app
-├── patches/       pnpm patches
-└── scripts/       repo checks
+│   ├── desktop/
+│   └── mobile/
+├── patches/
+└── scripts/
 ```
 
 Use pnpm.
