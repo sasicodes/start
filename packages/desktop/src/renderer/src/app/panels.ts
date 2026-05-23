@@ -40,6 +40,11 @@ export const useSessionPanels = ({ surface, sessionViewActive }: UseSessionPanel
     setSidePanelMode('settings');
   }, []);
 
+  const toggleSettingsPanel = useCallback(() => {
+    setSidePanelOpen((open) => (sidePanelMode === 'settings' ? !open : true));
+    setSidePanelMode('settings');
+  }, [sidePanelMode]);
+
   const toggleGitChangesPanel = useCallback(() => {
     setSidePanelOpen((open) => (sidePanelMode === 'git' ? !open : true));
     setSidePanelMode('git');
@@ -84,6 +89,7 @@ export const useSessionPanels = ({ surface, sessionViewActive }: UseSessionPanel
     renderedSidePanelMode,
     settingsPanelVisible,
     activityPanelVisible,
+    toggleSettingsPanel,
     toggleGitChangesPanel
   };
 };

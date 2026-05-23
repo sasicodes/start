@@ -29,7 +29,6 @@ export const SettingsButton = memo(({ active, onOpenSettings }: SettingsButtonPr
       transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
       class={tw(
         'grid size-11.5 shrink-0 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors duration-75 ease-out select-none hover:bg-control focus-visible:bg-control',
-        active && 'bg-control',
         !appFocused && 'pointer-events-none'
       )}
     >

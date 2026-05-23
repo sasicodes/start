@@ -34,6 +34,7 @@ export const App = () => {
     activityPanelVisible,
     settingsPanelVisible,
     renderedSidePanelMode,
+    toggleSettingsPanel,
     toggleGitChangesPanel
   } = useSessionPanels({ sessionViewActive, surface });
 
@@ -46,6 +47,11 @@ export const App = () => {
     setSurface('main');
     openSettingsPanel();
   }, [openSettingsPanel, setSurface, surface]);
+
+  const toggleSettings = useCallback(() => {
+    setSurface('main');
+    toggleSettingsPanel();
+  }, [setSurface, toggleSettingsPanel]);
 
   const showChatFromEvent = useCallback(() => {
     closeSidePanel();
@@ -281,7 +287,7 @@ export const App = () => {
       onOpenSession={openRecentSession}
       gitPanelVisible={gitPanelVisible}
       activeSessionId={activeSessionId}
-      onOpenSettings={showSettings}
+      onOpenSettings={toggleSettings}
       sessionRoutePending={sessionRoutePending}
       settingsPanelVisible={settingsPanelVisible}
       onToggleGitPanel={toggleGitChangesPanel}
