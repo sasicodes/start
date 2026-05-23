@@ -1,13 +1,34 @@
-import { appIconPath, appMenuName, isMac, trayIconPath } from '@main/application';
-import { Menu, nativeImage, shell, Tray } from 'electron';
+import { isMac, appIconPath, appMenuName, trayIconPath } from '@main/application';
+import { Menu, Tray, nativeImage, type MenuItemConstructorOptions } from 'electron';
 
 type MenuActions = {
+  composerShortcut: string;
   onNewSession: () => void;
   onQuickAccess: () => void;
   onShowSettings: () => void;
 };
 
 let tray: Tray | null = null;
+
+const shortcutItem = (label: string, accelerator: string): MenuItemConstructorOptions => ({
+  label,
+  accelerator,
+  enabled: false
+});
+
+const shortcutMenu = (composerShortcut: string): MenuItemConstructorOptions[] => [
+  shortcutItem('Settings', 'CommandOrControl+,'),
+  shortcutItem('Finder next', 'Down'),
+  shortcutItem('New session', 'CommandOrControl+N'),
+  shortcutItem('Quick access', composerShortcut),
+  shortcutItem('Submit prompt', 'Enter'),
+  shortcutItem('Finder previous', 'Up'),
+  shortcutItem('Prompt new line', 'Shift+Enter'),
+  shortcutItem('Toggle side panel', ']'),
+  shortcutItem('New session alternate', 'CommandOrControl+T'),
+  shortcutItem('Refill previous prompt', 'Up'),
+  shortcutItem('Close side panel or popover', 'Esc')
+];
 
 const createTrayIcon = () => {
   const icon = nativeImage.createFromPath(trayIconPath);
@@ -17,7 +38,7 @@ const createTrayIcon = () => {
   return resizedIcon;
 };
 
-export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings }: MenuActions) => {
+export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings, composerShortcut }: MenuActions) => {
   if (!tray) {
     tray = new Tray(createTrayIcon());
   }
@@ -32,6 +53,7 @@ export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings 
       },
       {
         label: 'Quick Access',
+        accelerator: composerShortcut,
         click: onQuickAccess
       },
       {
@@ -45,7 +67,12 @@ export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings 
   );
 };
 
-export const installApplicationMenu = ({ onNewSession, onQuickAccess, onShowSettings }: MenuActions) => {
+export const installApplicationMenu = ({
+  onNewSession,
+  onQuickAccess,
+  onShowSettings,
+  composerShortcut
+}: MenuActions) => {
   if (!isMac) {
     Menu.setApplicationMenu(null);
     return;
@@ -87,6 +114,7 @@ export const installApplicationMenu = ({ onNewSession, onQuickAccess, onShowSett
           },
           {
             label: 'Quick Access',
+            accelerator: composerShortcut,
             click: onQuickAccess
           },
           { type: 'separator' },
@@ -98,13 +126,7 @@ export const installApplicationMenu = ({ onNewSession, onQuickAccess, onShowSett
       { role: 'windowMenu' },
       {
         role: 'help',
-        submenu: [
-          {
-            label: `${appMenuName} Help`,
-            accelerator: 'CommandOrControl+?',
-            click: () => void shell.openExternal('https://start.intelligence.one')
-          }
-        ]
+        submenu: shortcutMenu(composerShortcut)
       }
     ])
   );

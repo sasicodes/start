@@ -6,7 +6,13 @@ import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
 import { WorkspaceSessionWatcher } from '@main/session-watcher';
 import { listSkills } from '@main/skills';
-import { type AppSettings, readAppSettings, validateAccelerator, writeAppSettings } from '@main/settings';
+import {
+  readAppSettings,
+  writeAppSettings,
+  type AppSettings,
+  defaultAppSettings,
+  validateAccelerator
+} from '@main/settings';
 import {
   createMainWindow,
   hideComposerWindow,
@@ -88,7 +94,8 @@ const registerComposerShortcut = (accelerator: string) => {
 const menuActions = () => ({
   onShowSettings: showSettings,
   onQuickAccess: toggleComposerWindow,
-  onNewSession: () => void startNewSession()
+  onNewSession: () => void startNewSession(),
+  composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
 
 app.whenReady().then(async () => {
