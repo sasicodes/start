@@ -1,36 +1,19 @@
 import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
-import { scrollToBottomButtonState } from '@renderer/shared/turn/scroll';
+import { useScrollToBottom } from '@renderer/shared/turn/use-scroll-to-bottom';
 import { turnIdsState } from '@renderer/state/chat';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
-import { useCallback, useEffect } from 'preact/hooks';
 
 interface TurnFeedProps {
   activityPanelTurnId: string;
   onOpenActivityPanel: (turnId: string) => void;
 }
 
-const hasPageBelow = (element: HTMLElement) =>
-  element.scrollHeight - element.clientHeight - element.scrollTop > element.clientHeight;
-
 export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: TurnFeedProps) => {
   const turnIds = turnIdsState.value;
   const { roomRef, scrollRef, contentRef, positioned, roomVisible } = useTurnRoom({ turnCount: turnIds.length });
-
-  const syncLatestButton = useCallback(() => {
-    const element = scrollRef.current;
-    scrollToBottomButtonState.value = Boolean(element && hasPageBelow(element));
-  }, [scrollRef]);
-
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-
-    element.addEventListener('scroll', syncLatestButton, { passive: true });
-    syncLatestButton();
-    return () => element.removeEventListener('scroll', syncLatestButton);
-  }, [turnIds.length, scrollRef, syncLatestButton]);
+  useScrollToBottom(scrollRef, turnIds.length);
 
   return (
     <section
