@@ -8,7 +8,7 @@ export const Showcase = () => {
         className="mx-auto border-y border-dashed border-retro-stone/50 bg-retro-cream/50 p-6 sm:p-10 lg:p-14"
       >
         <img
-          src="/images/workspace-preview.png"
+          src="/images/workspace-preview.webp"
           alt="Start workspace screenshot"
           width={4324}
           height={2432}

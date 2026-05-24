@@ -2,49 +2,23 @@
 
 > Your coding assistant.
 
-Start is a macOS desktop app for working with coding agents in one focused workspace. It helps you ask questions about a codebase, attach project context, edit files, review diffs, and prepare code for shipping.
+Start is a cross-platform coding assistant for working on software projects with AI agents. It gives developers a focused workspace for asking questions, editing files, reviewing changes, and moving code toward a pull request.
 
-The app is local-first. Project files, prompts, chat history, indexes, logs, API keys, and access tokens stay on the user's Mac. Start does not include tracking pixels, advertising identifiers, or third-party telemetry.
+## What you can do
 
-## Core surfaces
+- Use multiple AI models and switch between them for different tasks.
+- Choose thinking or effort levels when a model supports deeper reasoning.
+- Queue follow-up prompts so work can continue without losing your next thought.
+- Work across multiple workspaces and conversations.
+- Run parallel agents on separate threads of work.
+- Attach file context so the assistant understands the code you choose.
+- Review file changes in a diff viewer before committing.
+- Configure providers, keys, models, and preferences in settings.
+- Bring your own provider keys and keep control of the services you use.
 
-- Chat sessions for asking coding questions and directing agent work
-- Parallel work across multiple conversations
-- Multi-model selection for matching the model to the task
-- File context so the assistant can understand the code you choose
-- File edits with reviewable changes
-- Diff viewer for inspecting updates before committing work
-- Git workflow support for repository status, diffs, commits, and pull requests
+## Website
 
-## Local data
-
-- Application data is stored locally on the Mac
-- API keys and access tokens are stored in the macOS Keychain
-- AI prompts go directly from the user's machine to the provider they configure
-- Connected services, such as Git hosts, are contacted directly from the user's machine
-- Crash logs and diagnostics are not transmitted automatically
-
-## Requirements
-
-- macOS desktop app
-- Git for repository workflows
-- A configured AI provider or compatible agent backend
-- Project dependencies installed by the user when commands need them
-
-## Website pages
-
-- `/`: landing page
-- GitHub releases: https://github.com/sasicodes/start/releases
-- `/privacy`: privacy policy
-- `/terms`: terms of use
-
-## Brand copy
-
-- App name: Start
-- Description: your coding assistant
-- Tagline: Your coding assistant.
-- Public domain: https://start.intelligence.one
-
-## Contact
-
-For questions, contact start [at] intelligence [dot] one.
+- Landing page: https://start.intelligence.one
+- Releases: https://github.com/sasicodes/start/releases
+- Privacy: https://start.intelligence.one/privacy
+- Terms: https://start.intelligence.one/terms
