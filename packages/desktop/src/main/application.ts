@@ -1,5 +1,7 @@
 import { join } from 'node:path';
-import { app } from 'electron';
+import electron from 'electron';
+
+const { app } = electron;
 
 export const appId = 'one.intelligence.start';
 export const appName = 'start';

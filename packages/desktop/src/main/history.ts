@@ -27,18 +27,18 @@ type HistoryContext = {
 const entryId = (entry: Record<string, unknown>) => stringValue(entry.id) || `entry:${timestampValue(entry.timestamp)}`;
 
 const baseTurn = (entry: Record<string, unknown>, role: HistoryTurn['role'], text = ''): HistoryTurn => ({
-  id: entryId(entry),
   role,
   text,
+  id: entryId(entry),
   createdAt: timestampValue(entry.timestamp)
 });
 
 const compactEvent = (key: string, title: string, body = ''): ChatEvent => {
   const event: ChatEvent = {
     key,
-    kind: 'metadata',
+    state: 'done',
     title,
-    state: 'done'
+    kind: 'metadata'
   };
 
   if (body) event.body = body;
@@ -66,9 +66,9 @@ const assistantDetails = (entryIdValue: string, createdAt: number, content: unkn
 
     const event = toolEventDetail({
       state: 'done',
-      args: part.arguments,
       toolName: name,
-      key: `tool:${id}`
+      key: `tool:${id}`,
+      args: part.arguments
     });
     return [historyDetail(event, index, entryIdValue, createdAt)];
   });
@@ -85,9 +85,9 @@ const assistantTurn = (entry: Record<string, unknown>, message: Record<string, u
 
   const turn: HistoryTurn = {
     id,
-    role: 'assistant',
     text,
-    createdAt
+    createdAt,
+    role: 'assistant'
   };
   if (details.length > 0) turn.details = details;
   if (thinking) turn.thinking = thinking;
@@ -107,9 +107,9 @@ const bashTurn = (entry: Record<string, unknown>, message: Record<string, unknow
     .trim();
   const event: ChatEvent = {
     key: `bash:${entryId(entry)}`,
-    kind: 'tool',
+    state: 'done',
     title: 'Ran command',
-    state: 'done'
+    kind: 'tool'
   };
 
   if (body) event.body = body;
@@ -123,8 +123,10 @@ const customTurn = (entry: Record<string, unknown>, message: Record<string, unkn
   const text = textContent(message.content);
   if (!text) return [];
 
-  const customType = stringValue(message.customType) || 'custom';
-  return detailTurn(entry, compactEvent(`custom:${entryId(entry)}`, customType, text));
+  const customMessageType = stringValue(message.customType);
+  const event = compactEvent(`custom:${entryId(entry)}`, 'Agent message', text);
+  if (customMessageType) event.detail = customMessageType;
+  return detailTurn(entry, event);
 };
 
 const toolResultTurn = (entry: Record<string, unknown>, message: Record<string, unknown>, context: HistoryContext) => {
@@ -139,10 +141,10 @@ const toolResultTurn = (entry: Record<string, unknown>, message: Record<string, 
       entry,
       toolEventDetail({
         key,
-        state: error ? 'error' : 'done',
+        toolName,
         result: message,
         args: toolCall.args,
-        toolName
+        state: error ? 'error' : 'done'
       })
     );
   }
@@ -150,8 +152,8 @@ const toolResultTurn = (entry: Record<string, unknown>, message: Record<string, 
   const body = toolBody(toolName, {}, message);
   const event: ChatEvent = {
     key,
-    kind: error ? 'error' : 'tool',
     title: toolResultTitle(toolName, error),
+    kind: error ? 'error' : 'tool',
     state: error ? 'error' : 'done'
   };
 
@@ -208,8 +210,10 @@ const customMessageTurn = (entry: Record<string, unknown>) => {
   const content = textContent(entry.content);
   if (!content) return [];
 
-  const customType = stringValue(entry.customType) || 'custom';
-  return detailTurn(entry, compactEvent(`custom-message:${entryId(entry)}`, customType, content));
+  const customMessageType = stringValue(entry.customType);
+  const event = compactEvent(`custom-message:${entryId(entry)}`, 'Agent message', content);
+  if (customMessageType) event.detail = customMessageType;
+  return detailTurn(entry, event);
 };
 
 const labelTurn = (entry: Record<string, unknown>) => {
@@ -260,8 +264,8 @@ const collectResultToolCallIds = (entries: readonly unknown[]) => {
 
 export const historyTurns = (entries: readonly unknown[]): HistoryTurn[] => {
   const context: HistoryContext = {
-    resultToolCallIds: collectResultToolCallIds(entries),
-    toolCalls: new Map()
+    toolCalls: new Map(),
+    resultToolCallIds: collectResultToolCallIds(entries)
   };
   const turns = entries.flatMap((entry) => {
     if (!isRecord(entry)) return [];

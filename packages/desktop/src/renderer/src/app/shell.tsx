@@ -1,7 +1,6 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
-import { AgentTabs } from '@renderer/shared/agent-tabs';
 import { Settings } from '@renderer/shared/settings';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
@@ -20,50 +19,50 @@ interface FileDropHandlers {
 }
 
 interface MainSessionSurfaceProps {
-  sidePanel: ComponentChildren;
   workspacePath: string;
+  isGenerating: boolean;
   sidePanelLabel: string;
-  mainComposer: ComponentChildren;
-  gitPanelVisible: boolean;
   activeSessionId: string;
+  gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  activityPanelTurnId: string;
-  sessionRoutePending: boolean;
-  settingsPanelVisible: boolean;
   onOpenSettings: () => void;
+  activityPanelTurnId: string;
+  sidePanel: ComponentChildren;
+  sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
+  settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
+  mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   onSelectWorkspace: (path: string) => void;
   onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
-  onActivateTab: (id: string) => Promise<boolean>;
 }
 
 interface AppShellProps {
   surface: AppSurface;
-  sidePanel: ComponentChildren;
-  mainComposer: ComponentChildren;
-  overlayComposer: ComponentChildren;
-  fileHandlers: FileDropHandlers;
   workspacePath: string;
+  isGenerating: boolean;
   sidePanelLabel: string;
-  gitPanelVisible: boolean;
   activeSessionId: string;
-  sessionViewActive: boolean;
+  gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  activityPanelTurnId: string;
-  sessionRoutePending: boolean;
-  settingsPanelVisible: boolean;
+  sessionViewActive: boolean;
   onOpenSettings: () => void;
+  activityPanelTurnId: string;
+  sidePanel: ComponentChildren;
+  sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
+  settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
   onDiscardComposer: () => void;
+  fileHandlers: FileDropHandlers;
+  mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
+  overlayComposer: ComponentChildren;
   onSelectWorkspace: (path: string) => void;
   onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
-  onActivateTab: (id: string) => Promise<boolean>;
 }
 
 const MainSessionSurface = memo(
@@ -73,6 +72,7 @@ const MainSessionSurface = memo(
     sidePanelLabel,
     mainComposer,
     gitPanelVisible,
+    isGenerating,
     activeSessionId,
     sidePanelVisible,
     activityPanelTurnId,
@@ -84,8 +84,7 @@ const MainSessionSurface = memo(
     onSidePanelCollapse,
     onSelectWorkspace,
     onOpenActivityPanel,
-    onOpenSession,
-    onActivateTab
+    onOpenSession
   }: MainSessionSurfaceProps) => (
     <SidePanelLayout
       sidePanel={sidePanel}
@@ -96,8 +95,8 @@ const MainSessionSurface = memo(
       {!sessionRoutePending && (
         <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
       )}
-      <AgentTabs activeSessionId={activeSessionId} onActivate={onActivateTab} />
       <WorkspaceDock
+        isGenerating={isGenerating}
         workspacePath={workspacePath}
         onOpenSession={onOpenSession}
         activeSessionId={activeSessionId}
@@ -124,10 +123,10 @@ export const AppShell = memo(
     sidePanelLabel,
     overlayComposer,
     gitPanelVisible,
+    isGenerating,
     activeSessionId,
     sidePanelVisible,
     onOpenSession,
-    onActivateTab,
     sessionRoutePending,
     settingsPanelVisible,
     onOpenSettings,
@@ -163,8 +162,8 @@ export const AppShell = memo(
           sidePanelLabel={sidePanelLabel}
           mainComposer={mainComposer}
           onOpenSession={onOpenSession}
-          onActivateTab={onActivateTab}
           gitPanelVisible={gitPanelVisible}
+          isGenerating={isGenerating}
           activeSessionId={activeSessionId}
           onOpenSettings={onOpenSettings}
           sessionRoutePending={sessionRoutePending}

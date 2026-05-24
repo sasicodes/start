@@ -1,17 +1,17 @@
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
-import { ChevronDownIcon } from '@renderer/ui/icons';
+import { ArrowUpIcon, ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useState } from 'preact/hooks';
 
 interface DiffFileProps {
   file: PatchFile;
-  highlightRevision: number;
   language: string;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
+  highlightRevision: number;
 }
 
 interface FileProps {
@@ -58,6 +58,18 @@ const StatusMark = ({ status }: StatusMarkProps) => (
   </svg>
 );
 
+const fileHasPathChange = (file: PatchFile) => Boolean(file.oldPath && file.newPath && file.oldPath !== file.newPath);
+
+const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
+
+const fileOpenByDefault = (file: PatchFile) => fileHasTextDiff(file) && file.added + file.removed <= 320;
+
+const emptyFileMessage = (file: PatchFile) => {
+  if (fileHasPathChange(file)) return 'File renamed without changes.';
+  if (file.isBinary) return 'Binary file changed.';
+  return 'No text diff to show.';
+};
+
 const FileStats = ({ file }: FileProps) => {
   if (file.added === 0 && file.removed === 0) return null;
 
@@ -69,30 +81,39 @@ const FileStats = ({ file }: FileProps) => {
   );
 };
 
+const PathChange = ({ file }: FileProps) => (
+  <span class="inline-flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium">
+    <span class="min-w-0 truncate text-soft">{file.oldPath}</span>
+    <ArrowUpIcon class="size-3 flex-none rotate-90 text-soft" strokeWidth={2} />
+    <span class="min-w-0 truncate text-ink">{file.newPath}</span>
+  </span>
+);
+
+const FileTitle = ({ file }: FileProps) =>
+  fileHasPathChange(file) ? (
+    <PathChange file={file} />
+  ) : (
+    <span class="min-w-0 truncate text-sm leading-5 font-medium text-ink">{file.displayPath}</span>
+  );
+
 const EmptyFileDiff = ({ file }: FileProps) => (
-  <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">
-    {file.isBinary ? 'Binary file changed.' : 'No text diff to show.'}
-  </p>
+  <p class="m-0 px-4 py-4 text-center font-sans text-sm leading-6 text-soft">{emptyFileMessage(file)}</p>
 );
 
 export const DiffFile = memo(({ file, highlightRevision, language, status, viewMode }: DiffFileProps) => {
-  const [open, setOpen] = useState(file.added + file.removed <= 320);
-  const hasPathChange = Boolean(file.oldPath && file.newPath && file.oldPath !== file.newPath);
+  const [open, setOpen] = useState(() => fileOpenByDefault(file));
 
   return (
-    <section class="min-w-0 border-t border-line first:border-t-0 [contain-intrinsic-size:180px] [content-visibility:auto]">
+    <section class="min-w-0 border-t border-line [contain-intrinsic-size:180px] [content-visibility:auto]">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         class="group/file flex w-full min-w-0 items-center justify-between gap-3 border-0 bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
       >
-        <div class="min-w-0">
-          <div class="flex min-w-0 items-center gap-2">
-            <StatusMark status={status} />
-            <span class="min-w-0 truncate text-sm leading-5 font-medium text-ink">{file.displayPath}</span>
-          </div>
-          {hasPathChange && <p class="m-0 truncate text-xs leading-4 text-soft">from {file.oldPath}</p>}
+        <div class="flex min-w-0 items-center gap-2">
+          <StatusMark status={status} />
+          <FileTitle file={file} />
         </div>
         <div class="flex flex-none items-center gap-3">
           <FileStats file={file} />
@@ -104,8 +125,12 @@ export const DiffFile = memo(({ file, highlightRevision, language, status, viewM
           />
         </div>
       </button>
-      {open && file.hunks.length === 0 && <EmptyFileDiff file={file} />}
-      {open && <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />}
+      {open &&
+        (fileHasTextDiff(file) ? (
+          <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />
+        ) : (
+          <EmptyFileDiff file={file} />
+        ))}
     </section>
   );
 });

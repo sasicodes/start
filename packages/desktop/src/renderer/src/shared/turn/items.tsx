@@ -2,6 +2,7 @@ import { Markdown } from '@renderer/markdown';
 import {
   accordionContentMotion,
   accordionLayoutTransition,
+  activityPanelItems,
   detailCount,
   detailMeta,
   detailTarget,
@@ -9,7 +10,7 @@ import {
   splitDiffMetric
 } from '@renderer/shared/turn/activity';
 import { tw } from '@renderer/utils/tw';
-import type { TurnDetail } from '@renderer/utils/types';
+import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
@@ -138,21 +139,33 @@ export const DetailItem = ({ detail }: DetailItemProps) => {
   );
 };
 
-const ActivityDetailList = ({ details }: { details: TurnDetail[] }) => {
-  if (details.length === 0) return null;
+const ActivitySequence = ({ items }: { items: TurnActivityItem[] }) => (
+  <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2 p-0">
+    {items.map((item) =>
+      item.type === 'thinking' ? (
+        <motion.li key={item.id} layout="position" transition={accordionLayoutTransition} class="m-0">
+          <ThinkingSection thinking={item.text} />
+        </motion.li>
+      ) : (
+        <DetailItem key={item.id} detail={item.detail} />
+      )
+    )}
+  </motion.ul>
+);
+
+interface ActivityItemsProps {
+  thinking: string;
+  details: TurnDetail[];
+  items: TurnActivityItem[];
+}
+
+export const ActivityItems = ({ items, details, thinking }: ActivityItemsProps) => {
+  const panelItems = activityPanelItems(details, thinking, items);
+  if (panelItems.length === 0) return null;
 
   return (
-    <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2 p-0">
-      {details.map((detail) => (
-        <DetailItem key={detail.id} detail={detail} />
-      ))}
-    </motion.ul>
+    <motion.div layout="position" transition={accordionLayoutTransition} class="flex flex-col gap-2">
+      <ActivitySequence items={panelItems} />
+    </motion.div>
   );
 };
-
-export const ActivityItems = ({ details, thinking }: { details: TurnDetail[]; thinking: string }) => (
-  <motion.div layout="position" transition={accordionLayoutTransition} class="flex flex-col gap-2">
-    <ThinkingSection thinking={thinking} />
-    <ActivityDetailList details={details} />
-  </motion.div>
-);

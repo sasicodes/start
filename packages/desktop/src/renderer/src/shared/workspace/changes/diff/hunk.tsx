@@ -8,15 +8,15 @@ import { memo } from 'preact/compat';
 import { useMemo } from 'preact/hooks';
 
 interface HunkLineRange {
-  first: number;
   last: number;
+  first: number;
 }
 
 interface DiffHunksProps {
   file: PatchFile;
-  highlightRevision: number;
   language: string;
   viewMode: DiffViewMode;
+  highlightRevision: number;
 }
 
 const lineNumberText = (lineNumber: number | undefined) => (lineNumber ? lineNumber.toString() : '');
@@ -82,8 +82,7 @@ const DiffPane = ({
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           cell.tone === 'add' && 'text-success',
-          cell.tone === 'remove' && 'text-danger',
-          !changed && 'bg-transparent'
+          cell.tone === 'remove' && 'text-danger'
         )}
       />
       <span
@@ -105,7 +104,7 @@ const DiffPane = ({
           !highlightedHtml && cell.tone === 'remove' && 'text-danger',
           !highlightedHtml && !addition && !removal && !placeholder && 'text-ink',
           placeholder &&
-            'text-soft/25 [background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_6px)]'
+            'text-soft/25 [background-image:radial-gradient(circle,currentColor_1px,transparent_1px),radial-gradient(circle,currentColor_1px,transparent_1px)] [background-position:0_calc(50%_-_4px),0_calc(50%_+_4px)] [background-repeat:repeat-x] [background-size:8px_100%]'
         )}
       >
         {highlightedHtml ? null : cell.content || '\u00a0'}
@@ -165,8 +164,7 @@ const UnifiedLineRow = ({
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           addition && 'text-success',
-          removal && 'text-danger',
-          !changed && 'bg-transparent'
+          removal && 'text-danger'
         )}
       />
       <span

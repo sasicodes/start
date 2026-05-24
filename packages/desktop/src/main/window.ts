@@ -1,12 +1,15 @@
 import { join } from 'node:path';
 import { appIconPath, appName, isMac } from '@main/application';
 import { environment } from '@main/environment';
-import { app, BrowserWindow, type BrowserWindowConstructorOptions, screen, shell } from 'electron';
+import type { BrowserWindow as ElectronBrowserWindow, BrowserWindowConstructorOptions } from 'electron';
+import electron from 'electron';
+
+const { app, BrowserWindow, screen, shell } = electron;
 
 const getRendererUrl = () => (app.isPackaged ? null : (environment.rendererUrl ?? null));
 
-let mainWindow: BrowserWindow | null = null;
-let composerWindow: BrowserWindow | null = null;
+let mainWindow: ElectronBrowserWindow | null = null;
+let composerWindow: ElectronBrowserWindow | null = null;
 let composerVisible = false;
 let composerOpenedFromStart = false;
 let composerBlurSuppressionDepth = 0;
@@ -17,7 +20,7 @@ const openExternalUrl = (url: string) => {
   }
 };
 
-const loadRenderer = (window: BrowserWindow, surface: 'composer' | 'main') => {
+const loadRenderer = (window: ElectronBrowserWindow, surface: 'composer' | 'main') => {
   const rendererUrl = getRendererUrl();
 
   if (rendererUrl) {
@@ -31,7 +34,7 @@ const loadRenderer = (window: BrowserWindow, surface: 'composer' | 'main') => {
 
 const activeDisplayWorkArea = () => screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
 
-const fitComposerWindowToActiveDisplay = (window: BrowserWindow) => {
+const fitComposerWindowToActiveDisplay = (window: ElectronBrowserWindow) => {
   const nextBounds = activeDisplayWorkArea();
   const currentBounds = window.getBounds();
   if (
@@ -46,7 +49,7 @@ const fitComposerWindowToActiveDisplay = (window: BrowserWindow) => {
   window.setBounds(nextBounds, false);
 };
 
-export const createMainWindow = (): BrowserWindow => {
+export const createMainWindow = (): ElectronBrowserWindow => {
   if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
 
   const options: BrowserWindowConstructorOptions = {
@@ -112,7 +115,7 @@ export const createMainWindow = (): BrowserWindow => {
   return window;
 };
 
-export const createComposerWindow = (): BrowserWindow => {
+export const createComposerWindow = (): ElectronBrowserWindow => {
   if (composerWindow && !composerWindow.isDestroyed()) return composerWindow;
 
   const options: BrowserWindowConstructorOptions = {

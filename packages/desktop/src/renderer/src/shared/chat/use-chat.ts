@@ -12,7 +12,7 @@ import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
-import { clearSkillsCache } from '@renderer/shared/skills';
+import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { selectedModelKeyState } from '@renderer/state/chat';
@@ -43,6 +43,9 @@ const nextQueuedMessages = (current: QueuedMessage[], messages: QueuedMessage[])
   if (sameQueuedMessages(current, messages)) return current;
   return messages;
 };
+
+const streamingAssistantId = (turns: OpenSessionResult['turns']) =>
+  turns?.findLast((turn) => turn.role === 'assistant' && turn.streaming)?.id ?? null;
 
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
@@ -91,10 +94,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
-      updateActiveSessionId(nextStatus.sessionId);
+      updateActiveSessionId(nextStatus.sessionId && turnCount > 0 ? nextStatus.sessionId : '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
     },
-    [updateActiveSessionId]
+    [turnCount, updateActiveSessionId]
   );
 
   const syncStatus = useCallback(async () => {
@@ -131,6 +134,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const newSession = useCallback(async () => {
     const requestId = newSessionRequestRef.current + 1;
     newSessionRequestRef.current = requestId;
+    clearSlashCommandsCache();
     clearSession();
     try {
       await window.pi.chat.newSession();
@@ -145,11 +149,13 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     onShowChat,
     loadModels,
     syncStatus,
+    workspacePath,
     textareaRef,
     clearSession,
     terminalIdRef,
     assistantIdRef,
     onShowSettings,
+    activeSessionId,
     setIsGenerating,
     setQueuedMessages: updateQueuedMessages
   });
@@ -197,12 +203,14 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       }
       if (sessionRequestRef.current !== requestId) return false;
       applyStatus(nextStatus);
+      clearSlashCommandsCache();
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       setDraft('');
-      setIsGenerating(false);
       clearQueuedMessages();
       setTurns(() => result.turns ?? []);
+      assistantIdRef.current = streamingAssistantId(result.turns);
+      setIsGenerating(Boolean(nextStatus.isGenerating));
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
@@ -261,7 +269,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       } else {
         forgetWorkspace(result.status.workspacePath);
       }
-      clearSkillsCache();
+      clearSlashCommandsCache();
       clearFinderItemsCache();
       clearSession(options);
       setWorkspacePath(result.status.workspacePath);

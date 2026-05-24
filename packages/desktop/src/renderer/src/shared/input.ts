@@ -6,16 +6,16 @@ export type CommandInput = {
 export type FinderScope = 'root' | 'workspace';
 
 export type FinderToken = {
-  marker: '@' | '~';
   query: string;
-  scope: FinderScope;
   start: number;
   token: string;
   value: string;
+  marker: '@' | '~';
+  scope: FinderScope;
   folderPath: string;
 };
 
-export type SkillToken = {
+export type SlashCommandToken = {
   query: string;
   start: number;
   token: string;
@@ -55,7 +55,7 @@ export const activeFinderToken = (draft: string): FinderToken | undefined => {
   };
 };
 
-export const activeSkillToken = (draft: string): SkillToken | undefined => {
+export const activeSlashCommandToken = (draft: string): SlashCommandToken | undefined => {
   const match = /^(\s*)(\/[^\s]*)$/u.exec(draft);
   if (!match?.[2]) return;
 

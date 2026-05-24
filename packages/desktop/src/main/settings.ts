@@ -1,5 +1,7 @@
 import { readStartState, updateStartState } from '@main/storage';
-import { globalShortcut } from 'electron';
+import electron from 'electron';
+
+const { globalShortcut } = electron;
 
 export type AppSettings = {
   composerShortcut: string;

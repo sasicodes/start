@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
 interface WorkspaceDockProps {
+  isGenerating: boolean;
   workspacePath: string;
   activeSessionId: string;
   onChooseDirectory: () => void;
@@ -21,7 +22,14 @@ interface WorkspaceDockProps {
 }
 
 export const WorkspaceDock = memo(
-  ({ workspacePath, activeSessionId, onOpenSession, onChooseDirectory, onSelectWorkspace }: WorkspaceDockProps) => {
+  ({
+    workspacePath,
+    isGenerating,
+    activeSessionId,
+    onOpenSession,
+    onChooseDirectory,
+    onSelectWorkspace
+  }: WorkspaceDockProps) => {
     const appFocused = useAppFocusState();
 
     return (
@@ -47,6 +55,7 @@ export const WorkspaceDock = memo(
                 onSelectWorkspace={onSelectWorkspace}
               />
               <RecentSessions
+                isGenerating={isGenerating}
                 workspacePath={workspacePath}
                 activeSessionId={activeSessionId}
                 onOpenSession={onOpenSession}

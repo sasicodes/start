@@ -1,6 +1,9 @@
 import path from 'node:path';
-import { app, type OpenDialogOptions } from 'electron';
 import { readStartState, updateStartState } from '@main/storage';
+import type { OpenDialogOptions } from 'electron';
+import electron from 'electron';
+
+const { app } = electron;
 
 let activePath: string | undefined;
 let stopAccessing: (() => void) | undefined;

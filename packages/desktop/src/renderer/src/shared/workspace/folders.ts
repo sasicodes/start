@@ -9,16 +9,16 @@ interface UseWorkspaceFoldersOptions {
   workspacePath: string | undefined;
 }
 
+let stopWorkspaceFolderEvents: (() => void) | undefined;
 let workspaceFoldersCache: WorkspaceFolder[] | undefined;
 let workspaceFoldersRequest: Promise<WorkspaceFolder[]> | undefined;
-let stopWorkspaceFolderEvents: (() => void) | undefined;
 
 const workspaceFoldersListeners = new Set<WorkspaceFoldersListener>();
 
 const currentWorkspaceFolder = (workspacePath: string): WorkspaceFolder => ({
-  modified: Date.now(),
-  path: workspacePath,
   sessionCount: 0,
+  path: workspacePath,
+  modified: Date.now(),
   name: workspaceDisplayName(workspacePath)
 });
 
@@ -67,7 +67,12 @@ const refreshWorkspaceFolders = () => {
 
 const watchWorkspaceFolders = () => {
   if (stopWorkspaceFolderEvents) return;
-  stopWorkspaceFolderEvents = window.pi.chat.onRecentSessionsChanged(refreshWorkspaceFolders);
+  const offRecentSessionsChanged = window.pi.chat.onRecentSessionsChanged(refreshWorkspaceFolders);
+  const offStatusChanged = window.pi.chat.onStatusChanged(refreshWorkspaceFolders);
+  stopWorkspaceFolderEvents = () => {
+    offRecentSessionsChanged();
+    offStatusChanged();
+  };
 };
 
 const unwatchWorkspaceFolders = () => {

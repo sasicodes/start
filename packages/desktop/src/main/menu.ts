@@ -1,14 +1,18 @@
 import { isMac, appIconPath, appMenuName, trayIconPath } from '@main/application';
-import { Menu, Tray, nativeImage, type MenuItemConstructorOptions } from 'electron';
+import type { MenuItemConstructorOptions, Tray as ElectronTray } from 'electron';
+import electron from 'electron';
+
+const { Menu, Tray, nativeImage } = electron;
 
 type MenuActions = {
   composerShortcut: string;
   onNewSession: () => void;
   onQuickAccess: () => void;
   onShowSettings: () => void;
+  onCheckForUpdates: () => void;
 };
 
-let tray: Tray | null = null;
+let tray: ElectronTray | null = null;
 
 const shortcutItem = (label: string, accelerator: string): MenuItemConstructorOptions => ({
   label,
@@ -71,6 +75,7 @@ export const installApplicationMenu = ({
   onNewSession,
   onQuickAccess,
   onShowSettings,
+  onCheckForUpdates,
   composerShortcut
 }: MenuActions) => {
   if (!isMac) {
@@ -86,7 +91,7 @@ export const installApplicationMenu = ({
           { label: `About ${appMenuName}`, role: 'about' },
           {
             label: 'Check for Updates',
-            enabled: false
+            click: onCheckForUpdates
           },
           { type: 'separator' },
           {

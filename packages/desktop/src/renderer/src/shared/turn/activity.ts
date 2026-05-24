@@ -1,5 +1,5 @@
 import { closeMotionTransition, openMotionTransition, quickLayoutTransition } from '@renderer/ui/motion';
-import type { TurnDetail } from '@renderer/utils/types';
+import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import type { Transition } from 'motion/react';
 
 const diffMetricPattern = /^(.*?)(\+\d+)\s+(-\d+)$/;
@@ -33,7 +33,35 @@ export const accordionContentMotion = {
   initial: { height: 0, opacity: 0, y: -2 }
 };
 
-export const hasActivityDetails = (details: TurnDetail[], thinking: string) => details.length > 0 || Boolean(thinking);
+export const activityPanelItems = (
+  details: TurnDetail[],
+  thinking: string,
+  items: TurnActivityItem[] = []
+): TurnActivityItem[] => {
+  if (items.length > 0) return items;
+
+  return [
+    ...(thinking
+      ? [
+          {
+            createdAt: 0,
+            updatedAt: 0,
+            text: thinking,
+            id: 'thinking',
+            type: 'thinking' as const
+          }
+        ]
+      : []),
+    ...details.map((detail) => ({
+      detail,
+      id: detail.id,
+      type: 'detail' as const
+    }))
+  ];
+};
+
+export const hasActivityDetails = (details: TurnDetail[], thinking: string, items: TurnActivityItem[] = []) =>
+  activityPanelItems(details, thinking, items).length > 0;
 
 export const detailCount = (detail: TurnDetail) => (detail.count > 1 ? ` ×${detail.count}` : '');
 

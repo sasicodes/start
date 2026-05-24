@@ -5,12 +5,12 @@ import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { Workspace } from '@renderer/shared/composer/workspace';
-import { Finder, type FinderItem, finderItemId } from '@renderer/shared/finder';
-import { activeFinderToken, activeSkillToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
+import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
+import { activeFinderToken, activeSlashCommandToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { useFinderItems } from '@renderer/shared/use-finder-items';
-import { useSkillItems } from '@renderer/shared/skills';
+import { useSlashCommandItems } from '@renderer/shared/slash-commands';
 import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
@@ -18,9 +18,9 @@ import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface FinderSelection {
-  items: FinderItem[];
-  query: string;
   index: number;
+  query: string;
+  items: FinderItem[];
 }
 
 export const Composer = memo(
@@ -80,12 +80,13 @@ export const Composer = memo(
     );
 
     const finderToken = useMemo(() => activeFinderToken(draft), [draft]);
-    const skillToken = useMemo(() => activeSkillToken(draft), [draft]);
+    const slashCommandToken = useMemo(() => activeSlashCommandToken(draft), [draft]);
     const fileItems: FinderItem[] = useFinderItems(finderToken);
-    const skillItems: FinderItem[] = useSkillItems(skillToken);
-    const finderItems: FinderItem[] = skillToken ? skillItems : fileItems;
-    const finderQuery = skillToken?.query.trim().toLowerCase() ?? finderToken?.query.trim().toLowerCase() ?? '';
-    const finderVisible = Boolean(finderToken || skillToken);
+    const commandItems: FinderItem[] = useSlashCommandItems(slashCommandToken);
+    const finderItems: FinderItem[] = slashCommandToken ? commandItems : fileItems;
+    const finderQuery = (slashCommandToken?.query ?? finderToken?.query ?? '').trim().toLowerCase();
+    const finderStart = slashCommandToken?.start ?? finderToken?.start ?? 0;
+    const finderVisible = Boolean(finderToken || slashCommandToken);
     const hasAttachments = attachments.length > 0;
     const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
     const defaultFinderIndex = useMemo(() => {
@@ -97,6 +98,7 @@ export const Composer = memo(
         ? finderSelection.index
         : defaultFinderIndex;
     const selectedFinderItem = finderItems[activeFinderIndex] ?? finderItems[0];
+    const selectedFinderKey = selectedFinderItem ? finderItemKey(selectedFinderItem) : '';
     const centered = overlay || !hasTurns;
     const layered = hasAttachments || (!singleLine && isMultiline);
     const promptPlaceholder = usePromptPlaceholder({ centered, draft, hasTurns, isCommandMode });
@@ -128,12 +130,14 @@ export const Composer = memo(
     }, [draft, singleLine, updateTextareaLayout]);
 
     const completeFinderItem = (item: FinderItem, enterDirectory: boolean) => {
-      if (skillToken) {
-        onDraftChange(`${draft.slice(0, skillToken.start)}/${item.path} `);
+      if (slashCommandToken) {
+        if (item.type !== 'command') return;
+        onDraftChange(`${draft.slice(0, slashCommandToken.start)}/${item.name} `);
         return;
       }
 
       if (!finderToken) return;
+      if (item.type === 'command') return;
 
       const suffix = item.type === 'directory' && enterDirectory ? '/' : ' ';
       const nextToken = `${finderTokenPrefix(finderToken.marker)}${item.path}${suffix}`;
@@ -170,9 +174,9 @@ export const Composer = memo(
         return;
       }
 
-      if (event.key === 'Escape' && (finderToken || skillToken)) {
+      if (event.key === 'Escape' && (finderToken || slashCommandToken)) {
         event.preventDefault();
-        onDraftChange(draft.slice(0, (skillToken ?? finderToken)?.start ?? 0));
+        onDraftChange(draft.slice(0, finderStart));
         return;
       }
 
@@ -222,10 +226,10 @@ export const Composer = memo(
         {!centered && <ScrollToBottom />}
         <Finder
           items={finderItems}
-          emptyLabel={skillToken ? 'No matching skills' : 'No matching items'}
-          activePath={selectedFinderItem?.path}
+          emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
+          activeItemKey={selectedFinderKey}
           visible={finderVisible}
-          ariaLabel={skillToken ? 'Skills' : 'Project files'}
+          ariaLabel={slashCommandToken ? 'Slash commands' : 'Project files'}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
         />
         <Queue
@@ -276,7 +280,7 @@ export const Composer = memo(
                 onKeyDown={handleKeyDown}
                 layered={layered}
                 placeholder={promptPlaceholder.placeholder}
-                {...(selectedFinderItem ? { activeDescendant: finderItemId(selectedFinderItem.path) } : {})}
+                {...(selectedFinderKey ? { activeDescendant: finderItemId(selectedFinderKey) } : {})}
               />
             </div>
             <div class={tw('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>

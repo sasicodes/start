@@ -42,6 +42,7 @@
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
 - Avoid placeholder ternaries such as `condition ? '' : value`; split branches or extract helpers so each path computes only what it uses.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
+- For small icon-only controls, keep the visual size stable and expand the clickable hit area with a pseudo-element such as `before:absolute before:-inset-2` when precision clicking would be frustrating.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
 - The app description is `your coding assistant`
 - The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.

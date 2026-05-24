@@ -1,5 +1,7 @@
 import { sendToRendererWindows } from '@main/window';
-import { BrowserWindow } from 'electron';
+import electron from 'electron';
+
+const { BrowserWindow } = electron;
 
 type AppFocusListener = (focused: boolean) => void;
 

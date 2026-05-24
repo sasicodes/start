@@ -1,19 +1,19 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
-import { countLabel } from '@main/details';
+import { countLabel, stringValue, textContent } from '@main/details';
 import { toolEventDetail } from '@main/tool-details';
 import type { ChatEvent } from '@main/types';
 
 const metadataEvent = (key: string, title: string, state: ChatEvent['state'] = 'done'): ChatEvent => ({
   key,
-  kind: 'metadata',
+  state,
   title,
-  state
+  kind: 'metadata'
 });
 
 const errorEvent = (key: string, title: string): ChatEvent => ({
   key,
-  kind: 'error',
   title,
+  kind: 'error',
   state: 'error'
 });
 
@@ -38,10 +38,25 @@ const streamDetail = (event: Extract<AgentSessionEvent, { type: 'message_update'
 
   return toolEventDetail({
     state: 'active',
+    toolName: update.toolCall.name,
     args: update.toolCall.arguments,
-    key: `tool:${update.toolCall.id}`,
-    toolName: update.toolCall.name
+    key: `tool:${update.toolCall.id}`
   });
+};
+
+const customMessageEvent = (event: Extract<AgentSessionEvent, { type: 'message_end' }>) => {
+  const message = event.message;
+  if (message.role !== 'custom') return;
+  if (!message.display) return;
+
+  const body = textContent(message.content);
+  if (!body) return;
+
+  const customMessageType = stringValue(message.customType);
+  const result = metadataEvent(`custom:${customMessageType || 'message'}:${message.timestamp}`, 'Agent message');
+  if (customMessageType) result.detail = customMessageType;
+  result.body = body;
+  return result;
 };
 
 export type ChatEventContext = {
@@ -62,10 +77,10 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
     case 'tool_execution_update':
       return toolEventDetail({
         args: event.args,
-        result: event.partialResult,
         state: 'active',
         toolName: event.toolName,
-        key: `tool:${event.toolCallId}`
+        key: `tool:${event.toolCallId}`,
+        result: event.partialResult
       });
     case 'tool_execution_end':
       return toolEventDetail({
@@ -111,9 +126,10 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
       return withDetail(metadataEvent('session-info', 'Renamed session'), event.name ?? 'Untitled');
     case 'thinking_level_changed':
       return withMetric(metadataEvent('thinking-level', 'Changed thinking level'), event.level);
+    case 'message_end':
+      return customMessageEvent(event);
     case 'agent_end':
     case 'agent_start':
-    case 'message_end':
     case 'message_start':
     case 'turn_end':
     case 'turn_start':

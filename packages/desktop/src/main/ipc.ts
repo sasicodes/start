@@ -8,14 +8,17 @@ import {
 import type { ChatService } from '@main/chat';
 import type { withComposerBlurSuppressed } from '@main/window';
 import { openWorkspaceDialogOptions, rememberWorkspaceBookmark } from '@main/workspace/access';
-import { BrowserWindow, dialog, ipcMain, type WebContents } from 'electron';
+import type { WebContents } from 'electron';
+import electron from 'electron';
+
+const { BrowserWindow, dialog, ipcMain } = electron;
 
 interface ChatIpcOptions {
   chat: ChatService;
-  startNewSession: () => Promise<void>;
   notifyStatusChanged: () => void;
-  withComposerBlurSuppressed: typeof withComposerBlurSuppressed;
+  startNewSession: () => Promise<void>;
   watchRecentSessions: (workspacePath?: string) => void;
+  withComposerBlurSuppressed: typeof withComposerBlurSuppressed;
   notifyRecentSessionsChanged: (workspacePath?: string) => void;
   withCachedWorkspace: <T extends { status?: { workspacePath: string } }>(result: T) => Promise<T>;
 }
@@ -62,6 +65,7 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:tabs', () => chat.getTabs());
   ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
   ipcMain.handle('chat:models', () => chat.getModels());
+  ipcMain.handle('chat:slash-commands', () => chat.getSlashCommands());
   ipcMain.handle('chat:send', async (event, prompt: string, attachments = []) => {
     const result = await chat.send(prompt, event.sender as WebContents, attachments);
     trackStatusAnalyticsEvent('prompt_sent', {

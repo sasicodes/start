@@ -16,7 +16,8 @@ const fallbackText = (turn: Turn) => {
 
 const supplementOnlyRoles = new Set<Turn['role']>(['event', 'terminal', 'assistant']);
 
-const hasSupplement = (turn: Turn) => Boolean(turn.thinking) || Boolean(turn.details?.length);
+const hasSupplement = (turn: Turn) =>
+  Boolean(turn.thinking) || Boolean(turn.details?.length) || Boolean(turn.activityItems?.length);
 
 const shouldShowBody = (turn: Turn) =>
   Boolean(turn.text) || (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
@@ -75,8 +76,8 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 });
 
 interface TurnArticleProps {
-  activityPanelOpen: boolean;
   turn: Turn;
+  activityPanelOpen: boolean;
   onOpenActivityPanel: (turnId: string) => void;
 }
 
@@ -86,6 +87,7 @@ interface TurnArticleByIdProps extends Omit<TurnArticleProps, 'turn'> {
 
 export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn }: TurnArticleProps) => {
   const details = turn.details ?? [];
+  const items = turn.activityItems ?? [];
   const thinking = turn.thinking ?? '';
   const isUser = turn.role === 'user';
   const isEvent = turn.role === 'event';
@@ -106,11 +108,12 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
       )}
     >
       <TurnDetails
-        createdAt={turn.createdAt}
+        items={items}
         details={details}
-        panelOpen={activityPanelOpen}
         thinking={thinking}
+        createdAt={turn.createdAt}
         working={activityWorking}
+        panelOpen={activityPanelOpen}
         onOpenPanel={openActivityPanel}
       />
       <TurnBody turn={turn} />

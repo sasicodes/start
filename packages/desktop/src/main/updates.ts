@@ -1,7 +1,9 @@
 import { trackAnalyticsEvent } from '@main/analytics';
 import { getAppFocusState, onAppFocusChanged } from '@main/focus';
 import { sendToRendererWindows } from '@main/window';
-import { app, ipcMain } from 'electron';
+import electron from 'electron';
+
+const { app, ipcMain } = electron;
 import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
@@ -44,10 +46,12 @@ const updateErrorMessage = (error: unknown, fallback: string) =>
 
 const updateIsReadyToInstall = () => state.status === 'downloaded';
 
-const canCheckForUpdates = () =>
-  app.isPackaged && getAppFocusState().focused && !downloadPending && !updateIsReadyToInstall();
+const canRequestUpdateCheck = () => app.isPackaged && !downloadPending && !updateIsReadyToInstall();
 
-const canStartUpdateCheck = () => canCheckForUpdates() && !checking;
+const canCheckForUpdates = () => canRequestUpdateCheck() && getAppFocusState().focused;
+
+const canStartUpdateCheck = (requireFocus = true) =>
+  (requireFocus ? canCheckForUpdates() : canRequestUpdateCheck()) && !checking;
 
 const nextUpdateCheckDelay = () => {
   if (!lastUpdateCheckStartedAt) return updateCheckDelayMs;
@@ -67,8 +71,8 @@ const scheduleNextUpdateCheck = () => {
   updateCheckTimer.unref();
 };
 
-const checkForUpdates = async () => {
-  if (!canStartUpdateCheck()) return;
+const checkForUpdates = async (requireFocus = true) => {
+  if (!canStartUpdateCheck(requireFocus)) return;
 
   checking = true;
   lastUpdateCheckStartedAt = Date.now();
@@ -89,6 +93,8 @@ const checkForUpdatesInBackground = () => {
     scheduleNextUpdateCheck();
   });
 };
+
+export const checkForUpdatesNow = () => checkForUpdates(false);
 
 const updateCheckScheduleForFocus = (focused: boolean) => {
   if (focused) {

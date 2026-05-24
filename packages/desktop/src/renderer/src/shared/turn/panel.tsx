@@ -8,17 +8,17 @@ interface ActivityPanelProps {
 }
 
 export const ActivityPanel = memo(({ turnId }: ActivityPanelProps) => {
-  const signal = turnSignal(turnId);
-  const turn = signal?.value;
+  const turn = turnSignal(turnId)?.value;
   const details = turn?.details ?? [];
   const thinking = turn?.thinking ?? '';
+  const items = turn?.activityItems ?? [];
 
-  if (!hasActivityDetails(details, thinking)) return null;
+  if (!hasActivityDetails(details, thinking, items)) return null;
 
   return (
     <div class="min-h-full outline-0">
       <div class="p-4">
-        <ActivityItems details={details} thinking={thinking} />
+        <ActivityItems items={items} details={details} thinking={thinking} />
       </div>
     </div>
   );

@@ -14,8 +14,7 @@ import {
   validateAccelerator,
   writeAppSettings
 } from '@main/settings';
-import { listSkills } from '@main/skills';
-import { registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
+import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   createMainWindow,
   hideComposerWindow,
@@ -28,7 +27,9 @@ import {
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
-import { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
+import electron from 'electron';
+
+const { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
 
@@ -96,6 +97,7 @@ const menuActions = () => ({
   onShowSettings: showSettings,
   onQuickAccess: () => toggleQuickAccess('menu'),
   onNewSession: () => void startNewSession('menu'),
+  onCheckForUpdates: () => void checkForUpdatesNow(),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
 
@@ -136,7 +138,6 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
     listRootItems(relativePath, scope, chat.getWorkspaceCwd())
   );
-  ipcMain.handle('app:list-skills', () => listSkills(chat.getWorkspaceCwd()));
   ipcMain.handle('app:git-changes', (_event, workspacePath?: string) =>
     getGitChangeSummary(workspacePath ?? chat.getWorkspaceCwd())
   );

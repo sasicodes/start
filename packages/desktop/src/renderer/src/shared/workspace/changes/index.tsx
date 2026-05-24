@@ -92,8 +92,8 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
 
 export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
-  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('split');
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
+  const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
   const patch = useGitPatch(path, Boolean(path && diffReady));
 
   useEffect(() => {
@@ -129,7 +129,7 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
   return (
     <div class="flex min-h-full flex-col gap-4 outline-0">
       {patch.kind === 'ready' && (
-        <header class="flex items-center justify-between gap-3 px-4 pt-4 text-sm leading-6 font-medium">
+        <header class="sticky top-0 z-20 flex items-center justify-between gap-3 bg-canvas/80 px-4 pt-4 text-sm leading-6 font-medium backdrop-blur-md">
           <button
             type="button"
             disabled={!canCycle}
@@ -152,9 +152,9 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
               aria-pressed={!splitDiffView}
               aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
               onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
-              class="group/diff-view inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+              class="group/diff-view relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
             >
-              <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', !splitDiffView && 'rotate-90')} />
+              <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
             </button>
           </div>
         </header>

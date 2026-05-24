@@ -3,37 +3,39 @@ import type { AppSurface } from '@renderer/app/types';
 import { sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
 import { useRef, useEffect, useCallback } from 'preact/hooks';
 
-interface SessionRoutingOptions {
+interface SessionRouteOptions {
   route: AppRoute;
+  disabled: boolean;
   surface: AppSurface;
-  activeSessionId: string;
   loadedSessionId: string;
+  activeSessionId: string;
   closeSidePanel: () => void;
   navigate: (route: AppRoute, replace?: boolean) => void;
-  openSession: (path: string) => Promise<boolean>;
   openSessionId: (sessionId: string) => Promise<boolean>;
 }
 
-export const useSessionRouting = ({
+export const useSessionRoute = ({
   route,
+  disabled,
   surface,
   navigate,
-  openSession,
   openSessionId,
-  activeSessionId,
+  closeSidePanel,
   loadedSessionId,
-  closeSidePanel
-}: SessionRoutingOptions) => {
+  activeSessionId
+}: SessionRouteOptions) => {
   const selectingSessionRef = useRef(false);
   const openingRouteSessionRef = useRef('');
 
   useEffect(() => {
+    if (disabled) return;
     if (surface === 'composer') return;
     if (route.name !== 'chat' || !activeSessionId) return;
     navigate({ name: 'session', sessionId: activeSessionId }, true);
-  }, [activeSessionId, navigate, route.name, surface]);
+  }, [activeSessionId, disabled, navigate, route.name, surface]);
 
   useEffect(() => {
+    if (disabled) return;
     if (surface === 'composer') return;
     if (route.name !== 'session') return;
     if (selectingSessionRef.current) return;
@@ -63,7 +65,7 @@ export const useSessionRouting = ({
       active = false;
       if (openingRouteSessionRef.current === sessionId) openingRouteSessionRef.current = '';
     };
-  }, [closeSidePanel, loadedSessionId, navigate, openSessionId, route, surface]);
+  }, [closeSidePanel, disabled, loadedSessionId, navigate, openSessionId, route, surface]);
 
   return useCallback(
     async (session: RecentSession) => {
@@ -74,7 +76,7 @@ export const useSessionRouting = ({
       navigate(nextRoute, true);
 
       try {
-        const opened = await openSession(session.path);
+        const opened = await openSessionId(session.id);
         if (opened) return true;
         if (sameRoute(currentRoute(), nextRoute)) navigate({ name: 'chat' }, true);
         return false;
@@ -83,6 +85,6 @@ export const useSessionRouting = ({
         selectingSessionRef.current = false;
       }
     },
-    [closeSidePanel, navigate, openSession]
+    [closeSidePanel, navigate, openSessionId]
   );
 };
