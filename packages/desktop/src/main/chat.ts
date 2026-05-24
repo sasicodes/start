@@ -795,14 +795,16 @@ export class ChatService {
   async command(command: string, excludeFromContext: boolean, webContents: WebContents): Promise<CommandResult> {
     const text = command.trim();
     if (!text) return { ok: false, error: 'Command is empty.' };
-    const session = await this.getSession();
-    const runtimeState = this.runtimeStateForSession(session);
-    if (this.sessionIsGenerating(session)) return { ok: false, error: 'A response is already running.' };
-
-    runtimeState.isGenerating = true;
+    let runtimeState: SessionRuntimeState | null = null;
 
     try {
+      const session = await this.getSession();
+      runtimeState = this.runtimeStateForSession(session);
+      if (runtimeState.isGenerating || session.isStreaming)
+        return { ok: false, error: 'A response is already running.' };
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
+
+      runtimeState.isGenerating = true;
 
       const result = await session.executeBash(
         text,
@@ -824,7 +826,7 @@ export class ChatService {
       const message = error instanceof Error ? error.message : 'Command failed.';
       return { ok: false, error: message };
     } finally {
-      runtimeState.isGenerating = false;
+      if (runtimeState) runtimeState.isGenerating = false;
     }
   }
 
@@ -870,9 +872,12 @@ export class ChatService {
 
   async newSession(): Promise<void> {
     this.sessionOpenSequence += 1;
-    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+    const previousSession = this.session;
+    if (previousSession) {
+      this.clearQueuedMessages(undefined, this.runtimeStateForSession(previousSession));
+      this.storeBackgroundSession(this.workspaceCwd, previousSession);
+    }
     this.session = null;
-    this.clearActiveQueuedMessageState();
     this.attachments.clear();
     this.activeSessionId = '';
     this.shouldCreateSession = true;
@@ -1070,10 +1075,6 @@ export class ChatService {
 
     this.clearQueuedMessageState(runtimeState);
     if (webContents) this.emitQueueUpdate(webContents);
-  }
-
-  private clearActiveQueuedMessageState(): void {
-    this.clearQueuedMessageState(this.activeRuntimeState());
   }
 
   private clearQueuedMessageState(runtimeState = this.activeRuntimeState()): void {
