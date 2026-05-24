@@ -67,19 +67,8 @@ export const isProviderModel = (model: { provider: string; id: string; name?: st
   return haystack.includes('anthropic') || haystack.includes('claude');
 };
 
-const allowedLatestOpenAiModelIds = [
-  'gpt-5.5-pro',
-  'gpt-5.5',
-  'gpt-5.4-pro',
-  'gpt-5.4',
-  'gpt-5.3-codex-spark'
-];
-const allowedLatestAnthropicModelIds = [
-  'claude-opus-4-7',
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5'
-];
+const allowedLatestOpenAiModelIds = ['gpt-5.5-pro', 'gpt-5.5', 'gpt-5.4-pro', 'gpt-5.4', 'gpt-5.3-codex-spark'];
+const allowedLatestAnthropicModelIds = ['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
 
 const allowedLatestOpenAiModelIdSet = new Set(allowedLatestOpenAiModelIds);
 const allowedLatestAnthropicModelIdSet = new Set(allowedLatestAnthropicModelIds);
