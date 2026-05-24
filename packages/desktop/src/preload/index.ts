@@ -277,14 +277,9 @@ const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload
   return () => ipcRenderer.removeListener(channel, handler);
 };
 
-export type AppPlatform = 'linux' | 'win32' | 'darwin';
-
-const detectedPlatform: AppPlatform =
-  process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux';
-
 const api = {
   app: {
-    platform: detectedPlatform,
+    platform: process.platform,
     focusState: (): Promise<AppFocusState> => ipcRenderer.invoke('app:focus-state'),
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
