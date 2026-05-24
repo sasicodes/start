@@ -289,6 +289,7 @@ const api = {
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),
     showMain: (): Promise<void> => ipcRenderer.invoke('app:show-main'),
     openSettings: (): Promise<void> => ipcRenderer.invoke('app:open-settings'),
+    openShortcuts: (): Promise<void> => ipcRenderer.invoke('app:open-shortcuts'),
     submitComposer: (prompt: string, attachments: ImageAttachment[] = []): Promise<void> =>
       ipcRenderer.invoke('app:submit-composer', prompt, attachments),
     onShowComposer: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-composer', listener),
@@ -299,6 +300,7 @@ const api = {
     onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>
       onIpc<[UpdateState]>('app:update-state-changed', listener),
     onShowSettings: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-settings', listener),
+    onShowShortcuts: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-shortcuts', listener),
     onSubmitComposer: (listener: (prompt: string, attachments: ImageAttachment[]) => void): IpcDisposer =>
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>
         listener(prompt, attachments)

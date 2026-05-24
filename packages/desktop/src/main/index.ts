@@ -66,6 +66,10 @@ const showSettings = () => {
   sendToMainWindow('app:show-settings');
 };
 
+const showShortcuts = () => {
+  sendToMainWindow('app:show-shortcuts');
+};
+
 const toggleQuickAccess = (source: 'menu' | 'shortcut') => {
   trackAnalyticsEvent('quick_access_toggled', {
     source,
@@ -97,6 +101,7 @@ const registerComposerShortcut = (accelerator: string) => {
 
 const menuActions = () => ({
   onShowSettings: showSettings,
+  onShowShortcuts: showShortcuts,
   onQuickAccess: () => toggleQuickAccess('menu'),
   onNewSession: () => void startNewSession('menu'),
   onCheckForUpdates: () => void checkForUpdatesNow(),
@@ -161,6 +166,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:open-settings', () => {
     hideComposerWindow({ keepAppActive: true });
     showSettings();
+  });
+  ipcMain.handle('app:open-shortcuts', () => {
+    hideComposerWindow({ keepAppActive: true });
+    showShortcuts();
   });
   ipcMain.handle('app:open-path', (_event, path: string) => shell.openPath(path));
   ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {

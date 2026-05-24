@@ -32,6 +32,7 @@ export const App = () => {
     closeSidePanel,
     openActivityPanel,
     openSettingsPanel,
+    openShortcutsPanel,
     activityPanelVisible,
     settingsPanelVisible,
     renderedSidePanelMode,
@@ -48,6 +49,16 @@ export const App = () => {
     setSurface('main');
     openSettingsPanel();
   }, [openSettingsPanel, setSurface, surface]);
+
+  const showShortcuts = useCallback(() => {
+    if (surface === 'composer') {
+      void window.pi.app.openShortcuts().catch(() => {});
+      return;
+    }
+
+    setSurface('main');
+    openShortcutsPanel();
+  }, [openShortcutsPanel, setSurface, surface]);
 
   const toggleSettings = useCallback(() => {
     setSurface('main');
@@ -249,6 +260,11 @@ export const App = () => {
 
   useAppHotkey(appHotkeys.newChat, () => startNewSession());
   useAppHotkey(appHotkeys.settings, () => showSettings());
+  useAppHotkey(appHotkeys.shortcuts, () => showShortcuts());
+
+  useEffect(() => {
+    return window.pi.app.onShowShortcuts(showShortcuts);
+  }, [showShortcuts]);
 
   const renderComposer = (overlay: boolean, hasTurns: boolean) => (
     <Composer
