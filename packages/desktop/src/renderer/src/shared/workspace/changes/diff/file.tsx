@@ -1,5 +1,8 @@
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
+import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
+import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
+import { Reveal } from '@renderer/shared/workspace/changes/diff/reveal';
 import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { ArrowUpIcon, ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
@@ -7,6 +10,7 @@ import { memo } from 'preact/compat';
 import { useState } from 'preact/hooks';
 
 interface DiffFileProps {
+  cwd: string;
   file: PatchFile;
   language: string;
   status: DiffFileStatus;
@@ -62,11 +66,15 @@ const fileHasPathChange = (file: PatchFile) => Boolean(file.oldPath && file.newP
 
 const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
 
-const fileOpenByDefault = (file: PatchFile) => fileHasTextDiff(file) && file.added + file.removed <= 320;
+const fileOpenByDefault = (file: PatchFile, kind: PatchFileKind) =>
+  kind === 'image' || (fileHasTextDiff(file) && file.added + file.removed <= 320);
 
-const emptyFileMessage = (file: PatchFile) => {
-  if (fileHasPathChange(file)) return 'File renamed without changes.';
+const fallbackMessage = (file: PatchFile, kind: PatchFileKind) => {
+  if (kind === 'submodule') return 'Submodule pointer changed.';
+  if (kind === 'symlink') return 'Symlink target changed.';
+  if (kind === 'mode-only') return `Permissions changed (${file.oldMode} → ${file.newMode}).`;
   if (file.isBinary) return 'Binary file changed.';
+  if (fileHasPathChange(file)) return 'File renamed without changes.';
   return 'No text diff to show.';
 };
 
@@ -96,12 +104,39 @@ const FileTitle = ({ file }: FileProps) =>
     <span class="min-w-0 truncate text-sm leading-5 font-medium text-ink">{file.displayPath}</span>
   );
 
-const EmptyFileDiff = ({ file }: FileProps) => (
-  <p class="m-0 px-4 py-4 text-center font-sans text-sm leading-6 text-soft">{emptyFileMessage(file)}</p>
+const FallbackDiff = ({ cwd, file, kind }: { cwd: string; file: PatchFile; kind: PatchFileKind }) => (
+  <div class="flex flex-wrap items-center justify-center gap-2 px-4 py-4 font-sans text-sm leading-6 text-soft">
+    <span>{fallbackMessage(file, kind)}</span>
+    <Reveal cwd={cwd} filePath={file.newPath || file.oldPath} />
+  </div>
 );
 
-export const DiffFile = memo(({ file, highlightRevision, language, status, viewMode }: DiffFileProps) => {
-  const [open, setOpen] = useState(() => fileOpenByDefault(file));
+const DiffBody = ({
+  cwd,
+  file,
+  highlightRevision,
+  kind,
+  language,
+  status,
+  viewMode
+}: {
+  cwd: string;
+  file: PatchFile;
+  highlightRevision: number;
+  kind: PatchFileKind;
+  language: string;
+  status: DiffFileStatus;
+  viewMode: DiffViewMode;
+}) => {
+  if (kind === 'image') return <ImageDiff cwd={cwd} file={file} status={status} />;
+  if (fileHasTextDiff(file))
+    return <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />;
+  return <FallbackDiff cwd={cwd} file={file} kind={kind} />;
+};
+
+export const DiffFile = memo(({ cwd, file, highlightRevision, language, status, viewMode }: DiffFileProps) => {
+  const kind = patchFileKind(file);
+  const [open, setOpen] = useState(() => fileOpenByDefault(file, kind));
 
   return (
     <section class="min-w-0 border-t border-line [contain-intrinsic-size:180px] [content-visibility:auto]">
@@ -125,12 +160,17 @@ export const DiffFile = memo(({ file, highlightRevision, language, status, viewM
           />
         </div>
       </button>
-      {open &&
-        (fileHasTextDiff(file) ? (
-          <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />
-        ) : (
-          <EmptyFileDiff file={file} />
-        ))}
+      {open && (
+        <DiffBody
+          cwd={cwd}
+          file={file}
+          highlightRevision={highlightRevision}
+          kind={kind}
+          language={language}
+          status={status}
+          viewMode={viewMode}
+        />
+      )}
     </section>
   );
 });
