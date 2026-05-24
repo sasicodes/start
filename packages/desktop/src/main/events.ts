@@ -1,5 +1,5 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
-import { countLabel } from '@main/details';
+import { countLabel, stringValue, textContent } from '@main/details';
 import { toolEventDetail } from '@main/tool-details';
 import type { ChatEvent } from '@main/types';
 
@@ -42,6 +42,20 @@ const streamDetail = (event: Extract<AgentSessionEvent, { type: 'message_update'
     key: `tool:${update.toolCall.id}`,
     toolName: update.toolCall.name
   });
+};
+
+const customMessageEvent = (event: Extract<AgentSessionEvent, { type: 'message_end' }>) => {
+  const message = event.message;
+  if (message.role !== 'custom') return;
+  if (!message.display) return;
+
+  const body = textContent(message.content);
+  if (!body) return;
+
+  const customType = stringValue(message.customType) || 'custom';
+  const result = metadataEvent(`custom:${customType}:${message.timestamp}`, customType);
+  result.body = body;
+  return result;
 };
 
 export type ChatEventContext = {
@@ -111,9 +125,10 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
       return withDetail(metadataEvent('session-info', 'Renamed session'), event.name ?? 'Untitled');
     case 'thinking_level_changed':
       return withMetric(metadataEvent('thinking-level', 'Changed thinking level'), event.level);
+    case 'message_end':
+      return customMessageEvent(event);
     case 'agent_end':
     case 'agent_start':
-    case 'message_end':
     case 'message_start':
     case 'turn_end':
     case 'turn_start':
