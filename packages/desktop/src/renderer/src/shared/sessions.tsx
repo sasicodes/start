@@ -8,18 +8,27 @@ import { memo } from 'preact/compat';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 const sessionPageSize = 15;
+const sessionPrefetchDistance = 220;
 
-const EmptySessions = () => <div class="px-3 py-8 text-center text-sm text-soft">No recent sessions</div>;
-
-const SessionRow = ({
-  active,
-  onOpen,
-  session
-}: {
+interface SessionRowProps {
   active: boolean;
   session: RecentSession;
   onOpen: (session: RecentSession) => void;
-}) => (
+}
+
+interface SessionRowsProps {
+  activeSessionId: string;
+  sessions: RecentSession[];
+  onOpenSession: (session: RecentSession) => Promise<boolean>;
+}
+
+interface RecentSessionsProps {
+  workspacePath: string;
+  activeSessionId: string;
+  onOpenSession: (session: RecentSession) => Promise<boolean>;
+}
+
+const SessionRow = ({ active, onOpen, session }: SessionRowProps) => (
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
@@ -35,100 +44,65 @@ const SessionRow = ({
   </AppMenu.Item>
 );
 
-const SessionRows = ({
-  loaded,
-  sessions,
-  activeSessionId,
-  onOpenSession
-}: {
-  loaded: boolean;
-  activeSessionId: string;
-  sessions: RecentSession[];
-  onOpenSession: (session: RecentSession) => Promise<boolean>;
-}) => {
-  if (!loaded) return null;
-  if (sessions.length === 0) return <EmptySessions />;
-
-  return sessions.map((session) => (
+const SessionRows = ({ activeSessionId, onOpenSession, sessions }: SessionRowsProps) =>
+  sessions.map((session) => (
     <SessionRow
       key={session.id}
-      session={session}
       active={session.id === activeSessionId}
+      session={session}
       onOpen={(session) => void onOpenSession(session)}
     />
   ));
-};
 
-interface RecentSessionsProps {
-  workspacePath: string;
-  activeSessionId: string;
-  onOpenSession: (session: RecentSession) => Promise<boolean>;
-}
-
-export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
+export const RecentSessions = memo(({ activeSessionId, onOpenSession, workspacePath }: RecentSessionsProps) => {
   const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
-  const [open, setOpen] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [sessions, setSessions] = useState<RecentSession[]>([]);
-  const [hasMoreSessions, setHasMoreSessions] = useState(false);
   const loadingMoreRef = useRef(false);
   const loadedCountRef = useRef(0);
+  const [open, setOpen] = useState(false);
+  const [sessions, setSessions] = useState<RecentSession[]>([]);
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
 
   const loadSessions = useCallback(
-    async (showLoading = false, limit = sessionPageSize) => {
+    async (limit = sessionPageSize) => {
       const requestId = sessionsRequestRef.current + 1;
       sessionsRequestRef.current = requestId;
-      if (showLoading) setLoaded(false);
 
       try {
         const page = await window.pi.chat.recentSessionsPage({ limit, ...(workspacePath ? { workspacePath } : {}) });
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
+
         loadedCountRef.current = page.sessions.length;
         setSessions(page.sessions);
         setHasMoreSessions(page.hasMore);
       } catch {
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
+
         loadedCountRef.current = 0;
         setSessions([]);
         setHasMoreSessions(false);
-      } finally {
-        if (mountedRef.current && sessionsRequestRef.current === requestId) setLoaded(true);
       }
     },
     [workspacePath]
   );
 
-  const updateOpen = useCallback(
-    (nextOpen: boolean) => {
-      if (nextOpen) void loadSessions(false, Math.max(sessionPageSize, loadedCountRef.current));
-      setOpen(nextOpen);
-    },
-    [loadSessions]
-  );
-
-  const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
-
-  const hasNotice = sessions.some((session) => session.noticeKind);
-
   const loadMoreSessions = useCallback(async () => {
-    const lastSession = sessions.at(-1);
-    if (!hasMoreSessions || !lastSession || loadingMoreRef.current) return;
+    if (!hasMoreSessions || loadingMoreRef.current) return;
 
     loadingMoreRef.current = true;
     const requestId = sessionsRequestRef.current;
+    const offset = sessions.length;
+
     try {
       const page = await window.pi.chat.recentSessionsPage({
+        offset,
         limit: sessionPageSize,
-        cursor: `${lastSession.modified}:${lastSession.id}`,
         ...(workspacePath ? { workspacePath } : {})
       });
       if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
       setSessions((currentSessions) => {
-        const sessionsById = new Map(currentSessions.map((session) => [session.id, session]));
-        for (const session of page.sessions) sessionsById.set(session.id, session);
-        const nextSessions = [...sessionsById.values()];
+        const nextSessions = [...currentSessions, ...page.sessions];
         loadedCountRef.current = nextSessions.length;
         return nextSessions;
       });
@@ -137,7 +111,15 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
     } finally {
       loadingMoreRef.current = false;
     }
-  }, [hasMoreSessions, sessions, workspacePath]);
+  }, [hasMoreSessions, sessions.length, workspacePath]);
+
+  const updateOpen = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
+      setOpen(nextOpen);
+    },
+    [loadSessions]
+  );
 
   const handleSessionsScroll = useCallback(
     (event: Event) => {
@@ -145,12 +127,16 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
 
       const element = event.currentTarget;
       if (!(element instanceof HTMLElement)) return;
-      if (element.scrollHeight - element.scrollTop - element.clientHeight > 80) return;
+      if (element.scrollHeight - element.scrollTop - element.clientHeight > sessionPrefetchDistance) return;
 
       void loadMoreSessions();
     },
     [hasMoreSessions, loadMoreSessions]
   );
+
+  const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
+
+  const hasNotice = sessions.some((session) => session.noticeKind);
 
   useEffect(() => {
     return () => {
@@ -160,13 +146,13 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   }, []);
 
   useEffect(() => {
-    void loadSessions(true);
+    void loadSessions();
   }, [loadSessions]);
 
   useEffect(() => {
     const refreshOnChange = (event: RecentSessionsChanged) => {
       if (workspacePath && event.workspacePath && event.workspacePath !== workspacePath) return;
-      void loadSessions(false, Math.max(sessionPageSize, loadedCountRef.current));
+      void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
     };
 
     return window.pi.chat.onRecentSessionsChanged(refreshOnChange);
@@ -192,12 +178,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
               class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
               onScroll={handleSessionsScroll}
             >
-              <SessionRows
-                loaded={loaded}
-                sessions={sessions}
-                activeSessionId={activeSessionId}
-                onOpenSession={openSessionAndClose}
-              />
+              <SessionRows sessions={sessions} activeSessionId={activeSessionId} onOpenSession={openSessionAndClose} />
             </div>
           </MenuPanel>
         </AppMenu.Positioner>

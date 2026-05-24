@@ -125,13 +125,12 @@ export type RecentSession = {
   path: string;
   title: string;
   modified: number;
-  turnCount: number;
   noticeKind?: SessionNoticeKind;
 };
 
 export type RecentSessionsOptions = {
-  cursor?: string;
   limit?: number;
+  offset?: number;
   workspacePath?: string;
 };
 
@@ -141,8 +140,8 @@ export type RecentSessionsPage = {
 };
 
 export type ScopedChatEvent<T> = {
-  tabId: string;
   payload: T;
+  tabId: string;
   workspacePath: string;
 };
 
@@ -158,8 +157,8 @@ export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
 
 export type AgentTab = {
   id: string;
-  status: AgentTabStatus;
   sessionId?: string;
+  status: AgentTabStatus;
   workspacePath: string;
 };
 

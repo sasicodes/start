@@ -137,13 +137,12 @@ export interface RecentSession {
   path: string;
   title: string;
   modified: number;
-  turnCount: number;
   noticeKind?: SessionNoticeKind;
 }
 
 export interface RecentSessionsOptions {
-  cursor?: string;
   limit?: number;
+  offset?: number;
   workspacePath?: string;
 }
 
@@ -186,8 +185,8 @@ export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
 
 export interface AgentTab {
   id: string;
-  status: AgentTabStatus;
   sessionId?: string;
+  status: AgentTabStatus;
   workspacePath: string;
 }
 

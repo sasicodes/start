@@ -1,8 +1,6 @@
 import '@main/environment';
 
 import { randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { createInterface } from 'node:readline/promises';
 import {
   type AgentSession,
   AuthStorage,
@@ -10,6 +8,8 @@ import {
   ModelRegistry,
   SessionManager
 } from '@earendil-works/pi-coding-agent';
+import { recentSessionsPage } from '@main/chat/recents';
+import { sessionWorkspacePath, tabFromSession } from '@main/chat/tabs';
 import { textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
@@ -40,9 +40,9 @@ import {
   type ChatStatus,
   type EffortLevel,
   type CommandResult,
-  type SessionNotice,
   effortLevels,
   enabledTools,
+  type SessionNotice,
   type ImageAttachment,
   type ModelOption,
   type OpenSessionResult,
@@ -50,7 +50,6 @@ import {
   type ProviderAuthStatus,
   type ProviderLoginResult,
   type QueuedMessage,
-  type RecentSession,
   type RecentSessionsOptions,
   type RecentSessionsPage,
   type SendResult,
@@ -67,31 +66,30 @@ type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
 
-type ListedSession = Awaited<ReturnType<typeof SessionManager.list>>[number];
-
 export class ChatService {
   private appState = readStartState();
-  private readonly authStorage = AuthStorage.create();
-  private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private session: AgentSession | null = null;
   private abortSequence = 0;
   private isGenerating = false;
-  private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
-  private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
-  private queuedMessages: PendingQueuedMessage[] = [];
-  private queueDeliveryCandidates: QueuedMessage[] = [];
   private queueRebuildDepth = 0;
   private sessionOpenSequence = 0;
-  private activeSessionId: string | undefined;
   private shouldCreateSession = true;
-  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
+  private activeSessionId: string | undefined;
   private workspaceCwd = this.appState.lastWorkspace ?? process.cwd();
+  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
+  private queuedMessages: PendingQueuedMessage[] = [];
+  private queueDeliveryCandidates: QueuedMessage[] = [];
+
+  private readonly authStorage = AuthStorage.create();
+  private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
+  private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
+  private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   async getStatus(): Promise<ChatStatus> {
     this.refreshAuth();
@@ -208,21 +206,15 @@ export class ChatService {
       const sessionId = this.session.sessionManager.getSessionId();
       tabs.set(sessionId, {
         id: sessionId,
-        status: this.isGenerating ? 'generating' : 'idle',
         sessionId,
+        status: this.isGenerating ? 'generating' : 'idle',
         workspacePath: this.workspaceCwd
       });
     }
 
     for (const session of this.backgroundSessions.values()) {
       const sessionId = session.sessionManager.getSessionId();
-      const notice = this.notices.get(sessionId);
-      tabs.set(sessionId, {
-        id: sessionId,
-        status: notice?.kind ?? (session.isStreaming || session.isBashRunning ? 'generating' : 'idle'),
-        sessionId,
-        workspacePath: session.sessionManager.getCwd() || this.workspaceCwd
-      });
+      tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, this.notices.get(sessionId)));
     }
 
     return [...tabs.values()];
@@ -259,8 +251,8 @@ export class ChatService {
     const sessionId = sessionManager.getSessionId();
     return {
       id: sessionId,
-      status: 'idle',
       sessionId,
+      status: 'idle',
       workspacePath
     };
   }
@@ -316,7 +308,7 @@ export class ChatService {
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.backgroundSessions.delete(id);
     this.session = session;
-    this.workspaceCwd = session.sessionManager.getCwd() || this.workspaceCwd;
+    this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
     this.setActiveSession(session.sessionManager);
     this.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     this.shouldCreateSession = false;
@@ -330,30 +322,18 @@ export class ChatService {
     };
   }
 
-  async getRecentSessionsPage({
-    cursor = '',
-    limit = 15,
-    workspacePath = this.workspaceCwd
-  }: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
-    const sessions = await this.recentSessionRecords(workspacePath);
-    const cursorIndex = cursor ? sessions.findIndex((session) => this.recentSessionCursor(session) === cursor) : -1;
-    const pageStart = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-    const pageLimit = Math.max(1, limit);
-    const page = sessions.slice(pageStart, pageStart + pageLimit);
-
-    return {
-      sessions: await Promise.all(page.map((session) => this.recentSession(session))),
-      hasMore: pageStart + pageLimit < sessions.length
-    };
+  async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
+    const workspacePath = options.workspacePath ?? this.workspaceCwd;
+    return recentSessionsPage({ ...options, workspacePath }, this.notices);
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     folders.set(this.workspaceCwd, {
+      sessionCount: 0,
       modified: Date.now(),
       path: this.workspaceCwd,
-      sessionCount: 0,
       name: workspaceDisplayName(this.workspaceCwd),
       ...(this.workspaceHasNotice(this.workspaceCwd) ? { noticeKind: 'completed' as const } : {})
     });
@@ -370,8 +350,8 @@ export class ChatService {
       } else {
         folders.set(session.cwd, {
           modified,
-          path: session.cwd,
           sessionCount: 1,
+          path: session.cwd,
           name: workspaceDisplayName(session.cwd),
           ...(this.workspaceHasNotice(session.cwd) ? { noticeKind: 'completed' as const } : {})
         });
@@ -1039,33 +1019,6 @@ export class ChatService {
     return false;
   }
 
-  private recentSessionCursor(session: ListedSession): string {
-    return `${session.modified.getTime()}:${session.id}`;
-  }
-
-  private async recentSessionRecords(cwd: string): Promise<ListedSession[]> {
-    const sessions = await SessionManager.list(cwd);
-    const uniqueSessions = new Map<string, ListedSession>();
-
-    for (const session of sessions) uniqueSessions.set(session.id, session);
-
-    return [...uniqueSessions.values()].sort(
-      (first, second) => second.modified.getTime() - first.modified.getTime() || second.id.localeCompare(first.id)
-    );
-  }
-
-  private async recentSession(session: ListedSession): Promise<RecentSession> {
-    const notice = this.notices.get(session.id);
-    return {
-      id: session.id,
-      path: session.path,
-      modified: session.modified.getTime(),
-      turnCount: await this.userTurnCount(session.path),
-      title: session.name || session.firstMessage || 'Untitled session',
-      ...(notice ? { noticeKind: notice.kind } : {})
-    };
-  }
-
   private async getSession(): Promise<AgentSession> {
     if (this.session) return this.session;
 
@@ -1092,29 +1045,6 @@ export class ChatService {
     this.session = session;
     this.setActiveSession(sessionManager);
     return session;
-  }
-
-  private async userTurnCount(path: string): Promise<number> {
-    const lines = createInterface({
-      input: createReadStream(path, { encoding: 'utf8' }),
-      crlfDelay: Number.POSITIVE_INFINITY
-    });
-    let count = 0;
-
-    try {
-      for await (const line of lines) {
-        if (!line.trim()) continue;
-
-        try {
-          const entry = JSON.parse(line) as { type?: string; message?: { role?: string } };
-          if (entry.type === 'message' && entry.message?.role === 'user') count += 1;
-        } catch {}
-      }
-    } catch {
-      return 0;
-    }
-
-    return count;
   }
 
   private refreshAuth(): void {
