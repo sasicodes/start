@@ -277,7 +277,7 @@ const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload
   return () => ipcRenderer.removeListener(channel, handler);
 };
 
-export type AppPlatform = 'darwin' | 'linux' | 'win32';
+export type AppPlatform = 'linux' | 'win32' | 'darwin';
 
 const detectedPlatform: AppPlatform =
   process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux';

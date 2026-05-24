@@ -133,8 +133,8 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
 
 export const GitDiffViewer = ({
   cwd,
-  viewMode,
-  sections
+  sections,
+  viewMode
 }: {
   cwd: string;
   viewMode: DiffViewMode;

@@ -23,8 +23,8 @@ const wantsSide = (status: DiffFileStatus, side: 'before' | 'after', sidePath: s
 
 export const useImageBlobs = (cwd: string, file: PatchFile, status: DiffFileStatus): ImageBlobsState => {
   const [state, setState] = useState<ImageBlobsState>({ kind: 'loading' });
-  const wantBefore = wantsSide(status, 'before', file.oldPath);
   const wantAfter = wantsSide(status, 'after', file.newPath);
+  const wantBefore = wantsSide(status, 'before', file.oldPath);
 
   useEffect(() => {
     if (!cwd) {

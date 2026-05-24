@@ -111,15 +111,7 @@ const FallbackDiff = ({ cwd, file, kind }: { cwd: string; file: PatchFile; kind:
   </div>
 );
 
-const DiffBody = ({
-  cwd,
-  file,
-  kind,
-  status,
-  language,
-  viewMode,
-  highlightRevision
-}: {
+interface DiffBodyProps {
   cwd: string;
   file: PatchFile;
   language: string;
@@ -127,10 +119,12 @@ const DiffBody = ({
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
-}) => {
+}
+
+const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevision }: DiffBodyProps) => {
   if (kind === 'image') return <ImageDiff cwd={cwd} file={file} status={status} />;
   if (fileHasTextDiff(file))
-    return <DiffHunks file={file} viewMode={viewMode} language={language} highlightRevision={highlightRevision} />;
+    return <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />;
   return <FallbackDiff cwd={cwd} file={file} kind={kind} />;
 };
 
