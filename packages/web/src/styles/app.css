@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/fonts/serif.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 101%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("/fonts/serif-italic.woff2") format("woff2");
+  font-weight: 400 800;
+  font-style: italic;
+  font-display: swap;
+  ascent-override: 101%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "VT323";
+  src: url("/fonts/pixel.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 80%;
+  descent-override: 20%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/sans.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Cursive";
+  src: url("/fonts/cursive.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  ascent-override: 95%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
+@theme {
+  --font-serif: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-pixel: "VT323", "Courier New", monospace;
+  --font-cursive: "Cursive", cursive;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --color-retro-cream: oklch(0.954 0.013 93);
+  --color-retro-shell: oklch(0.942 0.015 91);
+  --color-retro-key: oklch(0.926 0.014 91);
+  --color-retro-beige: oklch(0.89 0.014 88);
+  --color-retro-bezel: oklch(0.842 0.009 75);
+  --color-retro-stone: oklch(0.796 0.013 89);
+  --color-retro-base: oklch(0.672 0.013 80);
+  --shadow-elevation:
+    0 2px 24px 0 rgba(0, 0, 0, 0.03), 0 4px 4px 0 rgba(0, 0, 0, 0.01), 0 2px 2px 0 rgba(0, 0, 0, 0.01);
+}
+
+@utility shadow-elevation {
+  box-shadow: var(--shadow-elevation);
+}
+
+@supports not (color: oklch(0 0 0)) {
+  :root {
+    --color-retro-cream: #f4f1e6;
+    --color-retro-shell: #f0ede0;
+    --color-retro-key: #ece8da;
+    --color-retro-beige: #e0dccf;
+    --color-retro-bezel: #d1cec7;
+    --color-retro-stone: #c4c0b3;
+    --color-retro-base: #a09c8f;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-retro-cream text-sm antialiased tabular-nums [text-rendering:optimizeLegibility];
+  }
+
+  h1 {
+    @apply text-2xl font-bold;
+  }
+
+  h2 {
+    @apply text-xl font-semibold;
+  }
+
+  h3 {
+    @apply text-lg font-semibold;
+  }
+
+  h4 {
+    @apply text-base font-medium;
+  }
+
+  ::selection {
+    background-color: oklch(0.22 0.013 89);
+    color: oklch(0.954 0.013 93);
+  }
+
+  :focus-visible {
+    outline-color: oklch(0.22 0.013 89);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.35) var(--color-retro-cream);
+  }
+
+  .dark * {
+    scrollbar-color: var(--color-neutral-700) transparent;
+  }
+}
+
+.crt-scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size:
+    100% 2px,
+    3px 100%;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+@keyframes type-key {
+  0%,
+  100% {
+    transform: translateZ(1px) translateY(0);
+    box-shadow:
+      0 6px 0 var(--color-retro-stone),
+      0 8px 7px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    transform: translateZ(-2px) translateY(5px);
+    box-shadow:
+      0 1px 0 var(--color-retro-stone),
+      0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+}
+
+.paused *,
+.paused *::before,
+.paused *::after {
+  animation-play-state: paused;
+  transition: none;
+}

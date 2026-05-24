@@ -10,8 +10,9 @@
     "audit": "pnpm run audit:deps && pnpm run audit:signatures",
     "audit:deps": "pnpm audit && pnpm --dir packages/desktop audit",
     "audit:signatures": "npm audit signatures && npm --prefix packages/desktop audit signatures",
-    "build": "pnpm run build:desktop",
+    "build": "pnpm run build:desktop && pnpm run build:web",
     "build:desktop": "pnpm --filter @start/desktop build",
+    "build:web": "pnpm --filter @start/web build",
     "check": "pnpm run check:pins && pnpm run check:deps && pnpm run lint && pnpm run format && pnpm run typecheck",
     "check:deps": "pnpm --filter @start/mobile check:deps",
     "check:fix": "pnpm run check:pins && pnpm run check:deps && biome check . --write && pnpm run typecheck",
@@ -25,7 +26,8 @@
     "lint": "biome lint . --error-on-warnings",
     "mobile": "pnpm --filter @start/mobile dev",
     "package": "pnpm --filter @start/desktop package",
-    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck"
+    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck && pnpm --filter @start/web typecheck",
+    "web": "pnpm --filter @start/web dev"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15"

@@ -1,0 +1,24 @@
+# Start
+
+> Your coding assistant.
+
+Start is a cross-platform coding assistant for working on software projects with AI agents. It gives developers a focused workspace for asking questions, editing files, reviewing changes, and moving code toward a pull request.
+
+## What you can do
+
+- Use multiple AI models and switch between them for different tasks.
+- Choose thinking or effort levels when a model supports deeper reasoning.
+- Queue follow-up prompts so work can continue without losing your next thought.
+- Work across multiple workspaces and conversations.
+- Run parallel agents on separate threads of work.
+- Attach file context so the assistant understands the code you choose.
+- Review file changes in a diff viewer before committing.
+- Configure providers, keys, models, and preferences in settings.
+- Bring your own provider keys and keep control of the services you use.
+
+## Website
+
+- Landing page: https://start.intelligence.one
+- Releases: https://github.com/sasicodes/start/releases
+- Privacy: https://start.intelligence.one/privacy
+- Terms: https://start.intelligence.one/terms

@@ -4,7 +4,8 @@
 .
 ├── packages/
 │   ├── desktop/
-│   └── mobile/
+│   ├── mobile/
+│   └── web/
 ├── patches/
 └── scripts/
 ```
@@ -14,6 +15,7 @@ Use pnpm.
 - install: `pnpm install`
 - desktop: `pnpm dev` or `pnpm desktop`
 - mobile: `pnpm mobile`
+- web: `pnpm web`
 - check: `pnpm check`
 - build: `pnpm build`
 - package desktop: `pnpm package`
