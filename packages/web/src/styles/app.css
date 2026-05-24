@@ -45,17 +45,6 @@
 }
 
 @font-face {
-  font-family: "Geist Mono";
-  src: url("/fonts/mono.woff2") format("woff2");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  ascent-override: 100%;
-  descent-override: 25%;
-  line-gap-override: 0%;
-}
-
-@font-face {
   font-family: "Cursive";
   src: url("/fonts/cursive.woff2") format("woff2");
   font-weight: 400;
@@ -71,8 +60,6 @@
   --font-pixel: "VT323", "Courier New", monospace;
   --font-cursive: "Cursive", cursive;
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, monospace;
-
   --color-retro-cream: oklch(0.954 0.013 93);
   --color-retro-shell: oklch(0.942 0.015 91);
   --color-retro-key: oklch(0.926 0.014 91);

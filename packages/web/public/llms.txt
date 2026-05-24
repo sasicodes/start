@@ -2,19 +2,19 @@
 
 > Your coding assistant.
 
-Start is a macOS desktop app for working with coding agents in one focused workspace. It helps you ask questions about a codebase, plan changes, edit files, run commands, review diffs, and prepare code for shipping.
+Start is a macOS desktop app for working with coding agents in one focused workspace. It helps you ask questions about a codebase, attach project context, edit files, review diffs, and prepare code for shipping.
 
-The app is local-first. Project files, prompts, chat history, tasks, indexes, logs, API keys, and access tokens stay on the user's Mac. Start does not include tracking pixels, advertising identifiers, or third-party telemetry.
+The app is local-first. Project files, prompts, chat history, indexes, logs, API keys, and access tokens stay on the user's Mac. Start does not include tracking pixels, advertising identifiers, or third-party telemetry.
 
 ## Core surfaces
 
-- Chat workspace for asking coding questions and directing agent work
-- Project-aware context so the assistant can read and edit files with user approval
-- Task tracking for breaking larger requests into visible steps
-- File explorer and file viewer for inspecting project files
-- Diff and changes review before committing work
-- Integrated terminal for running project commands
-- Git workflow support for status, diffs, commits, branches, and pull requests
+- Chat sessions for asking coding questions and directing agent work
+- Parallel work across multiple conversations
+- Multi-model selection for matching the model to the task
+- File context so the assistant can understand the code you choose
+- File edits with reviewable changes
+- Diff viewer for inspecting updates before committing work
+- Git workflow support for repository status, diffs, commits, and pull requests
 
 ## Local data
 
