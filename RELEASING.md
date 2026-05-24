@@ -1,47 +1,43 @@
-Cut a desktop release.
+# Releasing the desktop app
 
-Context for the agent:
+`main` is protected, so the version bump lands via PR. The desktop release workflow (`.github/workflows/release-desktop.yml`) triggers on tags starting with `v` and publishes the macOS build. Sign the tag (`git tag -s`) so GitHub shows Verified.
 
-The repository's main branch is protected. Direct pushes to main are rejected. Every change including a version bump must land through a pull request.
+Examples below use `v0.1.0-alpha.4` — substitute the actual release tag.
 
-The desktop release workflow lives at .github/workflows/release-desktop.yml. It triggers on git tags whose name starts with v. When triggered, it checks out the tag, builds the macOS distributable, signs and notarizes it with the repository secrets, and publishes a GitHub release with the artifacts attached.
+## 1. Preview the bump
 
-The tag must point at the commit that is actually on main after the bump PR merges, not at the local commit the bump script creates. The merge strategy used on GitHub may produce a different SHA (squash merge does, rebase merge usually preserves SHA, merge commit creates a new merge SHA). If the tag points at the pre-merge SHA, the release artifact's provenance is wrong because that commit may not be reachable from main.
+```sh
+node scripts/release-desktop.js v0.1.0-alpha.4 --dry-run
+```
 
-Tags must be signed so GitHub displays the Verified badge on the release. The repository convention is to use git tag -s, which signs with the local signing key configured in git (user.signingkey + gpg.format). Lightweight tags (git tag X without -a or -s) inherit verification from the underlying commit's signature. Annotated unsigned tags (git tag -a X) carry no signature of their own and show Unverified on GitHub even when the target commit is signed.
+## 2. Bump on a release branch and open a PR
 
-The bump helper script is scripts/release-desktop.js. It updates packages/desktop/package.json, creates a chore: bump desktop version commit, and creates an annotated tag locally. Its --push flag pushes the commit and the tag immediately; do not use --push for this flow because main is protected and because the tag would point at the pre-merge commit.
+```sh
+git checkout main && git pull
+git checkout -b chore/bump-alpha-4
+node scripts/release-desktop.js v0.1.0-alpha.4
+git push -u origin chore/bump-alpha-4
+gh pr create --title "chore: bump desktop version to 0.1.0-alpha.4"
+```
 
-Steps to release version X (for example v0.1.0-alpha.4):
+Do not pass `--push` to the bump script — the tag would point at the pre-merge commit, which may be rewritten when the PR merges.
 
-1. Preview the bump.
+## 3. Merge the PR
 
-   node scripts/release-desktop.js X --dry-run
+## 4. Sign and push the tag on the merged commit
 
-2. Create a release branch from the latest main, run the bump, push the branch, open a pull request.
+```sh
+git checkout main && git pull
+git tag -d v0.1.0-alpha.4
+git tag -s v0.1.0-alpha.4 -m v0.1.0-alpha.4
+git push origin v0.1.0-alpha.4
+```
 
-   git checkout main
-   git pull
-   git checkout -b chore/bump-X
-   node scripts/release-desktop.js X
-   git push -u origin chore/bump-X
-   gh pr create --title "chore: bump desktop version to X"
+The release workflow runs on the tag push and publishes the macOS artifacts.
 
-3. Wait for the pull request to be merged to main.
+## Script version arguments
 
-4. Update main locally, replace the local tag with one created on the merged commit, sign it, push the tag. The Release Desktop workflow runs on the tag push.
-
-   git checkout main
-   git pull
-   git tag -d X
-   git tag -s X -m X
-   git push origin X
-
-5. Confirm the workflow run succeeds at https://github.com/sasicodes/start/actions and that the release at https://github.com/sasicodes/start/releases shows the macOS artifacts and a Verified badge on the tag.
-
-Version argument forms accepted by scripts/release-desktop.js:
-- patch bumps 0.1.0-alpha.1 to 0.1.1
-- minor bumps 0.1.0-alpha.1 to 0.2.0
-- major bumps 0.1.0-alpha.1 to 1.0.0
-- explicit prerelease: v0.1.0-beta.1
-- explicit stable: 1.0.0
+- `patch` — `0.1.0-alpha.1` → `0.1.1`
+- `minor` — `0.1.0-alpha.1` → `0.2.0`
+- `major` — `0.1.0-alpha.1` → `1.0.0`
+- explicit: `v0.1.0-beta.1`, `1.0.0`
