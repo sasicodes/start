@@ -1,4 +1,4 @@
-import { fileHasTextDiff } from '@renderer/shared/workspace/changes/diff/estimate';
+import { fileHasTextDiff, isTooLargeToShow } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
 import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
@@ -72,6 +72,7 @@ const fallbackMessage = (file: PatchFile, kind: PatchFileKind) => {
   if (kind === 'symlink') return 'Symlink target changed.';
   if (kind === 'mode-only') return `Permissions changed (${file.oldMode} → ${file.newMode}).`;
   if (file.isBinary) return 'Binary file changed.';
+  if (isTooLargeToShow(file)) return 'File too large to show.';
   if (fileHasPathChange(file)) return 'File renamed without changes.';
   return 'No text diff to show.';
 };
@@ -121,7 +122,7 @@ interface DiffBodyProps {
 
 const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevision }: DiffBodyProps) => {
   if (kind === 'image') return <ImageDiff cwd={cwd} file={file} status={status} />;
-  if (fileHasTextDiff(file))
+  if (fileHasTextDiff(file) && !isTooLargeToShow(file))
     return <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />;
   return <FallbackDiff cwd={cwd} file={file} kind={kind} />;
 };

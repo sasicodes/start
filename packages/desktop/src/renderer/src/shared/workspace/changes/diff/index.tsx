@@ -12,43 +12,72 @@ import {
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
-import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
 import type { DiffEntriesState, DiffEntry, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { Virtual } from '@renderer/ui/virtual';
-import { useCallback, useEffect, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+
+interface ParseResponse {
+  jobId: number;
+  results: PatchFile[][];
+}
 
 const patchFileKey = (file: PatchFile, sectionKind: GitPatchSection['kind'], index: number) =>
   `${sectionKind}:${file.oldPath}:${file.newPath}:${index}`;
 
-const diffEntries = (sections: GitPatchSection[]): DiffEntry[] =>
-  sections.flatMap((section) =>
-    parseGitPatch(section.patch).map((file, index) => ({
-      file,
-      key: patchFileKey(file, section.kind, index),
-      language: patchFileLanguage(file),
-      status: section.kind === 'untracked' ? 'untracked' : file.status
-    }))
-  );
+const entriesFromResults = (sections: GitPatchSection[], results: PatchFile[][]): DiffEntry[] => {
+  const entries: DiffEntry[] = [];
+  for (const [sectionIndex, section] of sections.entries()) {
+    const files = results[sectionIndex] ?? [];
+    for (const [fileIndex, file] of files.entries()) {
+      entries.push({
+        file,
+        key: patchFileKey(file, section.kind, fileIndex),
+        language: patchFileLanguage(file),
+        status: section.kind === 'untracked' ? 'untracked' : file.status
+      });
+    }
+  }
+  return entries;
+};
 
 const entryKey = (entry: DiffEntry) => entry.key;
 const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
 
+const createParserWorker = () => new Worker(new URL('./parser.worker.ts', import.meta.url), { type: 'module' });
+
 const useDiffEntries = (sections: GitPatchSection[]) => {
   const [entryState, setEntryState] = useState<DiffEntriesState>({ kind: 'parsing' });
+  const workerRef = useRef<Worker | null>(null);
+  const jobIdRef = useRef(0);
 
   useEffect(() => {
-    let active = true;
+    if (!workerRef.current) workerRef.current = createParserWorker();
+    const worker = workerRef.current;
+    jobIdRef.current += 1;
+    const jobId = jobIdRef.current;
+
     setEntryState((current) => (current.kind === 'parsing' ? current : { kind: 'parsing' }));
-    const timer = window.setTimeout(() => {
-      const nextEntries = diffEntries(sections);
-      if (active) setEntryState({ entries: nextEntries, kind: 'ready' });
-    }, 0);
+
+    const onMessage = (event: MessageEvent<ParseResponse>) => {
+      if (event.data.jobId !== jobId) return;
+      setEntryState({ entries: entriesFromResults(sections, event.data.results), kind: 'ready' });
+    };
+
+    worker.addEventListener('message', onMessage);
+    worker.postMessage({ jobId, patches: sections.map((section) => section.patch) });
 
     return () => {
-      active = false;
-      window.clearTimeout(timer);
+      worker.removeEventListener('message', onMessage);
     };
   }, [sections]);
+
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    },
+    []
+  );
 
   return entryState;
 };

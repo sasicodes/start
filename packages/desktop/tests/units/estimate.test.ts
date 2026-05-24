@@ -1,4 +1,8 @@
-import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
+import {
+  estimatedFileHeight,
+  isOpenByDefault,
+  isTooLargeToShow
+} from '@renderer/shared/workspace/changes/diff/estimate';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { describe, expect, it } from 'vitest';
 
@@ -63,5 +67,23 @@ describe('estimatedFileHeight', () => {
 
   it('returns just the header when kind is text but there are no hunks', () => {
     expect(estimatedFileHeight(buildFile(), 'text')).toBe(52);
+  });
+});
+
+describe('isTooLargeToShow', () => {
+  it('is false for small changes', () => {
+    expect(isTooLargeToShow(buildFile({ added: 100, removed: 100 }))).toBe(false);
+  });
+
+  it('is false right at the threshold', () => {
+    expect(isTooLargeToShow(buildFile({ added: 1000, removed: 1000 }))).toBe(false);
+  });
+
+  it('is true above the threshold', () => {
+    expect(isTooLargeToShow(buildFile({ added: 1500, removed: 1500 }))).toBe(true);
+  });
+
+  it('prevents a huge file from auto-opening', () => {
+    expect(isOpenByDefault(buildFile({ added: 5000, hunks: [hunkOf(10)], removed: 5000 }), 'text')).toBe(false);
   });
 });
