@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { version as pkgVersion } from '../../../../package.json';
 
 const STAR_COUNT = 140;
 const FADE_IN_MS = 300;
@@ -230,7 +229,6 @@ export const DownloadButton = () => {
         <span className="relative z-10">Download for Mac</span>
         <canvas ref={canvasRef} className="pointer-events-none absolute top-0 left-0 w-full h-full z-0" />
       </a>
-      <span className="mt-2 text-xs font-pixel text-neutral-500">14 MB / v{pkgVersion}</span>
     </div>
   );
 };
