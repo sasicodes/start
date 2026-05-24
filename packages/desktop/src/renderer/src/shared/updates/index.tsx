@@ -1,5 +1,5 @@
-import type { UpdateState } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
+import { installUpdate, useUpdateState } from '@renderer/shared/updates/state';
 import {
   bottomBubbleHiddenMotion,
   bottomBubbleHideTransition,
@@ -8,34 +8,12 @@ import {
 } from '@renderer/ui/motion';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
-import { useEffect, useState } from 'preact/hooks';
 
 export const Update = memo(() => {
   const appFocused = useAppFocusState();
-  const [state, setState] = useState<UpdateState>({ status: 'idle' });
-
-  useEffect(() => {
-    let active = true;
-
-    window.pi.app
-      .updateState()
-      .then((nextState) => {
-        if (active) setState(nextState);
-      })
-      .catch(() => {});
-
-    const stopUpdateEvents = window.pi.app.onUpdateStateChanged(setState);
-    return () => {
-      active = false;
-      stopUpdateEvents();
-    };
-  }, []);
+  const state = useUpdateState();
 
   if (state.status !== 'downloaded') return null;
-
-  const installUpdate = () => {
-    window.pi.app.installUpdate().catch(() => {});
-  };
 
   return (
     <motion.button
