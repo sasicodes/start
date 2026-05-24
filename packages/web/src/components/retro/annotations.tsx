@@ -12,7 +12,7 @@ export const ANNOTATIONS: Annotation[] = [
   { label: 'PROMPT QUEUE', side: 'right', labelY: 205 },
   { label: 'FOLLOW-UPS', side: 'right', labelY: 285 },
   { label: 'CHANGE REVIEW', side: 'right', labelY: 365 },
-  { label: 'BRING KEYS', side: 'right', labelY: 445 }
+  { label: 'BYOK', side: 'right', labelY: 445 }
 ];
 
 export const DEFAULT_TARGETS = [
