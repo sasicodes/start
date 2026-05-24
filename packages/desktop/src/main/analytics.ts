@@ -15,6 +15,7 @@ import {
   ANALYTICS_USERNAME_STORAGE_NAME
 } from '@main/constants';
 import { startDir } from '@main/storage';
+import { app } from 'electron';
 import { PostHog } from 'posthog-node';
 
 type AnalyticsPropertyValue = null | number | string | boolean;
@@ -187,8 +188,10 @@ const readGitUsername = async () => {
 const readDeviceUsername = async () =>
   (await readGithubUsername()) ?? (await readGitlabUsername()) ?? (await readGitUsername());
 
-export const initAnalytics = (enabled: boolean) => {
-  if (!enabled) return;
+const canInitializeAnalytics = () => app.isPackaged;
+
+export const initAnalytics = () => {
+  if (!canInitializeAnalytics()) return;
   if (client) return;
 
   distinctId = loadDistinctId();
