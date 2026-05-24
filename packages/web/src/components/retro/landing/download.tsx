@@ -1,3 +1,4 @@
+import { MAC_DOWNLOADS } from '@/constants';
 import { useEffect, useRef } from 'react';
 
 const STAR_COUNT = 140;
@@ -219,17 +220,27 @@ export const Download = () => {
   }, []);
 
   return (
-    <div className="inline-flex flex-col items-center">
+    <div className="group relative inline-flex flex-col items-center pb-7">
       <a
         ref={buttonRef}
-        href="https://github.com/sasicodes/start/releases/latest"
-        target="_blank"
-        rel="noopener noreferrer"
+        href={MAC_DOWNLOADS.appleSilicon}
         className="relative inline-block cursor-pointer select-none overflow-hidden rounded-[4px] border-[1.5px] border-zinc-950 bg-neutral-200 px-6 py-1 font-pixel text-xl text-zinc-950 no-underline shadow-[inset_-1px_-1px_0_oklch(0.65_0_0),inset_1px_1px_0_oklch(0.98_0_0),0_0_0_1.5px_oklch(0.92_0_0),0_0_0_3.5px_oklch(0.18_0_0)] active:shadow-[inset_1px_1px_2px_oklch(0.58_0_0),0_0_0_1.5px_oklch(0.92_0_0),0_0_0_3.5px_oklch(0.18_0_0)]"
       >
         <span className="relative z-10">Download for Mac</span>
         <canvas ref={canvasRef} className="pointer-events-none absolute top-0 left-0 w-full h-full z-0" />
       </a>
+      <div className="pointer-events-none absolute bottom-0 flex whitespace-nowrap font-pixel text-sm text-zinc-700 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+        <a
+          href={MAC_DOWNLOADS.appleSilicon}
+          className="underline decoration-zinc-400 underline-offset-4 hover:text-zinc-950"
+        >
+          Apple Silicon
+        </a>
+        <span className="mx-2 text-zinc-500">/</span>
+        <a href={MAC_DOWNLOADS.intel} className="underline decoration-zinc-400 underline-offset-4 hover:text-zinc-950">
+          Intel Mac
+        </a>
+      </div>
     </div>
   );
 };
