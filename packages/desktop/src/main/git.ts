@@ -46,8 +46,8 @@ const maxPatchFiles = 240;
 const maxPatchLines = 20_000;
 const maxUntrackedFiles = 64;
 const maxUntrackedFileBytes = 512 * 1024;
-const gitFileBlobMaxBytes = 3 * 1024 * 1024;
 const gitShowTimeoutMs = 4000;
+const gitFileBlobMaxBytes = 3 * 1024 * 1024;
 
 const mimeByExtension: Record<string, string> = {
   bmp: 'image/bmp',

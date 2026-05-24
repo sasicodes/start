@@ -7,19 +7,19 @@ export type ImageBlobsState = { kind: 'loading' } | { kind: 'loaded'; after: str
 
 const skipsBefore = new Set<DiffFileStatus>(['added', 'untracked']);
 
+const fetchBlob = (cwd: string, filePath: string, ref: GitFileRef) =>
+  window.pi.app.gitFileBlob(cwd, filePath, ref).catch(() => {});
+
 const dataUrl = (blob: GitFileBlob) => `data:${blob.mime};base64,${blob.data}`;
+
+const loadSide = (cwd: string, filePath: string, ref: GitFileRef, want: boolean) =>
+  want ? fetchBlob(cwd, filePath, ref).then((blob) => (blob ? dataUrl(blob) : '')) : Promise.resolve('');
 
 const wantsSide = (status: DiffFileStatus, side: 'before' | 'after', sidePath: string) => {
   if (!sidePath) return false;
   if (side === 'before') return !skipsBefore.has(status);
   return status !== 'deleted';
 };
-
-const fetchBlob = (cwd: string, filePath: string, ref: GitFileRef) =>
-  window.pi.app.gitFileBlob(cwd, filePath, ref).catch(() => {});
-
-const loadSide = (cwd: string, filePath: string, ref: GitFileRef, want: boolean) =>
-  want ? fetchBlob(cwd, filePath, ref).then((blob) => (blob ? dataUrl(blob) : '')) : Promise.resolve('');
 
 export const useImageBlobs = (cwd: string, file: PatchFile, status: DiffFileStatus): ImageBlobsState => {
   const [state, setState] = useState<ImageBlobsState>({ kind: 'loading' });
