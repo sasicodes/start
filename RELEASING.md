@@ -1,20 +1,43 @@
-Release a desktop version by running the release helper:
+# Releasing the desktop app
 
-`node scripts/release-desktop.js patch --push`
+`main` is protected, so the version bump lands via PR. The desktop release workflow (`.github/workflows/release-desktop.yml`) triggers on tags starting with `v` and publishes the macOS build. Sign the tag (`git tag -s`) so GitHub shows Verified.
 
-Preview first:
-`node scripts/release-desktop.js patch --dry-run`
+Examples below use `v0.1.0-alpha.4` — substitute the actual release tag.
 
-The command does:
-- updates `packages/desktop/package.json` version
-- creates tag `v<version>`
-- pushes commit + tag when `--push` is included
+## 1. Preview the bump
 
-Version options:
-- `patch`: `0.1.0-alpha.1 -> 0.1.1`
-- `minor`: `0.1.0-alpha.1 -> 0.2.0`
-- `major`: `0.1.0-alpha.1 -> 1.0.0`
-- explicit version: `node scripts/release-desktop.js v0.1.0-beta.1 --push`
-- stable explicit: `node scripts/release-desktop.js 1.0.0 --push`
+```sh
+node scripts/release-desktop.js v0.1.0-alpha.4 --dry-run
+```
 
-Release tags are picked up by workflow when they start with `v`, so use the helper to keep the tag and package version aligned.
+## 2. Bump on a release branch and open a PR
+
+```sh
+git checkout main && git pull
+git checkout -b chore/bump-alpha-4
+node scripts/release-desktop.js v0.1.0-alpha.4
+git push -u origin chore/bump-alpha-4
+gh pr create --title "chore: bump desktop version to 0.1.0-alpha.4"
+```
+
+Do not pass `--push` to the bump script — the tag would point at the pre-merge commit, which may be rewritten when the PR merges.
+
+## 3. Merge the PR
+
+## 4. Sign and push the tag on the merged commit
+
+```sh
+git checkout main && git pull
+git tag -d v0.1.0-alpha.4
+git tag -s v0.1.0-alpha.4 -m v0.1.0-alpha.4
+git push origin v0.1.0-alpha.4
+```
+
+The release workflow runs on the tag push and publishes the macOS artifacts.
+
+## Script version arguments
+
+- `patch` — `0.1.0-alpha.1` → `0.1.1`
+- `minor` — `0.1.0-alpha.1` → `0.2.0`
+- `major` — `0.1.0-alpha.1` → `1.0.0`
+- explicit: `v0.1.0-beta.1`, `1.0.0`
