@@ -125,6 +125,7 @@ export type RecentSession = {
   path: string;
   title: string;
   modified: number;
+  status?: AgentTabStatus;
   noticeKind?: SessionNoticeKind;
 };
 

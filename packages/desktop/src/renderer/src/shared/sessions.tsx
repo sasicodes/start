@@ -16,6 +16,18 @@ const pageOptions = (workspacePath: string, limit: number, offset = 0) => ({
   ...(workspacePath ? { workspacePath } : {})
 });
 
+const sessionStatus = (session: RecentSession) => {
+  if (session.status && session.status !== 'idle') return session.status;
+  return session.noticeKind ?? '';
+};
+
+const triggerStatus = (sessions: RecentSession[]) => {
+  if (sessions.some((session) => sessionStatus(session) === 'failed')) return 'failed';
+  if (sessions.some((session) => sessionStatus(session) === 'generating')) return 'generating';
+  if (sessions.some((session) => sessionStatus(session) === 'completed')) return 'completed';
+  return '';
+};
+
 interface SessionRowProps {
   active: boolean;
   session: RecentSession;
@@ -34,21 +46,26 @@ interface RecentSessionsProps {
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-const SessionRow = ({ active, session, onOpen }: SessionRowProps) => (
-  <AppMenu.Item
-    onClick={() => onOpen(session)}
-    className={tw(
-      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
-      active && 'bg-control text-hover'
-    )}
-  >
-    <span class="flex min-w-0 flex-col gap-1">
+const SessionRow = ({ active, session, onOpen }: SessionRowProps) => {
+  const status = sessionStatus(session);
+
+  return (
+    <AppMenu.Item
+      onClick={() => onOpen(session)}
+      className={tw(
+        'grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+        status === 'failed' && 'bg-danger/[0.055]',
+        status === 'completed' && 'bg-success/[0.055]',
+        status === 'generating' && 'bg-blue-500/[0.07]',
+        active && 'bg-control text-hover'
+      )}
+    >
       <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
       <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
-    </span>
-    {session.noticeKind && <NoticeDot />}
-  </AppMenu.Item>
-);
+      {status && <NoticeDot kind={status} />}
+    </AppMenu.Item>
+  );
+};
 
 const SessionRows = ({ sessions, activeSessionId, onOpenSession }: SessionRowsProps) =>
   sessions.map((session) => (
@@ -138,7 +155,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
 
   const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
 
-  const hasNotice = sessions.some((session) => session.noticeKind);
+  const status = triggerStatus(sessions);
 
   useEffect(() => {
     return () => {
@@ -164,12 +181,17 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
     <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
       <AppMenu.Trigger
         aria-label="Recent sessions"
-        className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
+        className={tw(
+          'relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
+          status === 'failed' && 'bg-danger/[0.075]',
+          status === 'completed' && 'bg-success/[0.075]',
+          status === 'generating' && 'bg-blue-500/[0.09]'
+        )}
       >
         <HistoryIcon class="size-5" />
-        {hasNotice && (
+        {status && (
           <span class="absolute top-1.5 right-1.5">
-            <NoticeDot />
+            <NoticeDot kind={status} />
           </span>
         )}
       </AppMenu.Trigger>

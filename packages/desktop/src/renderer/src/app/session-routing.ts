@@ -10,7 +10,6 @@ interface SessionRoutingOptions {
   loadedSessionId: string;
   closeSidePanel: () => void;
   navigate: (route: AppRoute, replace?: boolean) => void;
-  openSession: (path: string) => Promise<boolean>;
   openSessionId: (sessionId: string) => Promise<boolean>;
 }
 
@@ -18,7 +17,6 @@ export const useSessionRouting = ({
   route,
   surface,
   navigate,
-  openSession,
   openSessionId,
   activeSessionId,
   loadedSessionId,
@@ -74,7 +72,7 @@ export const useSessionRouting = ({
       navigate(nextRoute, true);
 
       try {
-        const opened = await openSession(session.path);
+        const opened = await openSessionId(session.id);
         if (opened) return true;
         if (sameRoute(currentRoute(), nextRoute)) navigate({ name: 'chat' }, true);
         return false;
@@ -83,6 +81,6 @@ export const useSessionRouting = ({
         selectingSessionRef.current = false;
       }
     },
-    [closeSidePanel, navigate, openSession]
+    [closeSidePanel, navigate, openSessionId]
   );
 };

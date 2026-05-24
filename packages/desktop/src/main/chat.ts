@@ -201,6 +201,7 @@ export class ChatService {
   async openSessionId(sessionId: string): Promise<OpenSessionResult> {
     const id = sessionId.trim();
     if (!id) return { ok: false, error: 'Session id is empty.' };
+    if (this.backgroundSessions.has(id)) return this.activateTab(id);
 
     const sessions = await SessionManager.listAll();
     const session = sessions.find((entry) => entry.id === id);
@@ -329,7 +330,8 @@ export class ChatService {
 
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
-    return recentSessionsPage({ ...options, workspacePath }, this.notices);
+    const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
+    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices);
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {

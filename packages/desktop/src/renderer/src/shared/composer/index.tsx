@@ -227,7 +227,7 @@ export const Composer = memo(
         <Finder
           items={finderItems}
           emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
-          activeKey={selectedFinderKey}
+          activeItemKey={selectedFinderKey}
           visible={finderVisible}
           ariaLabel={slashCommandToken ? 'Slash commands' : 'Project files'}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
