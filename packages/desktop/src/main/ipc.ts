@@ -188,7 +188,7 @@ export const registerChatIpc = ({
     notifyRecentSessionsChanged();
   });
   ipcMain.handle('chat:prepare-dropped-files', (_event, paths: string[]) => chat.prepareDroppedFiles(paths));
-  ipcMain.handle('chat:set-runtime-api-key', (_event, provider: string, apiKey: string) => {
+  ipcMain.handle('chat:set-api-key', (_event, provider: string, apiKey: string) => {
     const providerId = provider.trim().toLowerCase();
     if (providerId && apiKey.trim()) {
       trackAnalyticsEvent('api_key_added', {
@@ -196,7 +196,7 @@ export const registerChatIpc = ({
         ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
       });
     }
-    return chat.setRuntimeApiKey(provider, apiKey);
+    return chat.setApiKey(provider, apiKey);
   });
   ipcMain.handle('chat:steer-queued-message', (event, id: string) =>
     chat.steerQueuedMessage(id, event.sender as WebContents)

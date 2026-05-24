@@ -513,12 +513,12 @@ export class ChatService {
     ];
   }
 
-  async setRuntimeApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
+  async setApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
     const cleanProvider = provider.trim().toLowerCase();
     const cleanApiKey = apiKey.trim();
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
 
-    this.authStorage.setRuntimeApiKey(cleanProvider, cleanApiKey);
+    this.authStorage.set(cleanProvider, { type: 'api_key', key: cleanApiKey });
     this.modelRegistry.refresh();
 
     return this.getAuthProviders();

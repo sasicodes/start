@@ -65,9 +65,10 @@ const useVisibleRange = (cumulative: Float64Array, overscan: number, containerRe
     let rafId = 0;
 
     const computeRange = () => {
+      const anchorTop = scrollAncestor ? scrollAncestor.getBoundingClientRect().top : 0;
       const containerRect = container.getBoundingClientRect();
       const viewportHeight = scrollAncestor ? scrollAncestor.clientHeight : window.innerHeight;
-      const scrollTop = -containerRect.top;
+      const scrollTop = anchorTop - containerRect.top;
       const next = rangeOf(cumulative, scrollTop, scrollTop + viewportHeight, overscan);
       setRange((previous) => (sameRange(previous, next) ? previous : next));
     };

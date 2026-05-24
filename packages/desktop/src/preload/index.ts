@@ -354,8 +354,8 @@ const api = {
     openSessionId: (sessionId: string): Promise<OpenSessionResult> =>
       ipcRenderer.invoke('chat:open-session-id', sessionId),
     authProviders: (): Promise<ProviderAuthStatus[]> => ipcRenderer.invoke('chat:auth-providers'),
-    setRuntimeApiKey: (provider: string, apiKey: string): Promise<ProviderAuthStatus[]> =>
-      ipcRenderer.invoke('chat:set-runtime-api-key', provider, apiKey),
+    setApiKey: (provider: string, apiKey: string): Promise<ProviderAuthStatus[]> =>
+      ipcRenderer.invoke('chat:set-api-key', provider, apiKey),
     loginSubscription: (provider: string): Promise<ProviderLoginResult> =>
       ipcRenderer.invoke('chat:login-subscription', provider),
     cancelSubscriptionLogin: (): Promise<void> => ipcRenderer.invoke('chat:cancel-subscription-login'),

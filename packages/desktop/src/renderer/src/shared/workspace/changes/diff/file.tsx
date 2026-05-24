@@ -1,4 +1,4 @@
-import { isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
+import { fileHasTextDiff, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
 import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
@@ -64,8 +64,6 @@ const StatusMark = ({ status }: StatusMarkProps) => (
 );
 
 const fileHasPathChange = (file: PatchFile) => Boolean(file.oldPath && file.newPath && file.oldPath !== file.newPath);
-
-const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
 
 const fallbackMessage = (file: PatchFile, kind: PatchFileKind) => {
   if (kind === 'submodule') return 'Submodule pointer changed.';

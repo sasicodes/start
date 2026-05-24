@@ -7,7 +7,7 @@ const fileHeaderHeight = 52;
 const imageBodyHeight = 360;
 const sectionPaddingTop = 8;
 
-const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
+export const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
 
 export const isOpenByDefault = (file: PatchFile, kind: PatchFileKind) =>
   kind === 'image' || (fileHasTextDiff(file) && file.added + file.removed <= 320);
