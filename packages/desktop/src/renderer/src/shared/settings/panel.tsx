@@ -31,11 +31,11 @@ const providers: {
 ];
 
 interface SettingsProps {
-  providers: ProviderAuthStatus[];
   composerShortcut: string;
+  providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
 }
 
@@ -143,15 +143,21 @@ export const Settings = memo(
                     )}
                   </p>
                 </div>
-                {connected && (
-                  <button
-                    type="button"
-                    onClick={() => void onDisconnectProvider(provider.key)}
-                    class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                  >
-                    Disconnect
-                  </button>
-                )}
+                <AnimatePresence initial={false}>
+                  {connected && (
+                    <motion.button
+                      key="disconnect"
+                      type="button"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1, transition: openMotionTransition }}
+                      exit={{ opacity: 0, transition: closeMotionTransition }}
+                      onClick={() => void onDisconnectProvider(provider.key)}
+                      class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                    >
+                      Disconnect
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
 
               <AnimatePresence initial={false}>

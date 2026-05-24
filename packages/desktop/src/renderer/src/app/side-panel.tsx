@@ -7,14 +7,14 @@ import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { memo } from 'preact/compat';
 
 interface AppSidePanelProps {
-  mode: SidePanelMode;
-  providers: ProviderAuthStatus[];
   turnId: string;
+  mode: SidePanelMode;
   workspacePath: string;
   composerShortcut: string;
+  providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
 }
 
