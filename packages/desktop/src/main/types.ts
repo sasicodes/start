@@ -31,8 +31,9 @@ export type ProviderAuthStatus = {
   key: string;
   name: string;
   label: string;
-  connected: boolean;
   kind: ProviderAuthKind;
+  connected: boolean;
+  hasCredentials: boolean;
 };
 
 export type ProviderLoginResult = {

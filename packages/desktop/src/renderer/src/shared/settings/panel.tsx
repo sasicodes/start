@@ -120,6 +120,7 @@ export const Settings = memo(
           const auth = providerStatus(authProviders, provider.key);
           const draftKey = apiKeys[provider.key];
           const connected = auth?.connected ?? false;
+          const hasCredentials = auth?.hasCredentials ?? false;
           const authLabel = auth?.label ?? 'Not connected';
           const hasDraftKey = draftKey.trim().length > 0;
           const authDetail = connected ? connectionDetail(auth?.label) : '';
@@ -144,7 +145,7 @@ export const Settings = memo(
                   </p>
                 </div>
                 <AnimatePresence initial={false}>
-                  {connected && (
+                  {hasCredentials && (
                     <motion.button
                       key="disconnect"
                       type="button"
@@ -161,7 +162,7 @@ export const Settings = memo(
               </div>
 
               <AnimatePresence initial={false}>
-                {!connected && (
+                {!hasCredentials && (
                   <motion.div
                     key="form"
                     initial={{ opacity: 0, height: 0 }}

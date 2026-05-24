@@ -1347,6 +1347,7 @@ export class ChatService {
     const subscriptionStatus = supportsSubscription ? this.authStorage.getAuthStatus(subscriptionProvider) : undefined;
     const hasSubscription =
       supportsSubscription && (subscriptionCredential?.type === 'oauth' || subscriptionStatus?.configured === true);
+    const hasCredentials = hasApiKey || hasSubscription;
     const kind = providerAuthKind(hasModels, hasSubscription, hasApiKey);
 
     return {
@@ -1354,7 +1355,8 @@ export class ChatService {
       name,
       kind,
       connected: hasModels,
-      label: providerAuthLabel(kind, hasSubscription || hasApiKey)
+      hasCredentials,
+      label: providerAuthLabel(kind, hasCredentials)
     };
   }
 

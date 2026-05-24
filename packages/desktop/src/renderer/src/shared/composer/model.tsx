@@ -2,8 +2,8 @@ import { Menu } from '@base-ui/react/menu';
 import type { EffortLevel, ModelOption } from '@preload/index';
 import { Thinking } from '@renderer/shared/composer/thinking';
 import { effortLevels } from '@renderer/shared/effort';
-import { modelProviderId } from '@renderer/shared/model-provider';
 import { Models, ProviderIcon } from '@renderer/shared/models';
+import { modelProviderId } from '@renderer/shared/models/provider';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { playCycleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -37,6 +37,10 @@ export const Model = ({
   const selectedModel = useMemo(
     () => models.find((model) => model.key === activeModelKey) ?? models[0],
     [models, activeModelKey]
+  );
+  const selectedProviderId = useMemo(
+    () => (selectedModel ? modelProviderId(selectedModel) : 'openai'),
+    [selectedModel]
   );
   const selectedModelLabel = selectedModel?.name ?? 'Models';
   const modelEffortLevels: EffortLevel[] =
@@ -80,7 +84,7 @@ export const Model = ({
               )}
             >
               <span class="flex-none translate-x-px -translate-y-[0.5px]">
-                <ProviderIcon id={selectedModel ? modelProviderId(selectedModel) : 'openai'} />
+                <ProviderIcon id={selectedProviderId} />
               </span>
             </Menu.Trigger>
           </Tooltip>

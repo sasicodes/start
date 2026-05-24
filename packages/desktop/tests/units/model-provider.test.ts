@@ -1,4 +1,4 @@
-import { modelProviderId } from '@renderer/shared/model-provider';
+import { modelProviderId } from '@renderer/shared/models/provider';
 import type { ModelOption } from '@preload/index';
 import { describe, expect, it } from 'vitest';
 
