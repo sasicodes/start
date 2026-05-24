@@ -21,8 +21,10 @@ const gitSectionOrder: GitPatchSectionKind[] = ['unstaged', 'untracked'];
 export const emptyGitSummary: GitChangeSummary = { deletions: 0, filesChanged: 0, insertions: 0 };
 
 const gitFilesLabel = (filesChanged: number) => (filesChanged === 1 ? '1 file' : `${filesChanged} files`);
-const gitFileChangesLabel = (filesChanged: number) =>
-  filesChanged === 1 ? '1 file change' : `${filesChanged} file changes`;
+const gitFileChangesLabel = (filesChanged: number) => {
+  if (filesChanged === 0) return 'file changes';
+  return filesChanged === 1 ? '1 file change' : `${filesChanged} file changes`;
+};
 
 const gitSectionLabel = (kind: GitPatchSectionKind) => {
   switch (kind) {

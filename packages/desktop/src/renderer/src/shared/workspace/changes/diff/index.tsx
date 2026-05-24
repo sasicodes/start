@@ -148,7 +148,7 @@ export const GitDiffViewer = ({
 
   return (
     <div class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
-      {entryState.kind === 'parsing' && <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Preparing diff…</p>}
+      {entryState.kind === 'parsing' && <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Preparing diff</p>}
       {entryState.kind === 'ready' && limited && (
         <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Diff too large to show.</p>
       )}
