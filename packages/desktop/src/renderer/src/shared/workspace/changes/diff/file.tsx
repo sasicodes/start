@@ -1,4 +1,4 @@
-import { fileHasTextDiff, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
+import { fileHasTextDiff } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
 import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
@@ -8,12 +8,14 @@ import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/ch
 import { ArrowUpIcon, ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
-import { useState } from 'preact/hooks';
 
 interface DiffFileProps {
   cwd: string;
+  open: boolean;
+  entryKey: string;
   file: PatchFile;
   language: string;
+  onToggle: (entryKey: string) => void;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
@@ -124,43 +126,44 @@ const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevisi
   return <FallbackDiff cwd={cwd} file={file} kind={kind} />;
 };
 
-export const DiffFile = memo(({ cwd, file, status, language, viewMode, highlightRevision }: DiffFileProps) => {
-  const kind = patchFileKind(file);
-  const [open, setOpen] = useState(() => isOpenByDefault(file, kind));
+export const DiffFile = memo(
+  ({ cwd, open, entryKey, file, status, onToggle, language, viewMode, highlightRevision }: DiffFileProps) => {
+    const kind = patchFileKind(file);
 
-  return (
-    <section class="min-w-0 border-t border-line">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        class="group/file flex w-full min-w-0 items-center justify-between gap-3 border-0 bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
-      >
-        <div class="flex min-w-0 items-center gap-2">
-          <StatusMark status={status} />
-          <FileTitle file={file} />
-        </div>
-        <div class="flex flex-none items-center gap-3">
-          <FileStats file={file} />
-          <ChevronDownIcon
-            class={tw(
-              'size-3.5 flex-none text-soft transition-[color,transform] duration-100 ease-out group-hover/file:text-hover group-focus-visible/file:text-hover',
-              !open && '-rotate-90'
-            )}
+    return (
+      <section class="min-w-0 border-t border-line">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => onToggle(entryKey)}
+          class="group/file flex w-full min-w-0 items-center justify-between gap-3 border-0 bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
+        >
+          <div class="flex min-w-0 items-center gap-2">
+            <StatusMark status={status} />
+            <FileTitle file={file} />
+          </div>
+          <div class="flex flex-none items-center gap-3">
+            <FileStats file={file} />
+            <ChevronDownIcon
+              class={tw(
+                'size-3.5 flex-none text-soft transition-[color,transform] duration-100 ease-out group-hover/file:text-hover group-focus-visible/file:text-hover',
+                !open && '-rotate-90'
+              )}
+            />
+          </div>
+        </button>
+        {open && (
+          <DiffBody
+            cwd={cwd}
+            file={file}
+            kind={kind}
+            status={status}
+            language={language}
+            viewMode={viewMode}
+            highlightRevision={highlightRevision}
           />
-        </div>
-      </button>
-      {open && (
-        <DiffBody
-          cwd={cwd}
-          file={file}
-          kind={kind}
-          status={status}
-          language={language}
-          viewMode={viewMode}
-          highlightRevision={highlightRevision}
-        />
-      )}
-    </section>
-  );
-});
+        )}
+      </section>
+    );
+  }
+);

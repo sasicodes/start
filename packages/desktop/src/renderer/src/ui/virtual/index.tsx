@@ -1,7 +1,7 @@
 import { cumulativeHeights, firstVisibleIndex, lastVisibleIndex, totalHeight } from '@renderer/ui/virtual/geometry';
 import { Fragment } from 'preact';
 import type { ComponentChildren, RefObject } from 'preact';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface VirtualProps<T> {
   overscan?: number;
@@ -46,15 +46,6 @@ const rangeOf = (cumulative: Float64Array, scrollTop: number, scrollBottom: numb
 
 const useVisibleRange = (cumulative: Float64Array, overscan: number, containerRef: RefObject<HTMLElement>): Range => {
   const [range, setRange] = useState<Range>(() => ({ end: initialEnd(cumulative, initialViewportGuess), start: 0 }));
-
-  useLayoutEffect(() => {
-    const limit = Math.max(0, cumulative.length - 1);
-    setRange((previous) =>
-      previous.end <= limit && previous.start <= limit
-        ? previous
-        : { end: Math.min(previous.end, limit), start: Math.min(previous.start, limit) }
-    );
-  }, [cumulative]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -112,9 +103,12 @@ export const Virtual = <T,>({
   const total = totalHeight(cumulative);
   const range = useVisibleRange(cumulative, overscan, containerRef);
 
-  const topSpacer = cumulative[range.start] ?? 0;
-  const visible = items.slice(range.start, range.end);
-  const bottomSpacer = Math.max(0, total - (cumulative[range.end] ?? total));
+  const limit = Math.max(0, cumulative.length - 1);
+  const end = Math.min(range.end, limit);
+  const start = Math.min(range.start, limit);
+  const topSpacer = cumulative[start] ?? 0;
+  const visible = items.slice(start, end);
+  const bottomSpacer = Math.max(0, total - (cumulative[end] ?? total));
 
   return (
     <div ref={containerRef} class="min-w-0">

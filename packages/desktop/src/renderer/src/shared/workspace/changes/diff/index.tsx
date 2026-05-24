@@ -1,5 +1,5 @@
 import type { GitPatchSection } from '@preload/index';
-import { estimatedFileHeight } from '@renderer/shared/workspace/changes/diff/estimate';
+import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
 import {
   cacheDiffHighlight,
@@ -126,19 +126,35 @@ export const GitDiffViewer = ({
   const limited = sections.some((section) => section.limited && !section.patch);
   const entries = entryState.kind === 'ready' ? entryState.entries : [];
   const highlightRevision = useDiffHighlighting(entryState);
+  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+
+  const onToggle = useCallback((key: string) => {
+    setToggled((previous) => {
+      const next = new Map(previous);
+      next.set(key, !previous.get(key));
+      return next;
+    });
+  }, []);
 
   const renderEntry = useCallback(
-    (entry: DiffEntry) => (
-      <DiffFile
-        cwd={cwd}
-        file={entry.file}
-        viewMode={viewMode}
-        status={entry.status}
-        language={entry.language}
-        highlightRevision={highlightRevision}
-      />
-    ),
-    [cwd, viewMode, highlightRevision]
+    (entry: DiffEntry) => {
+      const override = toggled.get(entry.key);
+      const open = override ?? isOpenByDefault(entry.file, patchFileKind(entry.file));
+      return (
+        <DiffFile
+          cwd={cwd}
+          open={open}
+          entryKey={entry.key}
+          file={entry.file}
+          onToggle={onToggle}
+          viewMode={viewMode}
+          status={entry.status}
+          language={entry.language}
+          highlightRevision={highlightRevision}
+        />
+      );
+    },
+    [cwd, toggled, onToggle, viewMode, highlightRevision]
   );
 
   return (
