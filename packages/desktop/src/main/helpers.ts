@@ -56,6 +56,11 @@ export const providerAuthLabel = (kind: ProviderAuthKind, hasCredentials: boolea
   return 'Not connected';
 };
 
+export const providerAuthSlots = (provider: string): string[] => {
+  if (provider === 'openai') return ['openai', 'openai-codex'];
+  return [provider];
+};
+
 export const isProviderModel = (model: { provider: string; id: string; name?: string }, provider: ProviderKey) => {
   const haystack = `${model.provider} ${model.id} ${model.name ?? ''}`.toLowerCase();
   if (provider === 'openai') {

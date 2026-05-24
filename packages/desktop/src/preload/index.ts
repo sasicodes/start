@@ -356,6 +356,8 @@ const api = {
     authProviders: (): Promise<ProviderAuthStatus[]> => ipcRenderer.invoke('chat:auth-providers'),
     setApiKey: (provider: string, apiKey: string): Promise<ProviderAuthStatus[]> =>
       ipcRenderer.invoke('chat:set-api-key', provider, apiKey),
+    disconnectProvider: (provider: string): Promise<ProviderAuthStatus[]> =>
+      ipcRenderer.invoke('chat:disconnect-provider', provider),
     loginSubscription: (provider: string): Promise<ProviderLoginResult> =>
       ipcRenderer.invoke('chat:login-subscription', provider),
     cancelSubscriptionLogin: (): Promise<void> => ipcRenderer.invoke('chat:cancel-subscription-login'),

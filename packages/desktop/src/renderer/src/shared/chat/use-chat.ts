@@ -326,6 +326,16 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [loadModels]
   );
 
+  const disconnectProvider = useCallback(
+    async (provider: string) => {
+      try {
+        setAuthProviders(await window.pi.chat.disconnectProvider(provider));
+        await loadModels();
+      } catch {}
+    },
+    [loadModels]
+  );
+
   const selectModel = useCallback(
     (modelKey: string) => {
       const previousModelKey = selectedModelKey;
@@ -392,6 +402,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     selectedModelKey,
     previousUserTurn,
     loginSubscription,
+    disconnectProvider,
     steerQueuedMessage,
     deleteQueuedMessage,
     selectThinkingLevel,

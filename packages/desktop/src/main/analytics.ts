@@ -26,6 +26,7 @@ const ANALYTICS_EVENTS = [
   'prompt_sent',
   'command_sent',
   'api_key_added',
+  'provider_disconnected',
   'model_selected',
   'session_created',
   'update_installed',

@@ -8,6 +8,7 @@ import {
   modelLabel,
   providerAuthKind,
   providerAuthLabel,
+  providerAuthSlots,
   textDelta,
   thinkingDelta
 } from '@main/helpers';
@@ -23,6 +24,12 @@ describe('helpers', () => {
     const model = { reasoning: true, thinkingLevelMap: { low: null, medium: 'med', high: 'hi' } };
     expect(clampThinkingLevel(model, 'low')).toBe('medium');
     expect(clampThinkingLevel(model, 'xhigh')).toBe('high');
+  });
+
+  it('maps providers to their auth.json slots, including the openai-codex subscription slot', () => {
+    expect(providerAuthSlots('openai')).toEqual(['openai', 'openai-codex']);
+    expect(providerAuthSlots('anthropic')).toEqual(['anthropic']);
+    expect(providerAuthSlots('google')).toEqual(['google']);
   });
 
   it('labels provider auth based on connection signals', () => {

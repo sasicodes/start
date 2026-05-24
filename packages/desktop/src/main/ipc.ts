@@ -198,6 +198,16 @@ export const registerChatIpc = ({
     }
     return chat.setApiKey(provider, apiKey);
   });
+  ipcMain.handle('chat:disconnect-provider', (_event, provider: string) => {
+    const providerId = provider.trim().toLowerCase();
+    if (providerId) {
+      trackAnalyticsEvent('provider_disconnected', {
+        provider: providerId,
+        ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
+      });
+    }
+    return chat.disconnectProvider(provider);
+  });
   ipcMain.handle('chat:steer-queued-message', (event, id: string) =>
     chat.steerQueuedMessage(id, event.sender as WebContents)
   );

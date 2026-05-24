@@ -24,6 +24,7 @@ import {
   modelLabel,
   providerAuthKind,
   providerAuthLabel,
+  providerAuthSlots,
   textDelta,
   thinkingDelta
 } from '@main/helpers';
@@ -519,6 +520,16 @@ export class ChatService {
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
 
     this.authStorage.set(cleanProvider, { type: 'api_key', key: cleanApiKey });
+    this.modelRegistry.refresh();
+
+    return this.getAuthProviders();
+  }
+
+  async disconnectProvider(provider: string): Promise<ProviderAuthStatus[]> {
+    const cleanProvider = provider.trim().toLowerCase();
+    if (!cleanProvider) return this.getAuthProviders();
+
+    for (const slot of providerAuthSlots(cleanProvider)) this.authStorage.remove(slot);
     this.modelRegistry.refresh();
 
     return this.getAuthProviders();

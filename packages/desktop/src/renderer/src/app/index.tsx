@@ -98,6 +98,7 @@ export const App = () => {
     selectedModelKey,
     previousUserTurn,
     loginSubscription,
+    disconnectProvider,
     steerQueuedMessage,
     deleteQueuedMessage,
     selectThinkingLevel,
@@ -252,6 +253,7 @@ export const App = () => {
       onSaveApiKey={saveApiKey}
       composerShortcut={composerShortcut}
       onLoginSubscription={loginSubscription}
+      onDisconnectProvider={disconnectProvider}
       onComposerShortcutChange={updateComposerShortcut}
     />
   );
