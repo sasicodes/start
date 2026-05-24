@@ -5,6 +5,7 @@ import { useRef, useEffect, useCallback } from 'preact/hooks';
 
 interface SessionRouteOptions {
   route: AppRoute;
+  disabled: boolean;
   surface: AppSurface;
   loadedSessionId: string;
   activeSessionId: string;
@@ -15,6 +16,7 @@ interface SessionRouteOptions {
 
 export const useSessionRoute = ({
   route,
+  disabled,
   surface,
   navigate,
   openSessionId,
@@ -26,12 +28,14 @@ export const useSessionRoute = ({
   const openingRouteSessionRef = useRef('');
 
   useEffect(() => {
+    if (disabled) return;
     if (surface === 'composer') return;
     if (route.name !== 'chat' || !activeSessionId) return;
     navigate({ name: 'session', sessionId: activeSessionId }, true);
-  }, [activeSessionId, navigate, route.name, surface]);
+  }, [activeSessionId, disabled, navigate, route.name, surface]);
 
   useEffect(() => {
+    if (disabled) return;
     if (surface === 'composer') return;
     if (route.name !== 'session') return;
     if (selectingSessionRef.current) return;
@@ -61,7 +65,7 @@ export const useSessionRoute = ({
       active = false;
       if (openingRouteSessionRef.current === sessionId) openingRouteSessionRef.current = '';
     };
-  }, [closeSidePanel, loadedSessionId, navigate, openSessionId, route, surface]);
+  }, [closeSidePanel, disabled, loadedSessionId, navigate, openSessionId, route, surface]);
 
   return useCallback(
     async (session: RecentSession) => {

@@ -2,9 +2,9 @@ import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
-import { useSessionPanels } from '@renderer/app/session-panels';
 import { useRendererRuntime } from '@renderer/app/runtime';
-import { useSessionRoute } from '@renderer/app/session-route';
+import { useSessionPanels } from '@renderer/app/session/panels';
+import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
 import { AppSidePanel, sidePanelLabel as getSidePanelLabel } from '@renderer/app/side-panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
@@ -12,10 +12,11 @@ import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
-import { useRef, useEffect, useCallback } from 'preact/hooks';
+import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 
 export const App = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const { route, surface, setSurface, navigate, showChat } = useAppNavigation(textareaRef);
   const { composerExiting, composerRevealKey, finishComposerExit, completeComposerExit } = useComposerOverlay({
     setSurface,
@@ -133,19 +134,28 @@ export const App = () => {
     [selectThinkingLevel]
   );
 
-  const chooseWorkspaceFromComposer = useCallback(async () => {
-    closeSidePanel();
-    const switched = await chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' });
-    if (switched) navigate({ name: 'chat' }, true);
-  }, [chooseWorkspaceDirectory, closeSidePanel, navigate, surface]);
+  const showSwitchedWorkspace = useCallback(
+    async (switcher: () => Promise<boolean>) => {
+      closeSidePanel();
+      setSwitchingWorkspace(true);
+      try {
+        const switched = await switcher();
+        if (switched) navigate({ name: 'chat' }, true);
+      } finally {
+        setSwitchingWorkspace(false);
+      }
+    },
+    [closeSidePanel, navigate]
+  );
+
+  const chooseWorkspaceFromComposer = useCallback(
+    () => showSwitchedWorkspace(() => chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' })),
+    [chooseWorkspaceDirectory, showSwitchedWorkspace, surface]
+  );
 
   const selectWorkspaceFromComposer = useCallback(
-    async (path: string) => {
-      closeSidePanel();
-      const switched = await switchWorkspace(path, { preserveDraft: true });
-      if (switched) navigate({ name: 'chat' }, true);
-    },
-    [closeSidePanel, navigate, switchWorkspace]
+    (path: string) => showSwitchedWorkspace(() => switchWorkspace(path, { preserveDraft: true })),
+    [showSwitchedWorkspace, switchWorkspace]
   );
 
   const startNewSession = useCallback(() => {
@@ -158,6 +168,7 @@ export const App = () => {
 
   const openRecentSession = useSessionRoute({
     route,
+    disabled: switchingWorkspace,
     surface,
     navigate,
     openSessionId,
@@ -203,19 +214,14 @@ export const App = () => {
     void window.pi.app.openPath(path).catch(() => {});
   }, []);
 
-  const chooseWorkspaceFromDock = useCallback(async () => {
-    closeSidePanel();
-    const switched = await chooseWorkspaceDirectory();
-    if (switched) navigate({ name: 'chat' }, true);
-  }, [chooseWorkspaceDirectory, closeSidePanel, navigate]);
+  const chooseWorkspaceFromDock = useCallback(
+    () => showSwitchedWorkspace(chooseWorkspaceDirectory),
+    [chooseWorkspaceDirectory, showSwitchedWorkspace]
+  );
 
   const selectWorkspaceFromDock = useCallback(
-    async (path: string) => {
-      closeSidePanel();
-      const switched = await switchWorkspace(path);
-      if (switched) navigate({ name: 'chat' }, true);
-    },
-    [closeSidePanel, navigate, switchWorkspace]
+    (path: string) => showSwitchedWorkspace(() => switchWorkspace(path)),
+    [showSwitchedWorkspace, switchWorkspace]
   );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;

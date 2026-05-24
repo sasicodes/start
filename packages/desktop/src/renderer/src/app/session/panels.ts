@@ -1,7 +1,7 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 
-interface UseSessionPanelsOptions {
+interface SessionPanelsOptions {
   surface: AppSurface;
   sessionViewActive: boolean;
 }
@@ -16,7 +16,7 @@ const isBracketToggle = (event: KeyboardEvent) => {
   return event.code === 'BracketRight' || event.key === ']';
 };
 
-export const useSessionPanels = ({ surface, sessionViewActive }: UseSessionPanelsOptions) => {
+export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOptions) => {
   const [activityTurnId, setActivityTurnId] = useState('');
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [sidePanelMode, setSidePanelMode] = useState<SidePanelMode>('settings');
