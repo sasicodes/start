@@ -46,6 +46,10 @@ interface GitSummaryLike {
   filesChanged: number;
 }
 
+const EmptyDiff = ({ message }: { message: string }) => (
+  <div class="grid flex-1 place-items-center px-4 text-sm leading-6 text-soft">{message}</div>
+);
+
 const summaryFromSections = (sections: GitSummaryLike[]) =>
   sections.reduce(
     (summary, section) => ({
@@ -159,15 +163,13 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
           </div>
         </header>
       )}
-      {patch.kind === 'loading' && <p class="m-0 px-4 pt-4 text-sm leading-6 text-soft">Preparing diff...</p>}
-      {patch.kind === 'unavailable' && <p class="m-0 px-4 text-sm leading-6 text-soft">No diff to show.</p>}
-      {patch.kind === 'ready' && patch.patch.sections.length === 0 && (
-        <p class="m-0 px-4 text-sm leading-6 text-soft">No diff to show.</p>
-      )}
+      {patch.kind === 'loading' && <EmptyDiff message="Preparing diff" />}
+      {patch.kind === 'unavailable' && <EmptyDiff message="No diff to show." />}
+      {patch.kind === 'ready' && patch.patch.sections.length === 0 && <EmptyDiff message="No diff to show." />}
       {patch.kind === 'ready' && patch.patch.sections.length > 0 && (
         <div class="min-w-0 pb-4">
-          <Suspense fallback={<p class="m-0 px-4 text-sm leading-6 text-soft">Preparing diff…</p>}>
-            <GitDiffViewer sections={visibleSections} viewMode={diffViewMode} />
+          <Suspense fallback={<p class="m-0 px-4 text-sm leading-6 text-soft">Preparing diff</p>}>
+            <GitDiffViewer cwd={path} viewMode={diffViewMode} sections={visibleSections} />
           </Suspense>
         </div>
       )}

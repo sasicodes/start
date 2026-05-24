@@ -131,7 +131,15 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
   return highlightRevision;
 };
 
-export const GitDiffViewer = ({ sections, viewMode }: { sections: GitPatchSection[]; viewMode: DiffViewMode }) => {
+export const GitDiffViewer = ({
+  cwd,
+  sections,
+  viewMode
+}: {
+  cwd: string;
+  viewMode: DiffViewMode;
+  sections: GitPatchSection[];
+}) => {
   const entryState = useDiffEntries(sections);
   const limited = sections.some((section) => section.limited && !section.patch);
   const entries = entryState.kind === 'ready' ? entryState.entries : [];
@@ -140,7 +148,7 @@ export const GitDiffViewer = ({ sections, viewMode }: { sections: GitPatchSectio
 
   return (
     <div class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
-      {entryState.kind === 'parsing' && <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Preparing diff…</p>}
+      {entryState.kind === 'parsing' && <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Preparing diff</p>}
       {entryState.kind === 'ready' && limited && (
         <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Diff too large to show.</p>
       )}
@@ -150,10 +158,11 @@ export const GitDiffViewer = ({ sections, viewMode }: { sections: GitPatchSectio
       {visibleEntries.map((entry) => (
         <DiffFile
           key={entry.key}
+          cwd={cwd}
           file={entry.file}
+          viewMode={viewMode}
           status={entry.status}
           language={entry.language}
-          viewMode={viewMode}
           highlightRevision={highlightRevision}
         />
       ))}

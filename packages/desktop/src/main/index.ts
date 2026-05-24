@@ -2,7 +2,7 @@ import { initAnalytics, shutdownAnalytics, trackAnalyticsEvent, workspaceAnalyti
 import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/application';
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
-import { getGitChangeSummary, getGitPatch } from '@main/git';
+import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
@@ -28,6 +28,7 @@ import {
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
+import nodePath from 'node:path';
 import electron from 'electron';
 
 const { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
@@ -151,6 +152,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:git-patch', (_event, workspacePath?: string) =>
     getGitPatch(workspacePath ?? chat.getWorkspaceCwd())
   );
+  ipcMain.handle('app:git-file-blob', (_event, workspacePath: string, filePath: string, ref: GitFileRef) =>
+    getGitFileBlob(workspacePath ?? chat.getWorkspaceCwd(), filePath, ref)
+  );
   ipcMain.handle('app:workspace', (_event, workspacePath?: string) =>
     getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
   );
@@ -172,6 +176,12 @@ app.whenReady().then(async () => {
     showShortcuts();
   });
   ipcMain.handle('app:open-path', (_event, path: string) => shell.openPath(path));
+  ipcMain.handle('app:reveal-path', (_event, workspacePath: string, filePath: string) => {
+    const cwdResolved = nodePath.resolve(workspacePath);
+    const absolutePath = nodePath.resolve(cwdResolved, filePath);
+    if (!absolutePath.startsWith(cwdResolved + nodePath.sep) && absolutePath !== cwdResolved) return;
+    shell.showItemInFolder(absolutePath);
+  });
   ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {
     trackAnalyticsEvent('composer_submitted', {
       attachment_count: attachments.length,

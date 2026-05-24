@@ -178,6 +178,14 @@ export interface GitPatch {
   sections: GitPatchSection[];
 }
 
+export type GitFileRef = 'head' | 'working';
+
+export interface GitFileBlob {
+  data: string;
+  mime: string;
+  sizeBytes: number;
+}
+
 export interface WorkspaceFolder {
   name: string;
   path: string;
@@ -271,11 +279,14 @@ const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload
 
 const api = {
   app: {
+    platform: process.platform,
     focusState: (): Promise<AppFocusState> => ipcRenderer.invoke('app:focus-state'),
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
     gitChanges: (path?: string): Promise<GitChangeSummary | undefined> => ipcRenderer.invoke('app:git-changes', path),
     gitPatch: (path?: string): Promise<GitPatch | undefined> => ipcRenderer.invoke('app:git-patch', path),
+    gitFileBlob: (workspacePath: string, filePath: string, ref: GitFileRef): Promise<GitFileBlob | undefined> =>
+      ipcRenderer.invoke('app:git-file-blob', workspacePath, filePath, ref),
     workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
@@ -283,6 +294,8 @@ const api = {
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),
+    revealPath: (workspacePath: string, filePath: string): Promise<void> =>
+      ipcRenderer.invoke('app:reveal-path', workspacePath, filePath),
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),

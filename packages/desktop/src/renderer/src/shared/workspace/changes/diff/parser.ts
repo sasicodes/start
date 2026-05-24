@@ -18,7 +18,9 @@ export interface PatchFile {
   displayPath: string;
   hunks: PatchHunk[];
   isBinary: boolean;
+  newMode: string;
   newPath: string;
+  oldMode: string;
   oldPath: string;
   removed: number;
   status: PatchFileStatus;
@@ -88,7 +90,9 @@ const createPatchFile = (line: string): PatchFile => {
     displayPath,
     hunks: [],
     isBinary: false,
+    newMode: '',
     newPath: paths.newPath,
+    oldMode: '',
     oldPath: paths.oldPath,
     removed: 0,
     status: 'modified'
@@ -137,11 +141,23 @@ const applyFileHeader = (file: PatchFile, line: string) => {
 
   if (line.startsWith('new file mode ')) {
     file.status = 'added';
+    file.newMode = line.slice(14).trim();
     return;
   }
 
   if (line.startsWith('deleted file mode ')) {
     file.status = 'deleted';
+    file.oldMode = line.slice(18).trim();
+    return;
+  }
+
+  if (line.startsWith('old mode ')) {
+    file.oldMode = line.slice(9).trim();
+    return;
+  }
+
+  if (line.startsWith('new mode ')) {
+    file.newMode = line.slice(9).trim();
     return;
   }
 
@@ -170,6 +186,15 @@ const applyFileHeader = (file: PatchFile, line: string) => {
     file.newPath = cleanPatchPath(line.slice(8));
     file.status = 'copied';
     updateDisplayPath(file);
+    return;
+  }
+
+  if (line.startsWith('index ')) {
+    const trailing = line.slice(6).split(' ')[1];
+    if (trailing && /^\d{6}$/.test(trailing)) {
+      if (!file.oldMode) file.oldMode = trailing;
+      if (!file.newMode) file.newMode = trailing;
+    }
     return;
   }
 
