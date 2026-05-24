@@ -229,14 +229,8 @@ export interface RootItem {
   description?: string;
 }
 
-export interface SkillItem {
-  command: string;
-  description: string;
-  name: string;
-  path: string;
-}
-
 export interface SlashCommandItem {
+  key: string;
   name: string;
   description: string;
   source: 'extension' | 'prompt' | 'skill';
@@ -277,7 +271,6 @@ const api = {
     focusState: (): Promise<AppFocusState> => ipcRenderer.invoke('app:focus-state'),
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>
       ipcRenderer.invoke('app:list-root-items', path, scope),
-    listSkills: (): Promise<SkillItem[]> => ipcRenderer.invoke('app:list-skills'),
     gitChanges: (path?: string): Promise<GitChangeSummary | undefined> => ipcRenderer.invoke('app:git-changes', path),
     gitPatch: (path?: string): Promise<GitPatch | undefined> => ipcRenderer.invoke('app:git-patch', path),
     workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),

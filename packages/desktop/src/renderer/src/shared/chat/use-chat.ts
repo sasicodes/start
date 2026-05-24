@@ -91,10 +91,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
-      updateActiveSessionId(nextStatus.sessionId);
+      updateActiveSessionId(nextStatus.sessionId && turnCount > 0 ? nextStatus.sessionId : '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
     },
-    [updateActiveSessionId]
+    [turnCount, updateActiveSessionId]
   );
 
   const syncStatus = useCallback(async () => {
@@ -131,6 +131,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const newSession = useCallback(async () => {
     const requestId = newSessionRequestRef.current + 1;
     newSessionRequestRef.current = requestId;
+    clearSlashCommandsCache();
     clearSession();
     try {
       await window.pi.chat.newSession();
@@ -197,6 +198,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       }
       if (sessionRequestRef.current !== requestId) return false;
       applyStatus(nextStatus);
+      clearSlashCommandsCache();
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       setDraft('');

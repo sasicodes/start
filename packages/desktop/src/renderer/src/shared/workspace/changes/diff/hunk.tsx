@@ -105,7 +105,7 @@ const DiffPane = ({
           !highlightedHtml && cell.tone === 'remove' && 'text-danger',
           !highlightedHtml && !addition && !removal && !placeholder && 'text-ink',
           placeholder &&
-            'text-soft/25 [background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_6px)]'
+            'text-soft/25 [background-image:radial-gradient(circle,currentColor_1px,transparent_1px),radial-gradient(circle,currentColor_1px,transparent_1px)] [background-position:0_calc(50%_-_4px),0_calc(50%_+_4px)] [background-repeat:repeat-x] [background-size:8px_100%]'
         )}
       >
         {highlightedHtml ? null : cell.content || '\u00a0'}
