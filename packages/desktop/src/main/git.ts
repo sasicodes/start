@@ -23,11 +23,11 @@ export type GitPatch = {
 
 export type GitFileRef = 'head' | 'working';
 
-export type GitFileBlob = {
+export interface GitFileBlob {
   data: string;
   mime: string;
   sizeBytes: number;
-};
+}
 
 type GitSectionStats = {
   files: Set<string>;
@@ -47,16 +47,17 @@ const maxPatchLines = 20_000;
 const maxUntrackedFiles = 64;
 const maxUntrackedFileBytes = 512 * 1024;
 const gitFileBlobMaxBytes = 3 * 1024 * 1024;
+const gitShowTimeoutMs = 4000;
 
 const mimeByExtension: Record<string, string> = {
-  avif: 'image/avif',
   bmp: 'image/bmp',
   gif: 'image/gif',
-  ico: 'image/x-icon',
-  jpeg: 'image/jpeg',
-  jpg: 'image/jpeg',
   png: 'image/png',
-  webp: 'image/webp'
+  jpg: 'image/jpeg',
+  avif: 'image/avif',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  ico: 'image/x-icon'
 };
 
 const mimeFromPath = (filePath: string) => {
@@ -316,39 +317,60 @@ export const getGitPatch = async (cwd: string): Promise<GitPatch | undefined> =>
 };
 
 const readWorkingTreeBuffer = async (cwd: string, filePath: string): Promise<Buffer | undefined> => {
-  const cwdResolved = path.resolve(cwd);
-  const absolutePath = path.resolve(cwdResolved, filePath);
-  if (!absolutePath.startsWith(cwdResolved + path.sep) && absolutePath !== cwdResolved) return;
+  try {
+    const cwdResolved = path.resolve(cwd);
+    const absolutePath = path.resolve(cwdResolved, filePath);
+    if (!absolutePath.startsWith(cwdResolved + path.sep) && absolutePath !== cwdResolved) return;
 
-  const details = await stat(absolutePath).catch(() => {});
-  if (!details?.isFile() || details.size > gitFileBlobMaxBytes) return;
+    const details = await stat(absolutePath);
+    if (!details.isFile() || details.size > gitFileBlobMaxBytes) return;
 
-  return (await readFile(absolutePath).catch(() => undefined)) || undefined;
+    return await readFile(absolutePath);
+  } catch {
+    return;
+  }
 };
 
-const readHeadBuffer = (cwd: string, filePath: string): Promise<Buffer | undefined> =>
-  new Promise((resolve) => {
-    const child = spawn('git', ['show', `HEAD:${filePath}`], { cwd });
-    const chunks: Buffer[] = [];
-    let size = 0;
-    let aborted = false;
+const readHeadBuffer = async (cwd: string, filePath: string): Promise<Buffer | undefined> => {
+  try {
+    return await new Promise<Buffer>((resolve, reject) => {
+      const child = spawn('git', ['show', `HEAD:${filePath}`], { cwd });
+      const chunks: Buffer[] = [];
+      let size = 0;
 
-    child.stdout.on('data', (chunk: Buffer) => {
-      size += chunk.length;
-      if (size > gitFileBlobMaxBytes) {
-        aborted = true;
+      const timer = setTimeout(() => {
         child.kill();
-        return;
-      }
-      chunks.push(chunk);
+        reject(new Error('git show timed out'));
+      }, gitShowTimeoutMs);
+
+      child.stdout.on('data', (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > gitFileBlobMaxBytes) {
+          child.kill();
+          clearTimeout(timer);
+          reject(new Error('blob exceeds max size'));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      child.stderr.on('data', () => {});
+      child.on('error', (error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          reject(new Error(`git show exited ${code}`));
+          return;
+        }
+        resolve(Buffer.concat(chunks));
+      });
     });
-    child.stderr.on('data', () => {});
-    child.on('error', () => resolve(undefined));
-    child.on('close', (code) => {
-      if (aborted || code !== 0) return resolve(undefined);
-      resolve(Buffer.concat(chunks));
-    });
-  });
+  } catch {
+    return;
+  }
+};
 
 export const getGitFileBlob = async (
   cwd: string,

@@ -1,27 +1,19 @@
+import { extensionOf } from '@renderer/shared/workspace/changes/diff/extension';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 
-export type PatchFileKind = 'binary' | 'image' | 'mode-only' | 'submodule' | 'symlink' | 'text';
+export type PatchFileKind = 'text' | 'image' | 'binary' | 'symlink' | 'mode-only' | 'submodule';
 
-const imageExtensions = new Set(['avif', 'bmp', 'gif', 'ico', 'jpeg', 'jpg', 'png', 'webp']);
-
-const submoduleMode = '160000';
-const symlinkMode = '120000';
-
-const extensionOf = (filePath: string) => {
-  const basename = filePath.split('/').pop() ?? '';
-  const dot = basename.lastIndexOf('.');
-  return dot === -1 ? '' : basename.slice(dot + 1).toLowerCase();
-};
+const imageExtensions = new Set(['bmp', 'gif', 'ico', 'jpg', 'png', 'avif', 'jpeg', 'webp']);
 
 export const isImagePath = (filePath: string) => imageExtensions.has(extensionOf(filePath));
 
 const isMode = (file: PatchFile, mode: string) => file.oldMode === mode || file.newMode === mode;
 
 export const patchFileKind = (file: PatchFile): PatchFileKind => {
-  if (isMode(file, submoduleMode)) return 'submodule';
-  if (isMode(file, symlinkMode)) return 'symlink';
+  if (isMode(file, '160000')) return 'submodule';
+  if (isMode(file, '120000')) return 'symlink';
+  if (file.hunks.length === 0 && file.oldMode && file.newMode && file.oldMode !== file.newMode) return 'mode-only';
   if (isImagePath(file.newPath || file.oldPath || file.displayPath)) return 'image';
   if (file.isBinary) return 'binary';
-  if (file.hunks.length === 0 && file.oldMode && file.newMode && file.oldMode !== file.newMode) return 'mode-only';
   return 'text';
 };

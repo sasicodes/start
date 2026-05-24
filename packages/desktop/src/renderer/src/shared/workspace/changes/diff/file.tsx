@@ -114,27 +114,27 @@ const FallbackDiff = ({ cwd, file, kind }: { cwd: string; file: PatchFile; kind:
 const DiffBody = ({
   cwd,
   file,
-  highlightRevision,
   kind,
-  language,
   status,
-  viewMode
+  language,
+  viewMode,
+  highlightRevision
 }: {
   cwd: string;
   file: PatchFile;
-  highlightRevision: number;
-  kind: PatchFileKind;
   language: string;
+  kind: PatchFileKind;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
+  highlightRevision: number;
 }) => {
   if (kind === 'image') return <ImageDiff cwd={cwd} file={file} status={status} />;
   if (fileHasTextDiff(file))
-    return <DiffHunks file={file} language={language} viewMode={viewMode} highlightRevision={highlightRevision} />;
+    return <DiffHunks file={file} viewMode={viewMode} language={language} highlightRevision={highlightRevision} />;
   return <FallbackDiff cwd={cwd} file={file} kind={kind} />;
 };
 
-export const DiffFile = memo(({ cwd, file, highlightRevision, language, status, viewMode }: DiffFileProps) => {
+export const DiffFile = memo(({ cwd, file, status, language, viewMode, highlightRevision }: DiffFileProps) => {
   const kind = patchFileKind(file);
   const [open, setOpen] = useState(() => fileOpenByDefault(file, kind));
 
@@ -164,11 +164,11 @@ export const DiffFile = memo(({ cwd, file, highlightRevision, language, status, 
         <DiffBody
           cwd={cwd}
           file={file}
-          highlightRevision={highlightRevision}
           kind={kind}
-          language={language}
           status={status}
+          language={language}
           viewMode={viewMode}
+          highlightRevision={highlightRevision}
         />
       )}
     </section>

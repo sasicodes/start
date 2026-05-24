@@ -100,4 +100,84 @@ describe('patchFileKind', () => {
     expect(file.status).toBe('added');
     expect(file.newMode).toBe('100644');
   });
+
+  it('prefers mode-only over image when an image file only changes permissions', () => {
+    const file = firstFile(['diff --git "a/logo.png" "b/logo.png"', 'old mode 100644', 'new mode 100755'].join('\n'));
+    expect(patchFileKind(file)).toBe('mode-only');
+  });
+
+  it('classifies deleted images as image', () => {
+    const file = firstFile(
+      [
+        'diff --git "a/old.jpg" "b/old.jpg"',
+        'deleted file mode 100644',
+        'index aaaaaaa..0000000',
+        'Binary files a/old.jpg and /dev/null differ'
+      ].join('\n')
+    );
+    expect(patchFileKind(file)).toBe('image');
+    expect(file.status).toBe('deleted');
+    expect(file.oldMode).toBe('100644');
+  });
+
+  it('classifies renamed images as image and exposes both paths', () => {
+    const file = firstFile(
+      [
+        'diff --git "a/old/hero.png" "b/new/hero.png"',
+        'similarity index 100%',
+        'rename from old/hero.png',
+        'rename to new/hero.png'
+      ].join('\n')
+    );
+    expect(patchFileKind(file)).toBe('image');
+    expect(file.status).toBe('renamed');
+    expect(file.oldPath).toBe('old/hero.png');
+    expect(file.newPath).toBe('new/hero.png');
+  });
+
+  it('classifies non-image binary files as binary', () => {
+    const file = firstFile(
+      [
+        'diff --git "a/manual.pdf" "b/manual.pdf"',
+        'index aaaaaaa..bbbbbbb 100644',
+        'Binary files a/manual.pdf and b/manual.pdf differ'
+      ].join('\n')
+    );
+    expect(patchFileKind(file)).toBe('binary');
+  });
+
+  it('does not classify SVG edits as image so they keep the text diff', () => {
+    const file = firstFile(
+      [
+        'diff --git "a/icon.svg" "b/icon.svg"',
+        'index aaaaaaa..bbbbbbb 100644',
+        '--- a/icon.svg',
+        '+++ b/icon.svg',
+        '@@ -1 +1 @@',
+        '-<svg width="10"/>',
+        '+<svg width="20"/>'
+      ].join('\n')
+    );
+    expect(patchFileKind(file)).toBe('text');
+  });
+
+  it('treats equal old and new modes with no hunks as text rather than mode-only', () => {
+    const file = firstFile(['diff --git "a/script.sh" "b/script.sh"', 'index aaaaaaa..bbbbbbb 100755'].join('\n'));
+    expect(patchFileKind(file)).toBe('text');
+  });
+});
+
+describe('isImagePath edge cases', () => {
+  it('treats only the final extension', () => {
+    expect(isImagePath('archive.tar.gz')).toBe(false);
+    expect(isImagePath('photo.backup.png')).toBe(true);
+  });
+
+  it('ignores files in directories named like image extensions', () => {
+    expect(isImagePath('png/notes.md')).toBe(false);
+  });
+
+  it('rejects empty paths', () => {
+    expect(isImagePath('')).toBe(false);
+  });
 });

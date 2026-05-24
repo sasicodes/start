@@ -133,12 +133,12 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
 
 export const GitDiffViewer = ({
   cwd,
-  sections,
-  viewMode
+  viewMode,
+  sections
 }: {
   cwd: string;
-  sections: GitPatchSection[];
   viewMode: DiffViewMode;
+  sections: GitPatchSection[];
 }) => {
   const entryState = useDiffEntries(sections);
   const limited = sections.some((section) => section.limited && !section.patch);
@@ -160,9 +160,9 @@ export const GitDiffViewer = ({
           key={entry.key}
           cwd={cwd}
           file={entry.file}
+          viewMode={viewMode}
           status={entry.status}
           language={entry.language}
-          viewMode={viewMode}
           highlightRevision={highlightRevision}
         />
       ))}

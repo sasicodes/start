@@ -169,7 +169,7 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
       {patch.kind === 'ready' && patch.patch.sections.length > 0 && (
         <div class="min-w-0 pb-4">
           <Suspense fallback={<p class="m-0 px-4 text-sm leading-6 text-soft">Preparing diff</p>}>
-            <GitDiffViewer cwd={path} sections={visibleSections} viewMode={diffViewMode} />
+            <GitDiffViewer cwd={path} viewMode={diffViewMode} sections={visibleSections} />
           </Suspense>
         </div>
       )}

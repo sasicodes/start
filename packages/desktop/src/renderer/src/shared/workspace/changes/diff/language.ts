@@ -1,3 +1,4 @@
+import { extensionOf } from '@renderer/shared/workspace/changes/diff/extension';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 
 const languageByExtension: Record<string, string> = {
@@ -43,12 +44,7 @@ const languageByExtension: Record<string, string> = {
 const languageFromPath = (filePath: string) => {
   const basename = filePath.split('/').pop() ?? '';
   if (/^dockerfile/i.test(basename)) return 'dockerfile';
-
-  const dot = basename.lastIndexOf('.');
-  if (dot === -1) return '';
-
-  const extension = basename.slice(dot + 1).toLowerCase();
-  return languageByExtension[extension] ?? '';
+  return languageByExtension[extensionOf(filePath)] ?? '';
 };
 
 export const patchFileLanguage = (file: PatchFile) =>

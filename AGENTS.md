@@ -19,6 +19,7 @@
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
 - Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
 - Keep side effects audited and singular: clean up every timer, animation frame, listener, watcher, subscription, and observer; avoid duplicate polling/listeners for the same source; batch high-frequency updates with animation frames when UI-bound.
+- Extract effect setup, async data fetching, and subscription logic into named custom hooks (`use*`) when the effect carries its own state, refs, or more than a few lines of setup; keep components focused on rendering.
 - Prefer `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
 - Keep files small. Split component files before they approach 300 lines.
 - Keep UI highly performant and snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
@@ -37,6 +38,7 @@
 - Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a real maintenance hazard.
 - Keep local component prop names minimal and contextual; avoid repeating parent/domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`, and similarly clear local names when the scope makes the meaning obvious.
 - Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; omit optional object properties at API boundaries.
+- Never write `undefined` literally as a value. For swallowed promise rejections use `.catch(() => {})` instead of `.catch(() => undefined)`; for absent state, omit the property or use an empty string per the rules above.
 - For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose absent-value branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
