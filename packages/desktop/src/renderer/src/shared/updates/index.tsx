@@ -13,7 +13,7 @@ import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 import { useEffect, useState } from 'preact/hooks';
 
-export const UpdateButton = memo(() => {
+export const Update = memo(() => {
   const appFocused = useAppFocusState();
   const [state, setState] = useState<UpdateState>({ status: 'idle' });
 
@@ -47,7 +47,7 @@ export const UpdateButton = memo(() => {
         onClick={() => void window.pi.app.installUpdate()}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
-          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-ink shadow-shell outline-0 transition-[background-color,padding] duration-75 ease-out select-none focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0',
+          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-ink shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0',
           downloaded && 'hover:bg-control',
           (!appFocused || !downloaded) && 'pointer-events-none'
         )}

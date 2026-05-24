@@ -4,7 +4,7 @@ import { app, ipcMain } from 'electron';
 import { autoUpdater, type UpdateInfo } from 'electron-updater';
 
 const updateCheckDelayMs = 30 * 1000;
-const updateCheckIntervalMs = 6 * 60 * 60 * 1000;
+const updateCheckIntervalMs = 60 * 60 * 1000;
 
 export type UpdateState =
   | { status: 'available'; version?: string }
