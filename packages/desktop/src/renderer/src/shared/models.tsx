@@ -1,14 +1,13 @@
 import type { ModelOption } from '@preload/index';
+import { modelProviderId, type ModelProviderId } from '@renderer/shared/model-provider';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { AnthropicIcon, CheckIcon, ChevronRightIcon, GearIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSubmenuTrigger } from '@renderer/ui/menu';
 import { useMemo } from 'preact/hooks';
 
-type ProviderId = 'anthropic' | 'google' | 'openai';
-
 interface ProviderGroup {
   name: string;
-  id: ProviderId;
+  id: ModelProviderId;
   models: ModelOption[];
 }
 
@@ -19,15 +18,7 @@ interface ModelsProps {
   onSelectModel: (modelKey: string) => void;
 }
 
-const matchesAny = (model: ModelOption, terms: string[]) => {
-  const haystack = `${model.provider} ${model.id} ${model.name}`.toLowerCase();
-  return terms.some((term) => haystack.includes(term));
-};
-
-const isAnthropicModel = (model: ModelOption) => matchesAny(model, ['anthropic', 'claude']);
-const isGoogleModel = (model: ModelOption) => matchesAny(model, ['gemini', 'google']);
-
-const ProviderIcon = ({ id }: { id: ProviderId }) => {
+export const ProviderIcon = ({ id }: { id: ModelProviderId }) => {
   if (id === 'openai') return <OpenAIIcon class="size-4" />;
   if (id === 'google') return <GeminiIcon class="size-4" />;
   return <AnthropicIcon class="size-4" />;
@@ -140,14 +131,13 @@ const ProviderSubmenu = ({
 
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
   const providers = useMemo<ProviderGroup[]>(() => {
-    const anthropic = models.filter(isAnthropicModel);
-    const google = models.filter(isGoogleModel);
-    const openai = models.filter((model) => !isAnthropicModel(model) && !isGoogleModel(model));
+    const grouped: Record<ModelProviderId, ModelOption[]> = { anthropic: [], google: [], openai: [] };
+    for (const model of models) grouped[modelProviderId(model)].push(model);
 
     return [
-      { id: 'openai', name: 'OpenAI', models: openai },
-      { id: 'anthropic', name: 'Anthropic', models: anthropic },
-      { id: 'google', name: 'Google', models: google }
+      { id: 'openai', name: 'OpenAI', models: grouped.openai },
+      { id: 'anthropic', name: 'Anthropic', models: grouped.anthropic },
+      { id: 'google', name: 'Google', models: grouped.google }
     ];
   }, [models]);
 

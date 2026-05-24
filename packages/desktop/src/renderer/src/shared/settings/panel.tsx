@@ -1,4 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
+import { apiKeyInputValue } from '@renderer/shared/settings/api-key';
 import { AnthropicIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -78,11 +79,13 @@ export const Settings = memo(
   }: SettingsProps) => {
     const [shortcutError, setShortcutError] = useState('');
     const [recordingShortcut, setRecordingShortcut] = useState(false);
+    const [editingKey, setEditingKey] = useState<ProviderKey | null>(null);
     const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', google: '', openai: '' });
 
     const saveApiKey = async (provider: ProviderKey) => {
       await onSaveApiKey(provider, apiKeys[provider]);
       setApiKeys((current) => ({ ...current, [provider]: '' }));
+      setEditingKey(null);
     };
 
     const updateApiKey = (provider: ProviderKey, value: string) => {
@@ -120,9 +123,12 @@ export const Settings = memo(
         {providers.map((provider, index) => {
           const auth = providerStatus(authProviders, provider.key);
           const draftKey = apiKeys[provider.key];
+          const editing = editingKey === provider.key;
+          const storedApiKey = auth?.kind === 'api_key';
           const authLabel = auth?.label ?? 'Not connected';
           const hasDraftKey = draftKey.trim().length > 0;
           const authDetail = auth?.connected ? connectionDetail(auth.label) : '';
+          const inputValue = apiKeyInputValue(draftKey, storedApiKey, editing);
 
           return (
             <div class={tw('py-4', index > 0 && 'border-t border-line')} key={provider.key}>
@@ -149,7 +155,9 @@ export const Settings = memo(
                 <div class="relative rounded-full border border-line bg-composer p-1">
                   <input
                     type="password"
-                    value={draftKey}
+                    value={inputValue}
+                    onFocus={() => setEditingKey(provider.key)}
+                    onBlur={() => setEditingKey((current) => (current === provider.key ? null : current))}
                     onInput={(event) => updateApiKey(provider.key, event.currentTarget.value)}
                     placeholder={`${provider.name} API key`}
                     class="h-8 w-full rounded-full border-0 bg-transparent pr-20 pl-3 text-sm text-ink outline-none placeholder:text-soft"
