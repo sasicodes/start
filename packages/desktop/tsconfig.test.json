@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "preserve",
+    "jsxImportSource": "preact",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleDetection": "force",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["node", "vitest/globals"],
+    "noEmit": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@main/*.js": ["src/main/*.ts"],
+      "@main/*": ["src/main/*.ts"],
+      "@preload/*.js": ["src/preload/*.ts"],
+      "@preload/*": ["src/preload/*.ts"],
+      "@renderer/*.js": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx"],
+      "@renderer/*": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx"]
+    }
+  },
+  "include": ["tests/**/*.ts", "vitest.config.ts"]
+}
