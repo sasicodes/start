@@ -10,6 +10,21 @@ export interface AppSettingsResult {
   error?: string;
 }
 
+export type AnalyticsEvent =
+  | 'api_key_added'
+  | 'app_opened'
+  | 'command_sent'
+  | 'composer_submitted'
+  | 'model_selected'
+  | 'prompt_sent'
+  | 'quick_access_toggled'
+  | 'session_created'
+  | 'shortcut_changed'
+  | 'subscription_login_started'
+  | 'thinking_level_selected'
+  | 'update_installed'
+  | 'workspace_changed';
+
 export interface ChatStatus {
   ready: boolean;
   workspacePath: string;
@@ -264,6 +279,10 @@ const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload
 };
 
 const api = {
+  analytics: {
+    track: (name: AnalyticsEvent, properties?: Record<string, unknown>): Promise<void> =>
+      ipcRenderer.invoke('analytics:track', name, properties)
+  },
   app: {
     focusState: (): Promise<AppFocusState> => ipcRenderer.invoke('app:focus-state'),
     listRootItems: (path: string, scope: 'root' | 'workspace'): Promise<RootItem[]> =>

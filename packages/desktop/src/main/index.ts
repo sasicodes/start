@@ -1,3 +1,10 @@
+import {
+  initAnalytics,
+  registerAnalyticsIpc,
+  shutdownAnalytics,
+  trackAnalyticsEvent,
+  workspaceAnalyticsProperties
+} from '@main/analytics';
 import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/application';
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
@@ -6,27 +13,27 @@ import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
 import { WorkspaceSessionWatcher } from '@main/session-watcher';
-import { listSkills } from '@main/skills';
 import {
-  readAppSettings,
-  writeAppSettings,
   type AppSettings,
   defaultAppSettings,
-  validateAccelerator
+  readAppSettings,
+  validateAccelerator,
+  writeAppSettings
 } from '@main/settings';
+import { listSkills } from '@main/skills';
 import { registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   createMainWindow,
   hideComposerWindow,
-  sendToRendererWindows,
   sendToMainWindow,
+  sendToRendererWindows,
   showMainWindow,
-  toggleComposerWindow,
   submitComposerToMainWindow,
+  toggleComposerWindow,
   withComposerBlurSuppressed
 } from '@main/window';
-import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
+import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
 import { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
 
 app.setName(appMenuName);
@@ -35,6 +42,7 @@ const chat = new ChatService();
 
 let appSettings: AppSettings | null = null;
 let stopWorkspaceChanged: (() => void) | undefined;
+let quitAfterAnalyticsShutdown = false;
 const recentSessionsWatcher = new WorkspaceSessionWatcher();
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
@@ -61,13 +69,25 @@ const showSettings = () => {
   sendToMainWindow('app:show-settings');
 };
 
-const startNewSession = async () => {
+const toggleQuickAccess = (source: 'menu' | 'shortcut') => {
+  trackAnalyticsEvent('quick_access_toggled', {
+    source,
+    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
+  });
+  toggleComposerWindow();
+};
+
+const startNewSession = async (source: 'menu' | 'renderer' = 'renderer') => {
   try {
     await chat.newSession();
   } catch {
     return;
   }
 
+  trackAnalyticsEvent('session_created', {
+    source,
+    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
+  });
   watchRecentSessions();
   notifyRecentSessionsChanged();
   sendToMainWindow('chat:new-session');
@@ -75,17 +95,20 @@ const startNewSession = async () => {
 
 const registerComposerShortcut = (accelerator: string) => {
   globalShortcut.unregisterAll();
-  return globalShortcut.register(accelerator, toggleComposerWindow);
+  return globalShortcut.register(accelerator, () => toggleQuickAccess('shortcut'));
 };
 
 const menuActions = () => ({
   onShowSettings: showSettings,
-  onQuickAccess: toggleComposerWindow,
-  onNewSession: () => void startNewSession(),
+  onQuickAccess: () => toggleQuickAccess('menu'),
+  onNewSession: () => void startNewSession('menu'),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
 
 app.whenReady().then(async () => {
+  initAnalytics(app.isPackaged);
+  registerAnalyticsIpc();
+
   nativeTheme.themeSource = 'system';
   app.setAppUserModelId(appId);
   app.setName(appMenuName);
@@ -102,6 +125,10 @@ app.whenReady().then(async () => {
   }
 
   appSettings = await readAppSettings();
+  trackAnalyticsEvent('app_opened', {
+    composer_shortcut: appSettings.composerShortcut,
+    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
+  });
   registerComposerShortcut(appSettings.composerShortcut);
   activateWorkspaceAccess(chat.getWorkspaceCwd());
 
@@ -141,15 +168,33 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('app:open-path', (_event, path: string) => shell.openPath(path));
   ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {
+    trackAnalyticsEvent('composer_submitted', {
+      attachment_count: attachments.length,
+      has_attachments: attachments.length > 0,
+      prompt_length: prompt.length,
+      ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
+    });
     submitComposerToMainWindow(prompt, attachments);
   });
   ipcMain.handle('app:set-composer-shortcut', async (_event, composerShortcut: string) => {
     const previousSettings = appSettings;
-    if (previousSettings?.composerShortcut === composerShortcut) return { ok: true, settings: previousSettings };
+    if (previousSettings?.composerShortcut === composerShortcut) {
+      trackAnalyticsEvent('shortcut_changed', {
+        ok: true,
+        changed: false,
+        composer_shortcut: composerShortcut
+      });
+      return { ok: true, settings: previousSettings };
+    }
 
     globalShortcut.unregisterAll();
     if (!validateAccelerator(composerShortcut)) {
       if (previousSettings) registerComposerShortcut(previousSettings.composerShortcut);
+      trackAnalyticsEvent('shortcut_changed', {
+        ok: false,
+        changed: false,
+        composer_shortcut: composerShortcut
+      });
       return { ok: false, settings: previousSettings, error: 'That shortcut is already in use or is not available.' };
     }
 
@@ -158,6 +203,12 @@ app.whenReady().then(async () => {
     appSettings = registered ? nextSettings : previousSettings;
     installApplicationMenu(menuActions());
     installStatusItem(menuActions());
+    trackAnalyticsEvent('shortcut_changed', {
+      ok: registered,
+      changed: registered,
+      composer_shortcut: nextSettings.composerShortcut,
+      ...(previousSettings?.composerShortcut ? { previous_composer_shortcut: previousSettings.composerShortcut } : {})
+    });
     return registered
       ? { ok: true, settings: nextSettings }
       : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
@@ -181,7 +232,17 @@ app.whenReady().then(async () => {
   app.on('activate', showMainWindow);
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  if (!quitAfterAnalyticsShutdown) {
+    quitAfterAnalyticsShutdown = true;
+    event.preventDefault();
+    void shutdownAnalytics()
+      .catch(() => {})
+      .finally(() => app.quit());
+    return;
+  }
+
+  void shutdownAnalytics();
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
   recentSessionsWatcher.close();
