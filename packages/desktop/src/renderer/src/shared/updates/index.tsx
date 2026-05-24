@@ -18,9 +18,12 @@ export const Update = memo(() => {
   useEffect(() => {
     let active = true;
 
-    window.pi.app.updateState().then((nextState) => {
-      if (active) setState(nextState);
-    });
+    window.pi.app
+      .updateState()
+      .then((nextState) => {
+        if (active) setState(nextState);
+      })
+      .catch(() => {});
 
     const stopUpdateEvents = window.pi.app.onUpdateStateChanged(setState);
     return () => {

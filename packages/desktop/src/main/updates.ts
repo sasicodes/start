@@ -19,9 +19,9 @@ export type UpdateState =
 type VersionedUpdateStatus = 'available' | 'downloaded' | 'downloading';
 
 let checking = false;
-let initialUpdateCheckTimer: NodeJS.Timeout | undefined;
 let state: UpdateState = { status: 'idle' };
 let updateCheckTimer: NodeJS.Timeout | undefined;
+let lastUpdateCheckStartedAt = 0;
 let stopFocusEvents: (() => void) | undefined;
 let stopUpdateEvents: (() => void) | undefined;
 
@@ -47,10 +47,39 @@ const currentUpdateVersion = () => {
   return;
 };
 
+const updatePending = () =>
+  state.status === 'available' || state.status === 'downloaded' || state.status === 'downloading';
+
+const stopUpdateCheckSchedule = () => {
+  if (updateCheckTimer) {
+    clearTimeout(updateCheckTimer);
+    updateCheckTimer = undefined;
+  }
+};
+
+const nextUpdateCheckDelay = () => {
+  if (!lastUpdateCheckStartedAt) return updateCheckDelayMs;
+
+  const nextCheckAt = lastUpdateCheckStartedAt + updateCheckIntervalMs;
+  return Math.max(updateCheckDelayMs, nextCheckAt - Date.now());
+};
+
+const scheduleNextUpdateCheck = () => {
+  stopUpdateCheckSchedule();
+  if (!app.isPackaged || !getAppFocusState().focused || updatePending()) return;
+
+  updateCheckTimer = setTimeout(() => {
+    updateCheckTimer = undefined;
+    checkForUpdatesInBackground();
+  }, nextUpdateCheckDelay());
+  updateCheckTimer.unref();
+};
+
 const checkForUpdates = async () => {
-  if (!app.isPackaged || checking || !getAppFocusState().focused) return;
+  if (!app.isPackaged || checking || updatePending() || !getAppFocusState().focused) return;
 
   checking = true;
+  lastUpdateCheckStartedAt = Date.now();
   try {
     setUpdateState({ status: 'checking' });
     await autoUpdater.checkForUpdates();
@@ -58,43 +87,20 @@ const checkForUpdates = async () => {
     setUpdateState({ status: 'error', error: error instanceof Error ? error.message : 'Update check failed.' });
   } finally {
     checking = false;
+    scheduleNextUpdateCheck();
   }
 };
 
 const checkForUpdatesInBackground = () => {
   checkForUpdates().catch((error: unknown) => {
     setUpdateState({ status: 'error', error: error instanceof Error ? error.message : 'Update check failed.' });
+    scheduleNextUpdateCheck();
   });
-};
-
-const stopUpdateCheckSchedule = () => {
-  if (initialUpdateCheckTimer) {
-    clearTimeout(initialUpdateCheckTimer);
-    initialUpdateCheckTimer = undefined;
-  }
-
-  if (updateCheckTimer) {
-    clearInterval(updateCheckTimer);
-    updateCheckTimer = undefined;
-  }
-};
-
-const startUpdateCheckSchedule = () => {
-  if (updateCheckTimer) return;
-
-  initialUpdateCheckTimer = setTimeout(() => {
-    checkForUpdatesInBackground();
-    initialUpdateCheckTimer = undefined;
-  }, updateCheckDelayMs);
-  initialUpdateCheckTimer.unref();
-
-  updateCheckTimer = setInterval(checkForUpdatesInBackground, updateCheckIntervalMs);
-  updateCheckTimer.unref();
 };
 
 const updateCheckScheduleForFocus = (focused: boolean) => {
   if (focused) {
-    startUpdateCheckSchedule();
+    scheduleNextUpdateCheck();
     return;
   }
 
@@ -119,16 +125,25 @@ export const startAutoUpdateChecks = () => {
   autoUpdater.allowPrerelease = app.getVersion().includes('-');
 
   const onCheckingForUpdate = () => setUpdateState({ status: 'checking' });
-  const onUpdateAvailable = (info: UpdateInfo) => setUpdateState(updateState('available', info));
+  const onUpdateAvailable = (info: UpdateInfo) => {
+    setUpdateState(updateState('available', info));
+    stopUpdateCheckSchedule();
+  };
   const onDownloadProgress = () => {
     if (state.status !== 'downloaded' && state.status !== 'downloading') {
       const version = currentUpdateVersion();
       setUpdateState({ status: 'downloading', ...(version ? { version } : {}) });
     }
   };
-  const onUpdateDownloaded = (info: UpdateInfo) => setUpdateState(updateState('downloaded', info));
+  const onUpdateDownloaded = (info: UpdateInfo) => {
+    setUpdateState(updateState('downloaded', info));
+    stopUpdateCheckSchedule();
+  };
   const onUpdateNotAvailable = () => setUpdateState({ status: 'idle' });
-  const onError = (error: Error) => setUpdateState({ status: 'error', error: error.message || 'Update failed.' });
+  const onError = (error: Error) => {
+    setUpdateState({ status: 'error', error: error.message || 'Update failed.' });
+    scheduleNextUpdateCheck();
+  };
 
   autoUpdater.on('error', onError);
   autoUpdater.on('download-progress', onDownloadProgress);
