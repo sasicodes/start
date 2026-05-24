@@ -9,7 +9,7 @@ export const ContentColumn = () => {
       </h1>
 
       <p className="text-base sm:text-lg md:text-xl lg:text-2xl leading-snug mb-5 sm:mb-10 max-w-[640px] font-serif -tracking-wide text-neutral-600 mx-auto">
-        Your coding assistant.
+        Start, your coding assistant.
       </p>
 
       <div className="flex flex-row gap-4 items-center justify-center">
