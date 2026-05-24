@@ -70,23 +70,28 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   const sessionsRequestRef = useRef(0);
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(sessionPageSize);
   const [sessions, setSessions] = useState<RecentSession[]>([]);
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const loadedCountRef = useRef(0);
 
   const loadSessions = useCallback(
-    async (showLoading = false) => {
+    async (showLoading = false, limit = sessionPageSize) => {
       const requestId = sessionsRequestRef.current + 1;
       sessionsRequestRef.current = requestId;
       if (showLoading) setLoaded(false);
 
       try {
-        const nextSessions = await window.pi.chat.recentSessions(workspacePath || undefined);
+        const page = await window.pi.chat.recentSessionsPage({ limit, ...(workspacePath ? { workspacePath } : {}) });
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
-        setSessions(nextSessions);
-        setVisibleCount((count) => Math.max(sessionPageSize, Math.min(count, nextSessions.length)));
+        loadedCountRef.current = page.sessions.length;
+        setSessions(page.sessions);
+        setHasMoreSessions(page.hasMore);
       } catch {
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
+        loadedCountRef.current = 0;
         setSessions([]);
+        setHasMoreSessions(false);
       } finally {
         if (mountedRef.current && sessionsRequestRef.current === requestId) setLoaded(true);
       }
@@ -96,7 +101,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
 
   const updateOpen = useCallback(
     (nextOpen: boolean) => {
-      if (nextOpen) void loadSessions();
+      if (nextOpen) void loadSessions(false, Math.max(sessionPageSize, loadedCountRef.current));
       setOpen(nextOpen);
     },
     [loadSessions]
@@ -104,13 +109,35 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
 
   const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
 
-  const visibleSessions = sessions.slice(0, visibleCount);
-  const hasMoreSessions = visibleCount < sessions.length;
   const hasNotice = sessions.some((session) => session.noticeKind);
 
-  const loadMoreSessions = useCallback(() => {
-    setVisibleCount((count) => Math.min(count + sessionPageSize, sessions.length));
-  }, [sessions.length]);
+  const loadMoreSessions = useCallback(async () => {
+    const lastSession = sessions.at(-1);
+    if (!hasMoreSessions || !lastSession || loadingMoreRef.current) return;
+
+    loadingMoreRef.current = true;
+    const requestId = sessionsRequestRef.current;
+    try {
+      const page = await window.pi.chat.recentSessionsPage({
+        limit: sessionPageSize,
+        cursor: `${lastSession.modified}:${lastSession.id}`,
+        ...(workspacePath ? { workspacePath } : {})
+      });
+      if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
+
+      setSessions((currentSessions) => {
+        const sessionsById = new Map(currentSessions.map((session) => [session.id, session]));
+        for (const session of page.sessions) sessionsById.set(session.id, session);
+        const nextSessions = [...sessionsById.values()];
+        loadedCountRef.current = nextSessions.length;
+        return nextSessions;
+      });
+      setHasMoreSessions(page.hasMore);
+    } catch {
+    } finally {
+      loadingMoreRef.current = false;
+    }
+  }, [hasMoreSessions, sessions, workspacePath]);
 
   const handleSessionsScroll = useCallback(
     (event: Event) => {
@@ -120,7 +147,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
       if (!(element instanceof HTMLElement)) return;
       if (element.scrollHeight - element.scrollTop - element.clientHeight > 80) return;
 
-      loadMoreSessions();
+      void loadMoreSessions();
     },
     [hasMoreSessions, loadMoreSessions]
   );
@@ -139,7 +166,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
   useEffect(() => {
     const refreshOnChange = (event: RecentSessionsChanged) => {
       if (workspacePath && event.workspacePath && event.workspacePath !== workspacePath) return;
-      void loadSessions();
+      void loadSessions(false, Math.max(sessionPageSize, loadedCountRef.current));
     };
 
     return window.pi.chat.onRecentSessionsChanged(refreshOnChange);
@@ -167,7 +194,7 @@ export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSess
             >
               <SessionRows
                 loaded={loaded}
-                sessions={visibleSessions}
+                sessions={sessions}
                 activeSessionId={activeSessionId}
                 onOpenSession={openSessionAndClose}
               />

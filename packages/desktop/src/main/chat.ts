@@ -10,7 +10,6 @@ import {
   ModelRegistry,
   SessionManager
 } from '@earendil-works/pi-coding-agent';
-import { sessionWorkspacePath, tabFromSession } from '@main/agents/session';
 import { textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
@@ -67,6 +66,8 @@ type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
 type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
+
+type ListedSession = Awaited<ReturnType<typeof SessionManager.list>>[number];
 
 export class ChatService {
   private appState = readStartState();
@@ -154,16 +155,17 @@ export class ChatService {
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
 
       const sessionManager = SessionManager.open(path);
+      const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
       this.clearQueuedMessageState();
       const { session } = await createAgentSession({
         model,
         sessionManager,
+        cwd: workspacePath,
         tools: enabledTools,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
-        cwd: sessionManager.getCwd() || process.cwd(),
         thinkingLevel: this.selectedThinkingLevel
       });
 
@@ -173,8 +175,9 @@ export class ChatService {
       }
 
       this.session = session;
+      this.workspaceCwd = workspacePath;
+      this.isGenerating = false;
       this.setActiveSession(sessionManager);
-      this.workspaceCwd = sessionManager.getCwd() || this.workspaceCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
       this.shouldCreateSession = false;
@@ -213,7 +216,13 @@ export class ChatService {
 
     for (const session of this.backgroundSessions.values()) {
       const sessionId = session.sessionManager.getSessionId();
-      tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, this.notices.get(sessionId)));
+      const notice = this.notices.get(sessionId);
+      tabs.set(sessionId, {
+        id: sessionId,
+        status: notice?.kind ?? (session.isStreaming || session.isBashRunning ? 'generating' : 'idle'),
+        sessionId,
+        workspacePath: session.sessionManager.getCwd() || this.workspaceCwd
+      });
     }
 
     return [...tabs.values()];
@@ -307,7 +316,7 @@ export class ChatService {
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.backgroundSessions.delete(id);
     this.session = session;
-    this.workspaceCwd = sessionWorkspacePath(session.sessionManager, this.workspaceCwd);
+    this.workspaceCwd = session.sessionManager.getCwd() || this.workspaceCwd;
     this.setActiveSession(session.sessionManager);
     this.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     this.shouldCreateSession = false;
@@ -326,41 +335,16 @@ export class ChatService {
     limit = 15,
     workspacePath = this.workspaceCwd
   }: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
-    const sessions = await this.getRecentSessions(workspacePath);
-    const start = cursor ? sessions.findIndex((session) => `${session.modified}:${session.id}` === cursor) + 1 : 0;
-    const pageStart = Math.max(0, start);
+    const sessions = await this.recentSessionRecords(workspacePath);
+    const cursorIndex = cursor ? sessions.findIndex((session) => this.recentSessionCursor(session) === cursor) : -1;
+    const pageStart = cursorIndex >= 0 ? cursorIndex + 1 : 0;
     const pageLimit = Math.max(1, limit);
     const page = sessions.slice(pageStart, pageStart + pageLimit);
 
     return {
-      sessions: page,
+      sessions: await Promise.all(page.map((session) => this.recentSession(session))),
       hasMore: pageStart + pageLimit < sessions.length
     };
-  }
-
-  async getRecentSessions(cwd = this.workspaceCwd): Promise<RecentSession[]> {
-    const sessions = await SessionManager.list(cwd);
-    const uniqueSessions = new Map<string, (typeof sessions)[number]>();
-
-    for (const session of sessions) {
-      uniqueSessions.set(session.id, session);
-    }
-
-    const recentSessions = [...uniqueSessions.values()].sort((a, b) => b.modified.getTime() - a.modified.getTime());
-
-    return Promise.all(
-      recentSessions.map(async (session) => {
-        const notice = this.notices.get(session.id);
-        return {
-          id: session.id,
-          path: session.path,
-          modified: session.modified.getTime(),
-          turnCount: await this.userTurnCount(session.path),
-          title: session.name || session.firstMessage || 'Untitled session',
-          ...(notice ? { noticeKind: notice.kind } : {})
-        };
-      })
-    );
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
@@ -1022,7 +1006,7 @@ export class ChatService {
   }
 
   private markNoticeSeen(sessionId: string): void {
-    this.notices.delete(sessionId);
+    if (!this.notices.delete(sessionId)) return;
     this.persistNotices();
   }
 
@@ -1053,6 +1037,33 @@ export class ChatService {
     }
 
     return false;
+  }
+
+  private recentSessionCursor(session: ListedSession): string {
+    return `${session.modified.getTime()}:${session.id}`;
+  }
+
+  private async recentSessionRecords(cwd: string): Promise<ListedSession[]> {
+    const sessions = await SessionManager.list(cwd);
+    const uniqueSessions = new Map<string, ListedSession>();
+
+    for (const session of sessions) uniqueSessions.set(session.id, session);
+
+    return [...uniqueSessions.values()].sort(
+      (first, second) => second.modified.getTime() - first.modified.getTime() || second.id.localeCompare(first.id)
+    );
+  }
+
+  private async recentSession(session: ListedSession): Promise<RecentSession> {
+    const notice = this.notices.get(session.id);
+    return {
+      id: session.id,
+      path: session.path,
+      modified: session.modified.getTime(),
+      turnCount: await this.userTurnCount(session.path),
+      title: session.name || session.firstMessage || 'Untitled session',
+      ...(notice ? { noticeKind: notice.kind } : {})
+    };
   }
 
   private async getSession(): Promise<AgentSession> {

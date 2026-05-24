@@ -22,6 +22,18 @@ export const registerChatIpc = ({
   withComposerBlurSuppressed,
   notifyRecentSessionsChanged
 }: ChatIpcOptions) => {
+  const notifyWorkspaceChanged = (workspacePath?: string) => {
+    watchRecentSessions(workspacePath);
+    notifyStatusChanged();
+    notifyRecentSessionsChanged(workspacePath);
+  };
+
+  const activateTab = async (id: string) => {
+    const result = await chat.activateTab(id);
+    if (result.ok) notifyWorkspaceChanged();
+    return result;
+  };
+
   ipcMain.handle('chat:tabs', () => chat.getTabs());
   ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
   ipcMain.handle('chat:models', () => chat.getModels());
@@ -38,19 +50,26 @@ export const registerChatIpc = ({
   });
   ipcMain.handle('chat:tabs:list', () => chat.getTabs());
   ipcMain.handle('chat:new-session', () => startNewSession());
-  ipcMain.handle('chat:tabs:abort', (_event, id: string) => chat.abortTab(id));
-  ipcMain.handle('chat:tabs:close', (_event, id: string) => chat.closeTab(id));
-  ipcMain.handle('chat:tabs:create', (_event, workspacePath?: string) => chat.createTab(workspacePath));
+  ipcMain.handle('chat:tabs:abort', async (_event, id: string) => {
+    await chat.abortTab(id);
+    notifyStatusChanged();
+  });
+  ipcMain.handle('chat:tabs:close', async (_event, id: string) => {
+    await chat.closeTab(id);
+    notifyStatusChanged();
+    notifyRecentSessionsChanged();
+  });
+  ipcMain.handle('chat:tabs:create', async (_event, workspacePath?: string) => {
+    const tab = await chat.createTab(workspacePath);
+    notifyWorkspaceChanged(tab.workspacePath);
+    return tab;
+  });
   ipcMain.handle('chat:tabs:status', () => chat.getStatus());
   ipcMain.handle('chat:notices:list', () => chat.getNotices());
   ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());
   ipcMain.handle('chat:open-session', async (_event, path: string) => {
     const result = await chat.openSession(path);
-    if (result.ok) {
-      watchRecentSessions();
-      notifyStatusChanged();
-      notifyRecentSessionsChanged();
-    }
+    if (result.ok) notifyWorkspaceChanged();
     return result;
   });
   ipcMain.handle('chat:select-model', async (_event, modelKey: string) => {
@@ -59,39 +78,38 @@ export const registerChatIpc = ({
     return status;
   });
   ipcMain.handle('chat:sessions:page', (_event, options = {}) => chat.getRecentSessionsPage(options));
-  ipcMain.handle('chat:tabs:activate', (_event, id: string) => chat.activateTab(id));
-  ipcMain.handle('chat:tabs:send', (event, id: string, prompt: string, attachments = []) =>
-    chat.sendToTab(id, prompt, event.sender as WebContents, attachments)
-  );
-  ipcMain.handle('chat:open-session-id', async (_event, sessionId: string) => {
-    const result = await chat.openSessionId(sessionId);
+  ipcMain.handle('chat:tabs:activate', (_event, id: string) => activateTab(id));
+  ipcMain.handle('chat:tabs:send', async (event, id: string, prompt: string, attachments = []) => {
+    const result = await chat.sendToTab(id, prompt, event.sender as WebContents, attachments);
     if (result.ok) {
-      watchRecentSessions();
       notifyStatusChanged();
       notifyRecentSessionsChanged();
     }
     return result;
   });
-  ipcMain.handle('chat:recent-sessions', (_event, workspacePath?: string) => chat.getRecentSessions(workspacePath));
+  ipcMain.handle('chat:open-session-id', async (_event, sessionId: string) => {
+    const result = await chat.openSessionId(sessionId);
+    if (result.ok) notifyWorkspaceChanged();
+    return result;
+  });
   ipcMain.handle('chat:release-attachments', (_event, ids: string[]) => chat.releaseAttachments(ids));
   ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
   ipcMain.handle('chat:switch-workspace', async (_event, path: string) => {
     const result = await chat.switchWorkspace(path);
-    if (result.ok) {
-      watchRecentSessions(result.status?.workspacePath);
-      notifyStatusChanged();
-      notifyRecentSessionsChanged(result.status?.workspacePath);
-    }
+    if (result.ok) notifyWorkspaceChanged(result.status?.workspacePath);
     return withCachedWorkspace(result);
   });
-  ipcMain.handle('chat:tabs:open-session', (_event, id: string) => chat.activateTab(id));
+  ipcMain.handle('chat:tabs:open-session', (_event, id: string) => activateTab(id));
   ipcMain.handle('chat:delete-queued-message', (event, id: string) =>
     chat.deleteQueuedMessage(id, event.sender as WebContents)
   );
   ipcMain.handle('chat:login-subscription', (event, provider: string) =>
     chat.loginSubscription(provider, event.sender as WebContents)
   );
-  ipcMain.handle('chat:notices:mark-seen', (_event, sessionId: string) => chat.markSessionNoticeSeen(sessionId));
+  ipcMain.handle('chat:notices:mark-seen', async (_event, sessionId: string) => {
+    await chat.markSessionNoticeSeen(sessionId);
+    notifyRecentSessionsChanged();
+  });
   ipcMain.handle('chat:prepare-dropped-files', (_event, paths: string[]) => chat.prepareDroppedFiles(paths));
   ipcMain.handle('chat:set-runtime-api-key', (_event, provider: string, apiKey: string) =>
     chat.setRuntimeApiKey(provider, apiKey)
@@ -119,11 +137,7 @@ export const registerChatIpc = ({
     if (result.canceled || !path) return { ok: true, cancelled: true, status: await chat.getStatus() };
     rememberWorkspaceBookmark(path, result.bookmarks?.[0]);
     const nextResult = await chat.switchWorkspace(path);
-    if (nextResult.ok) {
-      watchRecentSessions(nextResult.status?.workspacePath);
-      notifyStatusChanged();
-      notifyRecentSessionsChanged(nextResult.status?.workspacePath);
-    }
+    if (nextResult.ok) notifyWorkspaceChanged(nextResult.status?.workspacePath);
     return withCachedWorkspace(nextResult);
   });
   ipcMain.handle('chat:submit-subscription-auth-input', (_event, value: string) =>

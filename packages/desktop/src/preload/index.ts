@@ -302,8 +302,6 @@ const api = {
     markNoticeSeen: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:notices:mark-seen', sessionId),
     models: (): Promise<{ error?: string; models: ModelOption[]; selectedModelKey?: string }> =>
       ipcRenderer.invoke('chat:models'),
-    recentSessions: (workspacePath?: string): Promise<RecentSession[]> =>
-      ipcRenderer.invoke('chat:recent-sessions', workspacePath),
     recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
       ipcRenderer.invoke('chat:sessions:page', options),
     onRecentSessionsChanged: (listener: (event: RecentSessionsChanged) => void): IpcDisposer =>
