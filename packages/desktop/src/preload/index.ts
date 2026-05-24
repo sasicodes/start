@@ -8,31 +8,31 @@ export interface AppSettings {
 
 export interface AppSettingsResult {
   ok: boolean;
-  settings: AppSettings | null;
   error?: string;
+  settings: AppSettings | null;
 }
 
 export interface ChatStatus {
   ready: boolean;
-  workspacePath: string;
-  modelLabel?: string;
-  selectedModelKey?: string;
-  sessionId?: string;
-  thinkingLevel?: EffortLevel;
   error?: string;
+  sessionId?: string;
+  modelLabel?: string;
+  workspacePath: string;
+  selectedModelKey?: string;
+  thinkingLevel?: EffortLevel;
 }
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
 export interface ModelOption {
-  key: string;
   id: string;
+  key: string;
   name: string;
   provider: string;
   reasoning: boolean;
+  contextWindow: number;
   effortLevels: EffortLevel[];
   input: ('text' | 'image')[];
-  contextWindow: number;
 }
 
 export type ProviderAuthKind = 'api_key' | 'none' | 'subscription' | 'unknown';
@@ -40,24 +40,24 @@ export type ProviderAuthKind = 'api_key' | 'none' | 'subscription' | 'unknown';
 export interface ProviderAuthStatus {
   key: string;
   name: string;
+  label: string;
   connected: boolean;
   kind: ProviderAuthKind;
-  label: string;
 }
 
 export interface ProviderLoginResult {
   ok: boolean;
-  providers: ProviderAuthStatus[];
   error?: string;
+  providers: ProviderAuthStatus[];
 }
 
 export interface SubscriptionAuthUpdate {
-  provider: string;
-  message?: string;
-  placeholder?: string;
-  progress?: string;
-  instructions?: string;
   url?: string;
+  message?: string;
+  provider: string;
+  progress?: string;
+  placeholder?: string;
+  instructions?: string;
 }
 
 export interface ImageAttachment {
@@ -77,25 +77,25 @@ export interface PreparedDropFiles {
 export interface SendResult {
   ok: boolean;
   text?: string;
+  error?: string;
   queued?: boolean;
   sessionId?: string;
-  error?: string;
 }
 
 export interface CommandResult {
   ok: boolean;
-  output?: string;
-  sessionId?: string;
-  exitCode?: number;
   error?: string;
+  output?: string;
+  exitCode?: number;
+  sessionId?: string;
 }
 
 export type QueuedMessageKind = 'followUp' | 'steer';
 
 export interface QueuedMessage {
   id: string;
-  kind: QueuedMessageKind;
   text: string;
+  kind: QueuedMessageKind;
 }
 
 export interface QueuedTurnStart {
@@ -108,12 +108,12 @@ export type TurnDetailState = 'active' | 'done' | 'error' | 'queued';
 
 export interface ChatEvent {
   key: string;
-  kind: TurnDetailKind;
-  title: string;
-  state: TurnDetailState;
   body?: string;
+  title: string;
   detail?: string;
   metric?: string;
+  kind: TurnDetailKind;
+  state: TurnDetailState;
 }
 
 export interface HistoryTurnDetail extends ChatEvent {
@@ -125,11 +125,11 @@ export interface HistoryTurnDetail extends ChatEvent {
 
 export interface HistoryTurn {
   id: string;
-  role: 'user' | 'assistant' | 'terminal' | 'event';
   text: string;
+  thinking?: string;
   createdAt: number;
   details?: HistoryTurnDetail[];
-  thinking?: string;
+  role: 'user' | 'assistant' | 'terminal' | 'event';
 }
 
 export type SessionNoticeKind = 'completed' | 'failed';
@@ -159,17 +159,17 @@ export interface RecentSessionsChanged {
 }
 
 export interface GitChangeSummary {
-  filesChanged: number;
-  insertions: number;
   deletions: number;
+  insertions: number;
+  filesChanged: number;
 }
 
 export type GitPatchSectionKind = 'staged' | 'unstaged' | 'untracked';
 
 export interface GitPatchSection extends GitChangeSummary {
-  kind: GitPatchSectionKind;
-  limited: boolean;
   patch: string;
+  limited: boolean;
+  kind: GitPatchSectionKind;
 }
 
 export interface GitPatch {
@@ -190,8 +190,8 @@ export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
 export interface AgentTab {
   id: string;
   sessionId?: string;
-  status: AgentTabStatus;
   workspacePath: string;
+  status: AgentTabStatus;
 }
 
 export interface SessionNotice {
@@ -210,24 +210,24 @@ export interface ScopedChatEvent<T> {
 
 export interface SwitchWorkspaceResult {
   ok: boolean;
-  cancelled?: boolean;
-  status?: ChatStatus;
-  workspace?: WorkspaceInfo;
   error?: string;
+  status?: ChatStatus;
+  cancelled?: boolean;
+  workspace?: WorkspaceInfo;
 }
 
 export interface OpenSessionResult {
   ok: boolean;
   id?: string;
-  turns?: HistoryTurn[];
   error?: string;
+  turns?: HistoryTurn[];
 }
 
 export interface RootItem {
   name: string;
   path: string;
-  type: 'directory' | 'file';
   description?: string;
+  type: 'directory' | 'file';
 }
 
 export interface SlashCommandItem {
@@ -238,11 +238,11 @@ export interface SlashCommandItem {
 }
 
 export interface WorkspaceInfo {
-  branchName?: string;
-  folderName: string;
-  git?: GitChangeSummary;
-  iconDataUrl: string;
   path: string;
+  folderName: string;
+  branchName?: string;
+  iconDataUrl: string;
+  git?: GitChangeSummary;
 }
 
 export interface AppFocusState {

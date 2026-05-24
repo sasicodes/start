@@ -5,8 +5,8 @@ import electron from 'electron';
 const { nativeImage } = electron;
 
 type IconCandidate = {
-  filePath: string;
   score: number;
+  filePath: string;
 };
 
 const imageExtensions = new Set(['.avif', '.gif', '.ico', '.jpeg', '.jpg', '.png', '.svg', '.webp']);

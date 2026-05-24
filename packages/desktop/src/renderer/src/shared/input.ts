@@ -6,12 +6,12 @@ export type CommandInput = {
 export type FinderScope = 'root' | 'workspace';
 
 export type FinderToken = {
-  marker: '@' | '~';
   query: string;
-  scope: FinderScope;
   start: number;
   token: string;
   value: string;
+  marker: '@' | '~';
+  scope: FinderScope;
   folderPath: string;
 };
 

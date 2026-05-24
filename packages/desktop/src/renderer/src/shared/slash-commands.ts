@@ -2,31 +2,39 @@ import type { SlashCommandItem } from '@preload/index';
 import type { SlashCommandToken } from '@renderer/shared/input';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 
+let commandsCached = false;
+let cacheGeneration = 0;
 let cachedCommands: SlashCommandItem[] = [];
 let cachedCommandsPromise: Promise<SlashCommandItem[]> | undefined;
-let commandsCached = false;
 
 const loadCommands = () => {
-  cachedCommandsPromise ??= window.pi.chat
+  if (cachedCommandsPromise) return cachedCommandsPromise;
+
+  const generation = cacheGeneration;
+  const request = window.pi.chat
     .slashCommands()
     .then((commands) => {
+      if (cachedCommandsPromise === request) cachedCommandsPromise = undefined;
+      if (cacheGeneration !== generation) return cachedCommands;
+
       cachedCommands = commands;
       commandsCached = true;
-      cachedCommandsPromise = undefined;
       return commands;
     })
     .catch((error: unknown) => {
-      cachedCommandsPromise = undefined;
+      if (cachedCommandsPromise === request) cachedCommandsPromise = undefined;
       throw error;
     });
 
-  return cachedCommandsPromise;
+  cachedCommandsPromise = request;
+  return request;
 };
 
 export const clearSlashCommandsCache = () => {
-  cachedCommands = [];
-  commandsCached = false;
+  cacheGeneration += 1;
   cachedCommandsPromise = undefined;
+  commandsCached = false;
+  cachedCommands = [];
 };
 
 export const useSlashCommandItems = (token?: SlashCommandToken) => {

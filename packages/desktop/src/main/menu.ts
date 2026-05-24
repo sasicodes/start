@@ -6,10 +6,10 @@ const { Menu, Tray, nativeImage } = electron;
 
 type MenuActions = {
   composerShortcut: string;
-  onCheckForUpdates: () => void;
   onNewSession: () => void;
   onQuickAccess: () => void;
   onShowSettings: () => void;
+  onCheckForUpdates: () => void;
 };
 
 let tray: ElectronTray | null = null;

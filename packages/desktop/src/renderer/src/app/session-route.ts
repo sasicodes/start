@@ -3,25 +3,25 @@ import type { AppSurface } from '@renderer/app/types';
 import { sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
 import { useRef, useEffect, useCallback } from 'preact/hooks';
 
-interface SessionRoutingOptions {
+interface SessionRouteOptions {
   route: AppRoute;
   surface: AppSurface;
-  activeSessionId: string;
   loadedSessionId: string;
+  activeSessionId: string;
   closeSidePanel: () => void;
   navigate: (route: AppRoute, replace?: boolean) => void;
   openSessionId: (sessionId: string) => Promise<boolean>;
 }
 
-export const useSessionRouting = ({
+export const useSessionRoute = ({
   route,
   surface,
   navigate,
   openSessionId,
-  activeSessionId,
+  closeSidePanel,
   loadedSessionId,
-  closeSidePanel
-}: SessionRoutingOptions) => {
+  activeSessionId
+}: SessionRouteOptions) => {
   const selectingSessionRef = useRef(false);
   const openingRouteSessionRef = useRef('');
 

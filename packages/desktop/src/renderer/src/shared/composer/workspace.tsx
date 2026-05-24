@@ -5,7 +5,6 @@ import { attentionStatus, topAttentionStatus } from '@renderer/shared/attention-
 import { Indicator } from '@renderer/shared/indicator';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { tw } from '@renderer/utils/tw';
 import { useCallback, useState } from 'preact/hooks';
 
 interface WorkspaceProps {
@@ -37,12 +36,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
           <AppMenu.Trigger
             aria-label="Workspace folders"
             onMouseDown={(event: MouseEvent) => event.stopPropagation()}
-            className={tw(
-              'relative grid h-full aspect-square place-items-center overflow-hidden rounded-full border-0 bg-composer p-1.25 text-ink shadow-composer-overlay outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
-              attention === 'failed' && 'bg-danger/[0.075]',
-              attention === 'completed' && 'bg-success/[0.075]',
-              attention === 'generating' && 'bg-blue-500/[0.09]'
-            )}
+            className="relative grid h-full aspect-square place-items-center overflow-hidden rounded-full border-0 bg-composer p-1.25 text-ink shadow-composer-overlay outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
           >
             <img
               alt=""

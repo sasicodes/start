@@ -8,15 +8,15 @@ import { memo } from 'preact/compat';
 import { useMemo } from 'preact/hooks';
 
 interface HunkLineRange {
-  first: number;
   last: number;
+  first: number;
 }
 
 interface DiffHunksProps {
   file: PatchFile;
-  highlightRevision: number;
   language: string;
   viewMode: DiffViewMode;
+  highlightRevision: number;
 }
 
 const lineNumberText = (lineNumber: number | undefined) => (lineNumber ? lineNumber.toString() : '');

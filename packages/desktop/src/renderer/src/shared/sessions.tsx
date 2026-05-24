@@ -41,8 +41,8 @@ interface SessionRowProps {
 }
 
 interface SessionRowsProps {
-  sessions: RecentSession[];
   activeSessionId: string;
+  sessions: RecentSession[];
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
@@ -61,10 +61,7 @@ const SessionRow = ({ active, session, onOpen }: SessionRowProps) => {
       onClick={() => onOpen(session)}
       className={tw(
         'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
-        active && 'bg-control text-hover',
-        attention === 'failed' && 'bg-danger/[0.055]',
-        attention === 'completed' && 'bg-success/[0.055]',
-        attention === 'generating' && 'bg-blue-500/[0.07]'
+        active && 'bg-control text-hover'
       )}
     >
       <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
@@ -95,6 +92,7 @@ export const RecentSessions = memo(
     const loadingMoreRef = useRef(false);
     const sessionsRequestRef = useRef(0);
     const [open, setOpen] = useState(false);
+    const wasGeneratingRef = useRef(isGenerating);
     const [sessions, setSessions] = useState<RecentSession[]>([]);
     const [hasMoreSessions, setHasMoreSessions] = useState(false);
 
@@ -190,7 +188,9 @@ export const RecentSessions = memo(
     }, [loadSessions]);
 
     useEffect(() => {
-      if (!isGenerating) void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
+      const wasGenerating = wasGeneratingRef.current;
+      wasGeneratingRef.current = isGenerating;
+      if (wasGenerating && !isGenerating) void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
     }, [isGenerating, loadSessions]);
 
     useEffect(() => {
@@ -210,12 +210,7 @@ export const RecentSessions = memo(
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
         <AppMenu.Trigger
           aria-label="Recent sessions"
-          className={tw(
-            'relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
-            attention === 'failed' && 'bg-danger/[0.075]',
-            attention === 'completed' && 'bg-success/[0.075]',
-            attention === 'generating' && 'bg-blue-500/[0.09]'
-          )}
+          className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
         >
           <HistoryIcon class="size-5" />
           {attention && (

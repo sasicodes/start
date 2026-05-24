@@ -18,9 +18,9 @@ import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface FinderSelection {
-  items: FinderItem[];
-  query: string;
   index: number;
+  query: string;
+  items: FinderItem[];
 }
 
 export const Composer = memo(

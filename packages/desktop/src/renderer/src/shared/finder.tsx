@@ -12,18 +12,18 @@ interface CommandFinderItem {
 interface FileFinderItem {
   name: string;
   path: string;
-  type: 'directory' | 'file';
   description?: string;
+  type: 'directory' | 'file';
 }
 
 export type FinderItem = CommandFinderItem | FileFinderItem;
 
 interface FinderProps {
-  items: FinderItem[];
   visible: boolean;
-  activeItemKey?: string;
   ariaLabel: string;
   emptyLabel: string;
+  items: FinderItem[];
+  activeItemKey?: string;
   onSelect: (item: FinderItem) => void;
 }
 

@@ -4,7 +4,7 @@ import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
 import { useSessionPanels } from '@renderer/app/session-panels';
 import { useRendererRuntime } from '@renderer/app/runtime';
-import { useSessionRouting } from '@renderer/app/session-routing';
+import { useSessionRoute } from '@renderer/app/session-route';
 import { AppShell } from '@renderer/app/shell';
 import { AppSidePanel, sidePanelLabel as getSidePanelLabel } from '@renderer/app/side-panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
@@ -135,15 +135,17 @@ export const App = () => {
 
   const chooseWorkspaceFromComposer = useCallback(async () => {
     closeSidePanel();
-    await chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' });
-  }, [chooseWorkspaceDirectory, closeSidePanel, surface]);
+    const switched = await chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' });
+    if (switched) navigate({ name: 'chat' }, true);
+  }, [chooseWorkspaceDirectory, closeSidePanel, navigate, surface]);
 
   const selectWorkspaceFromComposer = useCallback(
-    (path: string) => {
+    async (path: string) => {
       closeSidePanel();
-      void switchWorkspace(path, { preserveDraft: true });
+      const switched = await switchWorkspace(path, { preserveDraft: true });
+      if (switched) navigate({ name: 'chat' }, true);
     },
-    [closeSidePanel, switchWorkspace]
+    [closeSidePanel, navigate, switchWorkspace]
   );
 
   const startNewSession = useCallback(() => {
@@ -154,7 +156,7 @@ export const App = () => {
     navigate({ name: 'chat' });
   }, [clearPendingAttachments, closeSidePanel, navigate, newSession, setSurface]);
 
-  const openRecentSession = useSessionRouting({
+  const openRecentSession = useSessionRoute({
     route,
     surface,
     navigate,
@@ -201,17 +203,19 @@ export const App = () => {
     void window.pi.app.openPath(path).catch(() => {});
   }, []);
 
-  const chooseWorkspaceFromDock = useCallback(() => {
+  const chooseWorkspaceFromDock = useCallback(async () => {
     closeSidePanel();
-    void chooseWorkspaceDirectory();
-  }, [chooseWorkspaceDirectory, closeSidePanel]);
+    const switched = await chooseWorkspaceDirectory();
+    if (switched) navigate({ name: 'chat' }, true);
+  }, [chooseWorkspaceDirectory, closeSidePanel, navigate]);
 
   const selectWorkspaceFromDock = useCallback(
-    (path: string) => {
+    async (path: string) => {
       closeSidePanel();
-      void switchWorkspace(path);
+      const switched = await switchWorkspace(path);
+      if (switched) navigate({ name: 'chat' }, true);
     },
-    [closeSidePanel, switchWorkspace]
+    [closeSidePanel, navigate, switchWorkspace]
   );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;

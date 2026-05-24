@@ -76,8 +76,8 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 });
 
 interface TurnArticleProps {
-  activityPanelOpen: boolean;
   turn: Turn;
+  activityPanelOpen: boolean;
   onOpenActivityPanel: (turnId: string) => void;
 }
 

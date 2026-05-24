@@ -21,10 +21,7 @@ const WorkspaceRow = ({
       onClick={() => onSelectWorkspace(folder.path)}
       className={tw(
         'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
-        selected ? 'bg-control text-hover' : 'bg-transparent',
-        attention === 'failed' && 'bg-danger/[0.055]',
-        attention === 'completed' && 'bg-success/[0.055]',
-        attention === 'generating' && 'bg-blue-500/[0.07]'
+        selected ? 'bg-control text-hover' : 'bg-transparent'
       )}
     >
       <span class="flex min-w-0 flex-col gap-0.5">

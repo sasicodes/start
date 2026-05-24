@@ -8,10 +8,10 @@ import { useState } from 'preact/hooks';
 
 interface DiffFileProps {
   file: PatchFile;
-  highlightRevision: number;
   language: string;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
+  highlightRevision: number;
 }
 
 interface FileProps {

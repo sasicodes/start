@@ -46,12 +46,7 @@ export const Workspace = memo(
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger
                 aria-label="Workspace folders"
-                className={tw(
-                  'relative flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer pr-1.5 pl-1.5 text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75',
-                  attention === 'failed' && 'bg-danger/[0.075]',
-                  attention === 'completed' && 'bg-success/[0.075]',
-                  attention === 'generating' && 'bg-blue-500/[0.09]'
-                )}
+                className="relative flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer pr-1.5 pl-1.5 text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75"
               >
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img

@@ -15,10 +15,10 @@ const { BrowserWindow, dialog, ipcMain } = electron;
 
 interface ChatIpcOptions {
   chat: ChatService;
-  startNewSession: () => Promise<void>;
   notifyStatusChanged: () => void;
-  withComposerBlurSuppressed: typeof withComposerBlurSuppressed;
+  startNewSession: () => Promise<void>;
   watchRecentSessions: (workspacePath?: string) => void;
+  withComposerBlurSuppressed: typeof withComposerBlurSuppressed;
   notifyRecentSessionsChanged: (workspacePath?: string) => void;
   withCachedWorkspace: <T extends { status?: { workspacePath: string } }>(result: T) => Promise<T>;
 }
