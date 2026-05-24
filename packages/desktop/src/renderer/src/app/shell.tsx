@@ -106,8 +106,8 @@ const MainSessionSurface = memo(
       />
       <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
         <Update />
-        <GitChanges workspacePath={workspacePath} expanded={gitPanelVisible} onTogglePanel={onToggleGitPanel} />
-        <Settings active={settingsPanelVisible} onOpenSettings={onOpenSettings} />
+        <GitChanges path={workspacePath} open={gitPanelVisible} onToggle={onToggleGitPanel} />
+        <Settings open={settingsPanelVisible} onOpen={onOpenSettings} />
       </div>
       {mainComposer}
     </SidePanelLayout>

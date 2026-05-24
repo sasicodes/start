@@ -31,13 +31,13 @@ const loadGitDiffViewer = () =>
 const GitDiffViewer = lazy(loadGitDiffViewer);
 
 interface GitChangesProps {
-  expanded?: boolean;
-  workspacePath: string;
-  onTogglePanel: () => void;
+  path: string;
+  open?: boolean;
+  onToggle: () => void;
 }
 
 interface GitChangesPanelProps {
-  workspacePath: string;
+  path: string;
 }
 
 interface GitSummaryLike {
@@ -56,8 +56,8 @@ const summaryFromSections = (sections: GitSummaryLike[]) =>
     emptyGitSummary
   );
 
-export const GitChanges = memo(({ expanded = false, workspacePath, onTogglePanel }: GitChangesProps) => {
-  const git = useGitChanges(workspacePath);
+export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProps) => {
+  const git = useGitChanges(path);
   const appFocused = useAppFocusState();
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
@@ -69,10 +69,10 @@ export const GitChanges = memo(({ expanded = false, workspacePath, onTogglePanel
       <motion.button
         type="button"
         animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
-        aria-expanded={expanded}
-        aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
+        aria-expanded={open}
+        aria-label={`${open ? 'Hide' : 'Show'} git changes, ${label}`}
         initial={bottomBubbleHiddenMotion}
-        onClick={onTogglePanel}
+        onClick={onToggle}
         style={{ maxWidth: `${gitChangesMaxWidthRatio * 100}vw` }}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
@@ -90,17 +90,17 @@ export const GitChanges = memo(({ expanded = false, workspacePath, onTogglePanel
   );
 });
 
-export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) => {
+export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('split');
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
-  const patch = useGitPatch(workspacePath, Boolean(workspacePath && diffReady));
+  const patch = useGitPatch(path, Boolean(path && diffReady));
 
   useEffect(() => {
     setDiffReady(false);
     const timer = window.setTimeout(() => setDiffReady(true), 190);
     return () => window.clearTimeout(timer);
-  }, [workspacePath]);
+  }, [path]);
 
   useEffect(() => {
     if (patch.kind !== 'ready' || patch.patch.sections.length === 0) return;

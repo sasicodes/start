@@ -246,9 +246,7 @@ export interface AppFocusState {
 }
 
 export type UpdateState =
-  | { status: 'available'; version?: string }
-  | { status: 'downloaded'; version?: string }
-  | { status: 'downloading'; version?: string }
+  | { status: 'downloaded' }
   | { error: string; status: 'error' }
   | { status: 'checking' }
   | { status: 'idle' };

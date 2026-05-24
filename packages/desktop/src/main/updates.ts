@@ -1,7 +1,7 @@
 import { getAppFocusState, onAppFocusChanged } from '@main/focus';
 import { sendToRendererWindows } from '@main/window';
 import { app, ipcMain } from 'electron';
-import electronUpdater, { type UpdateInfo } from 'electron-updater';
+import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
 
@@ -9,16 +9,13 @@ const updateCheckDelayMs = 30 * 1000;
 const updateCheckIntervalMs = 60 * 60 * 1000;
 
 export type UpdateState =
-  | { status: 'available'; version?: string }
-  | { status: 'downloaded'; version?: string }
-  | { status: 'downloading'; version?: string }
+  | { status: 'downloaded' }
   | { error: string; status: 'error' }
   | { status: 'checking' }
   | { status: 'idle' };
 
-type VersionedUpdateStatus = 'available' | 'downloaded' | 'downloading';
-
 let checking = false;
+let downloadPending = false;
 let state: UpdateState = { status: 'idle' };
 let updateCheckTimer: NodeJS.Timeout | undefined;
 let lastUpdateCheckStartedAt = 0;
@@ -33,22 +30,6 @@ const setUpdateState = (nextState: UpdateState) => {
   state = nextState;
   notifyUpdateStateChanged();
 };
-
-const updateState = (status: VersionedUpdateStatus, info: UpdateInfo): UpdateState => {
-  const version = info.version || undefined;
-  return { status, ...(version ? { version } : {}) };
-};
-
-const currentUpdateVersion = () => {
-  if (state.status === 'available' || state.status === 'downloaded' || state.status === 'downloading') {
-    return state.version;
-  }
-
-  return;
-};
-
-const updatePending = () =>
-  state.status === 'available' || state.status === 'downloaded' || state.status === 'downloading';
 
 const stopUpdateCheckSchedule = () => {
   if (updateCheckTimer) {
@@ -66,7 +47,7 @@ const nextUpdateCheckDelay = () => {
 
 const scheduleNextUpdateCheck = () => {
   stopUpdateCheckSchedule();
-  if (!app.isPackaged || !getAppFocusState().focused || updatePending()) return;
+  if (!app.isPackaged || downloadPending || state.status === 'downloaded' || !getAppFocusState().focused) return;
 
   updateCheckTimer = setTimeout(() => {
     updateCheckTimer = undefined;
@@ -76,7 +57,9 @@ const scheduleNextUpdateCheck = () => {
 };
 
 const checkForUpdates = async () => {
-  if (!app.isPackaged || checking || updatePending() || !getAppFocusState().focused) return;
+  if (!app.isPackaged || checking || downloadPending || state.status === 'downloaded' || !getAppFocusState().focused) {
+    return;
+  }
 
   checking = true;
   lastUpdateCheckStartedAt = Date.now();
@@ -125,22 +108,24 @@ export const startAutoUpdateChecks = () => {
   autoUpdater.allowPrerelease = app.getVersion().includes('-');
 
   const onCheckingForUpdate = () => setUpdateState({ status: 'checking' });
-  const onUpdateAvailable = (info: UpdateInfo) => {
-    setUpdateState(updateState('available', info));
+  const onUpdateAvailable = () => {
+    downloadPending = true;
     stopUpdateCheckSchedule();
   };
   const onDownloadProgress = () => {
-    if (state.status !== 'downloaded' && state.status !== 'downloading') {
-      const version = currentUpdateVersion();
-      setUpdateState({ status: 'downloading', ...(version ? { version } : {}) });
-    }
+    downloadPending = true;
   };
-  const onUpdateDownloaded = (info: UpdateInfo) => {
-    setUpdateState(updateState('downloaded', info));
+  const onUpdateDownloaded = () => {
+    downloadPending = false;
+    setUpdateState({ status: 'downloaded' });
     stopUpdateCheckSchedule();
   };
-  const onUpdateNotAvailable = () => setUpdateState({ status: 'idle' });
+  const onUpdateNotAvailable = () => {
+    downloadPending = false;
+    setUpdateState({ status: 'idle' });
+  };
   const onError = (error: Error) => {
+    downloadPending = false;
     setUpdateState({ status: 'error', error: error.message || 'Update failed.' });
     scheduleNextUpdateCheck();
   };
