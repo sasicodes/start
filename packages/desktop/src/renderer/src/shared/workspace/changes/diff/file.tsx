@@ -1,3 +1,4 @@
+import { isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
 import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
@@ -66,9 +67,6 @@ const fileHasPathChange = (file: PatchFile) => Boolean(file.oldPath && file.newP
 
 const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
 
-const fileOpenByDefault = (file: PatchFile, kind: PatchFileKind) =>
-  kind === 'image' || (fileHasTextDiff(file) && file.added + file.removed <= 320);
-
 const fallbackMessage = (file: PatchFile, kind: PatchFileKind) => {
   if (kind === 'submodule') return 'Submodule pointer changed.';
   if (kind === 'symlink') return 'Symlink target changed.';
@@ -130,10 +128,10 @@ const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevisi
 
 export const DiffFile = memo(({ cwd, file, status, language, viewMode, highlightRevision }: DiffFileProps) => {
   const kind = patchFileKind(file);
-  const [open, setOpen] = useState(() => fileOpenByDefault(file, kind));
+  const [open, setOpen] = useState(() => isOpenByDefault(file, kind));
 
   return (
-    <section class="min-w-0 border-t border-line [contain-intrinsic-size:180px] [content-visibility:auto]">
+    <section class="min-w-0 border-t border-line">
       <button
         type="button"
         aria-expanded={open}

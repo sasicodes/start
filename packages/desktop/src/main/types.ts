@@ -1,6 +1,6 @@
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
-export type ProviderKey = 'anthropic' | 'openai';
+export type ProviderKey = 'anthropic' | 'google' | 'openai';
 
 export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
 export type ChatStatus = {

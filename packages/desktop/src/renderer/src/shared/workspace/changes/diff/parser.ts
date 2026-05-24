@@ -1,3 +1,5 @@
+import { detachString } from '@renderer/shared/workspace/changes/diff/detach-string';
+
 export type PatchFileStatus = 'added' | 'copied' | 'deleted' | 'modified' | 'renamed';
 export type PatchLineKind = 'add' | 'context' | 'meta' | 'remove';
 
@@ -50,8 +52,8 @@ const cleanPatchPath = (value: string) => {
   const pathValue = unquotePath(pathPart.trim());
 
   if (!pathValue || pathValue === '/dev/null') return '';
-  if (pathValue.startsWith('a/') || pathValue.startsWith('b/')) return pathValue.slice(2);
-  return pathValue;
+  if (pathValue.startsWith('a/') || pathValue.startsWith('b/')) return detachString(pathValue.slice(2));
+  return detachString(pathValue);
 };
 
 const parseDiffGitPaths = (line: string): PatchPathPair => {
@@ -222,7 +224,7 @@ export const parseGitPatch = (patch: string): PatchFile[] => {
     if (hunkMatch) {
       oldCursor = lineNumber(hunkMatch[1]);
       newCursor = lineNumber(hunkMatch[3]);
-      currentHunk = { header: line, lines: [] };
+      currentHunk = { header: detachString(line), lines: [] };
       currentFile.hunks.push(currentHunk);
       continue;
     }
@@ -233,27 +235,27 @@ export const parseGitPatch = (patch: string): PatchFile[] => {
     }
 
     if (line.startsWith('+')) {
-      appendLine(currentHunk, 'add', line.slice(1), undefined, newCursor);
+      appendLine(currentHunk, 'add', detachString(line.slice(1)), undefined, newCursor);
       currentFile.added += 1;
       newCursor += 1;
       continue;
     }
 
     if (line.startsWith('-')) {
-      appendLine(currentHunk, 'remove', line.slice(1), oldCursor, undefined);
+      appendLine(currentHunk, 'remove', detachString(line.slice(1)), oldCursor, undefined);
       currentFile.removed += 1;
       oldCursor += 1;
       continue;
     }
 
     if (line.startsWith(' ')) {
-      appendLine(currentHunk, 'context', line.slice(1), oldCursor, newCursor);
+      appendLine(currentHunk, 'context', detachString(line.slice(1)), oldCursor, newCursor);
       oldCursor += 1;
       newCursor += 1;
       continue;
     }
 
-    appendLine(currentHunk, 'meta', line, undefined, undefined);
+    appendLine(currentHunk, 'meta', detachString(line), undefined, undefined);
   }
 
   return files;

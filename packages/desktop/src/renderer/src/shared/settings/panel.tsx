@@ -1,22 +1,30 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
-import { OpenAIIcon, AnthropicIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useState } from 'preact/hooks';
 
-type ProviderKey = 'openai' | 'anthropic';
+type ProviderKey = 'anthropic' | 'google' | 'openai';
 
 const providers: {
   key: ProviderKey;
   name: string;
+  supportsSubscription: boolean;
 }[] = [
   {
     key: 'openai',
-    name: 'OpenAI'
+    name: 'OpenAI',
+    supportsSubscription: true
   },
   {
     key: 'anthropic',
-    name: 'Anthropic'
+    name: 'Anthropic',
+    supportsSubscription: true
+  },
+  {
+    key: 'google',
+    name: 'Google',
+    supportsSubscription: false
   }
 ];
 
@@ -33,6 +41,7 @@ const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) 
 
 const ProviderIcon = ({ provider }: { provider: ProviderKey }) => {
   if (provider === 'openai') return <OpenAIIcon class="size-5" />;
+  if (provider === 'google') return <GeminiIcon class="size-5" />;
   return <AnthropicIcon class="size-5" />;
 };
 
@@ -69,7 +78,7 @@ export const Settings = memo(
   }: SettingsProps) => {
     const [shortcutError, setShortcutError] = useState('');
     const [recordingShortcut, setRecordingShortcut] = useState(false);
-    const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
+    const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', google: '', openai: '' });
 
     const saveApiKey = async (provider: ProviderKey) => {
       await onSaveApiKey(provider, apiKeys[provider]);
@@ -154,16 +163,18 @@ export const Settings = memo(
                     Save
                   </button>
                 </div>
-                <div class="flex items-center gap-2 px-1 text-xs leading-5 text-soft">
-                  <span>or</span>
-                  <button
-                    type="button"
-                    onClick={() => void onLoginSubscription(provider.key)}
-                    class="border-0 bg-transparent p-0 text-xs leading-5 font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                  >
-                    {subscriptionLabel(auth?.connected ?? false)}
-                  </button>
-                </div>
+                {provider.supportsSubscription && (
+                  <div class="flex items-center gap-2 px-1 text-xs leading-5 text-soft">
+                    <span>or</span>
+                    <button
+                      type="button"
+                      onClick={() => void onLoginSubscription(provider.key)}
+                      class="border-0 bg-transparent p-0 text-xs leading-5 font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                    >
+                      {subscriptionLabel(auth?.connected ?? false)}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );

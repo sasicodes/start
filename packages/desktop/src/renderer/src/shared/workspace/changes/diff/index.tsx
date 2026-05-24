@@ -1,4 +1,5 @@
 import type { GitPatchSection } from '@preload/index';
+import { estimatedFileHeight } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
 import {
   cacheDiffHighlight,
@@ -8,14 +9,13 @@ import {
   hasDiffHighlight,
   loadCodeHighlighter
 } from '@renderer/shared/workspace/changes/diff/highlight';
+import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
 import type { DiffEntriesState, DiffEntry, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
-import { useEffect, useState } from 'preact/hooks';
-
-const initialRenderedEntryCount = 40;
-const renderedEntryBatchSize = 40;
+import { Virtual } from '@renderer/ui/virtual';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 
 const patchFileKey = (file: PatchFile, sectionKind: GitPatchSection['kind'], index: number) =>
   `${sectionKind}:${file.oldPath}:${file.newPath}:${index}`;
@@ -29,6 +29,9 @@ const diffEntries = (sections: GitPatchSection[]): DiffEntry[] =>
       status: section.kind === 'untracked' ? 'untracked' : file.status
     }))
   );
+
+const entryKey = (entry: DiffEntry) => entry.key;
+const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
 
 const useDiffEntries = (sections: GitPatchSection[]) => {
   const [entryState, setEntryState] = useState<DiffEntriesState>({ kind: 'parsing' });
@@ -48,27 +51,6 @@ const useDiffEntries = (sections: GitPatchSection[]) => {
   }, [sections]);
 
   return entryState;
-};
-
-const useProgressiveEntries = (entries: DiffEntry[], entryState: DiffEntriesState) => {
-  const [renderedEntryCount, setRenderedEntryCount] = useState(initialRenderedEntryCount);
-
-  useEffect(() => {
-    if (entryState.kind !== 'ready') return;
-    setRenderedEntryCount(Math.min(initialRenderedEntryCount, entryState.entries.length));
-  }, [entryState]);
-
-  useEffect(() => {
-    if (renderedEntryCount >= entries.length) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      setRenderedEntryCount((count) => Math.min(count + renderedEntryBatchSize, entries.length));
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [entries.length, renderedEntryCount]);
-
-  return entries.length > renderedEntryCount ? entries.slice(0, renderedEntryCount) : entries;
 };
 
 const useDiffHighlighting = (entryState: DiffEntriesState) => {
@@ -144,7 +126,20 @@ export const GitDiffViewer = ({
   const limited = sections.some((section) => section.limited && !section.patch);
   const entries = entryState.kind === 'ready' ? entryState.entries : [];
   const highlightRevision = useDiffHighlighting(entryState);
-  const visibleEntries = useProgressiveEntries(entries, entryState);
+
+  const renderEntry = useCallback(
+    (entry: DiffEntry) => (
+      <DiffFile
+        cwd={cwd}
+        file={entry.file}
+        viewMode={viewMode}
+        status={entry.status}
+        language={entry.language}
+        highlightRevision={highlightRevision}
+      />
+    ),
+    [cwd, viewMode, highlightRevision]
+  );
 
   return (
     <div class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
@@ -155,17 +150,9 @@ export const GitDiffViewer = ({
       {entryState.kind === 'ready' && entries.length === 0 && !limited && (
         <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">No diff to show.</p>
       )}
-      {visibleEntries.map((entry) => (
-        <DiffFile
-          key={entry.key}
-          cwd={cwd}
-          file={entry.file}
-          viewMode={viewMode}
-          status={entry.status}
-          language={entry.language}
-          highlightRevision={highlightRevision}
-        />
-      ))}
+      {entryState.kind === 'ready' && entries.length > 0 && (
+        <Virtual items={entries} getKey={entryKey} renderItem={renderEntry} estimateHeight={estimateEntryHeight} />
+      )}
     </div>
   );
 };
