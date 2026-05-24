@@ -1,7 +1,7 @@
-import type { RecentSession, RecentSessionsChanged } from '@preload/index';
+import type { AgentTabStatus, RecentSession, RecentSessionsChanged } from '@preload/index';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
-import { NoticeDot } from '@renderer/ui/notice-dot';
+import { Indicator } from '@renderer/shared/indicator';
 import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { memo } from 'preact/compat';
@@ -10,26 +10,51 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 const sessionPageSize = 15;
 const sessionPrefetchDistance = 220;
 
+type SessionIndicatorKind = Exclude<AgentTabStatus, 'idle'>;
+type RecentIndicatorKind = SessionIndicatorKind | '';
+
 const pageOptions = (workspacePath: string, limit: number, offset = 0) => ({
   limit,
   offset,
   ...(workspacePath ? { workspacePath } : {})
 });
 
-const sessionStatus = (session: RecentSession, activeSessionId: string, isGenerating: boolean) => {
-  if (isGenerating && session.id === activeSessionId) return 'generating';
-  if (session.status && session.status !== 'idle') return session.status;
+const statusNeedsIndicator = (status: AgentTabStatus | undefined): status is SessionIndicatorKind =>
+  Boolean(status && status !== 'idle');
+
+const presentIndicatorKind = (kind: RecentIndicatorKind): kind is SessionIndicatorKind => Boolean(kind);
+
+const sessionIndicatorKind = (
+  session: RecentSession,
+  activeSessionId: string,
+  isGenerating: boolean
+): RecentIndicatorKind => {
+  if (session.id === activeSessionId && isGenerating) return 'generating';
+  if (statusNeedsIndicator(session.status)) return session.status;
   return session.noticeKind ?? '';
 };
 
-const triggerStatus = (sessions: RecentSession[], activeSessionId: string, isGenerating: boolean) => {
-  if (sessions.some((session) => sessionStatus(session, activeSessionId, isGenerating) === 'failed')) return 'failed';
-  if (sessions.some((session) => sessionStatus(session, activeSessionId, isGenerating) === 'generating'))
-    return 'generating';
-  if (sessions.some((session) => sessionStatus(session, activeSessionId, isGenerating) === 'completed'))
-    return 'completed';
+const indicatorKindPriority = (kinds: RecentIndicatorKind[]): RecentIndicatorKind => {
+  if (kinds.includes('failed')) return 'failed';
+  if (kinds.includes('generating')) return 'generating';
+  if (kinds.includes('completed')) return 'completed';
   return '';
 };
+
+const sessionIndicatorKinds = (sessions: RecentSession[], activeSessionId: string, isGenerating: boolean) =>
+  sessions.map((session) => sessionIndicatorKind(session, activeSessionId, isGenerating)).filter(presentIndicatorKind);
+
+const triggerIndicatorKind = (sessions: RecentSession[], activeSessionId: string, isGenerating: boolean) =>
+  indicatorKindPriority(sessionIndicatorKinds(sessions, activeSessionId, isGenerating));
+
+const acknowledgeSession = (session: RecentSession): RecentSession => {
+  const { noticeKind, status, ...rest } = session;
+  if (status && status !== 'completed' && status !== 'failed') return { ...rest, status };
+  return rest;
+};
+
+const acknowledgeSessionById = (sessions: RecentSession[], sessionId: string) =>
+  sessions.map((session) => (session.id === sessionId ? acknowledgeSession(session) : session));
 
 interface SessionRowProps {
   active: boolean;
@@ -53,7 +78,7 @@ interface RecentSessionsProps {
 }
 
 const SessionRow = ({ active, isGenerating, session, onOpen }: SessionRowProps) => {
-  const status = sessionStatus(session, active ? session.id : '', isGenerating);
+  const kind = sessionIndicatorKind(session, active ? session.id : '', isGenerating);
 
   return (
     <AppMenu.Item
@@ -61,16 +86,16 @@ const SessionRow = ({ active, isGenerating, session, onOpen }: SessionRowProps) 
       className={tw(
         'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
         active && 'bg-control text-hover',
-        status === 'failed' && 'bg-danger/[0.055]',
-        status === 'completed' && 'bg-success/[0.055]',
-        status === 'generating' && 'bg-blue-500/[0.07]'
+        kind === 'failed' && 'bg-danger/[0.055]',
+        kind === 'completed' && 'bg-success/[0.055]',
+        kind === 'generating' && 'bg-blue-500/[0.07]'
       )}
     >
       <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
       <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
-      {status && (
+      {kind && (
         <span class="flex h-4 items-center justify-end">
-          <NoticeDot kind={status} />
+          <Indicator kind={kind} />
         </span>
       )}
     </AppMenu.Item>
@@ -132,8 +157,8 @@ export const RecentSessions = memo(
         const page = await window.pi.chat.recentSessionsPage(pageOptions(workspacePath, sessionPageSize, offset));
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
-        setSessions((currentSessions) => {
-          const nextSessions = [...currentSessions, ...page.sessions];
+        setSessions((current) => {
+          const nextSessions = [...current, ...page.sessions];
           loadedCountRef.current = nextSessions.length;
           return nextSessions;
         });
@@ -165,9 +190,18 @@ export const RecentSessions = memo(
       [hasMoreSessions, loadMoreSessions]
     );
 
-    const openSessionAndClose = useCallback(async (session: RecentSession) => onOpenSession(session), [onOpenSession]);
+    const openSession = useCallback(
+      async (session: RecentSession) => {
+        const opened = await onOpenSession(session);
+        if (opened) {
+          setSessions((current) => acknowledgeSessionById(current, session.id));
+        }
+        return opened;
+      },
+      [onOpenSession]
+    );
 
-    const status = triggerStatus(sessions, activeSessionId, isGenerating);
+    const kind = triggerIndicatorKind(sessions, activeSessionId, isGenerating);
 
     useEffect(() => {
       return () => {
@@ -203,15 +237,15 @@ export const RecentSessions = memo(
           aria-label="Recent sessions"
           className={tw(
             'relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
-            status === 'failed' && 'bg-danger/[0.075]',
-            status === 'completed' && 'bg-success/[0.075]',
-            status === 'generating' && 'bg-blue-500/[0.09]'
+            kind === 'failed' && 'bg-danger/[0.075]',
+            kind === 'completed' && 'bg-success/[0.075]',
+            kind === 'generating' && 'bg-blue-500/[0.09]'
           )}
         >
           <HistoryIcon class="size-5" />
-          {status && (
-            <span class="absolute top-1.5 right-1.5">
-              <NoticeDot kind={status} />
+          {kind && (
+            <span class="pointer-events-none absolute top-[3px] right-[3px] z-10">
+              <Indicator kind={kind} />
             </span>
           )}
         </AppMenu.Trigger>
@@ -226,7 +260,7 @@ export const RecentSessions = memo(
                   sessions={sessions}
                   isGenerating={isGenerating}
                   activeSessionId={activeSessionId}
-                  onOpenSession={openSessionAndClose}
+                  onOpenSession={openSession}
                 />
               </div>
             </MenuPanel>

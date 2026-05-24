@@ -1,7 +1,7 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
-import { NoticeDot } from '@renderer/ui/notice-dot';
+import { Indicator } from '@renderer/shared/indicator';
 import { tw } from '@renderer/utils/tw';
 
 const WorkspaceOption = ({
@@ -24,7 +24,7 @@ const WorkspaceOption = ({
       <span class="truncate text-sm leading-5 font-medium">{folder.name}</span>
       <span class="truncate text-xs leading-4 font-normal text-soft">{folder.path}</span>
     </span>
-    {folder.noticeKind && <NoticeDot />}
+    {folder.noticeKind && <Indicator />}
   </AppMenu.Item>
 );
 
