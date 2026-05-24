@@ -76,28 +76,28 @@ const streamingTurnId = (session: AgentSession) => `streaming:${session.sessionM
 type LiveAssistantTurn = {
   id: string;
   text: string;
-  details: HistoryTurn['details'];
   thinking: string;
   createdAt: number;
+  details: HistoryTurn['details'];
 };
 
 const liveAssistantHistoryTurn = (turn: LiveAssistantTurn): HistoryTurn => ({
   id: turn.id,
   text: turn.text,
-  role: 'assistant',
   streaming: true,
+  role: 'assistant',
   createdAt: turn.createdAt,
-  ...(turn.details && turn.details.length > 0 ? { details: turn.details } : {}),
-  ...(turn.thinking ? { thinking: turn.thinking } : {})
+  ...(turn.thinking ? { thinking: turn.thinking } : {}),
+  ...(turn.details && turn.details.length > 0 ? { details: turn.details } : {})
 });
 
 const liveAssistantPlaceholder = (session: AgentSession): LiveAssistantTurn => {
   return {
-    id: streamingTurnId(session),
     text: '',
     details: [],
     thinking: '',
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    id: streamingTurnId(session)
   };
 };
 
@@ -107,12 +107,26 @@ type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
 
+type SessionRuntimeState = {
+  abortSequence: number;
+  isGenerating: boolean;
+  queueRebuildDepth: number;
+  liveAssistantTurn?: LiveAssistantTurn;
+  queuedMessages: PendingQueuedMessage[];
+  queueDeliveryCandidates: QueuedMessage[];
+};
+
+const createSessionRuntimeState = (): SessionRuntimeState => ({
+  abortSequence: 0,
+  queuedMessages: [],
+  isGenerating: false,
+  queueRebuildDepth: 0,
+  queueDeliveryCandidates: []
+});
+
 export class ChatService {
   private appState = readStartState();
   private session: AgentSession | null = null;
-  private abortSequence = 0;
-  private isGenerating = false;
-  private queueRebuildDepth = 0;
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
   private activeSessionId = '';
@@ -121,8 +135,6 @@ export class ChatService {
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
-  private queuedMessages: PendingQueuedMessage[] = [];
-  private queueDeliveryCandidates: QueuedMessage[] = [];
 
   private readonly authStorage = AuthStorage.create();
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
@@ -130,7 +142,7 @@ export class ChatService {
   private readonly activeSessionByWorkspace = new Map<string, string>();
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
-  private readonly liveAssistantTurns = new Map<string, LiveAssistantTurn>();
+  private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   async getStatus(): Promise<ChatStatus> {
@@ -153,7 +165,7 @@ export class ChatService {
       ready: true,
       workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
-      isGenerating: Boolean(this.session?.isStreaming || this.session?.isBashRunning),
+      isGenerating: Boolean(this.session && this.sessionIsGenerating(this.session)),
       selectedModelKey: modelKey(model),
       ...(sessionId ? { sessionId } : {}),
       thinkingLevel: this.selectedThinkingLevel
@@ -206,7 +218,6 @@ export class ChatService {
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
-      this.clearQueuedMessageState();
       const { session } = await createAgentSession({
         model,
         sessionManager,
@@ -224,7 +235,7 @@ export class ChatService {
       enableRegisteredTools(session);
       this.session = session;
       this.workspaceCwd = workspacePath;
-      this.isGenerating = false;
+      this.runtimeStateForSession(session).isGenerating = false;
       this.setActiveSession(sessionManager);
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
@@ -255,7 +266,7 @@ export class ChatService {
     const tabs = new Map<string, AgentTab>();
     if (this.session && this.sessionIsReportable(this.session)) {
       const sessionId = this.session.sessionManager.getSessionId();
-      const status = this.isGenerating ? 'generating' : 'idle';
+      const status = this.sessionIsGenerating(this.session) ? 'generating' : 'idle';
       tabs.set(sessionId, tabFromSessionStatus(this.session, status, this.workspaceCwd));
     }
 
@@ -263,7 +274,12 @@ export class ChatService {
       if (!this.sessionIsReportable(session)) continue;
 
       const sessionId = session.sessionManager.getSessionId();
-      tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, this.notices.get(sessionId)));
+      const notice = this.notices.get(sessionId);
+      const status = this.sessionIsGenerating(session) ? 'generating' : undefined;
+      const tab = status
+        ? tabFromSessionStatus(session, status, sessionWorkspacePath(session, this.workspaceCwd))
+        : tabFromSession(session, this.workspaceCwd, notice);
+      tabs.set(sessionId, tab);
     }
 
     return [...tabs.values()];
@@ -276,7 +292,6 @@ export class ChatService {
 
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.session = null;
-    this.clearQueuedMessageState();
     this.attachments.clear();
 
     const sessionManager = SessionManager.create(workspacePath);
@@ -291,7 +306,7 @@ export class ChatService {
     enableRegisteredTools(session);
     this.session = session;
     this.workspaceCwd = workspacePath;
-    this.isGenerating = false;
+    this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
     this.setActiveSession(sessionManager);
     this.persistState({ lastWorkspace: this.workspaceCwd });
@@ -311,10 +326,10 @@ export class ChatService {
       this.session.abortBash();
       await this.session.abort();
       this.session.dispose();
+      this.deleteRuntimeState(id);
       this.session = null;
       this.activeSessionByWorkspace.delete(this.workspaceCwd);
       this.activeSessionId = '';
-      this.isGenerating = false;
       this.shouldCreateSession = true;
     }
 
@@ -324,6 +339,7 @@ export class ChatService {
       await session.abort();
       session.dispose();
       this.backgroundSessions.delete(id);
+      this.deleteRuntimeState(id);
     }
 
     this.deleteWorkspaceSessionReferences(id);
@@ -338,6 +354,14 @@ export class ChatService {
   async abortTab(id: string, webContents?: WebContents): Promise<void> {
     if (this.activeSessionId === id) return this.abort(webContents);
     const session = this.backgroundSessions.get(id);
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    if (runtimeState) {
+      runtimeState.abortSequence += 1;
+      runtimeState.queuedMessages = [];
+      runtimeState.queueDeliveryCandidates = [];
+      delete runtimeState.liveAssistantTurn;
+    }
+    session?.clearQueue();
     session?.abortBash();
     await session?.abort();
   }
@@ -359,7 +383,7 @@ export class ChatService {
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
     this.setActiveSession(session.sessionManager);
-    this.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    this.runtimeStateForSession(session).isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     this.shouldCreateSession = false;
     this.persistState({ lastWorkspace: this.workspaceCwd });
     activateWorkspaceAccess(this.workspaceCwd);
@@ -452,11 +476,13 @@ export class ChatService {
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = this.backgroundSessionForWorkspace(nextCwd);
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
-      this.clearQueuedMessageState();
       this.attachments.clear();
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
-      this.isGenerating = Boolean(this.session?.isStreaming || this.session?.isBashRunning);
+      if (this.session)
+        this.runtimeStateForSession(this.session).isGenerating = Boolean(
+          this.session.isStreaming || this.session.isBashRunning
+        );
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
@@ -551,7 +577,7 @@ export class ChatService {
   }
 
   async selectModel(selectedKey: string): Promise<ChatStatus> {
-    if (this.isGenerating) {
+    if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
         workspacePath: this.workspaceCwd,
@@ -593,7 +619,7 @@ export class ChatService {
   }
 
   async selectThinkingLevel(level: string): Promise<ChatStatus> {
-    if (this.isGenerating) {
+    if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
         workspacePath: this.workspaceCwd,
@@ -637,22 +663,30 @@ export class ChatService {
   async send(prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
-    if (this.isGenerating) return this.queueFollowUp(text, webContents, attachments);
-
-    this.isGenerating = true;
-    const sendAbortSequence = this.abortSequence;
     let endError = '';
     let activeSession: AgentSession | null = null;
+    let runtimeState: SessionRuntimeState | null = null;
+    let sendAbortSequence = 0;
+    let startedGeneration = false;
     let sessionId = '';
     let workspacePath = this.workspaceCwd;
 
     try {
-      const images = await this.resolveAttachments(attachments);
       activeSession = await this.getSession();
       const session = activeSession;
       sessionId = session.sessionManager.getSessionId();
+      runtimeState = this.runtimeStateForSession(session);
+      if (runtimeState.isGenerating || session.isStreaming)
+        return this.queueFollowUp(text, webContents, attachments, session, runtimeState);
+      if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
+
+      const state = runtimeState;
+      state.isGenerating = true;
+      startedGeneration = true;
+      sendAbortSequence = state.abortSequence;
+      const images = await this.resolveAttachments(attachments);
       workspacePath = this.workspaceCwd;
-      this.resetLiveAssistantTurn(session);
+      this.resetLiveAssistantTurn(session, state);
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
@@ -662,7 +696,7 @@ export class ChatService {
         }
 
         if (active && event.type === 'message_start' && event.message.role === 'user') {
-          this.emitQueuedTurnStart(textContent(event.message.content), webContents);
+          this.emitQueuedTurnStart(textContent(event.message.content), state, webContents);
         }
 
         if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {
@@ -673,18 +707,18 @@ export class ChatService {
         if ('toolCallId' in event) previousToolArgs = toolArgs.get(event.toolCallId);
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
         const renderedEvent = chatEvent(event, eventContext);
-        if (renderedEvent) this.appendLiveAssistantDetail(sessionId, renderedEvent);
+        if (renderedEvent) this.appendLiveAssistantDetail(state, renderedEvent);
         if (active) this.emitEvent(webContents, renderedEvent);
         if (renderedEvent) this.emitScoped(webContents, 'chat:scoped-event', sessionId, workspacePath, renderedEvent);
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
-        if (delta) this.appendLiveAssistantText(sessionId, delta);
+        if (delta) this.appendLiveAssistantText(state, delta);
         if (active && delta) this.emit(webContents, 'delta', delta);
         if (delta) this.emitScoped(webContents, 'chat:scoped-delta', sessionId, workspacePath, delta);
 
         const thought = thinkingDelta(event);
-        if (thought) this.appendLiveAssistantThinking(sessionId, thought);
+        if (thought) this.appendLiveAssistantThinking(state, thought);
         if (active && thought) this.emit(webContents, 'thinking-delta', thought);
         if (thought) this.emitScoped(webContents, 'chat:scoped-thinking-delta', sessionId, workspacePath, thought);
 
@@ -703,8 +737,8 @@ export class ChatService {
       }
 
       if (endError) {
-        this.liveAssistantTurns.delete(sessionId);
-        if (this.abortSequence !== sendAbortSequence) {
+        delete state.liveAssistantTurn;
+        if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
             this.emit(webContents, 'done', '');
@@ -724,17 +758,17 @@ export class ChatService {
       }
 
       if (this.isActiveSession(sessionId, workspacePath)) {
-        this.liveAssistantTurns.delete(sessionId);
+        delete state.liveAssistantTurn;
         this.setActiveSession(session.sessionManager);
         this.emit(webContents, 'done', '');
       } else {
-        this.liveAssistantTurns.delete(sessionId);
+        delete state.liveAssistantTurn;
         this.setNotice(sessionId, workspacePath, 'completed', webContents);
       }
       this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
       return { ok: true, sessionId };
     } catch (error) {
-      if (this.abortSequence !== sendAbortSequence) {
+      if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
         if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
           this.emit(webContents, 'done', '');
@@ -744,7 +778,7 @@ export class ChatService {
       }
 
       const message = error instanceof Error ? error.message : 'Chat failed.';
-      if (sessionId) this.liveAssistantTurns.delete(sessionId);
+      if (runtimeState) delete runtimeState.liveAssistantTurn;
       if (this.isActiveSession(sessionId, workspacePath)) {
         this.clearQueuedMessages(webContents);
         this.emit(webContents, 'error', message);
@@ -754,19 +788,20 @@ export class ChatService {
       if (sessionId) this.emitScoped(webContents, 'chat:scoped-error', sessionId, workspacePath, message);
       return { ok: false, error: message };
     } finally {
-      if (this.isActiveSession(sessionId, workspacePath)) this.isGenerating = false;
+      if (runtimeState && startedGeneration) runtimeState.isGenerating = false;
     }
   }
 
   async command(command: string, excludeFromContext: boolean, webContents: WebContents): Promise<CommandResult> {
     const text = command.trim();
     if (!text) return { ok: false, error: 'Command is empty.' };
-    if (this.isGenerating) return { ok: false, error: 'A response is already running.' };
+    const session = await this.getSession();
+    const runtimeState = this.runtimeStateForSession(session);
+    if (this.sessionIsGenerating(session)) return { ok: false, error: 'A response is already running.' };
 
-    this.isGenerating = true;
+    runtimeState.isGenerating = true;
 
     try {
-      const session = await this.getSession();
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
 
       const result = await session.executeBash(
@@ -789,39 +824,46 @@ export class ChatService {
       const message = error instanceof Error ? error.message : 'Command failed.';
       return { ok: false, error: message };
     } finally {
-      this.isGenerating = false;
+      runtimeState.isGenerating = false;
     }
   }
 
   async steerQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
     const session = this.session;
-    const message = this.queuedMessages.find((item) => item.id === id);
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    const message = runtimeState?.queuedMessages.find((item) => item.id === id);
     if (!session) return this.visibleQueuedMessages();
+    if (!runtimeState) return this.visibleQueuedMessages();
     if (!message) return this.visibleQueuedMessages();
 
-    const canSteerQueuedMessage = this.isGenerating && session.isStreaming;
+    const canSteerQueuedMessage = runtimeState.isGenerating && session.isStreaming;
     if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
 
-    this.queuedMessages = this.queuedMessages.map((item) => (item.id === id ? { ...item, kind: 'steer' } : item));
-    await this.rebuildSessionQueue(session);
+    runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
+      item.id === id ? { ...item, kind: 'steer' } : item
+    );
+    await this.rebuildSessionQueue(session, runtimeState);
     this.emitQueueUpdate(webContents);
-    return this.visibleQueuedMessages();
+    return this.visibleQueuedMessages(runtimeState);
   }
 
   async deleteQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
     const session = this.session;
-    const nextMessages = this.queuedMessages.filter((message) => message.id !== id);
-    if (nextMessages.length === this.queuedMessages.length) return this.visibleQueuedMessages();
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    const nextMessages = (runtimeState?.queuedMessages ?? []).filter((message) => message.id !== id);
+    if (!runtimeState || nextMessages.length === runtimeState.queuedMessages.length)
+      return this.visibleQueuedMessages();
 
-    this.queuedMessages = nextMessages;
-    if (session) await this.rebuildSessionQueue(session);
+    runtimeState.queuedMessages = nextMessages;
+    if (session) await this.rebuildSessionQueue(session, runtimeState);
     this.emitQueueUpdate(webContents);
-    return this.visibleQueuedMessages();
+    return this.visibleQueuedMessages(runtimeState);
   }
 
   async abort(webContents?: WebContents): Promise<void> {
-    this.abortSequence += 1;
-    this.clearQueuedMessages(webContents);
+    const runtimeState = this.activeRuntimeState();
+    if (runtimeState) runtimeState.abortSequence += 1;
+    this.clearQueuedMessages(webContents, runtimeState);
     this.session?.abortBash();
     await this.session?.abort();
   }
@@ -830,10 +872,9 @@ export class ChatService {
     this.sessionOpenSequence += 1;
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.session = null;
-    this.clearQueuedMessageState();
+    this.clearActiveQueuedMessageState();
     this.attachments.clear();
     this.activeSessionId = '';
-    this.isGenerating = false;
     this.shouldCreateSession = true;
   }
 
@@ -845,8 +886,33 @@ export class ChatService {
     this.session = null;
     for (const session of this.backgroundSessions.values()) session.dispose();
     this.backgroundSessions.clear();
-    this.clearQueuedMessageState();
+    this.sessionRuntimeStates.clear();
     this.attachments.clear();
+  }
+
+  private runtimeStateForSessionId(sessionId: string): SessionRuntimeState {
+    const current = this.sessionRuntimeStates.get(sessionId);
+    if (current) return current;
+
+    const state = createSessionRuntimeState();
+    this.sessionRuntimeStates.set(sessionId, state);
+    return state;
+  }
+
+  private runtimeStateForSession(session: AgentSession): SessionRuntimeState {
+    return this.runtimeStateForSessionId(session.sessionManager.getSessionId());
+  }
+
+  private activeRuntimeState(): SessionRuntimeState | null {
+    return this.session ? this.runtimeStateForSession(this.session) : null;
+  }
+
+  private sessionIsGenerating(session: AgentSession): boolean {
+    return Boolean(this.runtimeStateForSession(session).isGenerating || session.isStreaming || session.isBashRunning);
+  }
+
+  private deleteRuntimeState(sessionId: string): void {
+    this.sessionRuntimeStates.delete(sessionId);
   }
 
   private cleanupAttachments(): void {
@@ -886,8 +952,8 @@ export class ChatService {
     return images;
   }
 
-  private visibleQueuedMessages(): QueuedMessage[] {
-    return this.queuedMessages.map((message) => ({
+  private visibleQueuedMessages(runtimeState = this.activeRuntimeState()): QueuedMessage[] {
+    return (runtimeState?.queuedMessages ?? []).map((message) => ({
       id: message.id,
       kind: message.kind,
       text: message.text
@@ -896,7 +962,7 @@ export class ChatService {
 
   private emitQueueUpdate(webContents: WebContents): void {
     const messages = this.visibleQueuedMessages();
-    const signature = JSON.stringify(messages);
+    const signature = `${this.activeSessionId}:${JSON.stringify(messages)}`;
     if (this.queueUpdateSignatures.get(webContents) === signature) return;
 
     this.queueUpdateSignatures.set(webContents, signature);
@@ -912,14 +978,15 @@ export class ChatService {
   }
 
   private syncQueuedMessages(steering: readonly string[], followUp: readonly string[], webContents: WebContents): void {
-    if (this.queueRebuildDepth > 0) return;
+    const runtimeState = this.activeRuntimeState();
+    if (!runtimeState || runtimeState.queueRebuildDepth > 0) return;
 
     const steeringMessages = [...steering];
     const followUpMessages = [...followUp];
     const nextMessages: PendingQueuedMessage[] = [];
     const deliveredMessages: QueuedMessage[] = [];
 
-    for (const message of this.queuedMessages) {
+    for (const message of runtimeState.queuedMessages) {
       if (message.kind === 'steer' && this.consumeQueuedText(steeringMessages, message.text)) {
         nextMessages.push(message);
       } else if (message.kind === 'followUp' && this.consumeQueuedText(followUpMessages, message.text)) {
@@ -936,17 +1003,18 @@ export class ChatService {
     for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
     for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
 
-    this.queueDeliveryCandidates.push(...deliveredMessages);
-    this.queuedMessages = nextMessages;
+    runtimeState.queueDeliveryCandidates.push(...deliveredMessages);
+    runtimeState.queuedMessages = nextMessages;
     this.emitQueueUpdate(webContents);
   }
 
   private async queueFollowUp(
     text: string,
     webContents: WebContents,
-    attachments: ImageAttachment[]
+    attachments: ImageAttachment[],
+    session: AgentSession,
+    runtimeState: SessionRuntimeState
   ): Promise<SendResult> {
-    const session = this.session;
     if (!session?.isStreaming) return { ok: false, error: 'The response is still starting.' };
 
     const id = randomUUID();
@@ -959,7 +1027,7 @@ export class ChatService {
         text,
         ...(images.length > 0 ? { images } : {})
       };
-      this.queuedMessages.push(message);
+      runtimeState.queuedMessages.push(message);
       if (images.length > 0) {
         await session.followUp(text, images);
       } else {
@@ -967,17 +1035,17 @@ export class ChatService {
       }
       return { ok: true, queued: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
     } catch (error) {
-      this.queuedMessages = this.queuedMessages.filter((message) => message.id !== id);
+      runtimeState.queuedMessages = runtimeState.queuedMessages.filter((message) => message.id !== id);
       this.emitQueueUpdate(webContents);
       return { ok: false, error: error instanceof Error ? error.message : 'Message could not be queued.' };
     }
   }
 
-  private async rebuildSessionQueue(session: AgentSession): Promise<void> {
-    this.queueRebuildDepth += 1;
+  private async rebuildSessionQueue(session: AgentSession, runtimeState: SessionRuntimeState): Promise<void> {
+    runtimeState.queueRebuildDepth += 1;
     try {
       session.clearQueue();
-      for (const message of this.queuedMessages) {
+      for (const message of runtimeState.queuedMessages) {
         if (message.kind === 'steer') {
           await session.steer(message.text, message.images);
         } else {
@@ -985,38 +1053,45 @@ export class ChatService {
         }
       }
     } finally {
-      this.queueRebuildDepth = Math.max(0, this.queueRebuildDepth - 1);
+      runtimeState.queueRebuildDepth = Math.max(0, runtimeState.queueRebuildDepth - 1);
     }
   }
 
-  private clearQueuedMessages(webContents?: WebContents): void {
+  private clearQueuedMessages(webContents?: WebContents, runtimeState = this.activeRuntimeState()): void {
     if (this.session) {
-      this.queueRebuildDepth += 1;
+      const state = runtimeState ?? this.runtimeStateForSession(this.session);
+      state.queueRebuildDepth += 1;
       try {
         this.session.clearQueue();
       } finally {
-        this.queueRebuildDepth = Math.max(0, this.queueRebuildDepth - 1);
+        state.queueRebuildDepth = Math.max(0, state.queueRebuildDepth - 1);
       }
     }
 
-    this.clearQueuedMessageState();
+    this.clearQueuedMessageState(runtimeState);
     if (webContents) this.emitQueueUpdate(webContents);
   }
 
-  private clearQueuedMessageState(): void {
-    this.queuedMessages = [];
-    this.queueDeliveryCandidates = [];
+  private clearActiveQueuedMessageState(): void {
+    this.clearQueuedMessageState(this.activeRuntimeState());
+  }
+
+  private clearQueuedMessageState(runtimeState = this.activeRuntimeState()): void {
+    if (!runtimeState) return;
+
+    runtimeState.queuedMessages = [];
+    runtimeState.queueDeliveryCandidates = [];
   }
 
   private queuedMessageMatches(message: QueuedMessage, text: string): boolean {
     return message.text === text || text.startsWith(`${message.text}\n[image`);
   }
 
-  private emitQueuedTurnStart(text: string, webContents: WebContents): void {
-    const index = this.queueDeliveryCandidates.findIndex((message) => this.queuedMessageMatches(message, text));
+  private emitQueuedTurnStart(text: string, runtimeState: SessionRuntimeState, webContents: WebContents): void {
+    const index = runtimeState.queueDeliveryCandidates.findIndex((message) => this.queuedMessageMatches(message, text));
     if (index === -1) return;
 
-    const [message] = this.queueDeliveryCandidates.splice(index, 1);
+    const [message] = runtimeState.queueDeliveryCandidates.splice(index, 1);
     if (message) webContents.send('chat:queued-turn-start', { id: message.id, text: message.text });
   }
 
@@ -1041,6 +1116,7 @@ export class ChatService {
     const sessionId = session.sessionManager.getSessionId();
     if (!this.sessionIsReportable(session)) {
       session.dispose();
+      this.deleteRuntimeState(sessionId);
       this.deleteWorkspaceSessionReferences(sessionId);
       return;
     }
@@ -1053,29 +1129,28 @@ export class ChatService {
     const turns = historyTurns(session.sessionManager.getEntries());
     if (!session.isStreaming) return turns;
 
-    const sessionId = session.sessionManager.getSessionId();
-    const liveTurn = this.liveAssistantTurns.get(sessionId);
+    const liveTurn = this.runtimeStateForSession(session).liveAssistantTurn;
     if (liveTurn) return [...turns, liveAssistantHistoryTurn(liveTurn)];
 
     return [...turns, liveAssistantHistoryTurn(liveAssistantPlaceholder(session))];
   }
 
-  private resetLiveAssistantTurn(session: AgentSession): void {
-    this.liveAssistantTurns.set(session.sessionManager.getSessionId(), liveAssistantPlaceholder(session));
+  private resetLiveAssistantTurn(session: AgentSession, runtimeState = this.runtimeStateForSession(session)): void {
+    runtimeState.liveAssistantTurn = liveAssistantPlaceholder(session);
   }
 
-  private appendLiveAssistantText(sessionId: string, delta: string): void {
-    const turn = this.liveAssistantTurns.get(sessionId);
+  private appendLiveAssistantText(runtimeState: SessionRuntimeState | null, delta: string): void {
+    const turn = runtimeState?.liveAssistantTurn;
     if (turn) turn.text += delta;
   }
 
-  private appendLiveAssistantThinking(sessionId: string, delta: string): void {
-    const turn = this.liveAssistantTurns.get(sessionId);
+  private appendLiveAssistantThinking(runtimeState: SessionRuntimeState | null, delta: string): void {
+    const turn = runtimeState?.liveAssistantTurn;
     if (turn) turn.thinking += delta;
   }
 
-  private appendLiveAssistantDetail(sessionId: string, event: ChatEvent): void {
-    const turn = this.liveAssistantTurns.get(sessionId);
+  private appendLiveAssistantDetail(runtimeState: SessionRuntimeState | null, event: ChatEvent): void {
+    const turn = runtimeState?.liveAssistantTurn;
     if (!turn) return;
 
     turn.details = [...(turn.details ?? []), historyDetail(event, turn.details?.length ?? 0, turn.id, Date.now())];
