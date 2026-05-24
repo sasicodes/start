@@ -49,7 +49,7 @@ const cleanSessionNotices = (value: unknown) => {
     const notice = entry as Partial<SessionNotice>;
     const sessionId = cleanString(notice.sessionId) ?? cleanString(key);
     const workspacePath = cleanString(notice.workspacePath);
-    const seenAt = typeof notice.seenAt === 'number' ? notice.seenAt : undefined;
+    const seenAt = typeof notice.seenAt === 'number' ? notice.seenAt : null;
     const createdAt = typeof notice.createdAt === 'number' ? notice.createdAt : Date.now();
     if (!sessionId || !workspacePath) continue;
     if (notice.kind !== 'completed' && notice.kind !== 'failed') continue;
@@ -62,7 +62,8 @@ const cleanSessionNotices = (value: unknown) => {
     };
   }
 
-  return Object.keys(notices).length > 0 ? notices : undefined;
+  if (Object.keys(notices).length > 0) return notices;
+  return;
 };
 
 const cleanThinkingLevel = (value: unknown): EffortLevel => {

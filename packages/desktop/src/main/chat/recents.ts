@@ -6,8 +6,8 @@ type RecentSessionsRequest = RecentSessionsOptions & { workspacePath: string };
 
 const defaultRecentSessionLimit = 15;
 
-const pageLimit = (limit: number | undefined) => Math.max(1, limit ?? defaultRecentSessionLimit);
-const pageOffset = (offset: number | undefined) => Math.max(0, offset ?? 0);
+const pageLimit = (options: RecentSessionsRequest) => Math.max(1, options.limit ?? defaultRecentSessionLimit);
+const pageOffset = (options: RecentSessionsRequest) => Math.max(0, options.offset ?? 0);
 
 const sortRecentSessions = (sessions: ListedSession[]) =>
   [...sessions].sort(
@@ -36,8 +36,8 @@ export const recentSessionsPage = async (
   notices: ReadonlyMap<string, SessionNotice>
 ): Promise<RecentSessionsPage> => {
   const sessions = await recentSessionRecords(options.workspacePath);
-  const offset = pageOffset(options.offset);
-  const limit = pageLimit(options.limit);
+  const offset = pageOffset(options);
+  const limit = pageLimit(options);
   const page = sessions.slice(offset, offset + limit);
 
   return {

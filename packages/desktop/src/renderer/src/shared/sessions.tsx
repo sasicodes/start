@@ -10,6 +10,12 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 const sessionPageSize = 15;
 const sessionPrefetchDistance = 220;
 
+const pageOptions = (workspacePath: string, limit: number, offset = 0) => ({
+  limit,
+  offset,
+  ...(workspacePath ? { workspacePath } : {})
+});
+
 interface SessionRowProps {
   active: boolean;
   session: RecentSession;
@@ -28,12 +34,12 @@ interface RecentSessionsProps {
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-const SessionRow = ({ active, onOpen, session }: SessionRowProps) => (
+const SessionRow = ({ active, session, onOpen }: SessionRowProps) => (
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
       'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
-      active ? 'bg-control text-hover' : 'bg-transparent'
+      active && 'bg-control text-hover'
     )}
   >
     <span class="flex min-w-0 flex-col gap-1">
@@ -44,17 +50,17 @@ const SessionRow = ({ active, onOpen, session }: SessionRowProps) => (
   </AppMenu.Item>
 );
 
-const SessionRows = ({ activeSessionId, onOpenSession, sessions }: SessionRowsProps) =>
+const SessionRows = ({ sessions, activeSessionId, onOpenSession }: SessionRowsProps) =>
   sessions.map((session) => (
     <SessionRow
       key={session.id}
-      active={session.id === activeSessionId}
       session={session}
+      active={session.id === activeSessionId}
       onOpen={(session) => void onOpenSession(session)}
     />
   ));
 
-export const RecentSessions = memo(({ activeSessionId, onOpenSession, workspacePath }: RecentSessionsProps) => {
+export const RecentSessions = memo(({ workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
   const mountedRef = useRef(true);
   const sessionsRequestRef = useRef(0);
   const loadingMoreRef = useRef(false);
@@ -69,7 +75,7 @@ export const RecentSessions = memo(({ activeSessionId, onOpenSession, workspaceP
       sessionsRequestRef.current = requestId;
 
       try {
-        const page = await window.pi.chat.recentSessionsPage({ limit, ...(workspacePath ? { workspacePath } : {}) });
+        const page = await window.pi.chat.recentSessionsPage(pageOptions(workspacePath, limit));
         if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
         loadedCountRef.current = page.sessions.length;
@@ -94,11 +100,7 @@ export const RecentSessions = memo(({ activeSessionId, onOpenSession, workspaceP
     const offset = sessions.length;
 
     try {
-      const page = await window.pi.chat.recentSessionsPage({
-        offset,
-        limit: sessionPageSize,
-        ...(workspacePath ? { workspacePath } : {})
-      });
+      const page = await window.pi.chat.recentSessionsPage(pageOptions(workspacePath, sessionPageSize, offset));
       if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
       setSessions((currentSessions) => {

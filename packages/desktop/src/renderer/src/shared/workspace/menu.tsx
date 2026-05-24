@@ -35,7 +35,7 @@ export const WorkspaceMenu = ({
   onSelectWorkspace
 }: {
   folders: WorkspaceFolder[];
-  workspacePath: string | undefined;
+  workspacePath?: string;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
 }) => (

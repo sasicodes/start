@@ -9,7 +9,7 @@ import {
   SessionManager
 } from '@earendil-works/pi-coding-agent';
 import { recentSessionsPage } from '@main/chat/recents';
-import { sessionWorkspacePath, tabFromSession } from '@main/chat/tabs';
+import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
@@ -74,7 +74,7 @@ export class ChatService {
   private queueRebuildDepth = 0;
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
-  private activeSessionId: string | undefined;
+  private activeSessionId = '';
   private workspaceCwd = this.appState.lastWorkspace ?? process.cwd();
   private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private authInputReject: ((error: Error) => void) | null = null;
@@ -204,12 +204,8 @@ export class ChatService {
     const tabs = new Map<string, AgentTab>();
     if (this.session) {
       const sessionId = this.session.sessionManager.getSessionId();
-      tabs.set(sessionId, {
-        id: sessionId,
-        sessionId,
-        status: this.isGenerating ? 'generating' : 'idle',
-        workspacePath: this.workspaceCwd
-      });
+      const status = this.isGenerating ? 'generating' : 'idle';
+      tabs.set(sessionId, tabFromSessionStatus(this.session, status, this.workspaceCwd));
     }
 
     for (const session of this.backgroundSessions.values()) {
@@ -264,7 +260,7 @@ export class ChatService {
       this.session.dispose();
       this.session = null;
       this.activeSessionByWorkspace.delete(this.workspaceCwd);
-      this.activeSessionId = undefined;
+      this.activeSessionId = '';
       this.isGenerating = false;
       this.shouldCreateSession = true;
     }
@@ -391,7 +387,7 @@ export class ChatService {
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
       this.clearQueuedMessageState();
       this.attachments.clear();
-      this.activeSessionId = this.session?.sessionManager.getSessionId();
+      this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
       this.isGenerating = Boolean(this.session?.isStreaming || this.session?.isBashRunning);
       this.shouldCreateSession = !this.session;
@@ -515,7 +511,7 @@ export class ChatService {
       this.sessionOpenSequence += 1;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
-      this.activeSessionId = undefined;
+      this.activeSessionId = '';
       this.shouldCreateSession = true;
     }
     this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
@@ -578,8 +574,8 @@ export class ChatService {
 
     this.isGenerating = true;
     const sendAbortSequence = this.abortSequence;
-    let endError: string | undefined;
-    let activeSession: AgentSession | undefined;
+    let endError = '';
+    let activeSession: AgentSession | null = null;
     let sessionId = '';
     let workspacePath = this.workspaceCwd;
 
@@ -761,7 +757,7 @@ export class ChatService {
     this.session = null;
     this.clearQueuedMessageState();
     this.attachments.clear();
-    this.activeSessionId = undefined;
+    this.activeSessionId = '';
     this.isGenerating = false;
     this.shouldCreateSession = true;
   }

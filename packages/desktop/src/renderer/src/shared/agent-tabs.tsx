@@ -24,6 +24,16 @@ const sameTabs = (first: AgentTab[], second: AgentTab[]) =>
     );
   });
 
+const nextTabsState = (currentTabs: AgentTab[], nextTabs: AgentTab[]) => {
+  if (sameTabs(currentTabs, nextTabs)) return currentTabs;
+  return nextTabs;
+};
+
+const emptyTabsState = (currentTabs: AgentTab[]) => {
+  if (currentTabs.length === 0) return currentTabs;
+  return [];
+};
+
 interface AgentTabsProps {
   activeSessionId: string;
   onActivate: (id: string) => Promise<boolean>;
@@ -35,9 +45,9 @@ export const AgentTabs = ({ activeSessionId, onActivate }: AgentTabsProps) => {
   const loadTabs = useCallback(async () => {
     try {
       const nextTabs = await window.pi.chat.tabs();
-      setTabs((currentTabs) => (sameTabs(currentTabs, nextTabs) ? currentTabs : nextTabs));
+      setTabs((currentTabs) => nextTabsState(currentTabs, nextTabs));
     } catch {
-      setTabs((currentTabs) => (currentTabs.length > 0 ? [] : currentTabs));
+      setTabs(emptyTabsState);
     }
   }, []);
 
@@ -64,8 +74,8 @@ export const AgentTabs = ({ activeSessionId, onActivate }: AgentTabsProps) => {
           <button
             key={tab.id}
             type="button"
-            aria-label={`${tab.workspacePath}, ${statusLabel(tab.status)}`}
             onClick={() => void onActivate(tab.id)}
+            aria-label={`${tab.workspacePath}, ${statusLabel(tab.status)}`}
             className={tw(
               'flex max-w-44 shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-xs leading-4 text-soft outline-0 transition-colors hover:bg-control focus-visible:bg-control',
               active && 'bg-control text-ink'
