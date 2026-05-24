@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type FakeAgentSessionEvent, getFakeSession } from '../fakes/agent/index.js';
 import { eventsByChannel } from '../fakes/electron.js';
+import { broadcastsByChannel } from '../fakes/window.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 describe('event replay', () => {
@@ -58,7 +59,12 @@ describe('event replay', () => {
     await sendPromise;
 
     expect(eventsByChannel(webContents, 'chat:delta')).toHaveLength(0);
-    const scopedDeltas = webContents.events.concat([]).filter((event) => event.channel === 'chat:scoped-delta');
-    expect(scopedDeltas).toHaveLength(0);
+
+    const scopedDeltas = broadcastsByChannel('chat:scoped-delta');
+    const scopedDeltaForTab = scopedDeltas.find((event) => {
+      const payload = event.args[0] as { tabId: string; payload: string };
+      return payload.tabId === tab.id && payload.payload === 'background delta';
+    });
+    expect(scopedDeltaForTab).toBeDefined();
   });
 });

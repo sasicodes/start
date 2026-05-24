@@ -15,7 +15,7 @@ const isBlockedDevToolsInput = (input: Input) => {
 export const installWindowHardening = () => {
   if (isDev) return;
   app.on('browser-window-created', (_event, window) => {
-    window.webContents.on('context-menu', event => event.preventDefault());
+    window.webContents.on('context-menu', (event) => event.preventDefault());
     window.webContents.on('before-input-event', (event, input) => {
       if (input.type !== 'keyDown') return;
       if (isBlockedDevToolsInput(input)) event.preventDefault();

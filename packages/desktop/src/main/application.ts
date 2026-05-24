@@ -11,7 +11,4 @@ export const isDev = !app.isPackaged;
 export const appVersion = app.getVersion();
 export const appMenuName = 'Start';
 export const trayIconPath = join(__dirname, '../../build/icons/tray-icon.png');
-export const appIconPath = join(
-  __dirname,
-  isProd ? '../../build/icons/icon.png' : '../../build/icons/icon-dev.png'
-);
+export const appIconPath = join(__dirname, isProd ? '../../build/icons/icon.png' : '../../build/icons/icon-dev.png');
