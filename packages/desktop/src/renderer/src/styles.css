@@ -9,16 +9,12 @@
 @source "../../../node_modules/@streamdown/cjk/dist/*.js";
 
 @theme {
-  --color-background: var(--color-panel);
   --color-canvas: transparent;
   --color-panel: oklch(99.8% 0.002 264);
   --color-muted: oklch(96.8% 0.003 264);
   --color-line: oklch(0% 0 0 / 0.06);
-  --color-border: var(--color-line);
   --color-ink: oklch(20% 0.01 255);
-  --color-foreground: var(--color-ink);
   --color-soft: oklch(20% 0.01 255 / 0.62);
-  --color-muted-foreground: var(--color-soft);
   --color-hover: oklch(20% 0.01 255 / 0.86);
   --color-brand: oklch(0% 0 0);
   --color-danger: oklch(55% 0.18 27);

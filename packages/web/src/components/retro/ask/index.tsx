@@ -39,7 +39,7 @@ export const Ask = () => {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Ask about Start on ${model.name}`}
-            className="flex items-center justify-center w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-[#e8e8e8] border-[1.5px] border-black text-zinc-500 hover:text-black hover:bg-zinc-200 cursor-pointer transition-colors duration-150 ease-out shadow-[1px_1px_0px_black]"
+            className="flex items-center justify-center size-7 sm:size-9 rounded-full bg-[#e8e8e8] border-[1.5px] border-black text-zinc-500 hover:text-black hover:bg-zinc-200 cursor-pointer transition-colors duration-150 ease-out shadow-[1px_1px_0px_black]"
           >
             <model.icon />
           </a>

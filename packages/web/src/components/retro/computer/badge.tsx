@@ -3,7 +3,7 @@ import { Mark } from '../mark';
 export const Badge = () => {
   return (
     <div className="absolute bottom-[28px] left-[28px]">
-      <Mark className="w-4 h-4" />
+      <Mark className="size-4" />
     </div>
   );
 };
