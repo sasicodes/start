@@ -28,6 +28,9 @@ importers:
       electron-updater:
         specifier: 6.8.3
         version: 6.8.3
+      posthog-node:
+        specifier: 5.34.2
+        version: 5.34.2
     devDependencies:
       '@base-ui/react':
         specifier: 1.5.0
@@ -1546,6 +1549,12 @@ packages:
 
   '@oxc-project/types@0.132.0':
     resolution: {integrity: sha512-FESMOxil5Se014ui/Eq8fT5uHJo6nIRwH0PfJrZJXs6Gek3ZVFOrpUv3YIZT20m+extU98Hg1Ym72U58rlsxUQ==}
+
+  '@posthog/core@1.29.2':
+    resolution: {integrity: sha512-DYhR0Sl7pVdUXa+C9poCVjTj3D6SI9P7RLhIhr74YyHeHuCGL/MZsDEWcz3ul3qHDIhZU9myIUjID890QiQw+g==}
+
+  '@posthog/types@1.373.5':
+    resolution: {integrity: sha512-K7STCnRG/WBE1q0BwEkIcrJB5OqECaymsQj6Hp4Ntvaek4dqHkZGfp6hxwIPqQPjlOXwidwPLo+XGsn+CoZUyw==}
 
   '@preact/preset-vite@2.10.5':
     resolution: {integrity: sha512-p0vJpxiVO7KWWazWny3LUZ+saXyZKWv6Ju0bYMWNJRp2YveufRPgSUB1C4MTqGJfz07EehMgfN+AJNwQy+w6Iw==}
@@ -5080,6 +5089,15 @@ packages:
     resolution: {integrity: sha512-FfR8sjd4em2T6fb3I2MwAJU7HWVMr9zba+enmQeeWFfCbm+UOC/0X4DS8XtpUTMwWMGbjKYP7xjfNekzyGmB3A==}
     engines: {node: ^10 || ^12 || >=14}
 
+  posthog-node@5.34.2:
+    resolution: {integrity: sha512-lGp7zyyvzNZqrto3CPq3nQzVn9ZUg5tApE8jNh12Cu8kOqT9KTABZ8kMgiybfzxVttSdE3m25RsBPLBHkxCWDg==}
+    engines: {node: ^20.20.0 || >=22.22.0}
+    peerDependencies:
+      rxjs: ^7.0.0
+    peerDependenciesMeta:
+      rxjs:
+        optional: true
+
   postject@1.0.0-alpha.6:
     resolution: {integrity: sha512-b9Eb8h2eVqNE8edvKdwqkrY6O7kAwmI8kcnBv1NScolYJbo59XUF0noFq+lxbC1yN20bmC0WBEbDC5H/7ASb0A==}
     engines: {node: '>=14.0.0'}
@@ -7876,6 +7894,12 @@ snapshots:
   '@oxc-project/types@0.130.0': {}
 
   '@oxc-project/types@0.132.0': {}
+
+  '@posthog/core@1.29.2':
+    dependencies:
+      '@posthog/types': 1.373.5
+
+  '@posthog/types@1.373.5': {}
 
   '@preact/preset-vite@2.10.5(@babel/core@7.29.0)(preact@10.29.2)(rollup@4.60.2)(vite@8.0.13(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.0))':
     dependencies:
@@ -11946,6 +11970,10 @@ snapshots:
       nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  posthog-node@5.34.2:
+    dependencies:
+      '@posthog/core': 1.29.2
 
   postject@1.0.0-alpha.6:
     dependencies:

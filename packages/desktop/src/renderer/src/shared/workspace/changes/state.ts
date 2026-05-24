@@ -1,4 +1,5 @@
 import type { GitChangeSummary, GitPatch, GitPatchSection, GitPatchSectionKind } from '@preload/index';
+import { useAppFocusState } from '@renderer/shared/app-focus';
 import { useEffect, useState } from 'preact/hooks';
 
 export type GitSummaryState =
@@ -107,6 +108,7 @@ export const summaryForViewMode = (summary: GitChangeSummary, sections: GitPatch
 
 export const useGitChanges = (workspacePath: string) => {
   const [git, setGit] = useState<GitSummaryState>({ kind: 'loading' });
+  const appFocused = useAppFocusState(Boolean(workspacePath));
 
   useEffect(() => {
     let active = true;
@@ -118,7 +120,13 @@ export const useGitChanges = (workspacePath: string) => {
       };
     }
 
-    setGit({ kind: 'loading' });
+    if (!appFocused) {
+      return () => {
+        active = false;
+      };
+    }
+
+    setGit((current) => (current.kind === 'ready' ? current : { kind: 'loading' }));
     const refreshGitChanges = () => {
       void window.pi.app
         .gitChanges(workspacePath)
@@ -133,19 +141,18 @@ export const useGitChanges = (workspacePath: string) => {
 
     refreshGitChanges();
     const interval = window.setInterval(refreshGitChanges, gitRefreshIntervalMs);
-    window.addEventListener('focus', refreshGitChanges);
     return () => {
       active = false;
       window.clearInterval(interval);
-      window.removeEventListener('focus', refreshGitChanges);
     };
-  }, [workspacePath]);
+  }, [appFocused, workspacePath]);
 
   return git;
 };
 
 export const useGitPatch = (workspacePath: string, enabled: boolean) => {
   const [patch, setPatch] = useState<GitPatchState>({ kind: 'idle' });
+  const appFocused = useAppFocusState(Boolean(workspacePath && enabled));
 
   useEffect(() => {
     let active = true;
@@ -157,7 +164,13 @@ export const useGitPatch = (workspacePath: string, enabled: boolean) => {
       };
     }
 
-    setPatch({ kind: 'loading' });
+    if (!appFocused) {
+      return () => {
+        active = false;
+      };
+    }
+
+    setPatch((current) => (current.kind === 'ready' ? current : { kind: 'loading' }));
     const refreshGitPatch = () => {
       void window.pi.app
         .gitPatch(workspacePath)
@@ -172,13 +185,11 @@ export const useGitPatch = (workspacePath: string, enabled: boolean) => {
 
     refreshGitPatch();
     const interval = window.setInterval(refreshGitPatch, gitRefreshIntervalMs);
-    window.addEventListener('focus', refreshGitPatch);
     return () => {
       active = false;
       window.clearInterval(interval);
-      window.removeEventListener('focus', refreshGitPatch);
     };
-  }, [enabled, workspacePath]);
+  }, [appFocused, enabled, workspacePath]);
 
   return patch;
 };
