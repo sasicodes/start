@@ -2,7 +2,7 @@ import { ChatGPTIcon, ClaudeIcon, GrokIcon, PerplexityIcon } from './icons';
 
 const LLMS_TXT_URL = 'https://start.intelligence.one/llms.txt';
 
-const QUERY = encodeURIComponent(`Read ${LLMS_TXT_URL} and tell me about Start, the desktop agent workspace.`);
+const QUERY = encodeURIComponent(`Read ${LLMS_TXT_URL} and tell me about Start, your coding assistant.`);
 
 const MODELS = [
   {
@@ -27,7 +27,7 @@ const MODELS = [
   }
 ];
 
-export const ModelLinks = () => {
+export const Ask = () => {
   return (
     <div className="flex flex-col gap-3 sm:gap-4 items-center justify-center">
       <span className="text-xs sm:text-sm font-medium text-black">Ask</span>

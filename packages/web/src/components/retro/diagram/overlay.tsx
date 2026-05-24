@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePageVisible } from '@/use-page-visible';
+import { useVisible } from '@/use-visible';
 import { ANNOTATIONS, AnnotationLines, computePath, DEFAULT_TARGETS, TEXT_GAP } from '../annotations';
 import { Preview } from './preview';
 
@@ -7,7 +7,7 @@ const LERP_FACTOR = 0.12;
 const SETTLE_THRESHOLD = 0.05;
 
 export const DiagramOverlay = () => {
-  const isVisible = usePageVisible();
+  const isVisible = useVisible();
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const currentPositions = useRef(DEFAULT_TARGETS.map((t) => ({ x: t.x, y: t.y })));

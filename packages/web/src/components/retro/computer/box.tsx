@@ -1,4 +1,4 @@
-interface BoxFaceProps {
+interface BoxProps {
   width: number;
   height: number;
   shadow?: string;
@@ -6,6 +6,6 @@ interface BoxFaceProps {
   transform: string;
 }
 
-export const BoxFace = ({ width, height, shadow, className, transform }: BoxFaceProps) => {
+export const Box = ({ width, height, shadow, className, transform }: BoxProps) => {
   return <div style={{ width, height, transform, boxShadow: shadow }} className={`absolute ${className}`} />;
 };

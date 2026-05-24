@@ -1,11 +1,11 @@
-import { CrtScreen } from '../crt/screen';
-import { FloppySlot } from './floppy-slot';
-import { FrontStickies } from './front-stickies';
-import { LogoBadge } from './logo-badge';
+import { Screen } from '../crt/screen';
+import { Badge } from './badge';
+import { Floppy } from './floppy';
 import { AnnotationMarkers } from './markers';
-import { VentGrille } from './vent-grille';
+import { Stickies } from './stickies';
+import { Vents } from './vents';
 
-export const FrontFace = () => {
+export const Front = () => {
   return (
     <div
       className="absolute w-[360px] h-[440px] flex flex-col items-center pt-10"
@@ -15,11 +15,11 @@ export const FrontFace = () => {
         boxShadow: 'inset 2px 2px 5px rgba(255,255,255,0.8), inset -5px -5px 15px rgba(0,0,0,0.1)'
       }}
     >
-      <CrtScreen />
-      <FloppySlot />
-      <LogoBadge />
-      <FrontStickies />
-      <VentGrille />
+      <Screen />
+      <Floppy />
+      <Badge />
+      <Stickies />
+      <Vents />
       <AnnotationMarkers />
     </div>
   );

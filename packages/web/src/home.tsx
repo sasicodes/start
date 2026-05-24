@@ -1,14 +1,14 @@
 import Lenis from 'lenis';
 import { useCallback, useEffect, useRef } from 'react';
-import { RetroLanding } from '@/components/retro/landing';
-import { ModelLinks } from '@/components/retro/model-links';
+import { Ask } from '@/components/retro/ask';
+import { Landing } from '@/components/retro/landing';
 import { Showcase } from '@/components/retro/showcase';
 import { Footer } from '@/footer';
-import { RailLines } from '@/rail-lines';
-import { usePageVisible } from '@/use-page-visible';
+import { Rails } from '@/rails';
+import { useVisible } from '@/use-visible';
 
 export const Home = () => {
-  const isVisible = usePageVisible();
+  const isVisible = useVisible();
   const rafId = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -51,18 +51,18 @@ export const Home = () => {
 
   return (
     <div className="w-full bg-retro-cream relative">
-      <RailLines />
+      <Rails />
       <section className="w-full h-dvh md:h-auto flex-1 flex flex-col gap-8 sm:gap-10 sm:justify-around sm:py-40">
-        <RetroLanding />
+        <Landing />
         <div className="sm:hidden flex flex-col gap-3 items-center justify-center mt-auto z-20 pb-6">
-          <ModelLinks />
+          <Ask />
         </div>
       </section>
       <div className="py-40">
         <Showcase />
       </div>
       <div className="hidden sm:flex justify-center pb-12 pt-16">
-        <ModelLinks />
+        <Ask />
       </div>
       <Footer />
     </div>

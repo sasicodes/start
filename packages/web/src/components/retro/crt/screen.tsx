@@ -1,4 +1,4 @@
-export const CrtScreen = () => {
+export const Screen = () => {
   return (
     <div
       className="flex h-[200px] w-[260px] items-center justify-center rounded-2xl bg-retro-bezel"

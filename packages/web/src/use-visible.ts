@@ -8,4 +8,4 @@ const subscribe = (cb: () => void) => {
 const getSnapshot = () => document.visibilityState === 'visible';
 const getServerSnapshot = () => true;
 
-export const usePageVisible = () => useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+export const useVisible = () => useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

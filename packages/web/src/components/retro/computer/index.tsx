@@ -1,10 +1,10 @@
-import { RetroKeyboard } from '../keyboard';
-import { RetroMouse } from '../mouse';
-import { BoxFace } from './box-face';
-import { FrontFace } from './front-face';
-import { KeyboardSticky } from './keyboard-sticky';
+import { Keyboard } from '../keyboard';
+import { Mouse } from '../mouse';
+import { Box } from './box';
+import { Front } from './front';
+import { Sticky } from './sticky';
 
-export const RetroComputer = () => {
+export const Computer = () => {
   return (
     <div className="relative p-16 -m-16" style={{ contain: 'layout style' }}>
       <div
@@ -12,11 +12,11 @@ export const RetroComputer = () => {
         style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
       >
         <div className="relative w-[360px] h-[440px]" style={{ transformStyle: 'preserve-3d' }}>
-          <FrontFace />
+          <Front />
 
-          <BoxFace className="bg-retro-stone" width={360} height={440} transform="translateZ(-100px) rotateY(180deg)" />
+          <Box className="bg-retro-stone" width={360} height={440} transform="translateZ(-100px) rotateY(180deg)" />
 
-          <BoxFace
+          <Box
             className="bg-retro-beige"
             width={200}
             height={440}
@@ -24,7 +24,7 @@ export const RetroComputer = () => {
             shadow="inset 10px 0 20px rgba(0,0,0,0.05)"
           />
 
-          <BoxFace
+          <Box
             className="bg-retro-stone"
             width={200}
             height={440}
@@ -32,9 +32,9 @@ export const RetroComputer = () => {
             shadow="inset 10px 0 20px rgba(0,0,0,0.1)"
           />
 
-          <BoxFace className="bg-retro-shell" width={360} height={200} transform="rotateX(90deg) translateZ(100px)" />
+          <Box className="bg-retro-shell" width={360} height={200} transform="rotateX(90deg) translateZ(100px)" />
 
-          <BoxFace
+          <Box
             className="bg-retro-base"
             width={360}
             height={200}
@@ -42,9 +42,9 @@ export const RetroComputer = () => {
             shadow="0 50px 80px rgba(0,0,0,0.3)"
           />
 
-          <RetroKeyboard />
-          <RetroMouse />
-          <KeyboardSticky />
+          <Keyboard />
+          <Mouse />
+          <Sticky />
         </div>
       </div>
     </div>

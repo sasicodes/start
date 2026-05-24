@@ -6,13 +6,13 @@ interface Annotation {
 
 export const ANNOTATIONS: Annotation[] = [
   { label: 'PARALLEL', side: 'left', labelY: 205 },
-  { label: 'AUTOPILOT', side: 'left', labelY: 285 },
+  { label: 'CHAT SESSIONS', side: 'left', labelY: 285 },
   { label: 'MULTI-MODEL', side: 'left', labelY: 365 },
-  { label: 'TASKS & PLANS', side: 'left', labelY: 445 },
-  { label: 'CODE REVIEW', side: 'right', labelY: 205 },
-  { label: 'FAST & SECURE', side: 'right', labelY: 285 },
-  { label: 'TERMINAL', side: 'right', labelY: 365 },
-  { label: 'INTEGRATIONS', side: 'right', labelY: 445 }
+  { label: 'FILE CONTEXT', side: 'left', labelY: 445 },
+  { label: 'DIFF VIEWER', side: 'right', labelY: 205 },
+  { label: 'LOCAL FIRST', side: 'right', labelY: 285 },
+  { label: 'FILE EDITS', side: 'right', labelY: 365 },
+  { label: 'GIT WORKFLOW', side: 'right', labelY: 445 }
 ];
 
 export const DEFAULT_TARGETS = [

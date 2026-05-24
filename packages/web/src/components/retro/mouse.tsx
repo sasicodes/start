@@ -2,7 +2,7 @@ const MOUSE_W = 46;
 const MOUSE_H = 68;
 const MOUSE_D = 9;
 
-export const RetroMouse = () => {
+export const Mouse = () => {
   return (
     <div
       className="absolute -bottom-[118px] left-[380px]"

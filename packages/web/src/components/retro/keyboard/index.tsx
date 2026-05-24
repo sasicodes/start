@@ -2,7 +2,7 @@ import { KeyboardEdge } from './edge';
 import { KeyGrid } from './grid';
 import { KeyboardSide } from './side';
 
-export const RetroKeyboard = () => {
+export const Keyboard = () => {
   return (
     <div
       className="absolute w-[360px] h-[140px] -bottom-[118px]"

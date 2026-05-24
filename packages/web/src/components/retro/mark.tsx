@@ -1,8 +1,8 @@
-interface StartMarkProps {
+interface MarkProps {
   className?: string;
 }
 
-export const StartMark = ({ className }: StartMarkProps) => {
+export const Mark = ({ className }: MarkProps) => {
   return (
     <svg role="img" viewBox="0 0 455 435" aria-label="Start" className={className}>
       <path

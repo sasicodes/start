@@ -31,7 +31,7 @@ const NOTES: StickyNote[] = [
   }
 ];
 
-export const FrontStickies = () => {
+export const Stickies = () => {
   return (
     <>
       {NOTES.map((note) => (

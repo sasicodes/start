@@ -3,7 +3,7 @@ const getTamilGreeting = () => {
   return hour < 12 ? 'காலை வணக்கம்' : 'மாலை வணக்கம்';
 };
 
-export const KeyboardSticky = () => {
+export const Sticky = () => {
   return (
     <div
       className="absolute -bottom-[108px] left-[20px]"

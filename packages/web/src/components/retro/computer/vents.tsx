@@ -9,7 +9,7 @@ const VENT_CELLS = [
   'bottom-right'
 ];
 
-export const VentGrille = () => {
+export const Vents = () => {
   return (
     <div className="absolute right-[25px] bottom-[25px] grid h-5 w-[30px] grid-cols-4 gap-0.5">
       {VENT_CELLS.map((cell) => (

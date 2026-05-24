@@ -24,7 +24,7 @@ const spawnStar = (): Star => ({
   color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)]
 });
 
-export const DownloadButton = () => {
+export const Download = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const buttonRef = useRef<HTMLAnchorElement>(null);
   const rafRef = useRef(0);
@@ -222,8 +222,9 @@ export const DownloadButton = () => {
     <div className="inline-flex flex-col items-center">
       <a
         ref={buttonRef}
-        href="https://r2.intelligence.one/start/releases/Start.dmg"
-        download
+        href="https://github.com/sasicodes/start/releases/latest"
+        target="_blank"
+        rel="noopener noreferrer"
         className="relative inline-block cursor-pointer select-none overflow-hidden rounded-[4px] border-[1.5px] border-zinc-950 bg-neutral-200 px-6 py-1 font-pixel text-xl text-zinc-950 no-underline shadow-[inset_-1px_-1px_0_oklch(0.65_0_0),inset_1px_1px_0_oklch(0.98_0_0),0_0_0_1.5px_oklch(0.92_0_0),0_0_0_3.5px_oklch(0.18_0_0)] active:shadow-[inset_1px_1px_2px_oklch(0.58_0_0),0_0_0_1.5px_oklch(0.92_0_0),0_0_0_3.5px_oklch(0.18_0_0)]"
       >
         <span className="relative z-10">Download for Mac</span>

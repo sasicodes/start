@@ -1,6 +1,6 @@
-import { DownloadButton } from './download-button';
+import { Download } from './download';
 
-export const ContentColumn = () => {
+export const Content = () => {
   return (
     <div className="text-center text-zinc-950 shrink-0 pt-10 sm:pt-0">
       <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] mb-4 sm:mb-6 -tracking-[2px] font-normal text-zinc-950 whitespace-nowrap">
@@ -13,7 +13,7 @@ export const ContentColumn = () => {
       </p>
 
       <div className="flex flex-row gap-4 items-center justify-center">
-        <DownloadButton />
+        <Download />
       </div>
     </div>
   );

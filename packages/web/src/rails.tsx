@@ -1,6 +1,6 @@
 import { INNER_RAIL, OUTER_RAIL } from '@/constants';
 
-export const RailLines = () => {
+export const Rails = () => {
   return (
     <>
       <div className="pointer-events-none fixed inset-0 z-[100] hidden sm:flex justify-center">
