@@ -20,6 +20,7 @@ export interface ComposerProps {
   onOpenSettings: () => void;
   onExitComplete: () => void;
   onRefillPrevious: () => void;
+  noProvidersConfigured: boolean;
   attachments: ImageAttachment[];
   queuedMessages: QueuedMessage[];
   onDraftChange: (value: string) => void;

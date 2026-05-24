@@ -55,6 +55,7 @@ export const Composer = memo(
     onRemoveAttachment,
     onSelectWorkspace,
     onSelectThinkingLevel,
+    noProvidersConfigured,
     onChooseWorkspaceDirectory
   }: ComposerProps) => {
     const isCommandMode = commandMode(draft);
@@ -146,7 +147,7 @@ export const Composer = memo(
 
     const handleSubmit = (event: SubmitEvent) => {
       event.preventDefault();
-      if (!draft.trim()) return;
+      if (!draft.trim() || noProvidersConfigured) return;
       onSubmit();
     };
 
@@ -194,7 +195,7 @@ export const Composer = memo(
 
       if (event.key !== 'Enter' || (event.shiftKey && !singleLine)) return;
       event.preventDefault();
-      if (!draft.trim()) return;
+      if (!draft.trim() || noProvidersConfigured) return;
       onSubmit();
     };
 
@@ -289,7 +290,13 @@ export const Composer = memo(
                 onOpenAttachment={onOpenAttachment}
                 onRemoveAttachment={onRemoveAttachment}
               />
-              <Generate draft={draft} onStop={onStop} commandMode={isCommandMode} isGenerating={isGenerating} />
+              <Generate
+                draft={draft}
+                onStop={onStop}
+                commandMode={isCommandMode}
+                isGenerating={isGenerating}
+                {...(noProvidersConfigured ? { disabledReason: 'Choose a provider' } : {})}
+              />
             </div>
           </div>
         </form>
