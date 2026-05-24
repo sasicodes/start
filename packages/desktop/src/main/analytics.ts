@@ -26,14 +26,14 @@ const ANALYTICS_EVENTS = [
   'prompt_sent',
   'command_sent',
   'api_key_added',
-  'provider_disconnected',
   'model_selected',
   'session_created',
-  'update_installed',
   'shortcut_changed',
+  'update_installed',
   'workspace_changed',
   'composer_submitted',
   'quick_access_toggled',
+  'provider_disconnected',
   'thinking_level_selected',
   'subscription_login_started'
 ] as const;

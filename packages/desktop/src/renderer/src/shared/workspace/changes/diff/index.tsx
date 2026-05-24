@@ -15,12 +15,27 @@ interface ParseResponse {
   results: PatchFile[][];
 }
 
-const Message = ({ text }: { text: string }) => <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">{text}</p>;
-
 const entryKey = (entry: DiffEntry) => entry.key;
 const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
 
+const Message = ({ text }: { text: string }) => <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">{text}</p>;
+
 const createParserWorker = () => new Worker(new URL('./parser.worker.ts', import.meta.url), { type: 'module' });
+
+const postParseJob = (
+  worker: Worker,
+  jobId: number,
+  sections: GitPatchSection[],
+  onReady: (entries: DiffEntry[]) => void
+) => {
+  const onMessage = (event: MessageEvent<ParseResponse>) => {
+    if (event.data.jobId !== jobId) return;
+    onReady(entriesFromResults(sections, event.data.results));
+  };
+  worker.addEventListener('message', onMessage);
+  worker.postMessage({ jobId, patches: sections.map((section) => section.patch) });
+  return () => worker.removeEventListener('message', onMessage);
+};
 
 const useDiffEntries = (sections: GitPatchSection[]) => {
   const [entryState, setEntryState] = useState<DiffEntriesState>({ kind: 'parsing' });
@@ -29,23 +44,12 @@ const useDiffEntries = (sections: GitPatchSection[]) => {
 
   useEffect(() => {
     if (!workerRef.current) workerRef.current = createParserWorker();
-    const worker = workerRef.current;
     jobIdRef.current += 1;
-    const jobId = jobIdRef.current;
-
     setEntryState((current) => (current.kind === 'parsing' ? current : { kind: 'parsing' }));
 
-    const onMessage = (event: MessageEvent<ParseResponse>) => {
-      if (event.data.jobId !== jobId) return;
-      setEntryState({ entries: entriesFromResults(sections, event.data.results), kind: 'ready' });
-    };
-
-    worker.addEventListener('message', onMessage);
-    worker.postMessage({ jobId, patches: sections.map((section) => section.patch) });
-
-    return () => {
-      worker.removeEventListener('message', onMessage);
-    };
+    return postParseJob(workerRef.current, jobIdRef.current, sections, (entries) =>
+      setEntryState({ entries, kind: 'ready' })
+    );
   }, [sections]);
 
   useEffect(
@@ -80,9 +84,9 @@ export const GitDiffViewer = ({
   sections: GitPatchSection[];
 }) => {
   const entryState = useDiffEntries(sections);
-  const highlightRevision = useDiffHighlighting(entryState);
   const ready = entryState.kind === 'ready';
   const entries = ready ? entryState.entries : [];
+  const highlightRevision = useDiffHighlighting(entryState);
   const limited = sections.some((section) => section.limited && !section.patch);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
 

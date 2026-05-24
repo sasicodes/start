@@ -1,15 +1,16 @@
-export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
+export type EffortLevel = 'high' | 'low' | 'xhigh' | 'medium';
 export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
-export type ProviderKey = 'anthropic' | 'google' | 'openai';
+export type ProviderKey = 'google' | 'openai' | 'anthropic';
 
 export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
+
 export type ChatStatus = {
   ready: boolean;
   error?: string;
-  isGenerating?: boolean;
   sessionId?: string;
   modelLabel?: string;
   workspacePath: string;
+  isGenerating?: boolean;
   selectedModelKey?: string;
   thinkingLevel?: EffortLevel;
 };
@@ -21,18 +22,18 @@ export type ModelOption = {
   provider: string;
   reasoning: boolean;
   contextWindow: number;
-  effortLevels: EffortLevel[];
   input: ('text' | 'image')[];
+  effortLevels: EffortLevel[];
 };
 
-export type ProviderAuthKind = 'api_key' | 'none' | 'subscription' | 'unknown';
+export type ProviderAuthKind = 'none' | 'api_key' | 'unknown' | 'subscription';
 
 export type ProviderAuthStatus = {
   key: string;
   name: string;
   label: string;
-  kind: ProviderAuthKind;
   connected: boolean;
+  kind: ProviderAuthKind;
   hasCredentials: boolean;
 };
 
@@ -77,7 +78,7 @@ export type CommandResult = {
   sessionId?: string;
 };
 
-export type QueuedMessageKind = 'followUp' | 'steer';
+export type QueuedMessageKind = 'steer' | 'followUp';
 
 export type QueuedMessage = {
   id: string;
@@ -90,8 +91,8 @@ export type QueuedTurnStart = {
   text: string;
 };
 
-export type TurnDetailKind = 'error' | 'metadata' | 'tool';
-export type TurnDetailState = 'active' | 'done' | 'error' | 'queued';
+export type TurnDetailKind = 'tool' | 'error' | 'metadata';
+export type TurnDetailState = 'done' | 'error' | 'active' | 'queued';
 
 export type ChatEvent = {
   key: string;
@@ -113,14 +114,14 @@ export type HistoryTurnDetail = ChatEvent & {
 export type HistoryTurn = {
   id: string;
   text: string;
+  createdAt: number;
   thinking?: string;
   streaming?: boolean;
-  createdAt: number;
   details?: HistoryTurnDetail[];
-  role: 'user' | 'assistant' | 'terminal' | 'event';
+  role: 'user' | 'event' | 'terminal' | 'assistant';
 };
 
-export type SessionNoticeKind = 'completed' | 'failed';
+export type SessionNoticeKind = 'failed' | 'completed';
 
 export type RecentSession = {
   id: string;
@@ -152,12 +153,12 @@ export type WorkspaceFolder = {
   name: string;
   path: string;
   modified: number;
-  sessionCount: number;
   status?: AgentTabStatus;
+  sessionCount: number;
   noticeKind?: SessionNoticeKind;
 };
 
-export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
+export type AgentTabStatus = 'idle' | 'failed' | 'completed' | 'generating';
 
 export type AgentTab = {
   id: string;
@@ -177,8 +178,8 @@ export type SessionNotice = {
 export type SwitchWorkspaceResult = {
   ok: boolean;
   error?: string;
-  status?: ChatStatus;
   cancelled?: boolean;
+  status?: ChatStatus;
 };
 
 export type OpenSessionResult = {

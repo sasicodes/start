@@ -3,15 +3,15 @@ import type { DiffEntry } from '@renderer/shared/workspace/changes/diff/types';
 type CodeHighlightModule = typeof import('@renderer/shared/workspace/changes/diff/syntax');
 
 interface DiffHighlightItem {
-  content: string;
   key: string;
+  content: string;
   language: string;
 }
 
 const batchSize = 200;
 const cacheLimit = 8000;
-const batchesPerRevision = 4;
 const maxLineLength = 600;
+const batchesPerRevision = 4;
 const cacheVersion = 'syntax-v2';
 const cache = new Map<string, string>();
 
