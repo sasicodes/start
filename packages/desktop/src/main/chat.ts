@@ -11,7 +11,7 @@ import {
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
-import { textContent } from '@main/details';
+import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
 import {
@@ -35,16 +35,18 @@ import {
 } from '@main/attachments';
 import { workspaceDisplayName } from '@main/utils/workspace';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
+import { sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import {
   type AgentTab,
   type AgentTabStatus,
+  type ChatEvent,
   type ChatStatus,
   type EffortLevel,
   type CommandResult,
   effortLevels,
-  enabledTools,
   type SessionNotice,
+  type HistoryTurn,
   type ImageAttachment,
   type ModelOption,
   type OpenSessionResult,
@@ -64,6 +66,40 @@ import electron from 'electron';
 const { shell } = electron;
 
 const attachmentMaxAgeMs = 15 * 60 * 1000;
+
+const enableRegisteredTools = (session: AgentSession) => {
+  session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
+};
+
+const streamingTurnId = (session: AgentSession) => `streaming:${session.sessionManager.getSessionId()}`;
+
+type LiveAssistantTurn = {
+  id: string;
+  text: string;
+  details: HistoryTurn['details'];
+  thinking: string;
+  createdAt: number;
+};
+
+const liveAssistantHistoryTurn = (turn: LiveAssistantTurn): HistoryTurn => ({
+  id: turn.id,
+  text: turn.text,
+  role: 'assistant',
+  streaming: true,
+  createdAt: turn.createdAt,
+  ...(turn.details && turn.details.length > 0 ? { details: turn.details } : {}),
+  ...(turn.thinking ? { thinking: turn.thinking } : {})
+});
+
+const liveAssistantPlaceholder = (session: AgentSession): LiveAssistantTurn => {
+  return {
+    id: streamingTurnId(session),
+    text: '',
+    details: [],
+    thinking: '',
+    createdAt: Date.now()
+  };
+};
 
 type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
 
@@ -94,6 +130,7 @@ export class ChatService {
   private readonly activeSessionByWorkspace = new Map<string, string>();
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
+  private readonly liveAssistantTurns = new Map<string, LiveAssistantTurn>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   async getStatus(): Promise<ChatStatus> {
@@ -116,6 +153,7 @@ export class ChatService {
       ready: true,
       workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
+      isGenerating: Boolean(this.session?.isStreaming || this.session?.isBashRunning),
       selectedModelKey: modelKey(model),
       ...(sessionId ? { sessionId } : {}),
       thinkingLevel: this.selectedThinkingLevel
@@ -173,7 +211,6 @@ export class ChatService {
         model,
         sessionManager,
         cwd: workspacePath,
-        tools: enabledTools,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
         thinkingLevel: this.selectedThinkingLevel
@@ -184,6 +221,7 @@ export class ChatService {
         return { ok: false, error: 'Session open was superseded.' };
       }
 
+      enableRegisteredTools(session);
       this.session = session;
       this.workspaceCwd = workspacePath;
       this.isGenerating = false;
@@ -194,7 +232,7 @@ export class ChatService {
       return {
         ok: true,
         id: sessionManager.getSessionId(),
-        turns: historyTurns(sessionManager.getEntries())
+        turns: this.sessionTurns(session)
       };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Session could not be opened.' };
@@ -246,11 +284,11 @@ export class ChatService {
       model,
       sessionManager,
       cwd: workspacePath,
-      tools: enabledTools,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
       thinkingLevel: this.selectedThinkingLevel
     });
+    enableRegisteredTools(session);
     this.session = session;
     this.workspaceCwd = workspacePath;
     this.isGenerating = false;
@@ -329,7 +367,7 @@ export class ChatService {
     return {
       ok: true,
       id,
-      turns: historyTurns(session.sessionManager.getEntries())
+      turns: this.sessionTurns(session)
     };
   }
 
@@ -614,6 +652,7 @@ export class ChatService {
       const session = activeSession;
       sessionId = session.sessionManager.getSessionId();
       workspacePath = this.workspaceCwd;
+      this.resetLiveAssistantTurn(session);
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
@@ -634,15 +673,18 @@ export class ChatService {
         if ('toolCallId' in event) previousToolArgs = toolArgs.get(event.toolCallId);
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
         const renderedEvent = chatEvent(event, eventContext);
+        if (renderedEvent) this.appendLiveAssistantDetail(sessionId, renderedEvent);
         if (active) this.emitEvent(webContents, renderedEvent);
         if (renderedEvent) this.emitScoped(webContents, 'chat:scoped-event', sessionId, workspacePath, renderedEvent);
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
+        if (delta) this.appendLiveAssistantText(sessionId, delta);
         if (active && delta) this.emit(webContents, 'delta', delta);
         if (delta) this.emitScoped(webContents, 'chat:scoped-delta', sessionId, workspacePath, delta);
 
         const thought = thinkingDelta(event);
+        if (thought) this.appendLiveAssistantThinking(sessionId, thought);
         if (active && thought) this.emit(webContents, 'thinking-delta', thought);
         if (thought) this.emitScoped(webContents, 'chat:scoped-thinking-delta', sessionId, workspacePath, thought);
 
@@ -661,6 +703,7 @@ export class ChatService {
       }
 
       if (endError) {
+        this.liveAssistantTurns.delete(sessionId);
         if (this.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
@@ -681,9 +724,11 @@ export class ChatService {
       }
 
       if (this.isActiveSession(sessionId, workspacePath)) {
+        this.liveAssistantTurns.delete(sessionId);
         this.setActiveSession(session.sessionManager);
         this.emit(webContents, 'done', '');
       } else {
+        this.liveAssistantTurns.delete(sessionId);
         this.setNotice(sessionId, workspacePath, 'completed', webContents);
       }
       this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
@@ -699,6 +744,7 @@ export class ChatService {
       }
 
       const message = error instanceof Error ? error.message : 'Chat failed.';
+      if (sessionId) this.liveAssistantTurns.delete(sessionId);
       if (this.isActiveSession(sessionId, workspacePath)) {
         this.clearQueuedMessages(webContents);
         this.emit(webContents, 'error', message);
@@ -1003,6 +1049,38 @@ export class ChatService {
     this.activeSessionByWorkspace.set(workspacePath, sessionId);
   }
 
+  private sessionTurns(session: AgentSession): HistoryTurn[] {
+    const turns = historyTurns(session.sessionManager.getEntries());
+    if (!session.isStreaming) return turns;
+
+    const sessionId = session.sessionManager.getSessionId();
+    const liveTurn = this.liveAssistantTurns.get(sessionId);
+    if (liveTurn) return [...turns, liveAssistantHistoryTurn(liveTurn)];
+
+    return [...turns, liveAssistantHistoryTurn(liveAssistantPlaceholder(session))];
+  }
+
+  private resetLiveAssistantTurn(session: AgentSession): void {
+    this.liveAssistantTurns.set(session.sessionManager.getSessionId(), liveAssistantPlaceholder(session));
+  }
+
+  private appendLiveAssistantText(sessionId: string, delta: string): void {
+    const turn = this.liveAssistantTurns.get(sessionId);
+    if (turn) turn.text += delta;
+  }
+
+  private appendLiveAssistantThinking(sessionId: string, delta: string): void {
+    const turn = this.liveAssistantTurns.get(sessionId);
+    if (turn) turn.thinking += delta;
+  }
+
+  private appendLiveAssistantDetail(sessionId: string, event: ChatEvent): void {
+    const turn = this.liveAssistantTurns.get(sessionId);
+    if (!turn) return;
+
+    turn.details = [...(turn.details ?? []), historyDetail(event, turn.details?.length ?? 0, turn.id, Date.now())];
+  }
+
   private deleteWorkspaceSessionReferences(sessionId: string): void {
     for (const [workspacePath, activeSessionId] of this.activeSessionByWorkspace) {
       if (activeSessionId === sessionId) this.activeSessionByWorkspace.delete(workspacePath);
@@ -1105,11 +1183,11 @@ export class ChatService {
       cwd,
       model,
       sessionManager,
-      tools: enabledTools,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
       thinkingLevel: this.selectedThinkingLevel
     });
+    enableRegisteredTools(session);
 
     this.shouldCreateSession = false;
 
@@ -1198,13 +1276,13 @@ export class ChatService {
   }
 
   private emitScoped<T>(
-    webContents: WebContents,
+    _webContents: WebContents,
     channel: string,
     tabId: string,
     workspacePath: string,
     payload: T
   ): void {
     if (!tabId) return;
-    webContents.send(channel, { tabId, workspacePath, payload });
+    sendToRendererWindows(channel, { tabId, workspacePath, payload });
   }
 }

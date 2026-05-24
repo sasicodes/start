@@ -15,6 +15,7 @@ export interface AppSettingsResult {
 export interface ChatStatus {
   ready: boolean;
   error?: string;
+  isGenerating?: boolean;
   sessionId?: string;
   modelLabel?: string;
   workspacePath: string;
@@ -127,6 +128,7 @@ export interface HistoryTurn {
   id: string;
   text: string;
   thinking?: string;
+  streaming?: boolean;
   createdAt: number;
   details?: HistoryTurnDetail[];
   role: 'user' | 'assistant' | 'terminal' | 'event';

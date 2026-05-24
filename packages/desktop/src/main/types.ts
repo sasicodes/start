@@ -3,10 +3,10 @@ export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
 export type ProviderKey = 'anthropic' | 'openai';
 
 export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
-export const enabledTools = ['ls', 'read', 'edit', 'find', 'grep', 'bash', 'write'];
 export type ChatStatus = {
   ready: boolean;
   error?: string;
+  isGenerating?: boolean;
   sessionId?: string;
   modelLabel?: string;
   workspacePath: string;
@@ -113,6 +113,7 @@ export type HistoryTurn = {
   id: string;
   text: string;
   thinking?: string;
+  streaming?: boolean;
   createdAt: number;
   details?: HistoryTurnDetail[];
   role: 'user' | 'assistant' | 'terminal' | 'event';

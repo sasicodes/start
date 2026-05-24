@@ -44,6 +44,9 @@ const nextQueuedMessages = (current: QueuedMessage[], messages: QueuedMessage[])
   return messages;
 };
 
+const streamingAssistantId = (turns: OpenSessionResult['turns']) =>
+  turns?.findLast((turn) => turn.role === 'assistant' && turn.streaming)?.id ?? null;
+
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -146,11 +149,13 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     onShowChat,
     loadModels,
     syncStatus,
+    workspacePath,
     textareaRef,
     clearSession,
     terminalIdRef,
     assistantIdRef,
     onShowSettings,
+    activeSessionId,
     setIsGenerating,
     setQueuedMessages: updateQueuedMessages
   });
@@ -202,9 +207,10 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       setDraft('');
-      setIsGenerating(false);
       clearQueuedMessages();
       setTurns(() => result.turns ?? []);
+      assistantIdRef.current = streamingAssistantId(result.turns);
+      setIsGenerating(Boolean(nextStatus.isGenerating));
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
