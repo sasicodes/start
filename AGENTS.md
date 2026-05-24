@@ -12,6 +12,7 @@
 - Follow commit and PR title style: use lowercase, precise titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
+- Add or extend tests when changing logic that can be covered without rendering — parsers, classifiers, pure helpers, IPC payload shapers, label mappings, etc. Refactor inline logic into pure exported functions when needed so it becomes testable, then assert each branch.
 - Do not add TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces instead.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
 - Use camelCase for variables, functions, hooks, and local constants; use PascalCase for types and components; use kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
