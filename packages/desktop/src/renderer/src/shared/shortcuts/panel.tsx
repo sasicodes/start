@@ -1,3 +1,4 @@
+import { formatForDisplay } from '@tanstack/hotkeys';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 
@@ -10,37 +11,13 @@ interface ShortcutEntry {
   chords: string[];
 }
 
-const keySymbols: Record<string, string> = {
-  alt: '⌥',
-  cmd: '⌘',
-  ctrl: '⌃',
-  esc: '⎋',
-  tab: '⇥',
-  down: '↓',
-  left: '←',
-  meta: '⌘',
-  right: '→',
-  space: '␣',
-  shift: '⇧',
-  control: '⌃',
-  arrowup: '↑',
-  command: '⌘',
-  enter: '↵',
-  option: '⌥',
-  return: '↵',
-  escape: '⎋',
-  arrowdown: '↓',
-  arrowleft: '←',
-  arrowright: '→',
-  backspace: '⌫',
-  up: '↑'
+const formatChord = (chord: string) => {
+  try {
+    return formatForDisplay(chord, { useSymbols: false, separatorToken: ' + ' });
+  } catch {
+    return chord;
+  }
 };
-
-const formatChord = (chord: string) =>
-  chord
-    .split('+')
-    .map((part) => keySymbols[part.toLowerCase()] ?? (part.length === 1 ? part.toUpperCase() : part))
-    .join('');
 
 export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
   const entries: ShortcutEntry[] = [
@@ -51,9 +28,9 @@ export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
     { label: 'Toggle side panel', chords: [']'] },
     { label: 'Submit prompt', chords: ['Enter'] },
     { label: 'New line in prompt', chords: ['Shift+Enter'] },
-    { label: 'Refill previous prompt', chords: ['Up'] },
-    { label: 'Finder next', chords: ['Down'] },
-    { label: 'Finder previous', chords: ['Up'] },
+    { label: 'Refill previous prompt', chords: ['ArrowUp'] },
+    { label: 'Finder next', chords: ['ArrowDown'] },
+    { label: 'Finder previous', chords: ['ArrowUp'] },
     { label: 'Close side panel or popover', chords: ['Escape'] }
   ];
 
@@ -66,7 +43,7 @@ export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
             class={tw('flex items-center justify-between gap-4 py-3', index > 0 && 'border-t border-line')}
           >
             <span class="text-sm text-ink">{entry.label}</span>
-            <span class="flex items-center gap-3 font-mono text-xs text-soft">
+            <span class="flex items-center gap-3 text-xs text-soft">
               {entry.chords.map((chord) => (
                 <span key={chord}>{formatChord(chord)}</span>
               ))}
