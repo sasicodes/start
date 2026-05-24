@@ -1,4 +1,4 @@
-import { isMac, appIconPath, appMenuName, trayIconPath } from '@main/application';
+import { isMac, isProd, appIconPath, appMenuName, trayIconPath } from '@main/application';
 import type { MenuItemConstructorOptions, Tray as ElectronTray } from 'electron';
 import electron from 'electron';
 
@@ -127,7 +127,18 @@ export const installApplicationMenu = ({
         ]
       },
       { role: 'editMenu' },
-      { role: 'viewMenu' },
+      isProd
+        ? {
+            label: 'View',
+            submenu: [
+              { role: 'resetZoom' },
+              { role: 'zoomIn' },
+              { role: 'zoomOut' },
+              { type: 'separator' },
+              { role: 'togglefullscreen' }
+            ]
+          }
+        : { role: 'viewMenu' },
       { role: 'windowMenu' },
       {
         role: 'help',

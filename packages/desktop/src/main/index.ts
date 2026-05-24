@@ -3,6 +3,7 @@ import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/applic
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitPatch } from '@main/git';
+import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
@@ -32,6 +33,7 @@ import electron from 'electron';
 const { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+installWindowHardening();
 
 const chat = new ChatService();
 

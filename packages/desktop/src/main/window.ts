@@ -1,12 +1,12 @@
 import { join } from 'node:path';
-import { appIconPath, appName, isMac } from '@main/application';
+import { appIconPath, appName, isDev, isMac } from '@main/application';
 import { environment } from '@main/environment';
 import type { BrowserWindow as ElectronBrowserWindow, BrowserWindowConstructorOptions } from 'electron';
 import electron from 'electron';
 
 const { app, BrowserWindow, screen, shell } = electron;
 
-const getRendererUrl = () => (app.isPackaged ? null : (environment.rendererUrl ?? null));
+const getRendererUrl = () => (isDev ? (environment.rendererUrl ?? null) : null);
 
 let mainWindow: ElectronBrowserWindow | null = null;
 let composerWindow: ElectronBrowserWindow | null = null;
@@ -70,7 +70,7 @@ export const createMainWindow = (): ElectronBrowserWindow => {
       sandbox: true,
       webSecurity: true,
       spellcheck: false,
-      devTools: !app.isPackaged,
+      devTools: isDev,
       backgroundThrottling: true
     }
   };
@@ -142,7 +142,7 @@ export const createComposerWindow = (): ElectronBrowserWindow => {
       sandbox: true,
       webSecurity: true,
       spellcheck: false,
-      devTools: !app.isPackaged,
+      devTools: isDev,
       backgroundThrottling: false
     }
   };
