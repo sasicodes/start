@@ -1,3 +1,4 @@
+import { trackAnalyticsEvent } from '@main/analytics';
 import { getAppFocusState, onAppFocusChanged } from '@main/focus';
 import { sendToRendererWindows } from '@main/window';
 import { app, ipcMain } from 'electron';
@@ -103,6 +104,7 @@ export const registerUpdateIpc = () => {
   ipcMain.handle('app:install-update', () => {
     if (state.status !== 'downloaded') return { ok: false };
 
+    trackAnalyticsEvent('update_installed');
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };
   });

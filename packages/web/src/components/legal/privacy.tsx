@@ -18,7 +18,14 @@ export const Privacy = () => {
               We do not collect your code, prompts, chat messages, file contents, file paths, diffs, environment
               variables, project names, or AI responses.
             </p>
-            <p>Start does not include tracking pixels, advertising identifiers, or third-party telemetry in the app.</p>
+            <p>
+              Start may send limited product usage signals to help us understand reliability, performance, and how the
+              app is used.
+            </p>
+            <p>
+              These signals are associated with this installation. If a local username is available from your developer
+              configuration, Start may include it as an optional profile property.
+            </p>
           </Section>
 
           <Section title="Where your data lives">
@@ -26,7 +33,7 @@ export const Privacy = () => {
               Project data, conversations, settings, and generated changes are stored by the app on your own device or
               in the services you explicitly configure.
             </p>
-            <p>No server-side copy exists. There is nothing for us to synchronize and nothing for us to disclose.</p>
+            <p>No server-side copy of your project data or conversations exists.</p>
           </Section>
 
           <Section title="Provider keys">
