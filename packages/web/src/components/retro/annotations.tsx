@@ -5,14 +5,14 @@ interface Annotation {
 }
 
 export const ANNOTATIONS: Annotation[] = [
-  { label: 'PARALLEL', side: 'left', labelY: 205 },
-  { label: 'CHAT SESSIONS', side: 'left', labelY: 285 },
+  { label: 'PARALLEL AGENTS', side: 'left', labelY: 205 },
+  { label: 'QUEUED PROMPTS', side: 'left', labelY: 285 },
   { label: 'MULTI-MODEL', side: 'left', labelY: 365 },
-  { label: 'FILE CONTEXT', side: 'left', labelY: 445 },
-  { label: 'DIFF VIEWER', side: 'right', labelY: 205 },
+  { label: 'EFFORT LEVELS', side: 'left', labelY: 445 },
+  { label: 'FILE CONTEXT', side: 'right', labelY: 205 },
   { label: 'LOCAL FIRST', side: 'right', labelY: 285 },
-  { label: 'FILE EDITS', side: 'right', labelY: 365 },
-  { label: 'GIT WORKFLOW', side: 'right', labelY: 445 }
+  { label: 'REVIEWABLE EDITS', side: 'right', labelY: 365 },
+  { label: 'DIFF VIEWER', side: 'right', labelY: 445 }
 ];
 
 export const DEFAULT_TARGETS = [
