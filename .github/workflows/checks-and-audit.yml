@@ -1,4 +1,4 @@
-name: Checks and Security
+name: Checks and Audit
 
 on:
   pull_request:
@@ -29,7 +29,7 @@ jobs:
       - name: Check
         run: pnpm check
 
-  security:
+  audit:
     name: Dependency audit
     runs-on: ubuntu-latest
 
