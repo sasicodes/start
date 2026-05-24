@@ -62,9 +62,6 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
   const summary = git.summary;
-  const hasDeletions = summary.deletions > 0;
-  const hasInsertions = summary.insertions > 0;
-  const hasLineChanges = hasInsertions || hasDeletions;
   const label = gitChangesLabel(summary.filesChanged);
 
   return (
@@ -85,9 +82,8 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
       >
         <ChangesIcon class="hidden size-5 flex-none @max-workspace-dock/chat:block" />
         <span class="flex min-w-0 items-center gap-2 @max-workspace-dock/chat:hidden">
-          {hasInsertions && <span class="tabular-nums text-success">+{summary.insertions}</span>}
-          {hasDeletions && <span class="tabular-nums text-danger">-{summary.deletions}</span>}
-          {!hasLineChanges && <span class="tabular-nums">{summary.filesChanged}</span>}
+          <span class="tabular-nums text-success">+{summary.insertions}</span>
+          <span class="tabular-nums text-danger">-{summary.deletions}</span>
         </span>
       </motion.button>
     </Tooltip>
