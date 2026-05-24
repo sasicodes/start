@@ -41,7 +41,7 @@ jobs:
         run: cd packages/desktop && pnpm dist --mac
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v5
         with:
           name: start-macos
           path: |
@@ -58,7 +58,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v6
         with:
           path: artifacts
           merge-multiple: true
