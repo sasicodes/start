@@ -33,6 +33,9 @@ export const Update = memo(() => {
 
   const downloaded = state.status === 'downloaded';
   const label = downloaded ? 'Update and Restart' : 'Update';
+  const installUpdate = () => {
+    window.pi.app.installUpdate().catch(() => {});
+  };
 
   return (
     <motion.button
@@ -40,7 +43,7 @@ export const Update = memo(() => {
       disabled={!downloaded}
       aria-label={label}
       initial={bottomBubbleHiddenMotion}
-      onClick={() => void window.pi.app.installUpdate()}
+      onClick={installUpdate}
       animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
       transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
       class={tw(

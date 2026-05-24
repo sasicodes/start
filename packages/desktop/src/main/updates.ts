@@ -61,6 +61,12 @@ const checkForUpdates = async () => {
   }
 };
 
+const checkForUpdatesInBackground = () => {
+  checkForUpdates().catch((error: unknown) => {
+    setUpdateState({ status: 'error', error: error instanceof Error ? error.message : 'Update check failed.' });
+  });
+};
+
 const stopUpdateCheckSchedule = () => {
   if (initialUpdateCheckTimer) {
     clearTimeout(initialUpdateCheckTimer);
@@ -77,12 +83,12 @@ const startUpdateCheckSchedule = () => {
   if (updateCheckTimer) return;
 
   initialUpdateCheckTimer = setTimeout(() => {
-    void checkForUpdates();
+    checkForUpdatesInBackground();
     initialUpdateCheckTimer = undefined;
   }, updateCheckDelayMs);
   initialUpdateCheckTimer.unref();
 
-  updateCheckTimer = setInterval(() => void checkForUpdates(), updateCheckIntervalMs);
+  updateCheckTimer = setInterval(checkForUpdatesInBackground, updateCheckIntervalMs);
   updateCheckTimer.unref();
 };
 
