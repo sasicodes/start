@@ -1,4 +1,5 @@
 import { trackAnalyticsEvent } from '@main/analytics';
+import { isProd } from '@main/application';
 import { getAppFocusState, onAppFocusChanged } from '@main/focus';
 import { sendToRendererWindows } from '@main/window';
 import electron from 'electron';
@@ -46,7 +47,7 @@ const updateErrorMessage = (error: unknown, fallback: string) =>
 
 const updateIsReadyToInstall = () => state.status === 'downloaded';
 
-const canRequestUpdateCheck = () => app.isPackaged && !downloadPending && !updateIsReadyToInstall();
+const canRequestUpdateCheck = () => isProd && !downloadPending && !updateIsReadyToInstall();
 
 const canCheckForUpdates = () => canRequestUpdateCheck() && getAppFocusState().focused;
 
@@ -117,7 +118,7 @@ export const registerUpdateIpc = () => {
 };
 
 export const startAutoUpdateChecks = () => {
-  if (!app.isPackaged || stopUpdateEvents) return;
+  if (!isProd || stopUpdateEvents) return;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;

@@ -16,6 +16,10 @@ export const appHotkeys = {
   settings: {
     name: 'Settings',
     shortcuts: ['Mod+,']
+  },
+  shortcuts: {
+    name: 'Keyboard Shortcuts',
+    shortcuts: ['Mod+/']
   }
 } satisfies Record<string, AppHotkey>;
 

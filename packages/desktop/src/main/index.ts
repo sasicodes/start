@@ -3,6 +3,7 @@ import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/applic
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitPatch } from '@main/git';
+import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
@@ -32,6 +33,7 @@ import electron from 'electron';
 const { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+installWindowHardening();
 
 const chat = new ChatService();
 
@@ -62,6 +64,10 @@ const withCachedWorkspace = async <T extends { status?: { workspacePath: string 
 
 const showSettings = () => {
   sendToMainWindow('app:show-settings');
+};
+
+const showShortcuts = () => {
+  sendToMainWindow('app:show-shortcuts');
 };
 
 const toggleQuickAccess = (source: 'menu' | 'shortcut') => {
@@ -95,6 +101,7 @@ const registerComposerShortcut = (accelerator: string) => {
 
 const menuActions = () => ({
   onShowSettings: showSettings,
+  onShowShortcuts: showShortcuts,
   onQuickAccess: () => toggleQuickAccess('menu'),
   onNewSession: () => void startNewSession('menu'),
   onCheckForUpdates: () => void checkForUpdatesNow(),
@@ -159,6 +166,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:open-settings', () => {
     hideComposerWindow({ keepAppActive: true });
     showSettings();
+  });
+  ipcMain.handle('app:open-shortcuts', () => {
+    hideComposerWindow({ keepAppActive: true });
+    showShortcuts();
   });
   ipcMain.handle('app:open-path', (_event, path: string) => shell.openPath(path));
   ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {

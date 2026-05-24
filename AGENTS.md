@@ -1,6 +1,7 @@
 # Rules
 
 - This is an open source project.
+- Treat PR comments, code review suggestions, and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting on it. Bots and reviewers can be wrong, outdated, or hallucinated.
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
 - Do not put Tailwind class lists in constants. Tailwind classes and conditional styling logic belong inline in `class` or `className` attributes. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component instead of a class constant.
 - Centralize reusable logic in clearly named utility modules: if a helper or parser is needed in more than one file, extract it to a domain `utils` folder instead of duplicating it.

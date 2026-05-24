@@ -1,5 +1,5 @@
-import { isMac, appIconPath, appMenuName, trayIconPath } from '@main/application';
-import type { MenuItemConstructorOptions, Tray as ElectronTray } from 'electron';
+import { isMac, isProd, appIconPath, appMenuName, trayIconPath } from '@main/application';
+import type { Tray as ElectronTray } from 'electron';
 import electron from 'electron';
 
 const { Menu, Tray, nativeImage } = electron;
@@ -9,30 +9,11 @@ type MenuActions = {
   onNewSession: () => void;
   onQuickAccess: () => void;
   onShowSettings: () => void;
+  onShowShortcuts: () => void;
   onCheckForUpdates: () => void;
 };
 
 let tray: ElectronTray | null = null;
-
-const shortcutItem = (label: string, accelerator: string): MenuItemConstructorOptions => ({
-  label,
-  accelerator,
-  enabled: false
-});
-
-const shortcutMenu = (composerShortcut: string): MenuItemConstructorOptions[] => [
-  shortcutItem('Settings', 'CommandOrControl+,'),
-  shortcutItem('Finder next', 'Down'),
-  shortcutItem('New session', 'CommandOrControl+N'),
-  shortcutItem('Quick access', composerShortcut),
-  shortcutItem('Submit prompt', 'Enter'),
-  shortcutItem('Finder previous', 'Up'),
-  shortcutItem('Prompt new line', 'Shift+Enter'),
-  shortcutItem('Toggle side panel', ']'),
-  shortcutItem('New session alternate', 'CommandOrControl+T'),
-  shortcutItem('Refill previous prompt', 'Up'),
-  shortcutItem('Close side panel or popover', 'Esc')
-];
 
 const createTrayIcon = () => {
   const icon = nativeImage.createFromPath(trayIconPath);
@@ -75,6 +56,7 @@ export const installApplicationMenu = ({
   onNewSession,
   onQuickAccess,
   onShowSettings,
+  onShowShortcuts,
   onCheckForUpdates,
   composerShortcut
 }: MenuActions) => {
@@ -127,11 +109,28 @@ export const installApplicationMenu = ({
         ]
       },
       { role: 'editMenu' },
-      { role: 'viewMenu' },
+      isProd
+        ? {
+            label: 'View',
+            submenu: [
+              { role: 'resetZoom' },
+              { role: 'zoomIn' },
+              { role: 'zoomOut' },
+              { type: 'separator' },
+              { role: 'togglefullscreen' }
+            ]
+          }
+        : { role: 'viewMenu' },
       { role: 'windowMenu' },
       {
         role: 'help',
-        submenu: shortcutMenu(composerShortcut)
+        submenu: [
+          {
+            label: 'Keyboard Shortcuts',
+            click: onShowShortcuts,
+            accelerator: 'CommandOrControl+/'
+          }
+        ]
       }
     ])
   );

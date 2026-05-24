@@ -1,0 +1,79 @@
+import {
+  agentEndError,
+  clampThinkingLevel,
+  getLatestProviderModels,
+  getSupportedEffortLevels,
+  isProviderModel,
+  modelKey,
+  modelLabel,
+  providerAuthKind,
+  providerAuthLabel,
+  textDelta,
+  thinkingDelta
+} from '@main/helpers';
+import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import { describe, expect, it } from 'vitest';
+
+describe('helpers', () => {
+  it('returns no effort levels for non-reasoning models', () => {
+    expect(getSupportedEffortLevels({ reasoning: false })).toEqual([]);
+  });
+
+  it('clamps a requested level upward when unavailable, then falls back downward', () => {
+    const model = { reasoning: true, thinkingLevelMap: { low: null, medium: 'med', high: 'hi' } };
+    expect(clampThinkingLevel(model, 'low')).toBe('medium');
+    expect(clampThinkingLevel(model, 'xhigh')).toBe('high');
+  });
+
+  it('labels provider auth based on connection signals', () => {
+    expect(providerAuthKind(false, false, false)).toBe('none');
+    expect(providerAuthKind(true, true, false)).toBe('subscription');
+    expect(providerAuthKind(true, false, true)).toBe('api_key');
+    expect(providerAuthLabel('subscription', true)).toBe('Connected via subscription');
+    expect(providerAuthLabel('none', false)).toBe('Not connected');
+  });
+
+  it('classifies OpenAI and Anthropic models from identifiers', () => {
+    expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'openai')).toBe(true);
+    expect(
+      isProviderModel({ id: 'claude-opus-4-7', name: 'Claude Opus 4 7', provider: 'anthropic' }, 'anthropic')
+    ).toBe(true);
+    expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
+  });
+
+  it('sorts the latest provider models into the configured display order', () => {
+    const sorted = getLatestProviderModels('anthropic', [
+      { id: 'claude-sonnet-4-6', name: 'Sonnet', provider: 'anthropic' },
+      { id: 'claude-opus-4-7', name: 'Opus 4 7', provider: 'anthropic' },
+      { id: 'claude-opus-4-6', name: 'Opus 4 6', provider: 'anthropic' }
+    ]);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6']);
+  });
+
+  it('exposes labels and keys for models', () => {
+    expect(modelKey({ id: 'claude-opus-4-7', provider: 'anthropic' })).toBe('anthropic:claude-opus-4-7');
+    expect(modelLabel({ name: 'claude-opus-4-7', provider: 'anthropic' })).toBe('claude opus 4 7');
+  });
+
+  it('extracts text and thinking deltas from agent session events', () => {
+    const textEvent: AgentSessionEvent = {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'Hi' }
+    } as AgentSessionEvent;
+    const thinkingEvent: AgentSessionEvent = {
+      type: 'message_update',
+      assistantMessageEvent: { type: 'thinking_delta', delta: 'thinking' }
+    } as AgentSessionEvent;
+
+    expect(textDelta(textEvent)).toBe('Hi');
+    expect(thinkingDelta(thinkingEvent)).toBe('thinking');
+  });
+
+  it('reports agent end errors when the last message has one', () => {
+    const event: AgentSessionEvent = {
+      type: 'agent_end',
+      messages: [{ errorMessage: 'boom' }]
+    } as AgentSessionEvent;
+    expect(agentEndError(event)).toBe('boom');
+  });
+});

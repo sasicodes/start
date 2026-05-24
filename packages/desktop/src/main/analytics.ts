@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { appVersion } from '@main/application';
+import { appVersion, isProd } from '@main/application';
 import {
   POSTHOG_HOST,
   ANALYTICS_FLUSH_AT,
@@ -15,7 +15,6 @@ import {
   ANALYTICS_USERNAME_STORAGE_NAME
 } from '@main/constants';
 import { startDir } from '@main/storage';
-import { app } from 'electron';
 import { PostHog } from 'posthog-node';
 
 type AnalyticsPropertyValue = null | number | string | boolean;
@@ -188,7 +187,7 @@ const readGitUsername = async () => {
 const readDeviceUsername = async () =>
   (await readGithubUsername()) ?? (await readGitlabUsername()) ?? (await readGitUsername());
 
-const canInitializeAnalytics = () => app.isPackaged;
+const canInitializeAnalytics = () => isProd;
 
 export const initAnalytics = () => {
   if (!canInitializeAnalytics()) return;
