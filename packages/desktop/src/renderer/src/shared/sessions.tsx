@@ -53,16 +53,20 @@ const SessionRow = ({ active, session, onOpen }: SessionRowProps) => {
     <AppMenu.Item
       onClick={() => onOpen(session)}
       className={tw(
-        'grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+        'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
         status === 'failed' && 'bg-danger/[0.055]',
         status === 'completed' && 'bg-success/[0.055]',
         status === 'generating' && 'bg-blue-500/[0.07]',
         active && 'bg-control text-hover'
       )}
     >
-      <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
+      <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
       <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
-      {status && <NoticeDot kind={status} />}
+      {status && (
+        <span class="flex h-4 items-center justify-end">
+          <NoticeDot kind={status} />
+        </span>
+      )}
     </AppMenu.Item>
   );
 };
