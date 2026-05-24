@@ -8,7 +8,7 @@ const notarizeMac = async (context) => {
 
   const appleId = process.env.APPLE_ID;
   const teamId = process.env.APPLE_TEAM_ID;
-  const appleIdPassword = process.env.APPLE_PASSWORD;
+  const appleIdPassword = process.env.APPLE_APP_SPECIFIC_PASSWORD;
 
   if (!appleId || !appleIdPassword || !teamId) return;
 
