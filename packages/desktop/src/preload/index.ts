@@ -130,12 +130,25 @@ export interface HistoryTurn {
   thinking?: string;
 }
 
+export type SessionNoticeKind = 'completed' | 'failed';
+
 export interface RecentSession {
   id: string;
-  title: string;
   path: string;
+  title: string;
   modified: number;
-  turnCount: number;
+  noticeKind?: SessionNoticeKind;
+}
+
+export interface RecentSessionsOptions {
+  limit?: number;
+  offset?: number;
+  workspacePath?: string;
+}
+
+export interface RecentSessionsPage {
+  hasMore: boolean;
+  sessions: RecentSession[];
 }
 
 export interface RecentSessionsChanged {
@@ -165,6 +178,30 @@ export interface WorkspaceFolder {
   path: string;
   modified: number;
   sessionCount: number;
+  noticeKind?: SessionNoticeKind;
+}
+
+export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
+
+export interface AgentTab {
+  id: string;
+  sessionId?: string;
+  status: AgentTabStatus;
+  workspacePath: string;
+}
+
+export interface SessionNotice {
+  seenAt?: number;
+  createdAt: number;
+  sessionId: string;
+  workspacePath: string;
+  kind: SessionNoticeKind;
+}
+
+export interface ScopedChatEvent<T> {
+  payload: T;
+  tabId: string;
+  workspacePath: string;
 }
 
 export interface SwitchWorkspaceResult {
@@ -250,10 +287,22 @@ const api = {
   },
   chat: {
     status: (): Promise<ChatStatus> => ipcRenderer.invoke('chat:status'),
+    tabs: (): Promise<AgentTab[]> => ipcRenderer.invoke('chat:tabs'),
+    listTabs: (): Promise<AgentTab[]> => ipcRenderer.invoke('chat:tabs:list'),
+    createTab: (workspacePath?: string): Promise<AgentTab> => ipcRenderer.invoke('chat:tabs:create', workspacePath),
+    tabStatus: (): Promise<ChatStatus> => ipcRenderer.invoke('chat:tabs:status'),
+    activateTab: (id: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:tabs:activate', id),
+    openTabSession: (id: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:tabs:open-session', id),
+    closeTab: (id: string): Promise<void> => ipcRenderer.invoke('chat:tabs:close', id),
+    sendToTab: (id: string, prompt: string, attachments: ImageAttachment[] = []): Promise<SendResult> =>
+      ipcRenderer.invoke('chat:tabs:send', id, prompt, attachments),
+    abortTab: (id: string): Promise<void> => ipcRenderer.invoke('chat:tabs:abort', id),
+    notices: (): Promise<SessionNotice[]> => ipcRenderer.invoke('chat:notices:list'),
+    markNoticeSeen: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:notices:mark-seen', sessionId),
     models: (): Promise<{ error?: string; models: ModelOption[]; selectedModelKey?: string }> =>
       ipcRenderer.invoke('chat:models'),
-    recentSessions: (workspacePath?: string): Promise<RecentSession[]> =>
-      ipcRenderer.invoke('chat:recent-sessions', workspacePath),
+    recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
+      ipcRenderer.invoke('chat:sessions:page', options),
     onRecentSessionsChanged: (listener: (event: RecentSessionsChanged) => void): IpcDisposer =>
       onIpc<[RecentSessionsChanged]>('chat:recent-sessions-changed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),
@@ -301,6 +350,18 @@ const api = {
     onQueuedTurnStart: (listener: (turn: QueuedTurnStart) => void): IpcDisposer =>
       onIpc<[QueuedTurnStart]>('chat:queued-turn-start', listener),
     onEvent: (listener: (event: ChatEvent) => void): IpcDisposer => onIpc<[ChatEvent]>('chat:event', listener),
+    onScopedEvent: (listener: (event: ScopedChatEvent<ChatEvent>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<ChatEvent>]>('chat:scoped-event', listener),
+    onScopedDelta: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<string>]>('chat:scoped-delta', listener),
+    onScopedThinkingDelta: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<string>]>('chat:scoped-thinking-delta', listener),
+    onScopedDone: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<string>]>('chat:scoped-done', listener),
+    onScopedError: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<string>]>('chat:scoped-error', listener),
+    onNotice: (listener: (event: ScopedChatEvent<SessionNotice | undefined>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<SessionNotice | undefined>]>('chat:notice', listener),
     onSubscriptionAuthUpdate: (listener: (update: SubscriptionAuthUpdate) => void): IpcDisposer =>
       onIpc<[SubscriptionAuthUpdate]>('chat:subscription-auth-update', listener)
   }

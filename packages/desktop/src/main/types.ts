@@ -118,12 +118,31 @@ export type HistoryTurn = {
   thinking?: string;
 };
 
+export type SessionNoticeKind = 'completed' | 'failed';
+
 export type RecentSession = {
   id: string;
-  title: string;
   path: string;
+  title: string;
   modified: number;
-  turnCount: number;
+  noticeKind?: SessionNoticeKind;
+};
+
+export type RecentSessionsOptions = {
+  limit?: number;
+  offset?: number;
+  workspacePath?: string;
+};
+
+export type RecentSessionsPage = {
+  hasMore: boolean;
+  sessions: RecentSession[];
+};
+
+export type ScopedChatEvent<T> = {
+  payload: T;
+  tabId: string;
+  workspacePath: string;
 };
 
 export type WorkspaceFolder = {
@@ -131,6 +150,24 @@ export type WorkspaceFolder = {
   path: string;
   modified: number;
   sessionCount: number;
+  noticeKind?: SessionNoticeKind;
+};
+
+export type AgentTabStatus = 'idle' | 'generating' | 'completed' | 'failed';
+
+export type AgentTab = {
+  id: string;
+  sessionId?: string;
+  status: AgentTabStatus;
+  workspacePath: string;
+};
+
+export type SessionNotice = {
+  seenAt?: number;
+  createdAt: number;
+  sessionId: string;
+  workspacePath: string;
+  kind: SessionNoticeKind;
 };
 
 export type SwitchWorkspaceResult = {

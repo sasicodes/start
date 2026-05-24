@@ -1,8 +1,6 @@
 import '@main/environment';
 
 import { randomUUID } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { createInterface } from 'node:readline/promises';
 import {
   type AgentSession,
   AuthStorage,
@@ -10,6 +8,8 @@ import {
   ModelRegistry,
   SessionManager
 } from '@earendil-works/pi-coding-agent';
+import { recentSessionsPage } from '@main/chat/recents';
+import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { historyTurns } from '@main/history';
@@ -36,11 +36,13 @@ import { workspaceDisplayName } from '@main/utils/workspace';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import {
+  type AgentTab,
   type ChatStatus,
-  type CommandResult,
   type EffortLevel,
+  type CommandResult,
   effortLevels,
   enabledTools,
+  type SessionNotice,
   type ImageAttachment,
   type ModelOption,
   type OpenSessionResult,
@@ -48,14 +50,14 @@ import {
   type ProviderAuthStatus,
   type ProviderLoginResult,
   type QueuedMessage,
-  type RecentSession,
+  type RecentSessionsOptions,
+  type RecentSessionsPage,
   type SendResult,
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
 import { shell, type WebContents } from 'electron';
 
-const maxRecentSessions = 40;
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 
 type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
@@ -66,24 +68,28 @@ type PendingQueuedMessage = QueuedMessage & {
 
 export class ChatService {
   private appState = readStartState();
-  private readonly authStorage = AuthStorage.create();
-  private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private session: AgentSession | null = null;
   private abortSequence = 0;
   private isGenerating = false;
-  private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
-  private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
-  private queuedMessages: PendingQueuedMessage[] = [];
-  private queueDeliveryCandidates: QueuedMessage[] = [];
   private queueRebuildDepth = 0;
   private sessionOpenSequence = 0;
-  private activeSessionId: string | undefined;
   private shouldCreateSession = true;
-  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
+  private activeSessionId = '';
   private workspaceCwd = this.appState.lastWorkspace ?? process.cwd();
+  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
+  private queuedMessages: PendingQueuedMessage[] = [];
+  private queueDeliveryCandidates: QueuedMessage[] = [];
+
+  private readonly authStorage = AuthStorage.create();
+  private readonly modelRegistry = ModelRegistry.create(this.authStorage);
+  private readonly backgroundSessions = new Map<string, AgentSession>();
+  private readonly activeSessionByWorkspace = new Map<string, string>();
+  private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
+  private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
+  private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   async getStatus(): Promise<ChatStatus> {
     this.refreshAuth();
@@ -95,8 +101,7 @@ export class ChatService {
         workspacePath: this.workspaceCwd,
         thinkingLevel: this.selectedThinkingLevel,
         error:
-          this.modelRegistry.getError() ??
-          'No configured Pi models found. Run pi login or configure ~/.pi/agent/auth.json.'
+          this.modelRegistry.getError() ?? 'No configured models found. Sign in or configure credentials to continue.'
       };
     }
 
@@ -139,28 +144,27 @@ export class ChatService {
   }
 
   async openSession(path: string): Promise<OpenSessionResult> {
-    if (this.isGenerating) return { ok: false, error: 'Stop the current response before opening a session.' };
-
     const openSequence = this.sessionOpenSequence + 1;
     this.sessionOpenSequence = openSequence;
 
     try {
       this.refreshAuth();
       const model = this.pickModel();
-      if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured Pi models found.' };
+      if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
 
       const sessionManager = SessionManager.open(path);
-      this.clearQueuedMessages();
-      this.session?.dispose();
+      const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
+      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
+      this.clearQueuedMessageState();
       const { session } = await createAgentSession({
-        cwd: sessionManager.getCwd() || process.cwd(),
         model,
+        sessionManager,
+        cwd: workspacePath,
         tools: enabledTools,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
-        thinkingLevel: this.selectedThinkingLevel,
-        sessionManager
+        thinkingLevel: this.selectedThinkingLevel
       });
 
       if (this.sessionOpenSequence !== openSequence) {
@@ -169,8 +173,9 @@ export class ChatService {
       }
 
       this.session = session;
+      this.workspaceCwd = workspacePath;
+      this.isGenerating = false;
       this.setActiveSession(sessionManager);
-      this.workspaceCwd = sessionManager.getCwd() || this.workspaceCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
       this.shouldCreateSession = false;
@@ -195,37 +200,138 @@ export class ChatService {
     return this.openSession(session.path);
   }
 
-  async getRecentSessions(cwd = this.workspaceCwd): Promise<RecentSession[]> {
-    const sessions = await SessionManager.list(cwd);
-    const uniqueSessions = new Map<string, (typeof sessions)[number]>();
-
-    for (const session of sessions) {
-      uniqueSessions.set(session.id, session);
+  getTabs(): AgentTab[] {
+    const tabs = new Map<string, AgentTab>();
+    if (this.session) {
+      const sessionId = this.session.sessionManager.getSessionId();
+      const status = this.isGenerating ? 'generating' : 'idle';
+      tabs.set(sessionId, tabFromSessionStatus(this.session, status, this.workspaceCwd));
     }
 
-    const recentSessions = [...uniqueSessions.values()]
-      .sort((a, b) => b.modified.getTime() - a.modified.getTime())
-      .slice(0, maxRecentSessions);
+    for (const session of this.backgroundSessions.values()) {
+      const sessionId = session.sessionManager.getSessionId();
+      tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, this.notices.get(sessionId)));
+    }
 
-    return Promise.all(
-      recentSessions.map(async (session) => ({
-        id: session.id,
-        path: session.path,
-        modified: session.modified.getTime(),
-        turnCount: await this.userTurnCount(session.path),
-        title: session.name || session.firstMessage || 'Untitled session'
-      }))
-    );
+    return [...tabs.values()];
+  }
+
+  async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+    this.refreshAuth();
+    const model = this.pickModel();
+    if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+
+    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+    this.session = null;
+    this.clearQueuedMessageState();
+    this.attachments.clear();
+
+    const sessionManager = SessionManager.create(workspacePath);
+    const { session } = await createAgentSession({
+      model,
+      sessionManager,
+      cwd: workspacePath,
+      tools: enabledTools,
+      authStorage: this.authStorage,
+      modelRegistry: this.modelRegistry,
+      thinkingLevel: this.selectedThinkingLevel
+    });
+    this.session = session;
+    this.workspaceCwd = workspacePath;
+    this.isGenerating = false;
+    this.shouldCreateSession = false;
+    this.setActiveSession(sessionManager);
+    this.persistState({ lastWorkspace: this.workspaceCwd });
+    activateWorkspaceAccess(this.workspaceCwd);
+
+    const sessionId = sessionManager.getSessionId();
+    return {
+      id: sessionId,
+      sessionId,
+      status: 'idle',
+      workspacePath
+    };
+  }
+
+  async closeTab(id: string): Promise<void> {
+    if (this.activeSessionId === id && this.session) {
+      this.session.abortBash();
+      await this.session.abort();
+      this.session.dispose();
+      this.session = null;
+      this.activeSessionByWorkspace.delete(this.workspaceCwd);
+      this.activeSessionId = '';
+      this.isGenerating = false;
+      this.shouldCreateSession = true;
+    }
+
+    const session = this.backgroundSessions.get(id);
+    if (session) {
+      session.abortBash();
+      await session.abort();
+      session.dispose();
+      this.backgroundSessions.delete(id);
+    }
+
+    this.deleteWorkspaceSessionReferences(id);
+    this.markNoticeSeen(id);
+  }
+
+  async sendToTab(id: string, prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []) {
+    await this.activateTab(id);
+    return this.send(prompt, webContents, attachments);
+  }
+
+  async abortTab(id: string, webContents?: WebContents): Promise<void> {
+    if (this.activeSessionId === id) return this.abort(webContents);
+    const session = this.backgroundSessions.get(id);
+    session?.abortBash();
+    await session?.abort();
+  }
+
+  async getNotices(): Promise<SessionNotice[]> {
+    return [...this.notices.values()];
+  }
+
+  async markSessionNoticeSeen(sessionId: string): Promise<void> {
+    this.markNoticeSeen(sessionId);
+  }
+
+  async activateTab(id: string): Promise<OpenSessionResult> {
+    const session = this.backgroundSessions.get(id);
+    if (!session) return this.openSessionId(id);
+
+    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+    this.backgroundSessions.delete(id);
+    this.session = session;
+    this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
+    this.setActiveSession(session.sessionManager);
+    this.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    this.shouldCreateSession = false;
+    this.persistState({ lastWorkspace: this.workspaceCwd });
+    activateWorkspaceAccess(this.workspaceCwd);
+
+    return {
+      ok: true,
+      id,
+      turns: historyTurns(session.sessionManager.getEntries())
+    };
+  }
+
+  async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
+    const workspacePath = options.workspacePath ?? this.workspaceCwd;
+    return recentSessionsPage({ ...options, workspacePath }, this.notices);
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     folders.set(this.workspaceCwd, {
+      sessionCount: 0,
       modified: Date.now(),
       path: this.workspaceCwd,
-      sessionCount: 0,
-      name: workspaceDisplayName(this.workspaceCwd)
+      name: workspaceDisplayName(this.workspaceCwd),
+      ...(this.workspaceHasNotice(this.workspaceCwd) ? { noticeKind: 'completed' as const } : {})
     });
 
     for (const session of sessions) {
@@ -236,12 +342,14 @@ export class ChatService {
       if (current) {
         current.modified = Math.max(current.modified, modified);
         current.sessionCount += 1;
+        if (this.workspaceHasNotice(session.cwd)) current.noticeKind = 'completed';
       } else {
         folders.set(session.cwd, {
           modified,
-          path: session.cwd,
           sessionCount: 1,
-          name: workspaceDisplayName(session.cwd)
+          path: session.cwd,
+          name: workspaceDisplayName(session.cwd),
+          ...(this.workspaceHasNotice(session.cwd) ? { noticeKind: 'completed' as const } : {})
         });
       }
     }
@@ -271,18 +379,18 @@ export class ChatService {
   async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (this.isGenerating) return { ok: false, error: 'Stop the current response before switching workspaces.' };
 
     try {
       this.sessionOpenSequence += 1;
-      this.session?.abortBash();
-      await this.session?.abort();
-      this.session?.dispose();
-      this.session = null;
-      this.clearQueuedMessages();
+      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+      this.session = this.backgroundSessionForWorkspace(nextCwd);
+      if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
+      this.clearQueuedMessageState();
       this.attachments.clear();
-      this.activeSessionId = undefined;
-      this.shouldCreateSession = true;
+      this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
+      if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
+      this.isGenerating = Boolean(this.session?.isStreaming || this.session?.isBashRunning);
+      this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistState({ lastWorkspace: this.workspaceCwd });
       activateWorkspaceAccess(this.workspaceCwd);
@@ -316,9 +424,6 @@ export class ChatService {
 
     this.authStorage.setRuntimeApiKey(cleanProvider, cleanApiKey);
     this.modelRegistry.refresh();
-    this.sessionOpenSequence += 1;
-    this.session?.dispose();
-    this.session = null;
 
     return this.getAuthProviders();
   }
@@ -355,9 +460,6 @@ export class ChatService {
       });
 
       this.modelRegistry.refresh();
-      this.sessionOpenSequence += 1;
-      this.session?.dispose();
-      this.session = null;
 
       return { ok: true, providers: await this.getAuthProviders() };
     } catch (error) {
@@ -407,8 +509,10 @@ export class ChatService {
     if (this.selectedModelKey !== nextModelKey) {
       this.selectedModelKey = nextModelKey;
       this.sessionOpenSequence += 1;
-      this.session?.dispose();
+      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
+      this.activeSessionId = '';
+      this.shouldCreateSession = true;
     }
     this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
 
@@ -446,7 +550,7 @@ export class ChatService {
         ready: false,
         workspacePath: this.workspaceCwd,
         thinkingLevel: this.selectedThinkingLevel,
-        error: this.modelRegistry.getError() ?? 'No configured Pi models found.'
+        error: this.modelRegistry.getError() ?? 'No configured models found.'
       };
     }
 
@@ -470,21 +574,26 @@ export class ChatService {
 
     this.isGenerating = true;
     const sendAbortSequence = this.abortSequence;
-    let endError: string | undefined;
-    let activeSession: AgentSession | undefined;
+    let endError = '';
+    let activeSession: AgentSession | null = null;
+    let sessionId = '';
+    let workspacePath = this.workspaceCwd;
 
     try {
       const images = await this.resolveAttachments(attachments);
       activeSession = await this.getSession();
       const session = activeSession;
+      sessionId = session.sessionManager.getSessionId();
+      workspacePath = this.workspaceCwd;
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
+        const active = this.isActiveSession(sessionId, workspacePath);
         if (event.type === 'queue_update') {
-          this.syncQueuedMessages(event.steering, event.followUp, webContents);
+          if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);
           return;
         }
 
-        if (event.type === 'message_start' && event.message.role === 'user') {
+        if (active && event.type === 'message_start' && event.message.role === 'user') {
           this.emitQueuedTurnStart(textContent(event.message.content), webContents);
         }
 
@@ -495,14 +604,18 @@ export class ChatService {
         let previousToolArgs: unknown;
         if ('toolCallId' in event) previousToolArgs = toolArgs.get(event.toolCallId);
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
-        this.emitEvent(webContents, chatEvent(event, eventContext));
+        const renderedEvent = chatEvent(event, eventContext);
+        if (active) this.emitEvent(webContents, renderedEvent);
+        if (renderedEvent) this.emitScoped(webContents, 'chat:scoped-event', sessionId, workspacePath, renderedEvent);
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
-        if (delta) this.emit(webContents, 'delta', delta);
+        if (active && delta) this.emit(webContents, 'delta', delta);
+        if (delta) this.emitScoped(webContents, 'chat:scoped-delta', sessionId, workspacePath, delta);
 
         const thought = thinkingDelta(event);
-        if (thought) this.emit(webContents, 'thinking-delta', thought);
+        if (active && thought) this.emit(webContents, 'thinking-delta', thought);
+        if (thought) this.emitScoped(webContents, 'chat:scoped-thinking-delta', sessionId, workspacePath, thought);
 
         const error = agentEndError(event);
         if (error) endError = error;
@@ -520,39 +633,60 @@ export class ChatService {
 
       if (endError) {
         if (this.abortSequence !== sendAbortSequence) {
-          this.setActiveSession(session.sessionManager);
-          this.emit(webContents, 'done', '');
-          return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            this.setActiveSession(session.sessionManager);
+            this.emit(webContents, 'done', '');
+          }
+          this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+          return { ok: true, sessionId };
         }
 
-        this.clearQueuedMessages(webContents);
-        this.emit(webContents, 'error', endError);
+        if (this.isActiveSession(sessionId, workspacePath)) {
+          this.clearQueuedMessages(webContents);
+          this.emit(webContents, 'error', endError);
+        } else {
+          this.setNotice(sessionId, workspacePath, 'failed', webContents);
+        }
+        this.emitScoped(webContents, 'chat:scoped-error', sessionId, workspacePath, endError);
         return { ok: false, error: endError };
       }
 
-      this.setActiveSession(session.sessionManager);
-      this.emit(webContents, 'done', '');
-      return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+      if (this.isActiveSession(sessionId, workspacePath)) {
+        this.setActiveSession(session.sessionManager);
+        this.emit(webContents, 'done', '');
+      } else {
+        this.setNotice(sessionId, workspacePath, 'completed', webContents);
+      }
+      this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+      return { ok: true, sessionId };
     } catch (error) {
       if (this.abortSequence !== sendAbortSequence) {
-        if (activeSession) this.setActiveSession(activeSession.sessionManager);
-        this.emit(webContents, 'done', '');
-        return { ok: true, ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}) };
+        if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
+          this.setActiveSession(activeSession.sessionManager);
+          this.emit(webContents, 'done', '');
+        }
+        if (sessionId) this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+        return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
       const message = error instanceof Error ? error.message : 'Chat failed.';
-      this.clearQueuedMessages(webContents);
-      this.emit(webContents, 'error', message);
+      if (this.isActiveSession(sessionId, workspacePath)) {
+        this.clearQueuedMessages(webContents);
+        this.emit(webContents, 'error', message);
+      } else if (sessionId) {
+        this.setNotice(sessionId, workspacePath, 'failed', webContents);
+      }
+      if (sessionId) this.emitScoped(webContents, 'chat:scoped-error', sessionId, workspacePath, message);
       return { ok: false, error: message };
     } finally {
-      this.isGenerating = false;
+      if (this.isActiveSession(sessionId, workspacePath)) this.isGenerating = false;
     }
   }
 
   async command(command: string, excludeFromContext: boolean, webContents: WebContents): Promise<CommandResult> {
     const text = command.trim();
     if (!text) return { ok: false, error: 'Command is empty.' };
-    if (this.isGenerating) return { ok: false, error: 'A Pi response is already running.' };
+    if (this.isGenerating) return { ok: false, error: 'A response is already running.' };
 
     this.isGenerating = true;
 
@@ -619,13 +753,11 @@ export class ChatService {
 
   async newSession(): Promise<void> {
     this.sessionOpenSequence += 1;
-    this.session?.abortBash();
-    await this.session?.abort();
-    this.session?.dispose();
+    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.session = null;
-    this.clearQueuedMessages();
+    this.clearQueuedMessageState();
     this.attachments.clear();
-    this.activeSessionId = undefined;
+    this.activeSessionId = '';
     this.isGenerating = false;
     this.shouldCreateSession = true;
   }
@@ -636,7 +768,9 @@ export class ChatService {
     this.clearSubscriptionAuthInput();
     this.session?.dispose();
     this.session = null;
-    this.clearQueuedMessages();
+    for (const session of this.backgroundSessions.values()) session.dispose();
+    this.backgroundSessions.clear();
+    this.clearQueuedMessageState();
     this.attachments.clear();
   }
 
@@ -738,7 +872,7 @@ export class ChatService {
     attachments: ImageAttachment[]
   ): Promise<SendResult> {
     const session = this.session;
-    if (!session?.isStreaming) return { ok: false, error: 'Pi is still starting the response.' };
+    if (!session?.isStreaming) return { ok: false, error: 'The response is still starting.' };
 
     const id = randomUUID();
 
@@ -790,9 +924,13 @@ export class ChatService {
       }
     }
 
+    this.clearQueuedMessageState();
+    if (webContents) this.emitQueueUpdate(webContents);
+  }
+
+  private clearQueuedMessageState(): void {
     this.queuedMessages = [];
     this.queueDeliveryCandidates = [];
-    if (webContents) this.emitQueueUpdate(webContents);
   }
 
   private queuedMessageMatches(message: QueuedMessage, text: string): boolean {
@@ -809,6 +947,72 @@ export class ChatService {
 
   private setActiveSession(sessionManager: SessionManager): void {
     this.activeSessionId = sessionManager.getSessionId();
+    this.activeSessionByWorkspace.set(this.workspaceCwd, this.activeSessionId);
+    this.markNoticeSeen(this.activeSessionId);
+  }
+
+  private storeBackgroundSession(workspacePath: string, session: AgentSession): void {
+    const sessionId = session.sessionManager.getSessionId();
+    this.backgroundSessions.set(sessionId, session);
+    this.activeSessionByWorkspace.set(workspacePath, sessionId);
+  }
+
+  private deleteWorkspaceSessionReferences(sessionId: string): void {
+    for (const [workspacePath, activeSessionId] of this.activeSessionByWorkspace) {
+      if (activeSessionId === sessionId) this.activeSessionByWorkspace.delete(workspacePath);
+    }
+  }
+
+  private backgroundSessionForWorkspace(workspacePath: string): AgentSession | null {
+    const preferredSessionId = this.activeSessionByWorkspace.get(workspacePath);
+    if (preferredSessionId) {
+      const preferredSession = this.backgroundSessions.get(preferredSessionId);
+      if (preferredSession) return preferredSession;
+    }
+
+    for (const session of this.backgroundSessions.values()) {
+      if ((session.sessionManager.getCwd() || workspacePath) === workspacePath) return session;
+    }
+
+    return null;
+  }
+
+  private isActiveSession(sessionId: string, workspacePath: string): boolean {
+    return Boolean(sessionId && this.activeSessionId === sessionId && this.workspaceCwd === workspacePath);
+  }
+
+  private markNoticeSeen(sessionId: string): void {
+    if (!this.notices.delete(sessionId)) return;
+    this.persistNotices();
+  }
+
+  private setNotice(
+    sessionId: string,
+    workspacePath: string,
+    kind: SessionNotice['kind'],
+    webContents?: WebContents
+  ): void {
+    this.notices.set(sessionId, {
+      kind,
+      sessionId,
+      createdAt: Date.now(),
+      workspacePath
+    });
+    this.persistNotices();
+    webContents?.send('chat:recent-sessions-changed', { workspacePath });
+    webContents?.send('chat:notice', { tabId: sessionId, payload: this.notices.get(sessionId), workspacePath });
+  }
+
+  private persistNotices(): void {
+    this.persistState({ sessionNotices: Object.fromEntries(this.notices) });
+  }
+
+  private workspaceHasNotice(workspacePath: string): boolean {
+    for (const notice of this.notices.values()) {
+      if (notice.workspacePath === workspacePath) return true;
+    }
+
+    return false;
   }
 
   private async getSession(): Promise<AgentSession> {
@@ -817,7 +1021,7 @@ export class ChatService {
     this.refreshAuth();
     const model = this.pickModel();
     if (!model) {
-      throw new Error(this.modelRegistry.getError() ?? 'No configured Pi models found.');
+      throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
     }
 
     const cwd = this.workspaceCwd;
@@ -825,11 +1029,11 @@ export class ChatService {
     const { session } = await createAgentSession({
       cwd,
       model,
+      sessionManager,
       tools: enabledTools,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      thinkingLevel: this.selectedThinkingLevel,
-      sessionManager
+      thinkingLevel: this.selectedThinkingLevel
     });
 
     this.shouldCreateSession = false;
@@ -837,29 +1041,6 @@ export class ChatService {
     this.session = session;
     this.setActiveSession(sessionManager);
     return session;
-  }
-
-  private async userTurnCount(path: string): Promise<number> {
-    const lines = createInterface({
-      input: createReadStream(path, { encoding: 'utf8' }),
-      crlfDelay: Number.POSITIVE_INFINITY
-    });
-    let count = 0;
-
-    try {
-      for await (const line of lines) {
-        if (!line.trim()) continue;
-
-        try {
-          const entry = JSON.parse(line) as { type?: string; message?: { role?: string } };
-          if (entry.type === 'message' && entry.message?.role === 'user') count += 1;
-        } catch {}
-      }
-    } catch {
-      return 0;
-    }
-
-    return count;
   }
 
   private refreshAuth(): void {
@@ -939,5 +1120,16 @@ export class ChatService {
   private emitEvent(webContents: WebContents, event: ReturnType<typeof chatEvent>): void {
     if (!event) return;
     webContents.send('chat:event', event);
+  }
+
+  private emitScoped<T>(
+    webContents: WebContents,
+    channel: string,
+    tabId: string,
+    workspacePath: string,
+    payload: T
+  ): void {
+    if (!tabId) return;
+    webContents.send(channel, { tabId, workspacePath, payload });
   }
 }

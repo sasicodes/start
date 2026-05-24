@@ -11,16 +11,21 @@ interface MutableRef<T> {
 
 interface UseChatSendOptions {
   draft: string;
+  setTurns: TurnUpdater;
   isGenerating: boolean;
   setDraft: (value: string) => void;
-  setTurns: TurnUpdater;
-  setIsGenerating: (value: boolean) => void;
-  setLoadedSessionId: (sessionId: string) => void;
-  updateActiveSessionId: (sessionId: string | undefined) => void;
   terminalIdRef: MutableRef<string | null>;
   assistantIdRef: MutableRef<string | null>;
   sessionRequestRef: MutableRef<number>;
+  setIsGenerating: (value: boolean) => void;
+  setLoadedSessionId: (sessionId: string) => void;
+  updateActiveSessionId: (sessionId?: string) => void;
 }
+
+const stopStreamingTurn = (turnId: string) => (turn: ReturnType<typeof createTurn>) => {
+  if (turn.id !== turnId) return turn;
+  return { ...turn, streaming: false };
+};
 
 export const useChatSend = ({
   draft,
@@ -118,8 +123,8 @@ export const useChatSend = ({
         assistantIdRef.current = null;
         setIsGenerating(false);
         setTurns((current) => [
-          ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
-          createTurn('system', 'Pi failed.')
+          ...current.map(stopStreamingTurn(assistantId)),
+          createTurn('system', 'Request failed.')
         ]);
         return;
       }
@@ -135,8 +140,8 @@ export const useChatSend = ({
         assistantIdRef.current = null;
         setIsGenerating(false);
         setTurns((current) => [
-          ...current.map((turn) => (turn.id === assistantId ? { ...turn, streaming: false } : turn)),
-          createTurn('system', result.error ?? 'Pi failed.')
+          ...current.map(stopStreamingTurn(assistantId)),
+          createTurn('system', result.error ?? 'Request failed.')
         ]);
       }
     },

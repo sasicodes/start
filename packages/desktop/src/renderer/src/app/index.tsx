@@ -76,6 +76,7 @@ export const App = () => {
     authProviders,
     queuedMessages,
     openSessionId,
+    activateTab,
     activeSessionId,
     loadedSessionId,
     switchWorkspace,
@@ -285,6 +286,7 @@ export const App = () => {
       workspacePath={workspacePath}
       sidePanelLabel={sidePanelLabel}
       onOpenSession={openRecentSession}
+      onActivateTab={activateTab}
       gitPanelVisible={gitPanelVisible}
       activeSessionId={activeSessionId}
       onOpenSettings={toggleSettings}

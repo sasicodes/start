@@ -1,4 +1,4 @@
-# Project Rules
+# Rules
 
 - Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
 - Do not put Tailwind class lists in constants. Tailwind classes and conditional styling logic belong inline in `class` or `className` attributes. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component instead of a class constant.
@@ -28,14 +28,14 @@
 - Name component files with clear component words only; avoid unnecessary domain prefixes or role suffixes like `composer-model-picker`, `thinking-button`, `list`, or `card` when the parent folder or component purpose is already clear.
 - Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
 - Prefer optimistic cached UI data for popovers, pickers, and frequently opened surfaces; refresh in the background and update only when real data changes.
-- Omit optional object properties when absent instead of serializing `undefined` or placeholder `null` values.
-- Model renderer loading state with explicit discriminated unions instead of stacking `null` and `undefined` in state types.
-- Use a bare `return;` for no-value exits instead of `return undefined;`.
-- Use conditional object spreads for optional JSX props instead of passing `undefined` with a ternary.
+- Omit optional object properties when absent instead of serializing placeholder nullish values.
+- Model renderer loading state with explicit discriminated unions instead of stacking nullish sentinels.
+- Use a bare `return;` for no-value exits.
+- Use conditional object spreads for optional JSX props instead of passing absent props with a ternary.
 - Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a real maintenance hazard.
 - Keep local component prop names minimal and contextual; avoid repeating parent/domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`, and similarly clear local names when the scope makes the meaning obvious.
-- Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; reserve `undefined` for optional API boundaries and omitted object properties.
-- For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose `value === undefined ? {}` branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
+- Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; omit optional object properties at API boundaries.
+- For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose absent-value branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.

@@ -39,6 +39,11 @@ const sameQueuedMessages = (first: QueuedMessage[], second: QueuedMessage[]) =>
     return nextMessage.id === message.id && nextMessage.kind === message.kind && nextMessage.text === message.text;
   });
 
+const nextQueuedMessages = (current: QueuedMessage[], messages: QueuedMessage[]) => {
+  if (sameQueuedMessages(current, messages)) return current;
+  return messages;
+};
+
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -58,8 +63,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const newSessionRequestRef = useRef(0);
   const { setTurns, turnCount, previousUserTurn } = useTurnSummary();
 
-  const updateActiveSessionId = useCallback((sessionId: string | undefined) => {
-    setActiveSessionId(sessionId ?? '');
+  const updateActiveSessionId = useCallback((sessionId = '') => {
+    setActiveSessionId(sessionId);
   }, []);
 
   const loadAuthProviders = useCallback(async () => {
@@ -102,7 +107,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, [applyStatus]);
 
   const updateQueuedMessages = useCallback((messages: QueuedMessage[]) => {
-    setQueuedMessages((current) => (sameQueuedMessages(current, messages) ? current : messages));
+    setQueuedMessages((current) => nextQueuedMessages(current, messages));
   }, []);
 
   const clearQueuedMessages = useCallback(() => updateQueuedMessages([]), [updateQueuedMessages]);
@@ -226,6 +231,19 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       sessionRequestRef.current = requestId;
       try {
         return await applyOpenSession(await window.pi.chat.openSessionId(sessionId), requestId);
+      } catch {
+        return false;
+      }
+    },
+    [applyOpenSession]
+  );
+
+  const activateTab = useCallback(
+    async (id: string) => {
+      const requestId = sessionRequestRef.current + 1;
+      sessionRequestRef.current = requestId;
+      try {
+        return await applyOpenSession(await window.pi.chat.activateTab(id), requestId);
       } catch {
         return false;
       }
@@ -358,6 +376,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     queuedMessages,
     authProviders,
     openSessionId,
+    activateTab,
     activeSessionId,
     loadedSessionId,
     switchWorkspace,

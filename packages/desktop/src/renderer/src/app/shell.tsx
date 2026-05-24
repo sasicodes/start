@@ -1,6 +1,7 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
+import { AgentTabs } from '@renderer/shared/agent-tabs';
 import { SettingsTrigger } from '@renderer/shared/settings/trigger';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
@@ -35,6 +36,7 @@ interface MainSessionSurfaceProps {
   onSelectWorkspace: (path: string) => void;
   onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
+  onActivateTab: (id: string) => Promise<boolean>;
 }
 
 interface AppShellProps {
@@ -60,6 +62,7 @@ interface AppShellProps {
   onSelectWorkspace: (path: string) => void;
   onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
+  onActivateTab: (id: string) => Promise<boolean>;
 }
 
 const MainSessionSurface = memo(
@@ -80,7 +83,8 @@ const MainSessionSurface = memo(
     onSidePanelCollapse,
     onSelectWorkspace,
     onOpenActivityPanel,
-    onOpenSession
+    onOpenSession,
+    onActivateTab
   }: MainSessionSurfaceProps) => (
     <SidePanelLayout
       sidePanel={sidePanel}
@@ -91,6 +95,7 @@ const MainSessionSurface = memo(
       {!sessionRoutePending && (
         <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
       )}
+      <AgentTabs activeSessionId={activeSessionId} onActivate={onActivateTab} />
       <WorkspaceDock
         workspacePath={workspacePath}
         onOpenSession={onOpenSession}
@@ -120,6 +125,7 @@ export const AppShell = memo(
     activeSessionId,
     sidePanelVisible,
     onOpenSession,
+    onActivateTab,
     sessionRoutePending,
     settingsPanelVisible,
     onOpenSettings,
@@ -155,6 +161,7 @@ export const AppShell = memo(
           sidePanelLabel={sidePanelLabel}
           mainComposer={mainComposer}
           onOpenSession={onOpenSession}
+          onActivateTab={onActivateTab}
           gitPanelVisible={gitPanelVisible}
           activeSessionId={activeSessionId}
           onOpenSettings={onOpenSettings}
