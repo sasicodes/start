@@ -15,7 +15,7 @@ interface DiffFileProps {
   entryKey: string;
   file: PatchFile;
   language: string;
-  onToggle: (entryKey: string) => void;
+  onToggle: (entryKey: string, currentlyOpen: boolean) => void;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
@@ -136,7 +136,7 @@ export const DiffFile = memo(
         <button
           type="button"
           aria-expanded={open}
-          onClick={() => onToggle(entryKey)}
+          onClick={() => onToggle(entryKey, open)}
           class="group/file flex w-full min-w-0 items-center justify-between gap-3 border-0 bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
         >
           <div class="flex min-w-0 items-center gap-2">

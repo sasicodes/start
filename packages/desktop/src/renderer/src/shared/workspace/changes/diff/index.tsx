@@ -12,6 +12,7 @@ import {
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
+import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
 import type { DiffEntriesState, DiffEntry, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { Virtual } from '@renderer/ui/virtual';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
@@ -157,18 +158,13 @@ export const GitDiffViewer = ({
   const highlightRevision = useDiffHighlighting(entryState);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
 
-  const onToggle = useCallback((key: string) => {
-    setToggled((previous) => {
-      const next = new Map(previous);
-      next.set(key, !previous.get(key));
-      return next;
-    });
+  const onToggle = useCallback((key: string, currentlyOpen: boolean) => {
+    setToggled((previous) => toggleOpen(previous, key, currentlyOpen));
   }, []);
 
   const renderEntry = useCallback(
     (entry: DiffEntry) => {
-      const override = toggled.get(entry.key);
-      const open = override ?? isOpenByDefault(entry.file, patchFileKind(entry.file));
+      const open = effectiveOpen(toggled, entry.key, isOpenByDefault(entry.file, patchFileKind(entry.file)));
       return (
         <DiffFile
           cwd={cwd}
