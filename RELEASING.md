@@ -24,7 +24,7 @@ To cut a release with version X (for example v0.1.0-alpha.4):
    git checkout main
    git pull
    git tag -d vX
-   git tag -a vX -m vX
+   git tag -s vX -m vX
    git push origin vX
 
 Version argument forms accepted by scripts/release-desktop.js:
