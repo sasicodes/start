@@ -61,8 +61,11 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   const appFocused = useAppFocusState();
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
-  const label = gitChangesLabel(git.summary.filesChanged);
   const summary = git.summary;
+  const hasDeletions = summary.deletions > 0;
+  const hasInsertions = summary.insertions > 0;
+  const hasLineChanges = hasInsertions || hasDeletions;
+  const label = gitChangesLabel(summary.filesChanged);
 
   return (
     <Tooltip label={label}>
@@ -76,14 +79,15 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
         style={{ maxWidth: `${gitChangesMaxWidthRatio * 100}vw` }}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
-          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
+          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-sm leading-none font-medium text-soft shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
           !appFocused && 'pointer-events-none'
         )}
       >
         <ChangesIcon class="hidden size-5 flex-none @max-workspace-dock/chat:block" />
         <span class="flex min-w-0 items-center gap-2 @max-workspace-dock/chat:hidden">
-          <span class="tabular-nums text-success">+{summary.insertions}</span>
-          <span class="tabular-nums text-danger">-{summary.deletions}</span>
+          {hasInsertions && <span class="tabular-nums text-success">+{summary.insertions}</span>}
+          {hasDeletions && <span class="tabular-nums text-danger">-{summary.deletions}</span>}
+          {!hasLineChanges && <span class="tabular-nums">{summary.filesChanged}</span>}
         </span>
       </motion.button>
     </Tooltip>
