@@ -40,13 +40,13 @@ type UntrackedFileData = {
   patch: string;
 };
 
-const execFileAsync = promisify(execFile);
-const gitMaxBuffer = 8 * 1024 * 1024;
-const maxPatchFiles = 240;
-const maxPatchLines = 20_000;
+const maxPatchFiles = 2000;
 const maxUntrackedFiles = 64;
-const maxUntrackedFileBytes = 512 * 1024;
 const gitShowTimeoutMs = 4000;
+const maxPatchLines = 200_000;
+const gitMaxBuffer = 32 * 1024 * 1024;
+const maxUntrackedFileBytes = 512 * 1024;
+const execFileAsync = promisify(execFile);
 const gitFileBlobMaxBytes = 3 * 1024 * 1024;
 
 const mimeByExtension: Record<string, string> = {

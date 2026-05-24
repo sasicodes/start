@@ -319,7 +319,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const saveApiKey = useCallback(
     async (provider: string, apiKey: string) => {
       try {
-        setAuthProviders(await window.pi.chat.setRuntimeApiKey(provider, apiKey));
+        setAuthProviders(await window.pi.chat.setApiKey(provider, apiKey));
         await loadModels();
       } catch {}
     },

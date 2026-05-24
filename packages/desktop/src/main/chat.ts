@@ -52,6 +52,7 @@ import {
   type OpenSessionResult,
   type PreparedDropFiles,
   type ProviderAuthStatus,
+  type ProviderKey,
   type ProviderLoginResult,
   type QueuedMessage,
   type RecentSessionsOptions,
@@ -503,19 +504,21 @@ export class ChatService {
     const available = this.modelRegistry.getAvailable();
     const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
     const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
+    const googleModels = available.filter((model) => isProviderModel(model, 'google'));
 
     return [
       this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
-      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0)
+      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0),
+      this.providerAuthStatus('google', 'Google', googleModels.length > 0)
     ];
   }
 
-  async setRuntimeApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
+  async setApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
     const cleanProvider = provider.trim().toLowerCase();
     const cleanApiKey = apiKey.trim();
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
 
-    this.authStorage.setRuntimeApiKey(cleanProvider, cleanApiKey);
+    this.authStorage.set(cleanProvider, { type: 'api_key', key: cleanApiKey });
     this.modelRegistry.refresh();
 
     return this.getAuthProviders();
@@ -1324,13 +1327,15 @@ export class ChatService {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
   }
 
-  private providerAuthStatus(key: 'anthropic' | 'openai', name: string, hasModels: boolean): ProviderAuthStatus {
-    const subscriptionProvider = key === 'openai' ? 'openai-codex' : key;
-    const subscriptionCredential = this.authStorage.get(subscriptionProvider);
-    const subscriptionStatus = this.authStorage.getAuthStatus(subscriptionProvider);
+  private providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): ProviderAuthStatus {
     const apiKeyStatus = this.authStorage.getAuthStatus(key);
     const hasApiKey = apiKeyStatus.configured;
-    const hasSubscription = subscriptionCredential?.type === 'oauth' || subscriptionStatus.configured;
+    const supportsSubscription = key === 'anthropic' || key === 'openai';
+    const subscriptionProvider = key === 'openai' ? 'openai-codex' : key;
+    const subscriptionCredential = supportsSubscription ? this.authStorage.get(subscriptionProvider) : undefined;
+    const subscriptionStatus = supportsSubscription ? this.authStorage.getAuthStatus(subscriptionProvider) : undefined;
+    const hasSubscription =
+      supportsSubscription && (subscriptionCredential?.type === 'oauth' || subscriptionStatus?.configured === true);
     const kind = providerAuthKind(hasModels, hasSubscription, hasApiKey);
 
     return {

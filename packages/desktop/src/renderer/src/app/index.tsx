@@ -6,7 +6,11 @@ import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
-import { AppSidePanel, sidePanelLabel as getSidePanelLabel } from '@renderer/app/side-panel';
+import {
+  AppSidePanel,
+  sidePanelLabel as getSidePanelLabel,
+  sidePanelMaxRatio as getSidePanelMaxRatio
+} from '@renderer/app/side-panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
@@ -238,6 +242,7 @@ export const App = () => {
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const noProvidersConfigured = modelsLoaded && models.length === 0;
   const sidePanelLabel = getSidePanelLabel(renderedSidePanelMode);
+  const sidePanelMaxRatio = getSidePanelMaxRatio(renderedSidePanelMode);
   const sidePanel = (
     <AppSidePanel
       mode={renderedSidePanelMode}
@@ -310,6 +315,7 @@ export const App = () => {
       fileHandlers={fileHandlers}
       workspacePath={workspacePath}
       sidePanelLabel={sidePanelLabel}
+      {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
       onOpenSession={openRecentSession}
       gitPanelVisible={gitPanelVisible}
       isGenerating={isGenerating}

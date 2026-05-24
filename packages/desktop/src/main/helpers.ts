@@ -63,23 +63,30 @@ export const isProviderModel = (model: { provider: string; id: string; name?: st
       haystack.includes('openai') || haystack.includes('gpt') || haystack.includes('o3') || haystack.includes('o4')
     );
   }
+  if (provider === 'google') {
+    return haystack.includes('google') || haystack.includes('gemini');
+  }
 
   return haystack.includes('anthropic') || haystack.includes('claude');
 };
 
 const allowedLatestOpenAiModelIds = ['gpt-5.5-pro', 'gpt-5.5', 'gpt-5.4-pro', 'gpt-5.4', 'gpt-5.3-codex-spark'];
 const allowedLatestAnthropicModelIds = ['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
+const allowedLatestGoogleModelIds = ['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-2.5-pro'];
 
 const allowedLatestOpenAiModelIdSet = new Set(allowedLatestOpenAiModelIds);
 const allowedLatestAnthropicModelIdSet = new Set(allowedLatestAnthropicModelIds);
+const allowedLatestGoogleModelIdSet = new Set(allowedLatestGoogleModelIds);
 
 export const allowedLatestModelIds = (provider: ProviderKey) => {
   if (provider === 'openai') return allowedLatestOpenAiModelIdSet;
+  if (provider === 'google') return allowedLatestGoogleModelIdSet;
   return allowedLatestAnthropicModelIdSet;
 };
 
 const allowedLatestModelOrder = (provider: ProviderKey) => {
   if (provider === 'openai') return allowedLatestOpenAiModelIds;
+  if (provider === 'google') return allowedLatestGoogleModelIds;
   return allowedLatestAnthropicModelIds;
 };
 
@@ -103,7 +110,8 @@ export const getLatestProviderModels = <T extends { provider: string; id: string
 export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(models: T[]) => {
   const openAiModels = getLatestProviderModels('openai', models);
   const anthropicModels = getLatestProviderModels('anthropic', models);
-  const latestModels = [...openAiModels, ...anthropicModels];
+  const googleModels = getLatestProviderModels('google', models);
+  const latestModels = [...openAiModels, ...anthropicModels, ...googleModels];
 
   if (latestModels.length === 0) return models;
   return latestModels;

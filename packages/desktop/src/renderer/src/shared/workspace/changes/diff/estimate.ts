@@ -1,0 +1,26 @@
+import type { PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
+import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
+
+const lineHeight = 24;
+const hunkGapHeight = 36;
+const fileHeaderHeight = 52;
+const imageBodyHeight = 360;
+const sectionPaddingTop = 8;
+
+export const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
+
+export const isOpenByDefault = (file: PatchFile, kind: PatchFileKind) =>
+  kind === 'image' || (fileHasTextDiff(file) && file.added + file.removed <= 320);
+
+const textBodyHeight = (file: PatchFile) => {
+  let totalLines = 0;
+  for (const hunk of file.hunks) totalLines += hunk.lines.length;
+  const gaps = Math.max(0, file.hunks.length - 1) * hunkGapHeight;
+  return sectionPaddingTop + totalLines * lineHeight + gaps;
+};
+
+export const estimatedFileHeight = (file: PatchFile, kind: PatchFileKind) => {
+  if (!isOpenByDefault(file, kind)) return fileHeaderHeight;
+  if (kind === 'image') return fileHeaderHeight + imageBodyHeight;
+  return fileHeaderHeight + textBodyHeight(file);
+};

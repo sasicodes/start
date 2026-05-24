@@ -33,12 +33,19 @@ describe('helpers', () => {
     expect(providerAuthLabel('none', false)).toBe('Not connected');
   });
 
-  it('classifies OpenAI and Anthropic models from identifiers', () => {
+  it('classifies OpenAI, Anthropic, and Google models from identifiers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'openai')).toBe(true);
     expect(
       isProviderModel({ id: 'claude-opus-4-7', name: 'Claude Opus 4 7', provider: 'anthropic' }, 'anthropic')
     ).toBe(true);
+    expect(
+      isProviderModel({ id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'google' }, 'google')
+    ).toBe(true);
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
+    expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'google')).toBe(false);
+    expect(
+      isProviderModel({ id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'google' }, 'openai')
+    ).toBe(false);
   });
 
   it('sorts the latest provider models into the configured display order', () => {
@@ -48,6 +55,15 @@ describe('helpers', () => {
       { id: 'claude-opus-4-6', name: 'Opus 4 6', provider: 'anthropic' }
     ]);
     expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6']);
+  });
+
+  it('orders Google models smartest to cheapest', () => {
+    const sorted = getLatestProviderModels('google', [
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' },
+      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: 'google' },
+      { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', provider: 'google' }
+    ]);
+    expect(sorted.map((model) => model.id)).toEqual(['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-2.5-pro']);
   });
 
   it('exposes labels and keys for models', () => {

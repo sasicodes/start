@@ -25,6 +25,11 @@ export const sidePanelLabel = (mode: SidePanelMode) => {
   return 'Side panel';
 };
 
+export const sidePanelMaxRatio = (mode: SidePanelMode): number | undefined => {
+  if (mode === 'settings' || mode === 'shortcuts') return 0.4;
+  return undefined;
+};
+
 export const AppSidePanel = memo(
   ({
     mode,
