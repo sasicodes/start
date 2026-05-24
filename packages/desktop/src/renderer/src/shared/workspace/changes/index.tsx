@@ -25,19 +25,19 @@ import {
 } from '@renderer/shared/workspace/changes/state';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 
-const gitChangesBadgeMaxWidthRatio = 0.7;
+const gitChangesMaxWidthRatio = 0.7;
 const loadGitDiffViewer = () =>
   import('@renderer/shared/workspace/changes/diff').then((module) => ({ default: module.GitDiffViewer }));
 const GitDiffViewer = lazy(loadGitDiffViewer);
 
-interface GitChangesBadgeProps {
-  expanded?: boolean;
-  workspacePath: string;
-  onTogglePanel: () => void;
+interface GitChangesProps {
+  path: string;
+  open?: boolean;
+  onToggle: () => void;
 }
 
 interface GitChangesPanelProps {
-  workspacePath: string;
+  path: string;
 }
 
 interface GitSummaryLike {
@@ -56,27 +56,27 @@ const summaryFromSections = (sections: GitSummaryLike[]) =>
     emptyGitSummary
   );
 
-export const GitChangesBadge = memo(({ expanded = false, workspacePath, onTogglePanel }: GitChangesBadgeProps) => {
-  const git = useGitChanges(workspacePath);
+export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProps) => {
+  const git = useGitChanges(path);
   const appFocused = useAppFocusState();
   if (git.kind !== 'ready' || git.summary.filesChanged === 0) return null;
 
-  const label = gitChangesLabel(git.summary.filesChanged);
   const summary = git.summary;
+  const label = gitChangesLabel(summary.filesChanged);
 
   return (
     <Tooltip label={label}>
       <motion.button
         type="button"
         animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
-        aria-expanded={expanded}
-        aria-label={`${expanded ? 'Hide' : 'Show'} git changes, ${label}`}
+        aria-expanded={open}
+        aria-label={`${open ? 'Hide' : 'Show'} git changes, ${label}`}
         initial={bottomBubbleHiddenMotion}
-        onClick={onTogglePanel}
-        style={{ maxWidth: `${gitChangesBadgeMaxWidthRatio * 100}vw` }}
+        onClick={onToggle}
+        style={{ maxWidth: `${gitChangesMaxWidthRatio * 100}vw` }}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
-          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-xs leading-none font-semibold text-soft shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
+          'flex h-11.5 shrink-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer px-5 text-sm leading-none font-medium text-soft shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:size-11.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:p-0 @max-workspace-dock/chat:text-ink',
           !appFocused && 'pointer-events-none'
         )}
       >
@@ -90,17 +90,17 @@ export const GitChangesBadge = memo(({ expanded = false, workspacePath, onToggle
   );
 });
 
-export const GitChangesPanel = memo(({ workspacePath }: GitChangesPanelProps) => {
+export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('split');
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
-  const patch = useGitPatch(workspacePath, Boolean(workspacePath && diffReady));
+  const patch = useGitPatch(path, Boolean(path && diffReady));
 
   useEffect(() => {
     setDiffReady(false);
     const timer = window.setTimeout(() => setDiffReady(true), 190);
     return () => window.clearTimeout(timer);
-  }, [workspacePath]);
+  }, [path]);
 
   useEffect(() => {
     if (patch.kind !== 'ready' || patch.patch.sections.length === 0) return;

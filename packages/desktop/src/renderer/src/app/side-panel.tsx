@@ -34,7 +34,7 @@ export const AppSidePanel = memo(
     onLoginSubscription,
     onComposerShortcutChange
   }: AppSidePanelProps) => {
-    if (mode === 'git') return <GitChangesPanel workspacePath={workspacePath} />;
+    if (mode === 'git') return <GitChangesPanel path={workspacePath} />;
 
     if (mode === 'settings') {
       return (

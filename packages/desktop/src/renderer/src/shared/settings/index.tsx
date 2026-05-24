@@ -10,22 +10,22 @@ import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
-interface SettingsTriggerProps {
-  active: boolean;
-  onOpenSettings: () => void;
+interface SettingsProps {
+  open: boolean;
+  onOpen: () => void;
 }
 
-export const SettingsTrigger = memo(({ active, onOpenSettings }: SettingsTriggerProps) => {
+export const Settings = memo(({ open, onOpen }: SettingsProps) => {
   const appFocused = useAppFocusState();
 
   return (
     <motion.button
       type="button"
       animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}
-      aria-expanded={active}
+      aria-expanded={open}
       aria-label="Open settings"
       initial={false}
-      onClick={onOpenSettings}
+      onClick={onOpen}
       transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
       class={tw(
         'grid size-11.5 shrink-0 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors duration-75 ease-out select-none hover:bg-control focus-visible:bg-control',

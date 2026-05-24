@@ -2,10 +2,11 @@ import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
 import { AgentTabs } from '@renderer/shared/agent-tabs';
-import { SettingsTrigger } from '@renderer/shared/settings/trigger';
+import { Settings } from '@renderer/shared/settings';
 import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
-import { GitChangesBadge } from '@renderer/shared/workspace/changes';
+import { Update } from '@renderer/shared/updates';
+import { GitChanges } from '@renderer/shared/workspace/changes';
 import { WorkspaceDock } from '@renderer/shared/workspace/dock';
 import type { ComponentChildren } from 'preact';
 import { memo } from 'preact/compat';
@@ -104,8 +105,9 @@ const MainSessionSurface = memo(
         onSelectWorkspace={onSelectWorkspace}
       />
       <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
-        <GitChangesBadge workspacePath={workspacePath} expanded={gitPanelVisible} onTogglePanel={onToggleGitPanel} />
-        <SettingsTrigger active={settingsPanelVisible} onOpenSettings={onOpenSettings} />
+        <Update />
+        <GitChanges path={workspacePath} open={gitPanelVisible} onToggle={onToggleGitPanel} />
+        <Settings open={settingsPanelVisible} onOpen={onOpenSettings} />
       </div>
       {mainComposer}
     </SidePanelLayout>
