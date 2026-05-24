@@ -5,7 +5,7 @@ import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;
 
-const updateCheckDelayMs = 30 * 1000;
+const updateCheckDelayMs = 10 * 1000;
 const updateCheckIntervalMs = 60 * 60 * 1000;
 
 export type UpdateState =
@@ -32,11 +32,21 @@ const setUpdateState = (nextState: UpdateState) => {
 };
 
 const stopUpdateCheckSchedule = () => {
-  if (updateCheckTimer) {
-    clearTimeout(updateCheckTimer);
-    updateCheckTimer = undefined;
-  }
+  if (!updateCheckTimer) return;
+
+  clearTimeout(updateCheckTimer);
+  updateCheckTimer = undefined;
 };
+
+const updateErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
+const updateIsReadyToInstall = () => state.status === 'downloaded';
+
+const canCheckForUpdates = () =>
+  app.isPackaged && getAppFocusState().focused && !downloadPending && !updateIsReadyToInstall();
+
+const canStartUpdateCheck = () => canCheckForUpdates() && !checking;
 
 const nextUpdateCheckDelay = () => {
   if (!lastUpdateCheckStartedAt) return updateCheckDelayMs;
@@ -47,7 +57,7 @@ const nextUpdateCheckDelay = () => {
 
 const scheduleNextUpdateCheck = () => {
   stopUpdateCheckSchedule();
-  if (!app.isPackaged || downloadPending || state.status === 'downloaded' || !getAppFocusState().focused) return;
+  if (!canCheckForUpdates()) return;
 
   updateCheckTimer = setTimeout(() => {
     updateCheckTimer = undefined;
@@ -57,9 +67,7 @@ const scheduleNextUpdateCheck = () => {
 };
 
 const checkForUpdates = async () => {
-  if (!app.isPackaged || checking || downloadPending || state.status === 'downloaded' || !getAppFocusState().focused) {
-    return;
-  }
+  if (!canStartUpdateCheck()) return;
 
   checking = true;
   lastUpdateCheckStartedAt = Date.now();
@@ -67,7 +75,7 @@ const checkForUpdates = async () => {
     setUpdateState({ status: 'checking' });
     await autoUpdater.checkForUpdates();
   } catch (error) {
-    setUpdateState({ status: 'error', error: error instanceof Error ? error.message : 'Update check failed.' });
+    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update check failed.') });
   } finally {
     checking = false;
     scheduleNextUpdateCheck();
@@ -76,7 +84,7 @@ const checkForUpdates = async () => {
 
 const checkForUpdatesInBackground = () => {
   checkForUpdates().catch((error: unknown) => {
-    setUpdateState({ status: 'error', error: error instanceof Error ? error.message : 'Update check failed.' });
+    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update check failed.') });
     scheduleNextUpdateCheck();
   });
 };
@@ -126,7 +134,7 @@ export const startAutoUpdateChecks = () => {
   };
   const onError = (error: Error) => {
     downloadPending = false;
-    setUpdateState({ status: 'error', error: error.message || 'Update failed.' });
+    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update failed.') });
     scheduleNextUpdateCheck();
   };
 
