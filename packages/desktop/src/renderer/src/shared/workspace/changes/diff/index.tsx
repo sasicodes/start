@@ -1,4 +1,5 @@
 import type { GitPatchSection } from '@preload/index';
+import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
 import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
 import {
@@ -10,7 +11,6 @@ import {
   loadCodeHighlighter
 } from '@renderer/shared/workspace/changes/diff/highlight';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
-import { patchFileLanguage } from '@renderer/shared/workspace/changes/diff/language';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
 import type { DiffEntriesState, DiffEntry, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
@@ -22,24 +22,7 @@ interface ParseResponse {
   results: PatchFile[][];
 }
 
-const patchFileKey = (file: PatchFile, sectionKind: GitPatchSection['kind'], index: number) =>
-  `${sectionKind}:${file.oldPath}:${file.newPath}:${index}`;
-
-const entriesFromResults = (sections: GitPatchSection[], results: PatchFile[][]): DiffEntry[] => {
-  const entries: DiffEntry[] = [];
-  for (const [sectionIndex, section] of sections.entries()) {
-    const files = results[sectionIndex] ?? [];
-    for (const [fileIndex, file] of files.entries()) {
-      entries.push({
-        file,
-        key: patchFileKey(file, section.kind, fileIndex),
-        language: patchFileLanguage(file),
-        status: section.kind === 'untracked' ? 'untracked' : file.status
-      });
-    }
-  }
-  return entries;
-};
+const Message = ({ text }: { text: string }) => <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">{text}</p>;
 
 const entryKey = (entry: DiffEntry) => entry.key;
 const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
@@ -153,9 +136,10 @@ export const GitDiffViewer = ({
   sections: GitPatchSection[];
 }) => {
   const entryState = useDiffEntries(sections);
-  const limited = sections.some((section) => section.limited && !section.patch);
-  const entries = entryState.kind === 'ready' ? entryState.entries : [];
   const highlightRevision = useDiffHighlighting(entryState);
+  const ready = entryState.kind === 'ready';
+  const entries = ready ? entryState.entries : [];
+  const limited = sections.some((section) => section.limited && !section.patch);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
 
   const onToggle = useCallback((key: string, currentlyOpen: boolean) => {
@@ -169,10 +153,10 @@ export const GitDiffViewer = ({
         <DiffFile
           cwd={cwd}
           open={open}
-          entryKey={entry.key}
           file={entry.file}
           onToggle={onToggle}
           viewMode={viewMode}
+          entryKey={entry.key}
           status={entry.status}
           language={entry.language}
           highlightRevision={highlightRevision}
@@ -184,14 +168,10 @@ export const GitDiffViewer = ({
 
   return (
     <div class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
-      {entryState.kind === 'parsing' && <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Preparing diff</p>}
-      {entryState.kind === 'ready' && limited && (
-        <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">Diff too large to show.</p>
-      )}
-      {entryState.kind === 'ready' && entries.length === 0 && !limited && (
-        <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">No diff to show.</p>
-      )}
-      {entryState.kind === 'ready' && entries.length > 0 && (
+      {entryState.kind === 'parsing' && <Message text="Preparing diff" />}
+      {ready && limited && <Message text="Diff too large to show." />}
+      {ready && !limited && entries.length === 0 && <Message text="No diff to show." />}
+      {ready && entries.length > 0 && (
         <Virtual items={entries} getKey={entryKey} renderItem={renderEntry} estimateHeight={estimateEntryHeight} />
       )}
     </div>

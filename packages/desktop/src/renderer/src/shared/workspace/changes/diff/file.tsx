@@ -12,13 +12,13 @@ import { memo } from 'preact/compat';
 interface DiffFileProps {
   cwd: string;
   open: boolean;
-  entryKey: string;
   file: PatchFile;
+  entryKey: string;
   language: string;
-  onToggle: (entryKey: string, currentlyOpen: boolean) => void;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
+  onToggle: (entryKey: string, currentlyOpen: boolean) => void;
 }
 
 interface FileProps {
@@ -128,7 +128,7 @@ const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevisi
 };
 
 export const DiffFile = memo(
-  ({ cwd, open, entryKey, file, status, onToggle, language, viewMode, highlightRevision }: DiffFileProps) => {
+  ({ cwd, file, open, status, entryKey, language, onToggle, viewMode, highlightRevision }: DiffFileProps) => {
     const kind = patchFileKind(file);
 
     return (
