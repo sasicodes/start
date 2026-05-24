@@ -53,6 +53,7 @@ const customMessageEvent = (event: Extract<AgentSessionEvent, { type: 'message_e
   if (!body) return;
 
   const customType = stringValue(message.customType) || 'custom';
+  console.log('[custom-message]', { customType, body, details: message.details });
   const result = metadataEvent(`custom:${customType}:${message.timestamp}`, customType);
   result.body = body;
   return result;
