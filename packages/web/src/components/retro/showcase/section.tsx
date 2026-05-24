@@ -10,11 +10,11 @@ export const Showcase = () => {
         <img
           src="/images/1.png"
           alt="Start workspace screenshot"
-          width={1024}
-          height={1024}
+          width={1600}
+          height={900}
           loading="lazy"
           decoding="async"
-          className="mx-auto aspect-square w-full max-w-[860px] rounded-2xl object-cover shadow-[0_24px_80px_rgba(33,28,18,0.12)]"
+          className="aspect-video w-full rounded-2xl object-cover shadow-[0_24px_80px_rgba(33,28,18,0.12)]"
         />
       </div>
     </section>
