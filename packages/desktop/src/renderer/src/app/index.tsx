@@ -284,6 +284,7 @@ export const App = () => {
       sidePanelLabel={sidePanelLabel}
       onOpenSession={openRecentSession}
       gitPanelVisible={gitPanelVisible}
+      isGenerating={isGenerating}
       activeSessionId={activeSessionId}
       onOpenSettings={toggleSettings}
       sessionRoutePending={sessionRoutePending}

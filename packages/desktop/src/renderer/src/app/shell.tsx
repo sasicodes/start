@@ -24,6 +24,7 @@ interface MainSessionSurfaceProps {
   sidePanelLabel: string;
   mainComposer: ComponentChildren;
   gitPanelVisible: boolean;
+  isGenerating: boolean;
   activeSessionId: string;
   sidePanelVisible: boolean;
   activityPanelTurnId: string;
@@ -47,6 +48,7 @@ interface AppShellProps {
   workspacePath: string;
   sidePanelLabel: string;
   gitPanelVisible: boolean;
+  isGenerating: boolean;
   activeSessionId: string;
   sessionViewActive: boolean;
   sidePanelVisible: boolean;
@@ -70,6 +72,7 @@ const MainSessionSurface = memo(
     sidePanelLabel,
     mainComposer,
     gitPanelVisible,
+    isGenerating,
     activeSessionId,
     sidePanelVisible,
     activityPanelTurnId,
@@ -93,6 +96,7 @@ const MainSessionSurface = memo(
         <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
       )}
       <WorkspaceDock
+        isGenerating={isGenerating}
         workspacePath={workspacePath}
         onOpenSession={onOpenSession}
         activeSessionId={activeSessionId}
@@ -119,6 +123,7 @@ export const AppShell = memo(
     sidePanelLabel,
     overlayComposer,
     gitPanelVisible,
+    isGenerating,
     activeSessionId,
     sidePanelVisible,
     onOpenSession,
@@ -158,6 +163,7 @@ export const AppShell = memo(
           mainComposer={mainComposer}
           onOpenSession={onOpenSession}
           gitPanelVisible={gitPanelVisible}
+          isGenerating={isGenerating}
           activeSessionId={activeSessionId}
           onOpenSettings={onOpenSettings}
           sessionRoutePending={sessionRoutePending}
