@@ -1,34 +1,35 @@
-Releases ship through a pull request because `main` is protected. The desktop release workflow runs on tag pushes that start with `v`, so the tag must be created on the merged commit, not the pre-merge one.
+Releases ship through a pull request because main is protected. The desktop release workflow runs on tag pushes that start with v, so the tag must point at the merged commit on main, not the pre-merge commit on the release branch.
 
-Preview the bump:
+To cut a release with version X (for example v0.1.0-alpha.4):
 
-`node scripts/release-desktop.js v0.1.0-alpha.4 --dry-run`
+1. Preview the version bump.
 
-Open the bump PR from a release branch:
+   node scripts/release-desktop.js X --dry-run
 
-```
-git checkout -b chore/bump-alpha-4
-node scripts/release-desktop.js v0.1.0-alpha.4
-git push -u origin chore/bump-alpha-4
-gh pr create --title "chore: bump desktop version to 0.1.0-alpha.4"
-```
+2. Create a release branch, run the bump, push the branch, open a PR. Do not pass --push to the bump script. --push would push the local tag to a commit that gets replaced when the PR merges.
 
-The script updates `packages/desktop/package.json`, commits `chore: bump desktop version to <version>`, and creates the annotated tag `v<version>` locally. Do not pass `--push` — it would push the tag to the pre-merge commit, which will be replaced when the PR merges.
+   git checkout main
+   git pull
+   git checkout -b chore/bump-X
+   node scripts/release-desktop.js X
+   git push -u origin chore/bump-X
+   gh pr create --title "chore: bump desktop version to X"
 
-After the PR merges, retag the merged commit and push the tag:
+   The bump script updates packages/desktop/package.json, commits chore: bump desktop version to X, and creates the local annotated tag vX.
 
-```
-git checkout main && git pull
-git tag -d v0.1.0-alpha.4
-git tag -a v0.1.0-alpha.4 -m v0.1.0-alpha.4
-git push origin v0.1.0-alpha.4
-```
+3. Wait for the PR to merge to main.
 
-The `Release Desktop` workflow runs on the tag push and publishes the macOS build.
+4. Retag the merged commit and push the tag. The Release Desktop workflow runs on the tag push and publishes the macOS build.
 
-Version options:
-- `patch`: `0.1.0-alpha.1 -> 0.1.1`
-- `minor`: `0.1.0-alpha.1 -> 0.2.0`
-- `major`: `0.1.0-alpha.1 -> 1.0.0`
-- explicit version: `node scripts/release-desktop.js v0.1.0-beta.1`
-- stable explicit: `node scripts/release-desktop.js 1.0.0`
+   git checkout main
+   git pull
+   git tag -d vX
+   git tag -a vX -m vX
+   git push origin vX
+
+Version argument forms accepted by scripts/release-desktop.js:
+- patch bumps 0.1.0-alpha.1 to 0.1.1
+- minor bumps 0.1.0-alpha.1 to 0.2.0
+- major bumps 0.1.0-alpha.1 to 1.0.0
+- explicit prerelease: v0.1.0-beta.1
+- explicit stable: 1.0.0
