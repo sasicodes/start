@@ -1,4 +1,4 @@
-name: Quality and Security
+name: Checks and Security
 
 on:
   pull_request:
@@ -7,8 +7,8 @@ permissions:
   contents: read
 
 jobs:
-  quality:
-    name: Code quality
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
 
     steps:
