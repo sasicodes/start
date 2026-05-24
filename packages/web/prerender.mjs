@@ -8,7 +8,7 @@ const distDir = resolve(__dirname, 'dist');
 const template = readFileSync(resolve(distDir, 'index.html'), 'utf-8');
 const { render } = await import(resolve(distDir, 'server', 'entry-server.js'));
 
-const routes = ['/', '/changelog', '/privacy', '/terms'];
+const routes = ['/', '/privacy', '/terms'];
 
 for (const route of routes) {
   const html = template.replace('<!--ssr-outlet-->', render(route));

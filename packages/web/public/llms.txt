@@ -34,7 +34,7 @@ The app is local-first. Project files, prompts, chat history, tasks, indexes, lo
 ## Website pages
 
 - `/`: landing page
-- `/changelog`: release notes
+- GitHub releases: https://github.com/sasicodes/start/releases
 - `/privacy`: privacy policy
 - `/terms`: terms of use
 

@@ -14,8 +14,13 @@ export const Footer = () => {
           </a>
         </span>
         <span>·</span>
-        <a href="/changelog" className="hover:text-neutral-900 transition-colors">
-          Changelog
+        <a
+          href="https://github.com/sasicodes/start/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-neutral-900 transition-colors"
+        >
+          Releases
         </a>
         <span>·</span>
         <a href="/terms" className="hover:text-neutral-900 transition-colors">

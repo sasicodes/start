@@ -1,4 +1,3 @@
-import { Changelog } from '@/components/changelog';
 import { Privacy } from '@/components/legal/privacy';
 import { Terms } from '@/components/legal/terms';
 import { Home } from '@/home';
@@ -10,7 +9,6 @@ interface AppProps {
 export const App = ({ path }: AppProps) => {
   const route = path ?? (typeof window !== 'undefined' ? window.location.pathname : '/');
 
-  if (route === '/changelog') return <Changelog />;
   if (route === '/privacy') return <Privacy />;
   if (route === '/terms') return <Terms />;
   return <Home />;
