@@ -102,7 +102,7 @@ const menuActions = () => ({
 });
 
 app.whenReady().then(async () => {
-  initAnalytics(app.isPackaged);
+  initAnalytics();
 
   nativeTheme.themeSource = 'system';
   app.setAppUserModelId(appId);
