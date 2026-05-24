@@ -245,6 +245,18 @@ export interface AppFocusState {
   focused: boolean;
 }
 
+export type UpdateState =
+  | { status: 'available'; version?: string }
+  | { status: 'downloaded'; version?: string }
+  | { status: 'downloading'; version?: string }
+  | { error: string; status: 'error' }
+  | { status: 'checking' }
+  | { status: 'idle' };
+
+export interface InstallUpdateResult {
+  ok: boolean;
+}
+
 type IpcDisposer = () => void;
 
 const onIpc = <Payload extends unknown[]>(channel: string, listener: (...payload: Payload) => void): IpcDisposer => {
@@ -265,8 +277,10 @@ const api = {
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
+    updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),
+    installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),
@@ -279,6 +293,8 @@ const api = {
     onHideComposerRequest: (listener: () => void): IpcDisposer => onIpc<[]>('app:hide-composer-request', listener),
     onFocusStateChanged: (listener: (state: AppFocusState) => void): IpcDisposer =>
       onIpc<[AppFocusState]>('app:focus-state-changed', listener),
+    onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>
+      onIpc<[UpdateState]>('app:update-state-changed', listener),
     onShowSettings: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-settings', listener),
     onSubmitComposer: (listener: (prompt: string, attachments: ImageAttachment[]) => void): IpcDisposer =>
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>

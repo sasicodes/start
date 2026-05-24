@@ -38,7 +38,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: cd packages/desktop && pnpm dist --mac
+        run: cd packages/desktop && pnpm dist --mac --publish never
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v6

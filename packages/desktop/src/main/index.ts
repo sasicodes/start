@@ -14,6 +14,7 @@ import {
   defaultAppSettings,
   validateAccelerator
 } from '@main/settings';
+import { registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   createMainWindow,
   hideComposerWindow,
@@ -126,6 +127,7 @@ app.whenReady().then(async () => {
     getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
   );
   ipcMain.handle('app:settings', () => appSettings);
+  registerUpdateIpc();
   ipcMain.handle('app:hide-composer', () => {
     hideComposerWindow();
   });
@@ -174,6 +176,7 @@ app.whenReady().then(async () => {
   app.on('browser-window-focus', scheduleAppFocusStateChanged);
 
   createMainWindow();
+  startAutoUpdateChecks();
 
   app.on('activate', showMainWindow);
 });
@@ -184,6 +187,7 @@ app.on('before-quit', () => {
   recentSessionsWatcher.close();
   stopWorkspaceChanged?.();
   stopWorkspaceChanged = undefined;
+  stopAutoUpdateChecks();
   chat.dispose();
   deactivateWorkspaceAccess();
 });
