@@ -2,14 +2,7 @@ import type { GitPatchSection } from '@preload/index';
 import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
 import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
-import {
-  cacheDiffHighlight,
-  collectDiffHighlightItems,
-  diffHighlightBatchSize,
-  diffHighlightRevisionBatchCount,
-  hasDiffHighlight,
-  loadCodeHighlighter
-} from '@renderer/shared/workspace/changes/diff/highlight';
+import { runDiffHighlighting } from '@renderer/shared/workspace/changes/diff/highlight';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
@@ -71,56 +64,7 @@ const useDiffHighlighting = (entryState: DiffEntriesState) => {
 
   useEffect(() => {
     if (entryState.kind !== 'ready' || entryState.entries.length === 0) return;
-
-    let active = true;
-    let frame = 0;
-    let batchesSinceUpdate = 0;
-
-    void loadCodeHighlighter()
-      .then(({ highlightCode }) => {
-        if (!active) return;
-
-        const items = collectDiffHighlightItems(entryState.entries);
-        let index = 0;
-
-        const processBatch = () => {
-          const end = Math.min(index + diffHighlightBatchSize, items.length);
-          const pendingHighlights: Promise<void>[] = [];
-
-          for (let itemIndex = index; itemIndex < end; itemIndex += 1) {
-            const item = items[itemIndex];
-            if (item && !hasDiffHighlight(item.key)) {
-              pendingHighlights.push(
-                highlightCode(item.content, item.language).then((html) => {
-                  cacheDiffHighlight(item.key, html);
-                })
-              );
-            }
-          }
-
-          void Promise.all(pendingHighlights).then(() => {
-            index = end;
-            batchesSinceUpdate += 1;
-
-            if (!active) return;
-
-            if (batchesSinceUpdate >= diffHighlightRevisionBatchCount || index >= items.length) {
-              batchesSinceUpdate = 0;
-              setHighlightRevision((value) => value + 1);
-            }
-
-            if (index < items.length) frame = window.requestAnimationFrame(processBatch);
-          });
-        };
-
-        frame = window.requestAnimationFrame(processBatch);
-      })
-      .catch(() => {});
-
-    return () => {
-      active = false;
-      window.cancelAnimationFrame(frame);
-    };
+    return runDiffHighlighting(entryState.entries, () => setHighlightRevision((value) => value + 1));
   }, [entryState]);
 
   return highlightRevision;
