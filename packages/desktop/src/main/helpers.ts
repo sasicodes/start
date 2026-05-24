@@ -67,21 +67,18 @@ export const isProviderModel = (model: { provider: string; id: string; name?: st
   return haystack.includes('anthropic') || haystack.includes('claude');
 };
 
-const allowedLatestOpenAiModelIds = new Set([
-  'gpt-5.4',
-  'gpt-5.5',
-  'gpt-5.4-pro',
-  'gpt-5.5-pro',
-  'gpt-5.3-codex-spark'
-]);
-const allowedLatestAnthropicModelIds = new Set([
-  'claude-opus-4-7',
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5'
-]);
+const allowedLatestOpenAiModelIds = ['gpt-5.5-pro', 'gpt-5.5', 'gpt-5.4-pro', 'gpt-5.4', 'gpt-5.3-codex-spark'];
+const allowedLatestAnthropicModelIds = ['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'];
+
+const allowedLatestOpenAiModelIdSet = new Set(allowedLatestOpenAiModelIds);
+const allowedLatestAnthropicModelIdSet = new Set(allowedLatestAnthropicModelIds);
 
 export const allowedLatestModelIds = (provider: ProviderKey) => {
+  if (provider === 'openai') return allowedLatestOpenAiModelIdSet;
+  return allowedLatestAnthropicModelIdSet;
+};
+
+const allowedLatestModelOrder = (provider: ProviderKey) => {
   if (provider === 'openai') return allowedLatestOpenAiModelIds;
   return allowedLatestAnthropicModelIds;
 };
@@ -97,7 +94,10 @@ export const getLatestProviderModels = <T extends { provider: string; id: string
   provider: ProviderKey,
   models: T[]
 ) => {
-  return models.filter((model) => isAllowedLatestProviderModel(model, provider));
+  const order = allowedLatestModelOrder(provider);
+  return models
+    .filter((model) => isAllowedLatestProviderModel(model, provider))
+    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 };
 
 export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(models: T[]) => {
