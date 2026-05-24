@@ -109,12 +109,14 @@ export class ChatService {
       };
     }
 
+    const sessionId = this.reportableActiveSessionId();
+
     return {
       ready: true,
       workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       selectedModelKey: modelKey(model),
-      ...(this.activeSessionId ? { sessionId: this.activeSessionId } : {}),
+      ...(sessionId ? { sessionId } : {}),
       thinkingLevel: this.selectedThinkingLevel
     };
   }
@@ -212,13 +214,15 @@ export class ChatService {
 
   getTabs(): AgentTab[] {
     const tabs = new Map<string, AgentTab>();
-    if (this.session) {
+    if (this.session && this.sessionIsReportable(this.session)) {
       const sessionId = this.session.sessionManager.getSessionId();
       const status = this.isGenerating ? 'generating' : 'idle';
       tabs.set(sessionId, tabFromSessionStatus(this.session, status, this.workspaceCwd));
     }
 
     for (const session of this.backgroundSessions.values()) {
+      if (!this.sessionIsReportable(session)) continue;
+
       const sessionId = session.sessionManager.getSessionId();
       tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, this.notices.get(sessionId)));
     }
@@ -346,7 +350,7 @@ export class ChatService {
     });
 
     for (const session of sessions) {
-      if (!session.cwd) continue;
+      if (!session.cwd || session.messageCount === 0) continue;
 
       const current = folders.get(session.cwd);
       const modified = session.modified.getTime();
@@ -956,6 +960,17 @@ export class ChatService {
     if (message) webContents.send('chat:queued-turn-start', { id: message.id, text: message.text });
   }
 
+  private sessionIsReportable(session: AgentSession | null): boolean {
+    return Boolean(
+      session && (session.sessionManager.getEntries().length || session.isStreaming || session.isBashRunning)
+    );
+  }
+
+  private reportableActiveSessionId(): string {
+    if (!this.activeSessionId || !this.sessionIsReportable(this.session)) return '';
+    return this.activeSessionId;
+  }
+
   private setActiveSession(sessionManager: SessionManager): void {
     this.activeSessionId = sessionManager.getSessionId();
     this.activeSessionByWorkspace.set(this.workspaceCwd, this.activeSessionId);
@@ -964,6 +979,12 @@ export class ChatService {
 
   private storeBackgroundSession(workspacePath: string, session: AgentSession): void {
     const sessionId = session.sessionManager.getSessionId();
+    if (!this.sessionIsReportable(session)) {
+      session.dispose();
+      this.deleteWorkspaceSessionReferences(sessionId);
+      return;
+    }
+
     this.backgroundSessions.set(sessionId, session);
     this.activeSessionByWorkspace.set(workspacePath, sessionId);
   }

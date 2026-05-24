@@ -3,6 +3,7 @@ import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
 interface CommandFinderItem {
+  key: string;
   name: string;
   type: 'command';
   description?: string;
@@ -32,7 +33,7 @@ interface FinderRowProps {
   onSelect: (item: FinderItem) => void;
 }
 
-export const finderItemKey = (item: FinderItem) => (item.type === 'command' ? item.name : item.path);
+export const finderItemKey = (item: FinderItem) => (item.type === 'command' ? item.key : item.path);
 
 export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`;
 

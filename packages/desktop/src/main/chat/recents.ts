@@ -41,7 +41,9 @@ const recentSessionRecords = async (workspacePath: string): Promise<ListedSessio
   const sessions = await SessionManager.list(workspacePath);
   const uniqueSessions = new Map<string, ListedSession>();
 
-  for (const session of sessions) uniqueSessions.set(session.id, session);
+  for (const session of sessions) {
+    if (session.messageCount > 0) uniqueSessions.set(session.id, session);
+  }
 
   return sortRecentSessions([...uniqueSessions.values()]);
 };

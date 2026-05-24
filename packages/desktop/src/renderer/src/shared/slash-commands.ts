@@ -62,8 +62,9 @@ export const useSlashCommandItems = (token?: SlashCommandToken) => {
         return command.name.toLowerCase().includes(query) || command.description.toLowerCase().includes(query);
       })
       .map((command) => ({
-        type: 'command' as const,
+        key: command.key,
         name: command.name,
+        type: 'command' as const,
         ...(command.description ? { description: command.description } : {})
       }));
   }, [commands, token]);

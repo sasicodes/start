@@ -1,6 +1,7 @@
 import type { AgentSession, SlashCommandInfo } from '@earendil-works/pi-coding-agent';
 
 export interface SlashCommandItem {
+  key: string;
   name: string;
   description: string;
   source: SlashCommandInfo['source'];
@@ -9,7 +10,8 @@ export interface SlashCommandItem {
 const slashCommandItem = (command: SlashCommandInfo): SlashCommandItem => ({
   name: command.name,
   source: command.source,
-  description: command.description ?? ''
+  description: command.description ?? '',
+  key: `${command.source}:${command.sourceInfo.path}:${command.name}`
 });
 
 export const sessionSlashCommandItems = (session: AgentSession): SlashCommandItem[] => {
