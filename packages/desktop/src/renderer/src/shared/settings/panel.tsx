@@ -120,7 +120,7 @@ export const Settings = memo(
         {providers.map((provider, index) => {
           const auth = providerStatus(authProviders, provider.key);
           const draftKey = apiKeys[provider.key];
-          const authLabel = auth?.label ?? 'Checking';
+          const authLabel = auth?.label ?? 'Not connected';
           const hasDraftKey = draftKey.trim().length > 0;
           const authDetail = auth?.connected ? connectionDetail(auth.label) : '';
 

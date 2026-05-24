@@ -6,8 +6,6 @@ export const cumulativeHeights = (heights: ReadonlyArray<number>): Float64Array 
   return result;
 };
 
-export const totalHeight = (cumulative: Float64Array) => cumulative[cumulative.length - 1] ?? 0;
-
 export const firstVisibleIndex = (cumulative: Float64Array, scrollTop: number) => {
   const last = cumulative.length - 2;
   if (last < 0) return 0;
@@ -36,3 +34,5 @@ export const lastVisibleIndex = (cumulative: Float64Array, scrollBottom: number)
   }
   return low;
 };
+
+export const totalHeight = (cumulative: Float64Array) => cumulative[cumulative.length - 1] ?? 0;

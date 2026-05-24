@@ -1,6 +1,6 @@
-const surrogatePattern = /[\uD800-\uDFFF]/;
 const initialBufferBytes = 1024;
 const encoder = new TextEncoder();
+const surrogatePattern = /[\uD800-\uDFFF]/;
 const decoder = new TextDecoder('utf-8', { ignoreBOM: true });
 
 let buffer = new Uint8Array(initialBufferBytes);

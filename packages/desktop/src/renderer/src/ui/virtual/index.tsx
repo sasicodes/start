@@ -1,15 +1,14 @@
 import { cumulativeHeights, firstVisibleIndex, lastVisibleIndex, totalHeight } from '@renderer/ui/virtual/geometry';
 import { Fragment } from 'preact';
-import type { ComponentChildren } from 'preact';
-import { memo } from 'preact/compat';
+import type { ComponentChildren, RefObject } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface VirtualProps<T> {
-  items: ReadonlyArray<T>;
   overscan?: number;
+  items: ReadonlyArray<T>;
   getKey: (item: T) => string;
-  renderItem: (item: T) => ComponentChildren;
   estimateHeight: (item: T) => number;
+  renderItem: (item: T) => ComponentChildren;
 }
 
 interface Range {
@@ -45,17 +44,7 @@ const rangeOf = (cumulative: Float64Array, scrollTop: number, scrollBottom: numb
   start: firstVisibleIndex(cumulative, Math.max(0, scrollTop - overscan))
 });
 
-const VirtualInner = <T,>({
-  items,
-  getKey,
-  renderItem,
-  estimateHeight,
-  overscan = defaultOverscan
-}: VirtualProps<T>) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const heights = useMemo(() => items.map(estimateHeight), [items, estimateHeight]);
-  const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
-  const total = totalHeight(cumulative);
+const useVisibleRange = (cumulative: Float64Array, overscan: number, containerRef: RefObject<HTMLElement>): Range => {
   const [range, setRange] = useState<Range>(() => ({ end: initialEnd(cumulative, initialViewportGuess), start: 0 }));
 
   useLayoutEffect(() => {
@@ -104,11 +93,27 @@ const VirtualInner = <T,>({
       resizeObserver.disconnect();
       if (!scrollAncestor) window.removeEventListener('resize', schedule);
     };
-  }, [cumulative, overscan]);
+  }, [cumulative, overscan, containerRef]);
+
+  return range;
+};
+
+export const Virtual = <T,>({
+  items,
+  getKey,
+  overscan = defaultOverscan,
+  renderItem,
+  estimateHeight
+}: VirtualProps<T>) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const heights = useMemo(() => items.map(estimateHeight), [items, estimateHeight]);
+  const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
+  const total = totalHeight(cumulative);
+  const range = useVisibleRange(cumulative, overscan, containerRef);
 
   const topSpacer = cumulative[range.start] ?? 0;
-  const bottomSpacer = Math.max(0, total - (cumulative[range.end] ?? total));
   const visible = items.slice(range.start, range.end);
+  const bottomSpacer = Math.max(0, total - (cumulative[range.end] ?? total));
 
   return (
     <div ref={containerRef} class="min-w-0">
@@ -120,5 +125,3 @@ const VirtualInner = <T,>({
     </div>
   );
 };
-
-export const Virtual = memo(VirtualInner) as typeof VirtualInner;
