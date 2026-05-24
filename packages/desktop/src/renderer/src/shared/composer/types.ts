@@ -17,6 +17,7 @@ export interface ComposerProps {
   workspacePath: string;
   selectedModelKey: string;
   thinkingLevel: EffortLevel;
+  noProvidersConfigured: boolean;
   onOpenSettings: () => void;
   onExitComplete: () => void;
   onRefillPrevious: () => void;

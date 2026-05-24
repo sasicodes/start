@@ -225,6 +225,7 @@ export const App = () => {
   );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
+  const noProvidersConfigured = modelsLoaded && models.length === 0;
   const sidePanelLabel = getSidePanelLabel(renderedSidePanelMode);
   const sidePanel = (
     <AppSidePanel
@@ -282,6 +283,7 @@ export const App = () => {
       onSelectWorkspace={selectWorkspaceFromComposer}
       onChooseWorkspaceDirectory={chooseWorkspaceFromComposer}
       onSelectThinkingLevel={selectThinkingFromComposer}
+      noProvidersConfigured={noProvidersConfigured}
     />
   );
 
