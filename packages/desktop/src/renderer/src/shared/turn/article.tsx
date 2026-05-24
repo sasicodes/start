@@ -108,12 +108,12 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
       )}
     >
       <TurnDetails
-        createdAt={turn.createdAt}
-        details={details}
         items={items}
-        panelOpen={activityPanelOpen}
+        details={details}
         thinking={thinking}
+        createdAt={turn.createdAt}
         working={activityWorking}
+        panelOpen={activityPanelOpen}
         onOpenPanel={openActivityPanel}
       />
       <TurnBody turn={turn} />

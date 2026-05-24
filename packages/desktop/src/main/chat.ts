@@ -38,6 +38,7 @@ import { readStartState, type StartState, updateStartState } from '@main/storage
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import {
   type AgentTab,
+  type AgentTabStatus,
   type ChatStatus,
   type EffortLevel,
   type CommandResult,
@@ -341,12 +342,13 @@ export class ChatService {
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
+    const attentionStatuses = this.workspaceAttentionStatuses();
     folders.set(this.workspaceCwd, {
       sessionCount: 0,
       modified: Date.now(),
       path: this.workspaceCwd,
       name: workspaceDisplayName(this.workspaceCwd),
-      ...(this.workspaceHasNotice(this.workspaceCwd) ? { noticeKind: 'completed' as const } : {})
+      ...this.workspaceAttention(this.workspaceCwd, attentionStatuses)
     });
 
     for (const session of sessions) {
@@ -357,16 +359,28 @@ export class ChatService {
       if (current) {
         current.modified = Math.max(current.modified, modified);
         current.sessionCount += 1;
-        if (this.workspaceHasNotice(session.cwd)) current.noticeKind = 'completed';
+        Object.assign(current, this.workspaceAttention(session.cwd, attentionStatuses));
       } else {
         folders.set(session.cwd, {
           modified,
           sessionCount: 1,
           path: session.cwd,
           name: workspaceDisplayName(session.cwd),
-          ...(this.workspaceHasNotice(session.cwd) ? { noticeKind: 'completed' as const } : {})
+          ...this.workspaceAttention(session.cwd, attentionStatuses)
         });
       }
+    }
+
+    for (const workspacePath of attentionStatuses.keys()) {
+      if (folders.has(workspacePath)) continue;
+
+      folders.set(workspacePath, {
+        sessionCount: 0,
+        modified: Date.now(),
+        path: workspacePath,
+        name: workspaceDisplayName(workspacePath),
+        ...this.workspaceAttention(workspacePath, attentionStatuses)
+      });
     }
 
     return [...folders.values()].sort((a, b) => b.modified - a.modified);
@@ -1027,8 +1041,8 @@ export class ChatService {
     this.notices.set(sessionId, {
       kind,
       sessionId,
-      createdAt: Date.now(),
-      workspacePath
+      workspacePath,
+      createdAt: Date.now()
     });
     this.persistNotices();
     webContents?.send('chat:recent-sessions-changed', { workspacePath });
@@ -1039,12 +1053,41 @@ export class ChatService {
     this.persistState({ sessionNotices: Object.fromEntries(this.notices) });
   }
 
-  private workspaceHasNotice(workspacePath: string): boolean {
-    for (const notice of this.notices.values()) {
-      if (notice.workspacePath === workspacePath) return true;
-    }
+  private topAttentionStatus(statuses: AgentTabStatus[]): AgentTabStatus | undefined {
+    if (statuses.includes('failed')) return 'failed';
+    if (statuses.includes('generating')) return 'generating';
+    if (statuses.includes('completed')) return 'completed';
+    return;
+  }
 
-    return false;
+  private workspaceAttention(
+    workspacePath: string,
+    attentionStatuses = this.workspaceAttentionStatuses()
+  ): Pick<WorkspaceFolder, 'noticeKind' | 'status'> {
+    const status = attentionStatuses.get(workspacePath);
+
+    return {
+      ...(status ? { status } : {}),
+      ...(status === 'completed' || status === 'failed' ? { noticeKind: status } : {})
+    };
+  }
+
+  private workspaceAttentionStatuses(): Map<string, AgentTabStatus> {
+    const statuses = new Map<string, AgentTabStatus[]>();
+    const addStatus = (workspacePath: string, status: AgentTabStatus) => {
+      if (status === 'idle') return;
+      statuses.set(workspacePath, [...(statuses.get(workspacePath) ?? []), status]);
+    };
+
+    for (const tab of this.getTabs()) addStatus(tab.workspacePath, tab.status);
+    for (const notice of this.notices.values()) addStatus(notice.workspacePath, notice.kind);
+
+    return new Map(
+      [...statuses.entries()].flatMap(([workspacePath, statuses]) => {
+        const status = this.topAttentionStatus(statuses);
+        return status ? [[workspacePath, status]] : [];
+      })
+    );
   }
 
   private async getSession(): Promise<AgentSession> {

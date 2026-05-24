@@ -82,8 +82,7 @@ const DiffPane = ({
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           cell.tone === 'add' && 'text-success',
-          cell.tone === 'remove' && 'text-danger',
-          !changed && 'bg-transparent'
+          cell.tone === 'remove' && 'text-danger'
         )}
       />
       <span
@@ -165,8 +164,7 @@ const UnifiedLineRow = ({
           'my-px',
           changed && '[background:repeating-linear-gradient(-45deg,currentColor_0_1px,transparent_1px_3px)]',
           addition && 'text-success',
-          removal && 'text-danger',
-          !changed && 'bg-transparent'
+          removal && 'text-danger'
         )}
       />
       <span

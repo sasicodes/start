@@ -5,15 +5,15 @@ import type { ChatEvent } from '@main/types';
 
 const metadataEvent = (key: string, title: string, state: ChatEvent['state'] = 'done'): ChatEvent => ({
   key,
-  kind: 'metadata',
+  state,
   title,
-  state
+  kind: 'metadata'
 });
 
 const errorEvent = (key: string, title: string): ChatEvent => ({
   key,
-  kind: 'error',
   title,
+  kind: 'error',
   state: 'error'
 });
 
@@ -38,9 +38,9 @@ const streamDetail = (event: Extract<AgentSessionEvent, { type: 'message_update'
 
   return toolEventDetail({
     state: 'active',
+    toolName: update.toolCall.name,
     args: update.toolCall.arguments,
-    key: `tool:${update.toolCall.id}`,
-    toolName: update.toolCall.name
+    key: `tool:${update.toolCall.id}`
   });
 };
 
@@ -52,8 +52,9 @@ const customMessageEvent = (event: Extract<AgentSessionEvent, { type: 'message_e
   const body = textContent(message.content);
   if (!body) return;
 
-  const customType = stringValue(message.customType) || 'custom';
-  const result = metadataEvent(`custom:${customType}:${message.timestamp}`, customType);
+  const customMessageType = stringValue(message.customType);
+  const result = metadataEvent(`custom:${customMessageType || 'message'}:${message.timestamp}`, 'Agent message');
+  if (customMessageType) result.detail = customMessageType;
   result.body = body;
   return result;
 };
@@ -76,10 +77,10 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
     case 'tool_execution_update':
       return toolEventDetail({
         args: event.args,
-        result: event.partialResult,
         state: 'active',
         toolName: event.toolName,
-        key: `tool:${event.toolCallId}`
+        key: `tool:${event.toolCallId}`,
+        result: event.partialResult
       });
     case 'tool_execution_end':
       return toolEventDetail({

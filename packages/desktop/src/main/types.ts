@@ -151,6 +151,7 @@ export type WorkspaceFolder = {
   path: string;
   modified: number;
   sessionCount: number;
+  status?: AgentTabStatus;
   noticeKind?: SessionNoticeKind;
 };
 

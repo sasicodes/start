@@ -59,8 +59,7 @@ const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
       class={tw(
         'flex w-full min-w-0 rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
         isCommand ? 'flex-col items-start gap-0.5' : 'items-center gap-3',
-        selected && 'bg-control',
-        !selected && 'bg-transparent'
+        selected ? 'bg-control' : 'bg-transparent'
       )}
     >
       <span class="min-w-0 flex-1 truncate">{label}</span>

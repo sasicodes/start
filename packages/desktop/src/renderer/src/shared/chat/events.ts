@@ -1,6 +1,7 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
+import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
@@ -117,6 +118,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const offShowSettings = window.pi.app.onShowSettings(() => optionsRef.current.onShowSettings());
     const offNewSession = window.pi.chat.onNewSession(() => {
+      clearSlashCommandsCache();
       if (optionsRef.current.assistantIdRef.current || optionsRef.current.terminalIdRef.current) {
         optionsRef.current.onShowChat();
         void optionsRef.current.syncStatus().catch(() => {});

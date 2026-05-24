@@ -1,6 +1,7 @@
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { attentionStatus, topAttentionStatus } from '@renderer/shared/attention-status';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Indicator } from '@renderer/shared/indicator';
@@ -12,18 +13,22 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 export const Workspace = memo(
   ({
     workspacePath,
-    onChooseDirectory,
-    onSelectWorkspace
+    onSelectWorkspace,
+    onChooseDirectory
   }: {
     workspacePath: string;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
   }) => {
-    const workspace = useWorkspace(workspacePath);
-    const rootRef = useRef<HTMLDivElement>(null);
     const [open, setOpen] = useState(false);
+    const rootRef = useRef<HTMLDivElement>(null);
+    const workspace = useWorkspace(workspacePath);
     const { folders } = useWorkspaceFolders({ workspacePath });
-    const hasNotice = folders.some((folder) => folder.path === workspacePath && folder.noticeKind);
+    const attention = topAttentionStatus(
+      folders
+        .filter((folder) => folder.path !== workspacePath)
+        .map((folder) => attentionStatus(folder.status, folder.noticeKind))
+    );
 
     const updateOpen = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -41,7 +46,12 @@ export const Workspace = memo(
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger
                 aria-label="Workspace folders"
-                className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer pr-1.5 pl-1.5 text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75"
+                className={tw(
+                  'relative flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer pr-1.5 pl-1.5 text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75',
+                  attention === 'failed' && 'bg-danger/[0.075]',
+                  attention === 'completed' && 'bg-success/[0.075]',
+                  attention === 'generating' && 'bg-blue-500/[0.09]'
+                )}
               >
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img
@@ -54,7 +64,6 @@ export const Workspace = memo(
                 <span class="flex min-w-0 flex-1 flex-col justify-center gap-0.5 transition-[opacity,transform] duration-150 ease-out @max-workspace-dock/chat:hidden">
                   <span class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate text-sm leading-4 font-medium text-ink">{workspace.folderName}</span>
-                    {hasNotice && <Indicator />}
                   </span>
                   <span class="truncate text-[11px] leading-3 font-medium text-soft">
                     {workspace.branchName ?? workspace.path}
@@ -69,6 +78,11 @@ export const Workspace = memo(
                     )}
                   />
                 </span>
+                {attention && (
+                  <span class="pointer-events-none absolute top-[3px] right-[3px] z-10">
+                    <Indicator kind={attention} />
+                  </span>
+                )}
               </AppMenu.Trigger>
             </div>
           </Tooltip>
