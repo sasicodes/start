@@ -95,6 +95,7 @@ export const RecentSessions = memo(
     const sessionsRequestRef = useRef(0);
     const [open, setOpen] = useState(false);
     const wasGeneratingRef = useRef(isGenerating);
+    const [knownEmpty, setKnownEmpty] = useState(false);
     const [sessions, setSessions] = useState<RecentSession[]>([]);
     const [hasMoreSessions, setHasMoreSessions] = useState(false);
 
@@ -110,12 +111,14 @@ export const RecentSessions = memo(
           loadedCountRef.current = page.sessions.length;
           setSessions(page.sessions);
           setHasMoreSessions(page.hasMore);
+          setKnownEmpty(page.sessions.length === 0);
         } catch {
           if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
           loadedCountRef.current = 0;
           setSessions([]);
           setHasMoreSessions(false);
+          setKnownEmpty(false);
         }
       },
       [workspacePath]
@@ -208,7 +211,7 @@ export const RecentSessions = memo(
       return window.pi.chat.onStatusChanged(() => void loadSessions(Math.max(sessionPageSize, loadedCountRef.current)));
     }, [loadSessions]);
 
-    if (sessions.length === 0) return null;
+    if (knownEmpty && sessions.length === 0) return null;
 
     return (
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
