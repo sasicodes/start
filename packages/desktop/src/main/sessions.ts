@@ -69,12 +69,13 @@ export const truncateTitle = (text: string): string => {
 interface Statements {
   insert: Database.Statement;
   archive: Database.Statement;
-  listByCwd: Database.Statement;
   unarchive: Database.Statement;
   selectById: Database.Statement;
   updateTitle: Database.Statement;
   updateTurnEnd: Database.Statement;
   updateThinking: Database.Statement;
+  listByCwdActive: Database.Statement;
+  listByCwdArchived: Database.Statement;
   updateTitleIfEmpty: Database.Statement;
 }
 
@@ -90,9 +91,6 @@ const statements = (): Statements => {
        ON CONFLICT(id) DO NOTHING`
     ),
     archive: db.prepare('UPDATE sessions SET archived = 1, archived_at = ?, updated_at = ? WHERE id = ?'),
-    listByCwd: db.prepare(
-      'SELECT * FROM sessions WHERE cwd = ? AND archived = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?'
-    ),
     unarchive: db.prepare('UPDATE sessions SET archived = 0, archived_at = NULL, updated_at = ? WHERE id = ?'),
     selectById: db.prepare('SELECT * FROM sessions WHERE id = ?'),
     updateTitle: db.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?'),
@@ -104,6 +102,12 @@ const statements = (): Statements => {
          WHERE id = ?`
     ),
     updateThinking: db.prepare('UPDATE sessions SET thinking_level = ?, updated_at = ? WHERE id = ?'),
+    listByCwdActive: db.prepare(
+      'SELECT * FROM sessions WHERE cwd = ? AND archived = 0 ORDER BY updated_at DESC LIMIT ? OFFSET ?'
+    ),
+    listByCwdArchived: db.prepare(
+      'SELECT * FROM sessions WHERE cwd = ? AND archived = 1 ORDER BY updated_at DESC LIMIT ? OFFSET ?'
+    ),
     updateTitleIfEmpty: db.prepare('UPDATE sessions SET title = COALESCE(title, ?), updated_at = ? WHERE id = ?')
   };
   return cachedStatements;
@@ -173,7 +177,7 @@ export const getSession = (id: string): SessionRecord | undefined => {
 };
 
 export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRecord[] => {
-  const archived = options.archived ? 1 : 0;
-  const rows = statements().listByCwd.all(cwd, archived, options.limit, options.offset) as SessionRow[];
+  const stmt = options.archived ? statements().listByCwdArchived : statements().listByCwdActive;
+  const rows = stmt.all(cwd, options.limit, options.offset) as SessionRow[];
   return rows.map(rowToRecord);
 };

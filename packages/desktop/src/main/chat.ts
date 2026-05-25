@@ -1220,7 +1220,7 @@ export class ChatService {
         notifyChanged();
         return;
       }
-      if (event.type === 'session_info_changed' && event.name !== undefined) {
+      if (event.type === 'session_info_changed' && event.name) {
         ensureRow();
         updateSessionTitle(sessionId, event.name);
         notifyChanged();
