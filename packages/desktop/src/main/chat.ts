@@ -16,6 +16,7 @@ import { resolveAuthBackend } from '@main/pi/auth';
 import { InMemorySettingsBackend } from '@main/pi/settings';
 import {
   archiveSession,
+  getSession,
   unarchiveSession,
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
@@ -208,13 +209,15 @@ export class ChatService {
   }
 
   async archiveSession(sessionId: string): Promise<void> {
+    const cwd = getSession(sessionId)?.cwd ?? this.workspaceCwd;
     archiveSession(sessionId);
-    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
+    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
   }
 
   async unarchiveSession(sessionId: string): Promise<void> {
+    const cwd = getSession(sessionId)?.cwd ?? this.workspaceCwd;
     unarchiveSession(sessionId);
-    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
+    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
   }
 
   async getModels(): Promise<{
@@ -1181,36 +1184,52 @@ export class ChatService {
     const path = sessionManager.getSessionFile();
     if (!path) return;
 
-    upsertSessionOnStart({
-      path,
-      modelId,
-      modelProvider,
-      appVersion,
-      id: sessionId,
-      cwd: sessionManager.getCwd(),
-      thinkingLevel: this.selectedThinkingLevel
-    });
+    const cwd = sessionManager.getCwd();
+    const initialThinkingLevel = this.selectedThinkingLevel;
+    let inserted = false;
+
+    const ensureRow = () => {
+      if (inserted) return;
+      upsertSessionOnStart({
+        path,
+        cwd,
+        modelId,
+        appVersion,
+        modelProvider,
+        id: sessionId,
+        thinkingLevel: initialThinkingLevel
+      });
+      inserted = true;
+    };
+
+    const notifyChanged = () => {
+      sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
+    };
 
     session.subscribe((event) => {
       if (event.type === 'turn_end') {
-        const usage = getLastAssistantUsage(sessionManager.getEntries());
-        const firstMessage = firstUserMessageText(sessionManager.getEntries());
+        ensureRow();
+        const entries = sessionManager.getEntries();
+        const usage = getLastAssistantUsage(entries);
+        const firstMessage = firstUserMessageText(entries);
         updateSessionOnTurnEnd(sessionId, {
           inputTokens: usage?.input ?? 0,
           outputTokens: usage?.output ?? 0,
           ...(firstMessage ? { firstMessage } : {})
         });
-        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+        notifyChanged();
         return;
       }
       if (event.type === 'session_info_changed' && event.name !== undefined) {
+        ensureRow();
         updateSessionTitle(sessionId, event.name);
-        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+        notifyChanged();
         return;
       }
       if (event.type === 'thinking_level_changed') {
+        ensureRow();
         updateSessionThinkingLevel(sessionId, event.level);
-        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+        notifyChanged();
       }
     });
   }
