@@ -14,6 +14,10 @@ describe('parseBrowserSnapshot', () => {
           { url: '', text: 'Missing URL' },
           { url: 'https://example.com/empty', text: '' }
         ],
+        elements: [
+          { ref: 'e1', tag: 'button', text: 'Submit', role: 'button', label: '', disabled: false },
+          { ref: '', tag: 'input', text: 'Search', role: 'input', label: 'Search', disabled: false }
+        ],
         headings: [
           { text: 'Overview', level: 1 },
           { text: '', level: 2 },
@@ -25,6 +29,7 @@ describe('parseBrowserSnapshot', () => {
       text: 'Example body',
       title: 'Example',
       links: [{ url: 'https://example.com/docs', text: 'Docs' }],
+      elements: [{ ref: 'e1', tag: 'button', text: 'Submit', role: 'button', label: '', disabled: false }],
       headings: [{ text: 'Overview', level: 1 }]
     });
   });

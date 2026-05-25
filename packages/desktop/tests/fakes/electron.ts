@@ -69,10 +69,12 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   capturePage: () => Promise<{ isEmpty: () => boolean }>;
   close: () => void;
   emit: (event: string, ...args: unknown[]) => void;
+  executeJavaScript: (script: string, userGesture?: boolean) => Promise<unknown>;
   focus: () => void;
   focusCount: number;
   getTitle: () => string;
   getURL: () => string;
+  inputEvents: unknown[];
   isLoading: () => boolean;
   loadURL: (url: string) => Promise<void>;
   navigationHistory: {
@@ -84,6 +86,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   off: (event: string, handler: Handler) => void;
   on: (event: string, handler: Handler) => void;
   reload: () => void;
+  sendInputEvent: (event: unknown) => void;
   setWindowOpenHandler: (handler: WindowOpenHandler) => void;
   stop: () => void;
 }
@@ -119,12 +122,14 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     emit: (event, ...args) => {
       for (const handler of handlersByEvent.get(event) ?? []) handler(...args);
     },
+    executeJavaScript: async (_script: string, _userGesture?: boolean) => ({ ok: true }),
     focus: () => {
       webContents.focusCount += 1;
     },
     focusCount: 0,
     getTitle: () => '',
     getURL: () => '',
+    inputEvents: [],
     isLoading: () => false,
     loadURL: async (_url: string) => {},
     navigationHistory: {
@@ -142,6 +147,9 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
       handlersByEvent.set(event, handlers);
     },
     reload: () => {},
+    sendInputEvent: (event) => {
+      webContents.inputEvents.push(event);
+    },
     setWindowOpenHandler: (_handler: WindowOpenHandler) => {},
     stop: () => {}
   };

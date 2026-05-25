@@ -10,11 +10,21 @@ export interface BrowserSnapshotLink {
   text: string;
 }
 
+export interface BrowserSnapshotElement {
+  ref: string;
+  tag: string;
+  text: string;
+  role: string;
+  label: string;
+  disabled: boolean;
+}
+
 export interface BrowserSnapshot {
   url: string;
   text: string;
   title: string;
   links: BrowserSnapshotLink[];
+  elements: BrowserSnapshotElement[];
   headings: BrowserSnapshotHeading[];
 }
 
@@ -26,10 +36,24 @@ const snapshotScript = `
   const maxLinkCount = 100;
   const maxTextLength = 10000;
   const maxHeadingCount = 60;
+  const maxElementCount = 120;
   const maxSnippetLength = 240;
+  const interactiveSelector = 'a[href], button, input, textarea, select, summary, [role="button"], [role="link"], [contenteditable="true"]';
   const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
   const truncate = (value, length) => normalize(value).slice(0, length);
   const linkText = (element) => element.textContent || element.getAttribute('aria-label') || element.href;
+  const elementText = (element) =>
+    element.getAttribute('aria-label') ||
+    element.getAttribute('placeholder') ||
+    element.textContent ||
+    element.getAttribute('name') ||
+    element.getAttribute('title') ||
+    '';
+  const isVisible = (element) => {
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+  };
 
   const headings = Array.from(document.querySelectorAll('h1, h2, h3'), (element) => ({
     text: truncate(element.textContent, maxSnippetLength),
@@ -41,10 +65,23 @@ const snapshotScript = `
     text: truncate(linkText(element), maxSnippetLength)
   })).filter((link) => link.url && link.text.length > 0).slice(0, maxLinkCount);
 
+  const elements = Array.from(document.querySelectorAll(interactiveSelector))
+    .filter(isVisible)
+    .slice(0, maxElementCount)
+    .map((element, index) => ({
+      ref: 'e' + (index + 1),
+      tag: element.tagName.toLowerCase(),
+      role: normalize(element.getAttribute('role') || element.tagName.toLowerCase()),
+      label: truncate(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '', maxSnippetLength),
+      text: truncate(elementText(element), maxSnippetLength),
+      disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true')
+    }));
+
   return {
     url: window.location.href,
     title: document.title,
     links,
+    elements,
     headings,
     text: truncate(document.body ? document.body.innerText : '', maxTextLength)
   };
@@ -100,6 +137,24 @@ const parseLinks = (value: unknown): BrowserSnapshotLink[] => {
   });
 };
 
+const parseElements = (value: unknown): BrowserSnapshotElement[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+
+    const ref = stringValue(item.ref);
+    const tag = stringValue(item.tag);
+    const text = stringValue(item.text);
+    const role = stringValue(item.role);
+    const label = stringValue(item.label);
+    const disabled = typeof item.disabled === 'boolean' ? item.disabled : false;
+    if (!ref || !tag) return [];
+
+    return [{ ref, tag, text, role, label, disabled }];
+  });
+};
+
 export const parseBrowserSnapshot = (value: unknown): BrowserSnapshot | null => {
   if (!isRecord(value)) return null;
 
@@ -108,6 +163,7 @@ export const parseBrowserSnapshot = (value: unknown): BrowserSnapshot | null => 
     text: stringValue(value.text),
     title: stringValue(value.title),
     links: parseLinks(value.links),
+    elements: parseElements(value.elements),
     headings: parseHeadings(value.headings)
   };
 };

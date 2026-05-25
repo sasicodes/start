@@ -1,9 +1,12 @@
 import {
   captureBrowserScreenshot,
   captureBrowserSnapshot,
+  clickInBrowser,
   getBrowserStatus,
   goBackInBrowser,
   goForwardInBrowser,
+  pressInBrowser,
+  typeInBrowser,
   reloadBrowser
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
@@ -32,7 +35,56 @@ const browserOpenSchema = {
   additionalProperties: false
 } as const;
 
+const browserClickSchema = {
+  properties: {
+    ref: {
+      type: 'string',
+      description: 'Element ref from browser_snapshot, such as e1.'
+    }
+  },
+  type: 'object',
+  required: ['ref'],
+  additionalProperties: false
+} as const;
+
+const browserTypeSchema = {
+  properties: {
+    ref: {
+      type: 'string',
+      description: 'Input element ref from browser_snapshot, such as e1.'
+    },
+    text: {
+      type: 'string',
+      description: 'Text to enter.'
+    },
+    clear: {
+      type: 'boolean',
+      description: 'Replace existing text when true.'
+    }
+  },
+  type: 'object',
+  required: ['ref', 'text'],
+  additionalProperties: false
+} as const;
+
+const browserPressSchema = {
+  properties: {
+    key: {
+      type: 'string',
+      description: 'One supported key, such as Enter, Tab, Escape, or ArrowDown.'
+    }
+  },
+  type: 'object',
+  required: ['key'],
+  additionalProperties: false
+} as const;
+
 const textResult = (text: string) => ({ details: null, content: [{ text, type: 'text' as const }] });
+
+const requiredString = (value: unknown, label: string) => {
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`Enter a browser ${label}.`);
+  return value;
+};
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -124,6 +176,46 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     label: 'browser',
+    async execute(_toolCallId, { ref }) {
+      const refValue = requiredString(ref, 'element ref');
+      const result = await clickInBrowser(refValue);
+      if (!result.ok) throw new Error(result.error ?? 'Could not click the browser element.');
+      return textResult(`Clicked browser element ${refValue}.`);
+    },
+    name: 'browser_click',
+    parameters: browserClickSchema,
+    description: 'Click an element ref from browser_snapshot.',
+    promptSnippet: 'Use browser_snapshot first, then click a listed element ref.'
+  }),
+  defineTool({
+    label: 'browser',
+    async execute(_toolCallId, { ref, text, clear }) {
+      const refValue = requiredString(ref, 'element ref');
+      const textValue = requiredString(text, 'text value');
+      const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear !== false });
+      if (!result.ok) throw new Error(result.error ?? 'Could not type into the browser element.');
+      return textResult(`Typed into browser element ${refValue}.`);
+    },
+    name: 'browser_type',
+    parameters: browserTypeSchema,
+    description: 'Type text into an input ref from browser_snapshot.',
+    promptSnippet: 'Use browser_snapshot first, then type into a listed input ref.'
+  }),
+  defineTool({
+    label: 'browser',
+    async execute(_toolCallId, { key }) {
+      const keyValue = requiredString(key, 'key');
+      const result = pressInBrowser(keyValue);
+      if (!result.ok) throw new Error(result.error ?? 'Could not press the browser key.');
+      return textResult(`Pressed ${keyValue} in the browser.`);
+    },
+    name: 'browser_press',
+    parameters: browserPressSchema,
+    description: 'Press a supported key in the browser page.',
+    promptSnippet: 'Use for Enter, Tab, Escape, arrows, deletion, or paging keys.'
+  }),
+  defineTool({
+    label: 'browser',
     async execute() {
       const result = await captureBrowserScreenshot();
       if (!result.ok) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
@@ -143,7 +235,7 @@ export const createBrowserTools = () => [
     },
     parameters: emptySchema,
     name: 'browser_snapshot',
-    description: 'Read bounded text, headings, and links from the open browser page.',
-    promptSnippet: 'Use to summarize or answer questions about the open page.'
+    description: 'Read page text, links, headings, and element refs.',
+    promptSnippet: 'Use to summarize an open page or find refs for browser_click/browser_type.'
   })
 ];

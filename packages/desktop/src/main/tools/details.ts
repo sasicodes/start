@@ -31,6 +31,18 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
     active: 'Opening browser',
     result: 'Opened browser'
   },
+  browser_click: {
+    done: 'Clicked browser',
+    error: 'Click failed',
+    active: 'Clicking browser',
+    result: 'Clicked browser'
+  },
+  browser_press: {
+    done: 'Pressed browser',
+    error: 'Press failed',
+    active: 'Pressing browser',
+    result: 'Pressed browser'
+  },
   browser_reload: {
     done: 'Reloaded browser',
     error: 'Reload failed',
@@ -42,6 +54,12 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
     error: 'Check failed',
     active: 'Checking browser',
     result: 'Checked browser'
+  },
+  browser_type: {
+    done: 'Typed browser',
+    error: 'Type failed',
+    active: 'Typing browser',
+    result: 'Typed browser'
   },
   browser_forward: {
     done: 'Went forward',

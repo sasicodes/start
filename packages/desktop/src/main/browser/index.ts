@@ -1,4 +1,5 @@
 import { isDev } from '@main/application';
+import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { readBrowserSnapshot, type BrowserSnapshot } from '@main/browser/snapshot';
 import { sendToRendererWindows } from '@main/window';
@@ -35,6 +36,12 @@ export interface BrowserActionResult {
   status?: BrowserStatus;
 }
 
+export interface BrowserTypeOptions {
+  clear: boolean;
+  ref: string;
+  text: string;
+}
+
 export interface BrowserSnapshotResult extends BrowserActionResult {
   snapshot?: BrowserSnapshot;
 }
@@ -50,6 +57,21 @@ let lastBounds: BrowserBounds | null = null;
 
 const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
+const allowedKeyCodes = new Set([
+  'Tab',
+  'Enter',
+  'Escape',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Backspace',
+  'Delete',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown'
+]);
 const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
@@ -261,6 +283,38 @@ export const captureBrowserSnapshot = async (): Promise<BrowserSnapshotResult> =
   if (!snapshot) return { ok: false, error: 'Could not read the browser page.' };
 
   return { ok: true, snapshot, status: statusFromView() };
+};
+
+export const clickInBrowser = async (ref: string): Promise<BrowserActionResult> => {
+  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  const result = await clickBrowserElement(browserView.webContents, ref);
+  if (!result.ok)
+    return { ok: false, error: result.error ?? 'Could not click the browser element.', status: statusFromView() };
+
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
+export const typeInBrowser = async ({ ref, text, clear }: BrowserTypeOptions): Promise<BrowserActionResult> => {
+  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  const result = await typeBrowserText(browserView.webContents, ref, text, clear);
+  if (!result.ok)
+    return { ok: false, error: result.error ?? 'Could not type into the browser element.', status: statusFromView() };
+
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
+export const pressInBrowser = (key: string): BrowserActionResult => {
+  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  if (!allowedKeyCodes.has(key)) return { ok: false, error: 'Unsupported browser key.', status: statusFromView() };
+
+  browserView.webContents.sendInputEvent({ type: 'keyDown', keyCode: key });
+  browserView.webContents.sendInputEvent({ type: 'keyUp', keyCode: key });
+  sendStatus();
+  return { ok: true, status: statusFromView() };
 };
 
 export const destroyBrowser = () => {

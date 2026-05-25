@@ -49,10 +49,22 @@ describe('tool details', () => {
     ).toMatchObject({
       title: 'Read browser'
     });
+
+    expect(
+      toolEventDetail({
+        key: 'tool:3',
+        state: 'done',
+        args: { ref: 'e1' },
+        toolName: 'browser_click'
+      })
+    ).toMatchObject({
+      title: 'Clicked browser'
+    });
   });
 
   it('renders browser tool error labels without raw tool names', () => {
     expect(toolResultTitle('browser_open', true)).toBe('Open failed');
+    expect(toolResultTitle('browser_type', true)).toBe('Type failed');
     expect(
       toolEventDetail({
         key: 'tool:1',

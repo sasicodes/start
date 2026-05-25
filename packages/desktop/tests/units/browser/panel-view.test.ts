@@ -3,9 +3,16 @@ import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 import type { WebContents } from 'electron';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const { captureBrowserScreenshot, destroyBrowser, openBrowserUrl, reloadBrowser, setBrowserBounds } = await import(
-  '@main/browser/index'
-);
+const {
+  captureBrowserScreenshot,
+  clickInBrowser,
+  destroyBrowser,
+  openBrowserUrl,
+  pressInBrowser,
+  reloadBrowser,
+  setBrowserBounds,
+  typeInBrowser
+} = await import('@main/browser/index');
 
 const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) =>
   window.webContents as unknown as WebContents;
@@ -158,6 +165,44 @@ describe('browser panel view', () => {
     await openBrowserUrl(webContents, 'https://example.com');
 
     expect(view.webContents.focusCount).toBe(1);
+  });
+
+  it('runs browser element interactions against the native view', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    await expect(clickInBrowser('e1')).resolves.toMatchObject({ ok: true });
+    await expect(typeInBrowser({ ref: 'e2', text: 'hello', clear: true })).resolves.toMatchObject({ ok: true });
+
+    expect(view.webContents.inputEvents).toEqual([]);
+  });
+
+  it('sends supported browser key presses to the native view', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    expect(pressInBrowser('Enter')).toMatchObject({ ok: true });
+    expect(view.webContents.inputEvents).toEqual([
+      { type: 'keyDown', keyCode: 'Enter' },
+      { type: 'keyUp', keyCode: 'Enter' }
+    ]);
+  });
+
+  it('rejects unsupported browser key presses', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+
+    expect(pressInBrowser('A')).toMatchObject({ ok: false, error: 'Unsupported browser key.' });
   });
 
   it('keeps interrupted browser navigation structured', async () => {
