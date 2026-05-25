@@ -103,6 +103,7 @@ export const RecentSessions = memo(
       async (limit = sessionPageSize) => {
         const requestId = sessionsRequestRef.current + 1;
         sessionsRequestRef.current = requestId;
+        setKnownEmpty(false);
 
         try {
           const page = await window.pi.chat.recentSessionsPage(pageOptions(workspacePath, limit));
