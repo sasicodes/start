@@ -1,5 +1,11 @@
-import type Database from 'better-sqlite3';
-import { openStartDb } from '@main/db';
+import { openStartDb, type StartStatement } from '@main/db';
+import {
+  readOptionalNumber,
+  readOptionalString,
+  readRequiredNumber,
+  readRequiredString,
+  type SqliteRow
+} from '@main/sqlite-row';
 
 const titleMaxLength = 120;
 
@@ -67,16 +73,16 @@ export const truncateTitle = (text: string): string => {
 };
 
 interface Statements {
-  insert: Database.Statement;
-  archive: Database.Statement;
-  unarchive: Database.Statement;
-  selectById: Database.Statement;
-  updateTitle: Database.Statement;
-  updateTurnEnd: Database.Statement;
-  updateThinking: Database.Statement;
-  listByCwdActive: Database.Statement;
-  listByCwdArchived: Database.Statement;
-  updateTitleIfEmpty: Database.Statement;
+  insert: StartStatement;
+  archive: StartStatement;
+  unarchive: StartStatement;
+  selectById: StartStatement;
+  updateTitle: StartStatement;
+  updateTurnEnd: StartStatement;
+  updateThinking: StartStatement;
+  listByCwdActive: StartStatement;
+  listByCwdArchived: StartStatement;
+  updateTitleIfEmpty: StartStatement;
 }
 
 let cachedStatements: Statements | undefined;
@@ -130,6 +136,23 @@ const rowToRecord = (row: SessionRow): SessionRecord => ({
   ...(row.thinking_level ? { thinkingLevel: row.thinking_level } : {})
 });
 
+const toSessionRow = (row: SqliteRow): SessionRow => ({
+  id: readRequiredString(row, 'id'),
+  cwd: readRequiredString(row, 'cwd'),
+  path: readRequiredString(row, 'path'),
+  title: readOptionalString(row, 'title'),
+  archived: readRequiredNumber(row, 'archived'),
+  created_at: readRequiredNumber(row, 'created_at'),
+  updated_at: readRequiredNumber(row, 'updated_at'),
+  app_version: readOptionalString(row, 'app_version'),
+  archived_at: readOptionalNumber(row, 'archived_at'),
+  model_id: readOptionalString(row, 'model_id'),
+  model_provider: readOptionalString(row, 'model_provider'),
+  thinking_level: readOptionalString(row, 'thinking_level'),
+  total_input_tokens: readRequiredNumber(row, 'total_input_tokens'),
+  total_output_tokens: readRequiredNumber(row, 'total_output_tokens')
+});
+
 export const upsertSessionOnStart = (input: UpsertOnStartInput): void => {
   const now = Date.now();
   statements().insert.run(
@@ -171,13 +194,13 @@ export const unarchiveSession = (id: string): void => {
 };
 
 export const getSession = (id: string): SessionRecord | undefined => {
-  const row = statements().selectById.get(id) as SessionRow | undefined;
-  if (!row) return;
-  return rowToRecord(row);
+  const rawRow = statements().selectById.get(id);
+  if (!rawRow) return;
+  return rowToRecord(toSessionRow(rawRow));
 };
 
 export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRecord[] => {
   const stmt = options.archived ? statements().listByCwdArchived : statements().listByCwdActive;
-  const rows = stmt.all(cwd, options.limit, options.offset) as SessionRow[];
+  const rows = stmt.all(cwd, options.limit, options.offset).map(toSessionRow);
   return rows.map(rowToRecord);
 };

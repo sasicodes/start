@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const openDbMock = vi.fn();
@@ -8,7 +8,7 @@ vi.mock('@main/db', () => ({
   closeStartDb: () => undefined
 }));
 
-const migration = `
+const schema = `
   CREATE TABLE sessions (
     id                   TEXT    PRIMARY KEY,
     path                 TEXT    NOT NULL,
@@ -27,11 +27,11 @@ const migration = `
   );
 `;
 
-let db: Database.Database;
+let db: DatabaseSync;
 
 beforeEach(() => {
-  db = new Database(':memory:');
-  db.exec(migration);
+  db = new DatabaseSync(':memory:');
+  db.exec(schema);
   openDbMock.mockReturnValue(db);
 });
 

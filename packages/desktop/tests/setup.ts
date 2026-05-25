@@ -9,6 +9,7 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
     SessionManager: fake.SessionManager,
     SettingsManager: fake.SettingsManager,
     createAgentSession: fake.createAgentSession,
+    defineTool: <T>(tool: T) => tool,
     getLastAssistantUsage: () => undefined
   };
 });
@@ -20,7 +21,9 @@ vi.mock('electron', async () => {
     app: fake.app,
     shell: fake.shell,
     clipboard: fake.clipboard,
-    nativeImage: fake.nativeImage
+    nativeImage: fake.nativeImage,
+    BrowserWindow: fake.default.BrowserWindow,
+    WebContentsView: fake.default.WebContentsView
   };
 });
 
@@ -39,14 +42,10 @@ vi.mock('@main/db', () => {
   return {
     openStartDb: () => ({
       prepare: () => stub,
-      transaction:
-        <T>(fn: () => T) =>
-        () =>
-          fn(),
-      pragma: () => undefined,
       exec: () => undefined,
       close: () => undefined
     }),
+    runStartTransaction: <T>(fn: () => T) => fn(),
     closeStartDb: () => undefined
   };
 });

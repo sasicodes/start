@@ -1,5 +1,6 @@
 import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
+import { useBrowserPanel } from '@renderer/app/browser';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
 import { useRendererRuntime } from '@renderer/app/runtime';
@@ -36,6 +37,7 @@ export const App = () => {
     closeSidePanel,
     openActivityPanel,
     openSettingsPanel,
+    openBrowserPanel,
     openShortcutsPanel,
     activityPanelVisible,
     settingsPanelVisible,
@@ -63,6 +65,8 @@ export const App = () => {
     setSurface('main');
     openShortcutsPanel();
   }, [openShortcutsPanel, setSurface, surface]);
+
+  const browserPanel = useBrowserPanel({ openPanel: openBrowserPanel, setSurface });
 
   const toggleSettings = useCallback(() => {
     setSurface('main');
@@ -249,9 +253,11 @@ export const App = () => {
       mode={renderedSidePanelMode}
       providers={authProviders}
       turnId={activityTurnId}
+      browserUrl={browserPanel.url}
       workspacePath={workspacePath}
       onSaveApiKey={saveApiKey}
       composerShortcut={composerShortcut}
+      onBrowserUrlOpened={browserPanel.clear}
       onLoginSubscription={loginSubscription}
       onDisconnectProvider={disconnectProvider}
       onComposerShortcutChange={updateComposerShortcut}

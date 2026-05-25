@@ -1,6 +1,6 @@
 import type { ComponentChildren } from 'preact';
 
-export interface SidePanelLayoutProps {
+export interface PanelLayoutProps {
   children: ComponentChildren;
   sidePanel: ComponentChildren;
   sidePanelLabel: string;

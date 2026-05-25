@@ -45,6 +45,11 @@ export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOp
     setSidePanelMode('shortcuts');
   }, []);
 
+  const openBrowserPanel = useCallback(() => {
+    setSidePanelOpen(true);
+    setSidePanelMode('browser');
+  }, []);
+
   const toggleSettingsPanel = useCallback(() => {
     setSidePanelOpen((open) => (sidePanelMode === 'settings' ? !open : true));
     setSidePanelMode('settings');
@@ -81,6 +86,7 @@ export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOp
     sidePanelMode === 'activity' && (!sessionViewActive || !activityTurnId) ? 'settings' : sidePanelMode;
   const sidePanelVisible = surface === 'main' && sidePanelOpen;
   const gitPanelVisible = sidePanelVisible && renderedSidePanelMode === 'git';
+  const browserPanelVisible = sidePanelVisible && renderedSidePanelMode === 'browser';
   const settingsPanelVisible = sidePanelVisible && renderedSidePanelMode === 'settings';
   const activityPanelVisible = sidePanelVisible && renderedSidePanelMode === 'activity';
   const shortcutsPanelVisible = sidePanelVisible && renderedSidePanelMode === 'shortcuts';
@@ -89,9 +95,11 @@ export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOp
     activityTurnId,
     sidePanelVisible,
     gitPanelVisible,
+    browserPanelVisible,
     closeSidePanel,
     openSettingsPanel,
     openActivityPanel,
+    openBrowserPanel,
     openShortcutsPanel,
     renderedSidePanelMode,
     settingsPanelVisible,

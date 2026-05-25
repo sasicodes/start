@@ -8,6 +8,18 @@ export const CheckIcon = (props: IconProps) => (
   </svg>
 );
 
+export const XIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M6.75 6.75L17.25 17.25M17.25 6.75L6.75 17.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const ChevronLeftIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
@@ -24,6 +36,83 @@ export const ChevronRightIcon = (props: IconProps) => (
     <path
       d="M9 4L14.8787 9.87866C16.0503 11.0502 16.0503 12.9497 14.8787 14.1213L9 20"
       stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
+export const RefreshIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M13 21C13.5523 21 14 20.5523 14 20C14 19.4477 13.5523 19 13 19C12.4477 19 12 19.4477 12 20C12 20.5523 12.4477 21 13 21Z"
+      fill="currentColor"
+    />
+    <path
+      d="M21 11C21 10.4477 20.5523 9.99999 20 9.99999C19.4477 9.99999 19 10.4477 19 11C19 11.5523 19.4477 12 20 12C20.5523 12 21 11.5523 21 11Z"
+      fill="currentColor"
+    />
+    <path
+      d="M19.9295 14.2679C20.4078 14.5441 20.5716 15.1557 20.2955 15.634C20.0193 16.1123 19.4078 16.2761 18.9295 16C18.4512 15.7238 18.2873 15.1123 18.5634 14.634C18.8396 14.1557 19.4512 13.9918 19.9295 14.2679Z"
+      fill="currentColor"
+    />
+    <path
+      d="M17.3676 19.2942C17.8459 19.0181 18.0098 18.4065 17.7336 17.9282C17.4575 17.4499 16.8459 17.286 16.3676 17.5621C15.8893 17.8383 15.7254 18.4499 16.0016 18.9282C16.2777 19.4065 16.8893 19.5703 17.3676 19.2942Z"
+      fill="currentColor"
+    />
+    <path
+      d="M18.9269 7.99998C18.4487 8.27612 17.8371 8.11225 17.5609 7.63396C17.2848 7.15566 17.4487 6.54407 17.9269 6.26793C18.4052 5.99179 19.0168 6.15566 19.293 6.63396C19.5691 7.11225 19.4052 7.72384 18.9269 7.99998Z"
+      fill="currentColor"
+    />
+    <path
+      d="M9.25 14.75V20.25H3.75"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M15.2493 4.41452C14.2521 3.98683 13.1537 3.75 12 3.75C7.44365 3.75 3.75 7.44365 3.75 12C3.75 15.498 5.92698 18.4875 9 19.6876"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
+export const ScreenshotIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M8.25 20.25H6.75C5.09315 20.25 3.75 18.9069 3.75 17.25V15.75M15.75 20.25H17.25C18.9069 20.25 20.25 18.9069 20.25 17.25V15.75M3.75 8.25V6.75C3.75 5.09315 5.09315 3.75 6.75 3.75H8.25M15.75 3.75H17.25C18.9069 3.75 20.25 5.09315 20.25 6.75V8.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M7.75 13.25V10.1642C7.75 9.38317 8.38317 8.75 9.16421 8.75C9.53929 8.75 9.899 8.601 10.1642 8.33579L10.25 8.25C10.5701 7.92986 11.0044 7.75 11.4571 7.75H12.5429C12.9956 7.75 13.4299 7.92986 13.75 8.25L13.8358 8.33579C14.101 8.601 14.4607 8.75 14.8358 8.75C15.6168 8.75 16.25 9.38317 16.25 10.1642V13.25C16.25 14.3546 15.3546 15.25 14.25 15.25H9.75C8.64543 15.25 7.75 14.3546 7.75 13.25Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M12 11.85V11.835M12.75 11.85C12.75 12.2642 12.4142 12.6 12 12.6C11.5858 12.6 11.25 12.2642 11.25 11.85C11.25 11.4358 11.5858 11.1 12 11.1C12.4142 11.1 12.75 11.4358 12.75 11.85Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
+export const BrowserEmptyIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M19.7783 4.22184L4.22197 19.7782M21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12ZM18.5163 18.516C17.3167 19.7156 13.427 17.7707 9.82826 14.172C6.22955 10.5733 4.28467 6.68352 5.48424 5.48395C6.68381 4.28438 10.5736 6.22927 14.1723 9.82798C17.771 13.4267 19.7159 17.3165 18.5163 18.516Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
     />

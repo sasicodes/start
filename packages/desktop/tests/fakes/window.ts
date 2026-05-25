@@ -6,7 +6,11 @@ export interface BroadcastEvent {
 const broadcasts: BroadcastEvent[] = [];
 
 export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
-  broadcasts.push({ channel, args });
+  broadcasts.push({ args, channel });
+};
+
+export const sendToMainWindow = (channel: string, ...args: unknown[]) => {
+  broadcasts.push({ args, channel });
 };
 
 export const broadcastedEvents = () => [...broadcasts];

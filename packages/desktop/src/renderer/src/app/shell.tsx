@@ -1,8 +1,8 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
+import { PanelLayout } from '@renderer/shared/panel/layout';
 import { Settings } from '@renderer/shared/settings';
-import { SidePanelLayout } from '@renderer/shared/side-panel/layout';
 import { TurnFeed } from '@renderer/shared/turn/feed';
 import { Update } from '@renderer/shared/updates';
 import { GitChanges } from '@renderer/shared/workspace/changes';
@@ -89,7 +89,7 @@ const MainSessionSurface = memo(
     onOpenActivityPanel,
     onOpenSession
   }: MainSessionSurfaceProps) => (
-    <SidePanelLayout
+    <PanelLayout
       sidePanel={sidePanel}
       sidePanelLabel={sidePanelLabel}
       sidePanelVisible={sidePanelVisible}
@@ -113,7 +113,7 @@ const MainSessionSurface = memo(
         <Settings open={settingsPanelVisible} onOpen={onOpenSettings} />
       </div>
       {mainComposer}
-    </SidePanelLayout>
+    </PanelLayout>
   )
 );
 
@@ -157,9 +157,6 @@ export const AppShell = memo(
       {...(surface === 'composer' ? { onMouseDown: onDiscardComposer } : {})}
       class="relative block h-full min-h-screen w-full overflow-hidden bg-transparent"
     >
-      {surface === 'main' && (
-        <div aria-hidden="true" class="absolute inset-x-0 top-0 z-60 h-7 [-webkit-app-region:drag]" />
-      )}
       {surface === 'main' ? (
         <MainSessionSurface
           sidePanel={sidePanel}

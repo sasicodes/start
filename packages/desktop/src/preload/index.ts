@@ -260,6 +260,28 @@ export interface AppFocusState {
   focused: boolean;
 }
 
+export interface BrowserBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface BrowserStatus {
+  url: string;
+  open: boolean;
+  title: string;
+  loading: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
+}
+
+export interface BrowserActionResult {
+  ok: boolean;
+  error?: string;
+  status?: BrowserStatus;
+}
+
 export type UpdateState =
   | { status: 'downloaded' }
   | { error: string; status: 'error' }
@@ -293,6 +315,15 @@ const api = {
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
+    browserBack: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-back'),
+    browserForward: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-forward'),
+    browserReload: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-reload'),
+    browserStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-stop'),
+    browserStatus: (): Promise<BrowserStatus> => ipcRenderer.invoke('app:browser-status'),
+    browserScreenshot: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-screenshot'),
+    browserOpen: (url: string): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-open', url),
+    browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
+      ipcRenderer.invoke('app:browser-bounds', bounds),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),
     revealPath: (workspacePath: string, filePath: string): Promise<void> =>
@@ -309,6 +340,10 @@ const api = {
     onShowComposer: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-composer', listener),
     onDiscardComposer: (listener: () => void): IpcDisposer => onIpc<[]>('app:discard-composer', listener),
     onHideComposerRequest: (listener: () => void): IpcDisposer => onIpc<[]>('app:hide-composer-request', listener),
+    onBrowserOpenRequest: (listener: (url: string) => void): IpcDisposer =>
+      onIpc<[string]>('app:browser-open-request', listener),
+    onBrowserStatus: (listener: (status: BrowserStatus) => void): IpcDisposer =>
+      onIpc<[BrowserStatus]>('app:browser-status', listener),
     onFocusStateChanged: (listener: (state: AppFocusState) => void): IpcDisposer =>
       onIpc<[AppFocusState]>('app:focus-state-changed', listener),
     onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>

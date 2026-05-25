@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import type Database from 'better-sqlite3';
 import { baseDir } from '@main/application';
-import { openStartDb } from '@main/db';
+import { openStartDb, runStartTransaction, type StartStatement } from '@main/db';
+import { readRequiredString, type SqliteRow } from '@main/sqlite-row';
 import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {
@@ -100,9 +100,9 @@ const stateKey = {
 type StateRow = { key: string; value_json: string };
 
 interface AppStateStatements {
-  selectAll: Database.Statement;
-  upsert: Database.Statement;
-  remove: Database.Statement;
+  selectAll: StartStatement;
+  upsert: StartStatement;
+  remove: StartStatement;
 }
 
 let cachedStatements: AppStateStatements | undefined;
@@ -120,7 +120,12 @@ const statements = (): AppStateStatements => {
   return cachedStatements;
 };
 
-const readAllRows = (): StateRow[] => statements().selectAll.all() as StateRow[];
+const toStateRow = (row: SqliteRow): StateRow => ({
+  key: readRequiredString(row, 'key'),
+  value_json: readRequiredString(row, 'value_json')
+});
+
+const readAllRows = (): StateRow[] => statements().selectAll.all().map(toStateRow);
 
 const writeRow = (key: string, value: unknown) => statements().upsert.run(key, JSON.stringify(value), Date.now());
 
@@ -163,14 +168,14 @@ export const readStartState = (): StartState => {
 
 export const writeStartState = (state: StartState): StartState => {
   const nextState = parseStartState(state);
-  openStartDb().transaction(() => {
+  runStartTransaction(() => {
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
     writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);
     writeOrDeleteRow(stateKey.workspaceBookmarks, nextState.workspaceBookmarks);
-  })();
+  });
   return nextState;
 };
 

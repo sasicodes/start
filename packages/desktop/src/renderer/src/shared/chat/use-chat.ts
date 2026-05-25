@@ -149,6 +149,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     onShowChat,
     loadModels,
     syncStatus,
+    loadAuthProviders,
     workspacePath,
     textareaRef,
     clearSession,

@@ -1,6 +1,6 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import { countLabel, stringValue, textContent } from '@main/details';
-import { toolEventDetail } from '@main/tool-details';
+import { toolEventDetail } from '@main/tools/details';
 import type { ChatEvent } from '@main/types';
 
 const metadataEvent = (key: string, title: string, state: ChatEvent['state'] = 'done'): ChatEvent => ({

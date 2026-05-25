@@ -18,6 +18,51 @@ const bodyValue = (event: ChatEvent, value: string) => {
 
 const recordPath = (args: Record<string, unknown>) => stringValue(args.path) || '.';
 
+const browserToolTitles: Record<string, { active: string; done: string; error: string; result: string }> = {
+  browser_back: {
+    done: 'Went back',
+    error: 'Back failed',
+    active: 'Going back',
+    result: 'Went back'
+  },
+  browser_open: {
+    done: 'Opened browser',
+    error: 'Open failed',
+    active: 'Opening browser',
+    result: 'Opened browser'
+  },
+  browser_reload: {
+    done: 'Reloaded browser',
+    error: 'Reload failed',
+    active: 'Reloading browser',
+    result: 'Reloaded browser'
+  },
+  browser_status: {
+    done: 'Checked browser',
+    error: 'Check failed',
+    active: 'Checking browser',
+    result: 'Checked browser'
+  },
+  browser_forward: {
+    done: 'Went forward',
+    error: 'Forward failed',
+    active: 'Going forward',
+    result: 'Went forward'
+  },
+  browser_snapshot: {
+    done: 'Read browser',
+    error: 'Read failed',
+    active: 'Reading browser',
+    result: 'Read browser'
+  },
+  browser_screenshot: {
+    done: 'Captured browser',
+    error: 'Capture failed',
+    active: 'Capturing browser',
+    result: 'Captured browser'
+  }
+};
+
 const fileLanguages: Record<string, string> = {
   c: 'c',
   h: 'c',
@@ -110,6 +155,8 @@ export const toolBody = (toolName: string, args: Record<string, unknown>, result
 };
 
 const toolDetail = (toolName: string, args: Record<string, unknown>) => {
+  if (toolName === 'browser_open') return stringValue(args.url);
+  if (toolName.startsWith('browser_')) return '';
   if (toolName === 'bash') return stringValue(args.command).replace(/\s+/g, ' ').trim();
   if (toolName === 'find') return stringValue(args.pattern);
   if (toolName === 'grep') return stringValue(args.pattern);
@@ -145,6 +192,9 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
 };
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
+  const browserTitle = browserToolTitles[toolName];
+  if (browserTitle) return error ? browserTitle.error : browserTitle.result;
+
   if (error) {
     if (toolName === 'bash') return 'Command failed';
     if (toolName === 'edit') return 'File modification failed';
@@ -182,6 +232,12 @@ const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
+  const browserTitle = browserToolTitles[toolName];
+  if (browserTitle) {
+    if (state === 'error') return browserTitle.error;
+    return state === 'active' ? browserTitle.active : browserTitle.done;
+  }
+
   const path = recordPath(args);
   const command = toolDetail(toolName, args);
   const pattern = stringValue(args.pattern);

@@ -49,7 +49,7 @@
 
 .markdown-default [data-streamdown="link"],
 .markdown-compact [data-streamdown="link"] {
-  @apply text-hover underline decoration-line underline-offset-3 transition-colors hover:text-ink;
+  @apply text-link no-underline decoration-dotted underline-offset-3 transition-colors hover:text-link hover:underline;
 }
 
 .markdown-default [data-streamdown="inline-code"],

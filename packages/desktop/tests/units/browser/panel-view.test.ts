@@ -1,0 +1,144 @@
+import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
+import type { WebContents } from 'electron';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+const { captureBrowserScreenshot, destroyBrowser, openBrowserUrl, reloadBrowser, setBrowserBounds } = await import(
+  '@main/browser/index'
+);
+
+const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) =>
+  window.webContents as unknown as WebContents;
+
+describe('browser panel view', () => {
+  beforeEach(() => {
+    resetFakeBrowserWindows();
+    destroyBrowser();
+  });
+
+  afterEach(() => {
+    destroyBrowser();
+  });
+
+  it('closes the native browser view when panel bounds are cleared', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    expect(window.contentView.children).toHaveLength(1);
+    expect(view?.backgroundColor).toBe('#00000000');
+
+    setBrowserBounds(webContents, null);
+    expect(window.contentView.children).toHaveLength(0);
+    expect(view?.webContents.closed).toBe(true);
+  });
+
+  it('creates a fresh browser view after the panel is reopened', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+
+    setBrowserBounds(webContents, null);
+    setBrowserBounds(webContents, { x: 12, y: 24, width: 320, height: 220 });
+
+    expect(window.contentView.children).toHaveLength(1);
+    expect(window.contentView.children[0]).not.toBe(view);
+  });
+
+  it('refuses browser actions after the panel is closed', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    setBrowserBounds(webContents, null);
+
+    expect(reloadBrowser()).toEqual({
+      ok: false,
+      error: 'Open the in-app browser panel first.',
+      status: {
+        url: '',
+        open: false,
+        title: '',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false
+      }
+    });
+  });
+
+  it('returns a structured error when screenshot capture fails', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+    view.webContents.capturePage = async () => {
+      throw new Error('destroyed');
+    };
+
+    await expect(captureBrowserScreenshot()).resolves.toEqual({
+      ok: false,
+      error: 'Could not capture the browser screenshot.',
+      status: {
+        url: '',
+        open: true,
+        title: '',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false
+      }
+    });
+  });
+
+  it('keeps interrupted browser navigation structured', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+    view.webContents.loadURL = async () => {
+      throw new Error('ERR_ABORTED');
+    };
+
+    await expect(openBrowserUrl(webContents, 'https://example.com')).resolves.toEqual({
+      ok: true,
+      status: {
+        url: '',
+        open: true,
+        title: '',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false
+      }
+    });
+  });
+
+  it('returns a structured error when browser navigation fails', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+    view.webContents.loadURL = async () => {
+      throw new Error('ERR_NAME_NOT_RESOLVED');
+    };
+
+    await expect(openBrowserUrl(webContents, 'https://example.com')).resolves.toEqual({
+      ok: false,
+      error: 'This site cannot be loaded.',
+      status: {
+        url: '',
+        open: true,
+        title: '',
+        loading: false,
+        canGoBack: false,
+        canGoForward: false
+      }
+    });
+  });
+});

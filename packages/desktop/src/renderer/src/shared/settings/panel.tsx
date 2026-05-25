@@ -120,8 +120,8 @@ export const Settings = memo(
           const auth = providerStatus(authProviders, provider.key);
           const draftKey = apiKeys[provider.key];
           const connected = auth?.connected ?? false;
-          const hasCredentials = auth?.hasCredentials ?? false;
-          const authLabel = auth?.label ?? 'Not connected';
+          const hasCredentials = auth?.hasCredentials ?? true;
+          const authLabel = auth?.label ?? 'Checking connection';
           const hasDraftKey = draftKey.trim().length > 0;
           const authDetail = connected ? connectionDetail(auth?.label) : '';
 

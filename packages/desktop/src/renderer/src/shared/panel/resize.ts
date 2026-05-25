@@ -2,16 +2,16 @@ import {
   clamp,
   getResizeCursor,
   type ResizeCursor,
-  readStoredSidePanelWidth,
-  getSidePanelCollapseWidth,
-  sidePanelSettleDurationMs,
-  writeStoredSidePanelWidth,
-  defaultMaxSidePanelWidthRatio
-} from '@renderer/shared/side-panel/width';
+  readStoredPanelWidth,
+  getPanelCollapseWidth,
+  panelSettleDurationMs,
+  writeStoredPanelWidth,
+  defaultMaxPanelWidthRatio
+} from '@renderer/shared/panel/width';
 import type { JSX } from 'preact';
 import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'preact/hooks';
 
-interface UseSidePanelResizeOptions {
+interface UsePanelResizeOptions {
   fallbackWidth: number;
   sidePanelVisible: boolean;
   maxSidePanelWidthRatio: number;
@@ -19,16 +19,16 @@ interface UseSidePanelResizeOptions {
   onSidePanelCollapse?: () => void;
 }
 
-export const useSidePanelResize = ({
+export const usePanelResize = ({
   fallbackWidth,
   maxSidePanelWidthRatio,
   onSidePanelCollapse,
   sidePanelVisible,
   minSidePanelWidthRatio
-}: UseSidePanelResizeOptions) => {
+}: UsePanelResizeOptions) => {
   const [resizing, setResizing] = useState(false);
   const [settling, setSettling] = useState(false);
-  const [initialWidth] = useState(() => readStoredSidePanelWidth() ?? fallbackWidth);
+  const [initialWidth] = useState(() => readStoredPanelWidth() ?? fallbackWidth);
   const rootRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController>();
   const frameRef = useRef<number>();
@@ -46,7 +46,7 @@ export const useSidePanelResize = ({
   const getRootWidth = useCallback(() => rootRef.current?.clientWidth ?? window.innerWidth, []);
 
   const getMaxWidth = useCallback(
-    () => getRootWidth() * clamp(maxSidePanelWidthRatio || defaultMaxSidePanelWidthRatio, 0, 1),
+    () => getRootWidth() * clamp(maxSidePanelWidthRatio || defaultMaxPanelWidthRatio, 0, 1),
     [getRootWidth, maxSidePanelWidthRatio]
   );
 
@@ -56,12 +56,12 @@ export const useSidePanelResize = ({
   );
 
   const setOffset = useCallback((offset: number) => {
-    rootRef.current?.style.setProperty('--side-panel-offset', `${offset}px`);
+    rootRef.current?.style.setProperty('--panel-offset', `${offset}px`);
   }, []);
 
   const setWidth = useCallback((width: number) => {
     widthRef.current = width;
-    rootRef.current?.style.setProperty('--side-panel-width', `${width}px`);
+    rootRef.current?.style.setProperty('--panel-width', `${width}px`);
   }, []);
 
   const setResizeCursor = useCallback(
@@ -72,7 +72,7 @@ export const useSidePanelResize = ({
         minWidth: getMinWidth(),
         canCollapse: Boolean(onSidePanelCollapse)
       });
-      rootRef.current?.style.setProperty('--side-panel-resize-cursor', cursor);
+      rootRef.current?.style.setProperty('--panel-resize-cursor', cursor);
       return cursor;
     },
     [getMaxWidth, getMinWidth, onSidePanelCollapse]
@@ -154,7 +154,7 @@ export const useSidePanelResize = ({
         settleTimeoutRef.current = window.setTimeout(() => {
           settleTimeoutRef.current = undefined;
           setSettling(false);
-        }, sidePanelSettleDurationMs);
+        }, panelSettleDurationMs);
       });
     },
     [applyWidth, clearSettle, setOffset, stopResize]
@@ -174,7 +174,7 @@ export const useSidePanelResize = ({
         settleTimeoutRef.current = undefined;
         onSidePanelCollapse?.();
         setSettling(false);
-      }, sidePanelSettleDurationMs);
+      }, panelSettleDurationMs);
     });
   }, [clearSettle, getMinWidth, onSidePanelCollapse, setOffset, setWidth, stopResize]);
 
@@ -183,12 +183,12 @@ export const useSidePanelResize = ({
     const minWidth = getMinWidth();
     const nextWidth = rawWidth < minWidth ? minWidth : preferredWidthRef.current;
 
-    if (rawWidth <= getSidePanelCollapseWidth(minWidth)) {
+    if (rawWidth <= getPanelCollapseWidth(minWidth)) {
       collapse();
       return;
     }
 
-    writeStoredSidePanelWidth(nextWidth);
+    writeStoredPanelWidth(nextWidth);
 
     if (rawWidth < minWidth) {
       preferredWidthRef.current = nextWidth;

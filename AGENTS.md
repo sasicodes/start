@@ -44,6 +44,8 @@
 - Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
 - Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
 - Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
+- Extract long boolean expressions, chained fallbacks, and repeated validation checks into named helpers when a name makes the condition easier to scan.
+- Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
 - Avoid placeholder ternaries such as `condition ? '' : value`; split branches or extract helpers so each path computes only what it uses.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
 - For small icon-only controls, keep the visual size stable and expand the clickable hit area with a pseudo-element such as `before:absolute before:-inset-2` when precision clicking would be frustrating.

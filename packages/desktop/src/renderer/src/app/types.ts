@@ -1,2 +1,2 @@
 export type AppSurface = 'main' | 'composer';
-export type SidePanelMode = 'activity' | 'git' | 'settings' | 'shortcuts';
+export type SidePanelMode = 'activity' | 'browser' | 'git' | 'settings' | 'shortcuts';

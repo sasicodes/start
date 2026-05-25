@@ -24,6 +24,7 @@ interface UseChatEventsOptions {
   clearSession: () => void;
   onShowSettings: () => void;
   loadModels: () => Promise<void>;
+  loadAuthProviders: () => Promise<void>;
   syncStatus: () => Promise<void>;
   workspacePath: string;
   activeSessionId: string;
@@ -42,6 +43,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
   const refreshChatState = useCallback(() => {
     void optionsRef.current.syncStatus().catch(() => {});
     void optionsRef.current.loadModels().catch(() => {});
+    void optionsRef.current.loadAuthProviders().catch(() => {});
   }, []);
 
   useAppFocusChange((focused) => {

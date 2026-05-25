@@ -1,4 +1,4 @@
-import { formatForDisplay } from '@tanstack/hotkeys';
+import { formatShortcut } from '@renderer/shared/shortcuts/format';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 
@@ -10,14 +10,6 @@ interface ShortcutEntry {
   label: string;
   chords: string[];
 }
-
-const formatChord = (chord: string) => {
-  try {
-    return formatForDisplay(chord, { useSymbols: false, separatorToken: ' + ' });
-  } catch {
-    return chord;
-  }
-};
 
 export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
   const entries: ShortcutEntry[] = [
@@ -47,7 +39,7 @@ export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
               {entry.chords.map((chord, chordIndex) => (
                 <span class="flex items-center gap-2" key={chord}>
                   {chordIndex > 0 && <span>/</span>}
-                  <span>{formatChord(chord)}</span>
+                  <span>{formatShortcut(chord)}</span>
                 </span>
               ))}
             </span>

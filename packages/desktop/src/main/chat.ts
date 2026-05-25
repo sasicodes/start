@@ -14,6 +14,7 @@ import { appVersion } from '@main/application';
 import { closeStartDb, openStartDb } from '@main/db';
 import { resolveAuthBackend } from '@main/pi/auth';
 import { InMemorySettingsBackend } from '@main/pi/settings';
+import { createStartCustomTools } from '@main/pi/tools/index';
 import {
   archiveSession,
   getSession,
@@ -263,12 +264,13 @@ export class ChatService {
       this.session = null;
       const resourceLoader = await createStartResourceLoader(workspacePath);
       const { session } = await createAgentSession({
+        cwd: workspacePath,
         model,
         sessionManager,
         resourceLoader,
-        cwd: workspacePath,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
+        customTools: createStartCustomTools(),
         settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
       });
@@ -344,12 +346,13 @@ export class ChatService {
     const sessionManager = SessionManager.create(workspacePath);
     const resourceLoader = await createStartResourceLoader(workspacePath);
     const { session } = await createAgentSession({
+      cwd: workspacePath,
       model,
       sessionManager,
       resourceLoader,
-      cwd: workspacePath,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
+      customTools: createStartCustomTools(),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -1384,6 +1387,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
+      customTools: createStartCustomTools(),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });

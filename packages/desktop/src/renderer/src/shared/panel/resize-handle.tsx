@@ -17,7 +17,7 @@ export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => 
       onPointerDown={onPointerDown}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
-      class="absolute inset-y-0 left-0 z-20 w-3 -translate-x-1/2 touch-none select-none [cursor:var(--side-panel-resize-cursor,ew-resize)] [-webkit-app-region:no-drag]"
+      class="absolute inset-y-0 left-0 z-20 w-3 -translate-x-1/2 touch-none select-none [cursor:var(--panel-resize-cursor,ew-resize)] [-webkit-app-region:no-drag]"
     >
       <div
         class={tw(

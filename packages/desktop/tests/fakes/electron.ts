@@ -1,4 +1,5 @@
 type Handler = (...args: unknown[]) => unknown;
+type WindowEvent = 'closed';
 
 export interface FakeWebContents {
   send: (channel: string, ...args: unknown[]) => void;
@@ -32,6 +33,7 @@ export const shell = {
 };
 
 export const clipboard = {
+  writeImage: (_image: unknown) => {},
   readImage: () => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })
 };
 
@@ -45,11 +47,146 @@ export const app = {
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
 };
 
+interface FakeBrowserBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface FakeWindowOpenInput {
+  url: string;
+}
+
+interface FakeWindowOpenResult {
+  action: 'allow' | 'deny';
+}
+
+type WindowOpenHandler = (input: FakeWindowOpenInput) => FakeWindowOpenResult;
+
+export interface FakeBrowserWebContents extends FakeWebContents {
+  closed: boolean;
+  capturePage: () => Promise<{ isEmpty: () => boolean }>;
+  close: () => void;
+  getTitle: () => string;
+  getURL: () => string;
+  isLoading: () => boolean;
+  loadURL: (url: string) => Promise<void>;
+  navigationHistory: {
+    canGoBack: () => boolean;
+    canGoForward: () => boolean;
+    goBack: () => void;
+    goForward: () => void;
+  };
+  on: (_event: string, _handler: () => void) => void;
+  reload: () => void;
+  setWindowOpenHandler: (handler: WindowOpenHandler) => void;
+  stop: () => void;
+}
+
+export interface FakeContentView {
+  children: FakeWebContentsView[];
+  addChildView: (view: FakeWebContentsView) => void;
+  removeChildView: (view: FakeWebContentsView) => void;
+}
+
+export interface FakeBrowserWindow {
+  contentView: FakeContentView;
+  destroyed: boolean;
+  webContents: FakeBrowserWebContents;
+  close: () => void;
+  isDestroyed: () => boolean;
+  off: (event: WindowEvent, handler: () => void) => void;
+  on: (event: WindowEvent, handler: () => void) => void;
+}
+
+const windowsByWebContents = new Map<FakeBrowserWebContents, FakeBrowserWindow>();
+
+const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
+  const base = createFakeWebContents();
+  const webContents: FakeBrowserWebContents = {
+    ...base,
+    closed: false,
+    capturePage: async () => ({ isEmpty: () => false }),
+    close: () => {
+      webContents.closed = true;
+    },
+    getTitle: () => '',
+    getURL: () => '',
+    isLoading: () => false,
+    loadURL: async (_url: string) => {},
+    navigationHistory: {
+      canGoBack: () => false,
+      canGoForward: () => false,
+      goBack: () => {},
+      goForward: () => {}
+    },
+    on: (_event: string, _handler: () => void) => {},
+    reload: () => {},
+    setWindowOpenHandler: (_handler: WindowOpenHandler) => {},
+    stop: () => {}
+  };
+  return webContents;
+};
+
+export class FakeWebContentsView {
+  bounds: FakeBrowserBounds[] = [];
+  backgroundColor = '';
+  webContents = createFakeBrowserWebContents();
+
+  setBackgroundColor = (color: string) => {
+    this.backgroundColor = color;
+  };
+
+  setBounds = (bounds: FakeBrowserBounds) => {
+    this.bounds.push(bounds);
+  };
+}
+
+export const createFakeBrowserWindow = (): FakeBrowserWindow => {
+  const closedHandlers = new Set<() => void>();
+  const contentView: FakeContentView = {
+    children: [],
+    addChildView: (view) => {
+      contentView.children.push(view);
+    },
+    removeChildView: (view) => {
+      contentView.children = contentView.children.filter((child) => child !== view);
+    }
+  };
+  const window: FakeBrowserWindow = {
+    contentView,
+    destroyed: false,
+    webContents: createFakeBrowserWebContents(),
+    close: () => {
+      window.destroyed = true;
+      for (const handler of closedHandlers) handler();
+    },
+    isDestroyed: () => window.destroyed,
+    off: (_event, handler) => {
+      closedHandlers.delete(handler);
+    },
+    on: (_event, handler) => {
+      closedHandlers.add(handler);
+    }
+  };
+  windowsByWebContents.set(window.webContents, window);
+  return window;
+};
+
+export const resetFakeBrowserWindows = () => {
+  windowsByWebContents.clear();
+};
+
 const fakeElectronModule = {
   app,
   shell,
   clipboard,
   nativeImage,
+  BrowserWindow: {
+    fromWebContents: (webContents: FakeBrowserWebContents) => windowsByWebContents.get(webContents) ?? null
+  },
+  WebContentsView: FakeWebContentsView,
   ipcMain: {
     handle: (_channel: string, _handler: Handler) => {},
     on: (_channel: string, _handler: Handler) => {}

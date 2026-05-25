@@ -1,5 +1,16 @@
 import { initAnalytics, shutdownAnalytics, trackAnalyticsEvent, workspaceAnalyticsProperties } from '@main/analytics';
-import { appIconPath, appId, appMenuName, appVersion, isMac } from '@main/application';
+import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main/application';
+import {
+  captureBrowserScreenshot,
+  destroyBrowser,
+  getBrowserStatus,
+  goBackInBrowser,
+  goForwardInBrowser,
+  openBrowserUrl,
+  reloadBrowser,
+  setBrowserBounds,
+  stopBrowser
+} from '@main/browser/index';
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } from '@main/git';
@@ -33,6 +44,7 @@ import electron from 'electron';
 const { app, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
 
 const chat = new ChatService();
@@ -151,6 +163,14 @@ app.whenReady().then(async () => {
     getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
   );
   ipcMain.handle('app:settings', () => appSettings);
+  ipcMain.handle('app:browser-back', goBackInBrowser);
+  ipcMain.handle('app:browser-forward', goForwardInBrowser);
+  ipcMain.handle('app:browser-reload', reloadBrowser);
+  ipcMain.handle('app:browser-stop', stopBrowser);
+  ipcMain.handle('app:browser-status', getBrowserStatus);
+  ipcMain.handle('app:browser-screenshot', captureBrowserScreenshot);
+  ipcMain.handle('app:browser-open', (event, url: string) => openBrowserUrl(event.sender, url));
+  ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
   registerUpdateIpc();
   ipcMain.handle('app:hide-composer', () => {
     hideComposerWindow();
@@ -254,6 +274,7 @@ app.on('before-quit', (event) => {
   stopWorkspaceChanged?.();
   stopWorkspaceChanged = undefined;
   stopAutoUpdateChecks();
+  void destroyBrowser();
   chat.dispose();
   deactivateWorkspaceAccess();
 });
