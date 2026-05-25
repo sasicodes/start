@@ -58,11 +58,10 @@ const bumpVersion = (version, releaseVersion) => {
 };
 
 const listWorkspaceChanges = () => {
-  const status = runCapture('git status --short', { cwd: workspaceRoot });
+  const status = execSync('git status --short', { cwd: workspaceRoot, encoding: 'utf8' });
   return status
     .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
+    .filter((line) => line.length > 0)
     .map((line) => line.slice(3));
 };
 
