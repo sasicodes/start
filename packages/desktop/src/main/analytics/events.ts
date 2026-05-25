@@ -7,14 +7,15 @@ import {
 } from '@main/analytics/index';
 import type { ChatService } from '@main/chat';
 
+type AnalyticsProperties = Record<string, null | number | string | boolean>;
 type Attachments = readonly unknown[];
 
-const attachmentProperties = (attachments: Attachments) => ({
+const attachmentProperties = (attachments: Attachments): AnalyticsProperties => ({
   attachment_count: attachments.length,
   has_attachments: attachments.length > 0
 });
 
-const chatStatusProperties = async (chat: ChatService) => {
+const chatStatusProperties = async (chat: ChatService): Promise<AnalyticsProperties> => {
   try {
     const status = await chat.getStatus();
     return {
@@ -28,7 +29,7 @@ const chatStatusProperties = async (chat: ChatService) => {
   }
 };
 
-const trackWithChatStatus = (chat: ChatService, event: AnalyticsEvent, properties: Record<string, unknown>) => {
+const trackWithChatStatus = (chat: ChatService, event: AnalyticsEvent, properties: AnalyticsProperties) => {
   void chatStatusProperties(chat).then((status) => trackAnalyticsEvent(event, { ...status, ...properties }));
 };
 
