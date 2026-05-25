@@ -15,7 +15,26 @@ const migrations = [
      provider   TEXT PRIMARY KEY,
      ciphertext BLOB NOT NULL,
      updated_at INTEGER NOT NULL
-   )`
+   )`,
+  `CREATE TABLE sessions (
+     id                   TEXT    PRIMARY KEY,
+     path                 TEXT    NOT NULL,
+     cwd                  TEXT    NOT NULL,
+     title                TEXT,
+     model_provider       TEXT,
+     model_id             TEXT,
+     thinking_level       TEXT,
+     total_input_tokens   INTEGER NOT NULL DEFAULT 0,
+     total_output_tokens  INTEGER NOT NULL DEFAULT 0,
+     archived             INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0, 1)),
+     archived_at          INTEGER,
+     app_version          TEXT,
+     created_at           INTEGER NOT NULL,
+     updated_at           INTEGER NOT NULL
+   );
+   CREATE INDEX idx_sessions_cwd      ON sessions(cwd, updated_at DESC) WHERE archived = 0;
+   CREATE INDEX idx_sessions_updated  ON sessions(updated_at DESC)      WHERE archived = 0;
+   CREATE INDEX idx_sessions_archived ON sessions(archived, updated_at DESC)`
 ] as const;
 
 const applyPragmas = (db: Database.Database) => {

@@ -8,7 +8,8 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
     ModelRegistry: fake.ModelRegistry,
     SessionManager: fake.SessionManager,
     SettingsManager: fake.SettingsManager,
-    createAgentSession: fake.createAgentSession
+    createAgentSession: fake.createAgentSession,
+    getLastAssistantUsage: () => undefined
   };
 });
 

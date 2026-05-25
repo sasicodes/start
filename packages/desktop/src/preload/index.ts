@@ -339,6 +339,8 @@ const api = {
     slashCommands: (): Promise<SlashCommandItem[]> => ipcRenderer.invoke('chat:slash-commands'),
     recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
       ipcRenderer.invoke('chat:sessions:page', options),
+    archiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:archive', sessionId),
+    unarchiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:unarchive', sessionId),
     onRecentSessionsChanged: (listener: (event: RecentSessionsChanged) => void): IpcDisposer =>
       onIpc<[RecentSessionsChanged]>('chat:recent-sessions-changed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),

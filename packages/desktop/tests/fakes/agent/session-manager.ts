@@ -55,6 +55,14 @@ export class FakeSessionManager {
     return [...this.entries];
   }
 
+  getSessionFile(): string | undefined {
+    return this.id;
+  }
+
+  isPersisted(): boolean {
+    return true;
+  }
+
   appendEntry(entry: unknown) {
     this.entries.push(entry);
   }

@@ -5,13 +5,23 @@ import {
   type AgentSession,
   AuthStorage,
   createAgentSession,
+  getLastAssistantUsage,
   ModelRegistry,
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
+import { appVersion } from '@main/application';
 import { closeStartDb, openStartDb } from '@main/db';
 import { resolveAuthBackend } from '@main/pi/auth';
 import { InMemorySettingsBackend } from '@main/pi/settings';
+import {
+  archiveSession,
+  unarchiveSession,
+  updateSessionOnTurnEnd,
+  updateSessionThinkingLevel,
+  updateSessionTitle,
+  upsertSessionOnStart
+} from '@main/session-index';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
@@ -76,6 +86,17 @@ const attachmentMaxAgeMs = 15 * 60 * 1000;
 
 const enableRegisteredTools = (session: AgentSession) => {
   session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
+};
+
+type SessionEntries = ReturnType<SessionManager['getEntries']>;
+
+const firstUserMessageText = (entries: SessionEntries): string => {
+  for (const entry of entries) {
+    if (entry.type === 'message' && entry.message.role === 'user') {
+      return textContent(entry.message.content);
+    }
+  }
+  return '';
 };
 
 const streamingTurnId = (session: AgentSession) => `streaming:${session.sessionManager.getSessionId()}`;
@@ -186,6 +207,16 @@ export class ChatService {
     return sessionSlashCommandItems(session);
   }
 
+  async archiveSession(sessionId: string): Promise<void> {
+    archiveSession(sessionId);
+    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
+  }
+
+  async unarchiveSession(sessionId: string): Promise<void> {
+    unarchiveSession(sessionId);
+    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
+  }
+
   async getModels(): Promise<{
     models: ModelOption[];
     error?: string;
@@ -245,6 +276,7 @@ export class ChatService {
       }
 
       enableRegisteredTools(session);
+      this.subscribeIndexSync(session, model.provider, model.id);
       this.session = session;
       this.workspaceCwd = workspacePath;
       this.runtimeStateForSession(session).isGenerating = false;
@@ -319,6 +351,7 @@ export class ChatService {
       thinkingLevel: this.selectedThinkingLevel
     });
     enableRegisteredTools(session);
+    this.subscribeIndexSync(session, model.provider, model.id);
     this.session = session;
     this.workspaceCwd = workspacePath;
     this.runtimeStateForSession(session).isGenerating = false;
@@ -1141,6 +1174,47 @@ export class ChatService {
     this.markNoticeSeen(this.activeSessionId);
   }
 
+  private subscribeIndexSync(session: AgentSession, modelProvider: string, modelId: string): void {
+    const sessionManager = session.sessionManager;
+    if (!sessionManager.isPersisted()) return;
+    const sessionId = sessionManager.getSessionId();
+    const path = sessionManager.getSessionFile();
+    if (!path) return;
+
+    upsertSessionOnStart({
+      path,
+      modelId,
+      modelProvider,
+      appVersion,
+      id: sessionId,
+      cwd: sessionManager.getCwd(),
+      thinkingLevel: this.selectedThinkingLevel
+    });
+
+    session.subscribe((event) => {
+      if (event.type === 'turn_end') {
+        const usage = getLastAssistantUsage(sessionManager.getEntries());
+        const firstMessage = firstUserMessageText(sessionManager.getEntries());
+        updateSessionOnTurnEnd(sessionId, {
+          inputTokens: usage?.input ?? 0,
+          outputTokens: usage?.output ?? 0,
+          ...(firstMessage ? { firstMessage } : {})
+        });
+        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+        return;
+      }
+      if (event.type === 'session_info_changed' && event.name !== undefined) {
+        updateSessionTitle(sessionId, event.name);
+        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+        return;
+      }
+      if (event.type === 'thinking_level_changed') {
+        updateSessionThinkingLevel(sessionId, event.level);
+        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: sessionManager.getCwd() });
+      }
+    });
+  }
+
   private storeBackgroundSession(workspacePath: string, session: AgentSession): void {
     const sessionId = session.sessionManager.getSessionId();
     if (!this.sessionIsReportable(session)) {
@@ -1295,6 +1369,7 @@ export class ChatService {
       thinkingLevel: this.selectedThinkingLevel
     });
     enableRegisteredTools(session);
+    this.subscribeIndexSync(session, model.provider, model.id);
 
     this.shouldCreateSession = false;
 
