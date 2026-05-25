@@ -1,4 +1,4 @@
-import { SessionManager } from '@earendil-works/pi-coding-agent';
+import { listSessionsByCwd, type SessionRecord } from '@main/sessions';
 import type {
   AgentTabStatus,
   RecentSession,
@@ -7,7 +7,6 @@ import type {
   SessionNotice
 } from '@main/types';
 
-type ListedSession = Awaited<ReturnType<typeof SessionManager.list>>[number];
 type RecentSessionsRequest = RecentSessionsOptions & { workspacePath: string };
 
 const defaultRecentSessionLimit = 15;
@@ -15,13 +14,8 @@ const defaultRecentSessionLimit = 15;
 const pageLimit = (options: RecentSessionsRequest) => Math.max(1, options.limit ?? defaultRecentSessionLimit);
 const pageOffset = (options: RecentSessionsRequest) => Math.max(0, options.offset ?? 0);
 
-const sortRecentSessions = (sessions: ListedSession[]) =>
-  [...sessions].sort(
-    (first, second) => second.modified.getTime() - first.modified.getTime() || second.id.localeCompare(first.id)
-  );
-
 const recentSession = (
-  session: ListedSession,
+  session: SessionRecord,
   statuses: ReadonlyMap<string, AgentTabStatus>,
   notice?: SessionNotice
 ): RecentSession => {
@@ -30,22 +24,11 @@ const recentSession = (
   return {
     id: session.id,
     path: session.path,
-    title: session.name || session.firstMessage || 'Untitled session',
-    modified: session.modified.getTime(),
+    title: session.title,
+    modified: session.updatedAt,
     ...(status ? { status } : {}),
     ...(notice ? { noticeKind: notice.kind } : {})
   };
-};
-
-const recentSessionRecords = async (workspacePath: string): Promise<ListedSession[]> => {
-  const sessions = await SessionManager.list(workspacePath);
-  const uniqueSessions = new Map<string, ListedSession>();
-
-  for (const session of sessions) {
-    if (session.messageCount > 0) uniqueSessions.set(session.id, session);
-  }
-
-  return sortRecentSessions([...uniqueSessions.values()]);
 };
 
 export const recentSessionsPage = async (
@@ -53,13 +36,18 @@ export const recentSessionsPage = async (
   statuses: ReadonlyMap<string, AgentTabStatus>,
   notices: ReadonlyMap<string, SessionNotice>
 ): Promise<RecentSessionsPage> => {
-  const sessions = await recentSessionRecords(options.workspacePath);
-  const offset = pageOffset(options);
   const limit = pageLimit(options);
-  const page = sessions.slice(offset, offset + limit);
+  const offset = pageOffset(options);
+  const lookahead = limit + 1;
+  const rows = listSessionsByCwd(options.workspacePath, {
+    limit: lookahead,
+    offset,
+    archived: options.archived === true
+  });
+  const page = rows.slice(0, limit);
 
   return {
-    hasMore: offset + limit < sessions.length,
+    hasMore: rows.length > limit,
     sessions: page.map((session) => recentSession(session, statuses, notices.get(session.id)))
   };
 };

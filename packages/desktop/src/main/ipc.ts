@@ -17,7 +17,6 @@ interface ChatIpcOptions {
   chat: ChatService;
   notifyStatusChanged: () => void;
   startNewSession: () => Promise<void>;
-  watchRecentSessions: (workspacePath?: string) => void;
   withComposerBlurSuppressed: typeof withComposerBlurSuppressed;
   notifyRecentSessionsChanged: (workspacePath?: string) => void;
   withCachedWorkspace: <T extends { status?: { workspacePath: string } }>(result: T) => Promise<T>;
@@ -27,13 +26,11 @@ export const registerChatIpc = ({
   chat,
   startNewSession,
   notifyStatusChanged,
-  watchRecentSessions,
   withCachedWorkspace,
   withComposerBlurSuppressed,
   notifyRecentSessionsChanged
 }: ChatIpcOptions) => {
   const notifyWorkspaceChanged = (workspacePath?: string) => {
-    watchRecentSessions(workspacePath);
     notifyStatusChanged();
     notifyRecentSessionsChanged(workspacePath);
   };
@@ -64,6 +61,8 @@ export const registerChatIpc = ({
 
   ipcMain.handle('chat:tabs', () => chat.getTabs());
   ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
+  ipcMain.handle('chat:sessions:archive', (_event, sessionId: string) => chat.archiveSession(sessionId));
+  ipcMain.handle('chat:sessions:unarchive', (_event, sessionId: string) => chat.unarchiveSession(sessionId));
   ipcMain.handle('chat:models', () => chat.getModels());
   ipcMain.handle('chat:slash-commands', () => chat.getSlashCommands());
   ipcMain.handle('chat:send', async (event, prompt: string, attachments = []) => {

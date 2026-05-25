@@ -135,6 +135,7 @@ export type RecentSession = {
 export type RecentSessionsOptions = {
   limit?: number;
   offset?: number;
+  archived?: boolean;
   workspacePath?: string;
 };
 

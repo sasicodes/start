@@ -7,7 +7,6 @@ import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { listRootItems, type RootItemsScope } from '@main/root-items';
-import { WorkspaceSessionWatcher } from '@main/session-watcher';
 import {
   type AppSettings,
   defaultAppSettings,
@@ -41,7 +40,6 @@ const chat = new ChatService();
 let appSettings: AppSettings | null = null;
 let stopWorkspaceChanged: (() => void) | undefined;
 let quitAfterAnalyticsShutdown = false;
-const recentSessionsWatcher = new WorkspaceSessionWatcher();
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -49,10 +47,6 @@ const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => 
 
 const notifyStatusChanged = () => {
   sendToRendererWindows('chat:status-changed');
-};
-
-const watchRecentSessions = (workspacePath = chat.getWorkspaceCwd()) => {
-  recentSessionsWatcher.watch(workspacePath, notifyRecentSessionsChanged);
 };
 
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
@@ -90,7 +84,6 @@ const startNewSession = async (source: 'menu' | 'renderer' = 'renderer') => {
     source,
     ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
   });
-  watchRecentSessions();
   notifyRecentSessionsChanged();
   sendToMainWindow('chat:new-session');
 };
@@ -137,7 +130,6 @@ app.whenReady().then(async () => {
 
   installApplicationMenu(menuActions());
   installStatusItem(menuActions());
-  watchRecentSessions();
   stopWorkspaceChanged = onWorkspaceChanged((workspace) => {
     sendToRendererWindows('app:workspace-changed', workspace);
   });
@@ -232,7 +224,6 @@ app.whenReady().then(async () => {
     chat,
     startNewSession,
     notifyStatusChanged,
-    watchRecentSessions,
     withCachedWorkspace,
     withComposerBlurSuppressed,
     notifyRecentSessionsChanged
@@ -260,7 +251,6 @@ app.on('before-quit', (event) => {
   void shutdownAnalytics();
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
-  recentSessionsWatcher.close();
   stopWorkspaceChanged?.();
   stopWorkspaceChanged = undefined;
   stopAutoUpdateChecks();
