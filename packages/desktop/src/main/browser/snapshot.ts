@@ -1,3 +1,5 @@
+import { browserElementsScript } from '@main/browser/elements';
+import { withTimeout } from '@main/browser/timeout';
 import type { WebContents } from 'electron';
 
 export interface BrowserSnapshotHeading {
@@ -33,12 +35,11 @@ const snapshotTimeoutMs = 3000;
 
 const snapshotScript = `
 (() => {
+  ${browserElementsScript}
   const maxLinkCount = 100;
   const maxTextLength = 10000;
   const maxHeadingCount = 60;
-  const maxElementCount = 120;
   const maxSnippetLength = 240;
-  const interactiveSelector = 'a[href], button, input, textarea, select, summary, [role="button"], [role="link"], [contenteditable="true"]';
   const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
   const truncate = (value, length) => normalize(value).slice(0, length);
   const linkText = (element) => element.textContent || element.getAttribute('aria-label') || element.href;
@@ -49,11 +50,6 @@ const snapshotScript = `
     element.getAttribute('name') ||
     element.getAttribute('title') ||
     '';
-  const isVisible = (element) => {
-    const style = window.getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-  };
 
   const headings = Array.from(document.querySelectorAll('h1, h2, h3'), (element) => ({
     text: truncate(element.textContent, maxSnippetLength),
@@ -65,17 +61,14 @@ const snapshotScript = `
     text: truncate(linkText(element), maxSnippetLength)
   })).filter((link) => link.url && link.text.length > 0).slice(0, maxLinkCount);
 
-  const elements = Array.from(document.querySelectorAll(interactiveSelector))
-    .filter(isVisible)
-    .slice(0, maxElementCount)
-    .map((element, index) => ({
-      ref: 'e' + (index + 1),
-      tag: element.tagName.toLowerCase(),
-      role: normalize(element.getAttribute('role') || element.tagName.toLowerCase()),
-      label: truncate(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '', maxSnippetLength),
-      text: truncate(elementText(element), maxSnippetLength),
-      disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true')
-    }));
+  const elements = browserElements().map((element, index) => ({
+    ref: 'e' + (index + 1),
+    tag: element.tagName.toLowerCase(),
+    role: normalize(element.getAttribute('role') || element.tagName.toLowerCase()),
+    label: truncate(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '', maxSnippetLength),
+    text: truncate(elementText(element), maxSnippetLength),
+    disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true')
+  }));
 
   return {
     url: window.location.href,
@@ -93,21 +86,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const stringValue = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 const numberValue = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
-
-const withTimeout = async <T>(task: Promise<T>, timeoutMs: number): Promise<T | null> => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), timeoutMs);
-  });
-
-  try {
-    return await Promise.race([task, timeout]);
-  } catch {
-    return null;
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-};
 
 const parseHeadings = (value: unknown): BrowserSnapshotHeading[] => {
   if (!Array.isArray(value)) return [];

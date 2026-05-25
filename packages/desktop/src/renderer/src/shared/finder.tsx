@@ -1,4 +1,6 @@
 import { Attached } from '@renderer/shared/composer/attached';
+import type { BrowserFinderItem } from '@renderer/shared/finder-items';
+import { BrowserIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
@@ -16,7 +18,7 @@ interface FileFinderItem {
   type: 'directory' | 'file';
 }
 
-export type FinderItem = CommandFinderItem | FileFinderItem;
+export type FinderItem = BrowserFinderItem | CommandFinderItem | FileFinderItem;
 
 interface FinderProps {
   visible: boolean;
@@ -33,17 +35,22 @@ interface FinderRowProps {
   onSelect: (item: FinderItem) => void;
 }
 
-export const finderItemKey = (item: FinderItem) => (item.type === 'command' ? item.key : item.path);
+export const finderItemKey = (item: FinderItem) => {
+  if (item.type === 'browser') return item.key;
+  if (item.type === 'command') return item.key;
+  return item.path;
+};
 
 export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`;
 
 const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
   const itemKey = finderItemKey(item);
   const selected = itemKey === activeItemKey;
+  const isBrowser = item.type === 'browser';
   const isCommand = item.type === 'command';
   const isDirectory = item.type === 'directory';
   const label = isDirectory ? `${item.name}/` : item.name;
-  const description = item.description ? (isCommand ? item.description : `[${item.description}]`) : '';
+  const description = item.description ? (isBrowser || isCommand ? item.description : `[${item.description}]`) : '';
 
   return (
     <button
@@ -62,6 +69,7 @@ const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
         selected ? 'bg-control' : 'bg-transparent'
       )}
     >
+      {isBrowser && <BrowserIcon class="size-4 shrink-0 text-soft" />}
       <span class="min-w-0 flex-1 truncate">{label}</span>
       {description && (
         <span

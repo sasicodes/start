@@ -6,8 +6,8 @@ import {
   goBackInBrowser,
   goForwardInBrowser,
   pressInBrowser,
-  typeInBrowser,
-  reloadBrowser
+  reloadBrowser,
+  typeInBrowser
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { sendToMainWindow } from '@main/window';

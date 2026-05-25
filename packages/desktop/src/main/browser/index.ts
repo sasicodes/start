@@ -37,9 +37,9 @@ export interface BrowserActionResult {
 }
 
 export interface BrowserTypeOptions {
-  clear: boolean;
   ref: string;
   text: string;
+  clear: boolean;
 }
 
 export interface BrowserSnapshotResult extends BrowserActionResult {

@@ -1,3 +1,5 @@
+import { browserElementsScript } from '@main/browser/elements';
+import { withTimeout } from '@main/browser/timeout';
 import type { WebContents } from 'electron';
 
 export interface BrowserInteractionResult {
@@ -6,22 +8,6 @@ export interface BrowserInteractionResult {
 }
 
 const interactionTimeoutMs = 3000;
-
-const elementScript = `
-const maxElementCount = 120;
-const interactiveSelector = 'a[href], button, input, textarea, select, summary, [role="button"], [role="link"], [contenteditable="true"]';
-const isVisible = (element) => {
-  const style = window.getComputedStyle(element);
-  const rect = element.getBoundingClientRect();
-  return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-};
-const browserElements = () => Array.from(document.querySelectorAll(interactiveSelector)).filter(isVisible).slice(0, maxElementCount);
-const browserElementForRef = (ref) => {
-  const match = /^e([1-9]\\d*)$/.exec(String(ref ?? ''));
-  if (!match) return null;
-  return browserElements()[Number(match[1]) - 1] ?? null;
-};
-`;
 
 const parseInteractionResult = (value: unknown): BrowserInteractionResult => {
   if (!value || typeof value !== 'object') return { ok: false, error: 'Browser action failed.' };
@@ -33,23 +19,8 @@ const parseInteractionResult = (value: unknown): BrowserInteractionResult => {
   };
 };
 
-const withTimeout = async <T>(task: Promise<T>): Promise<T | null> => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), interactionTimeoutMs);
-  });
-
-  try {
-    return await Promise.race([task, timeout]);
-  } catch {
-    return null;
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-};
-
 const runInteractionScript = async (webContents: WebContents, script: string): Promise<BrowserInteractionResult> => {
-  const result = await withTimeout(webContents.executeJavaScript(script, true));
+  const result = await withTimeout(webContents.executeJavaScript(script, true), interactionTimeoutMs);
   if (!result) return { ok: false, error: 'Browser action timed out.' };
   return parseInteractionResult(result);
 };
@@ -59,7 +30,7 @@ export const clickBrowserElement = (webContents: WebContents, ref: string): Prom
     webContents,
     `
 (() => {
-  ${elementScript}
+  ${browserElementsScript}
   const element = browserElementForRef(${JSON.stringify(ref)});
   if (!element) return { ok: false, error: 'Element not found. Take a new browser snapshot.' };
   if (element.disabled || element.getAttribute('aria-disabled') === 'true') return { ok: false, error: 'Element is disabled.' };
@@ -81,7 +52,7 @@ export const typeBrowserText = (
     webContents,
     `
 (() => {
-  ${elementScript}
+  ${browserElementsScript}
   const element = browserElementForRef(${JSON.stringify(ref)});
   const text = ${JSON.stringify(text)};
   const clear = ${JSON.stringify(clear)};

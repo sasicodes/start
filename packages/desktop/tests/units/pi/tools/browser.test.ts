@@ -12,13 +12,13 @@ const reloadBrowserMock = vi.fn();
 const typeInBrowserMock = vi.fn();
 
 vi.mock('@main/browser/index', () => ({
-  reloadBrowser: reloadBrowserMock,
   typeInBrowser: typeInBrowserMock,
+  reloadBrowser: reloadBrowserMock,
   pressInBrowser: pressInBrowserMock,
   goForwardInBrowser: goForwardInBrowserMock,
   goBackInBrowser: goBackInBrowserMock,
-  clickInBrowser: clickInBrowserMock,
   getBrowserStatus: getBrowserStatusMock,
+  clickInBrowser: clickInBrowserMock,
   captureBrowserSnapshot: captureBrowserSnapshotMock,
   captureBrowserScreenshot: captureBrowserScreenshotMock
 }));
@@ -149,7 +149,7 @@ describe('browser tools', () => {
     await toolByName('browser_back').execute('call-1', {});
     await toolByName('browser_forward').execute('call-2', {});
     await toolByName('browser_reload').execute('call-3', {});
-    await toolByName('browser_screenshot').execute('call-6', {});
+    await toolByName('browser_screenshot').execute('call-4', {});
 
     expect(goBackInBrowserMock).toHaveBeenCalledOnce();
     expect(goForwardInBrowserMock).toHaveBeenCalledOnce();

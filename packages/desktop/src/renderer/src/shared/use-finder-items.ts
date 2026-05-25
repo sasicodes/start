@@ -1,4 +1,5 @@
 import type { RootItem } from '@preload/index';
+import { browserFinderItems, withBrowserFinderItems, type FinderItems } from '@renderer/shared/finder-items';
 import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -23,7 +24,7 @@ const setFinderItemsCache = (key: string, items: RootItem[]) => {
 const finderCacheKey = (token: Pick<FinderToken, 'scope' | 'value'>) => `${token.scope}:${token.value}`;
 
 export const useFinderItems = (token: FinderToken | undefined) => {
-  const [items, setItems] = useState<RootItem[]>([]);
+  const [items, setItems] = useState<FinderItems[]>([]);
 
   useEffect(() => {
     window.pi.app
@@ -47,16 +48,16 @@ export const useFinderItems = (token: FinderToken | undefined) => {
 
     const cacheKey = finderCacheKey(token);
     const cachedItems = finderItemsCache.get(cacheKey);
-    if (cachedItems) setItems(cachedItems);
+    if (cachedItems) setItems(withBrowserFinderItems(token, cachedItems));
 
     window.pi.app
       .listRootItems(token.value, token.scope)
       .then((rootItems) => {
         setFinderItemsCache(cacheKey, rootItems);
-        if (!disposed) setItems(rootItems);
+        if (!disposed) setItems(withBrowserFinderItems(token, rootItems));
       })
       .catch(() => {
-        if (!disposed && !cachedItems) setItems([]);
+        if (!disposed && !cachedItems) setItems(browserFinderItems(token));
       });
 
     return () => {
