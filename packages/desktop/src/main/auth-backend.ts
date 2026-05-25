@@ -18,6 +18,7 @@ interface AuthRow {
 export class KeychainAuthBackend implements AuthStorageBackend {
   private readonly readStmt;
   private readonly writeStmt;
+  private asyncQueue: Promise<unknown> = Promise.resolve();
 
   constructor(db: Database.Database) {
     this.readStmt = db.prepare('SELECT ciphertext FROM auth WHERE provider = ?');
@@ -34,10 +35,15 @@ export class KeychainAuthBackend implements AuthStorageBackend {
   }
 
   async withLockAsync<T>(fn: (current: string | undefined) => Promise<LockResult<T>>): Promise<T> {
-    const current = this.readCurrent();
-    const { result, next } = await fn(current);
-    if (next !== undefined) this.persist(next);
-    return result;
+    const run = async (): Promise<T> => {
+      const current = this.readCurrent();
+      const { result, next } = await fn(current);
+      if (next !== undefined) this.persist(next);
+      return result;
+    };
+    const pending = this.asyncQueue.then(run, run);
+    this.asyncQueue = pending.catch(() => {});
+    return pending;
   }
 
   private readCurrent(): string | undefined {
