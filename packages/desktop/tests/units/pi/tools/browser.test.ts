@@ -167,6 +167,12 @@ describe('browser tools', () => {
     expect(pressInBrowserMock).toHaveBeenCalledWith('Enter');
   });
 
+  it('defaults browser_type clear to false when omitted', async () => {
+    await toolByName('browser_type').execute('call-4', { ref: 'e3', text: 'world' });
+
+    expect(typeInBrowserMock).toHaveBeenCalledWith({ ref: 'e3', text: 'world', clear: false });
+  });
+
   it('returns current browser page content snapshots', async () => {
     const result = await toolByName('browser_snapshot').execute('call-1', {});
 

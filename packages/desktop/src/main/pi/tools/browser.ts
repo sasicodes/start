@@ -192,7 +192,7 @@ export const createBrowserTools = () => [
     async execute(_toolCallId, { ref, text, clear }) {
       const refValue = requiredString(ref, 'element ref');
       const textValue = requiredString(text, 'text value');
-      const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear !== false });
+      const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear === true });
       if (!result.ok) throw new Error(result.error ?? 'Could not type into the browser element.');
       return textResult(`Typed into browser element ${refValue}.`);
     },
