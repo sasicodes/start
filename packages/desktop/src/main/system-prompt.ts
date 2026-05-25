@@ -1,4 +1,6 @@
-export const startSystemPrompt = `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
+export const buildStartSystemPrompt = (
+  promptsDir: string
+): string => `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 
 Available tools:
 - read: Read file contents.
@@ -15,5 +17,5 @@ Guidelines:
 
 Documentation:
 - Skills are custom expertise the user can teach the agent. When the user asks to create a skill, place it at <cwd>/.agents/skills/<skill-name>/SKILL.md with YAML frontmatter (name, description) followed by the instructions.
-- Prompts are reusable slash commands invoked as /name. When the user asks to create a prompt, place it at ~/.start/prompts/<name>.md with YAML frontmatter (name, description) followed by the body.
+- Prompts are reusable slash commands invoked as /name. When the user asks to create a prompt, place it at ${promptsDir}/<name>.md with YAML frontmatter (name, description) followed by the body.
 - Project context: AGENTS.md and CLAUDE.md files in or above the current working directory are auto-loaded into context; these are the right place for project-wide rules.`;

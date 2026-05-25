@@ -1,11 +1,12 @@
 import { join, sep } from 'node:path';
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
-import { startSystemPrompt } from '@main/system-prompt';
+import { buildStartSystemPrompt } from '@main/system-prompt';
 
 const startAgentDir = join(baseDir, 'agent');
 const startPromptsDir = join(baseDir, 'prompts');
 const piConfigSegment = `${sep}.pi${sep}`;
+const systemPrompt = buildStartSystemPrompt(startPromptsDir);
 
 export const createStartResourceLoader = async (cwd: string) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
@@ -19,7 +20,7 @@ export const createStartResourceLoader = async (cwd: string) => {
     appendSystemPrompt: [],
     agentDir: startAgentDir,
     noPromptTemplates: false,
-    systemPrompt: startSystemPrompt,
+    systemPrompt,
     additionalSkillPaths: [projectSkillsDir],
     additionalPromptTemplatePaths: [startPromptsDir],
     skillsOverride: (base) => ({
