@@ -1,4 +1,11 @@
-import { initAnalytics, shutdownAnalytics, trackAnalyticsEvent, workspaceAnalyticsProperties } from '@main/analytics';
+import { initAnalytics, shutdownAnalytics } from '@main/analytics/index';
+import {
+  trackAppOpened,
+  trackComposerSubmitted,
+  trackQuickAccessToggled,
+  trackSessionCreated,
+  trackShortcutChanged
+} from '@main/analytics/events';
 import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main/application';
 import {
   captureBrowserScreenshot,
@@ -78,10 +85,7 @@ const showShortcuts = () => {
 };
 
 const toggleQuickAccess = (source: 'menu' | 'shortcut') => {
-  trackAnalyticsEvent('quick_access_toggled', {
-    source,
-    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-  });
+  trackQuickAccessToggled(source, chat.getWorkspaceCwd());
   toggleComposerWindow();
 };
 
@@ -92,10 +96,7 @@ const startNewSession = async (source: 'menu' | 'renderer' = 'renderer') => {
     return;
   }
 
-  trackAnalyticsEvent('session_created', {
-    source,
-    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-  });
+  trackSessionCreated(source, chat.getWorkspaceCwd());
   notifyRecentSessionsChanged();
   sendToMainWindow('chat:new-session');
 };
@@ -133,10 +134,7 @@ app.whenReady().then(async () => {
   }
 
   appSettings = await readAppSettings();
-  trackAnalyticsEvent('app_opened', {
-    composer_shortcut: appSettings.composerShortcut,
-    ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-  });
+  trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
   registerComposerShortcut(appSettings.composerShortcut);
   activateWorkspaceAccess(chat.getWorkspaceCwd());
 
@@ -195,33 +193,20 @@ app.whenReady().then(async () => {
     shell.showItemInFolder(absolutePath);
   });
   ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {
-    trackAnalyticsEvent('composer_submitted', {
-      attachment_count: attachments.length,
-      has_attachments: attachments.length > 0,
-      prompt_length: prompt.length,
-      ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-    });
+    trackComposerSubmitted(prompt, attachments, chat.getWorkspaceCwd());
     submitComposerToMainWindow(prompt, attachments);
   });
   ipcMain.handle('app:set-composer-shortcut', async (_event, composerShortcut: string) => {
     const previousSettings = appSettings;
     if (previousSettings?.composerShortcut === composerShortcut) {
-      trackAnalyticsEvent('shortcut_changed', {
-        ok: true,
-        changed: false,
-        composer_shortcut: composerShortcut
-      });
+      trackShortcutChanged({ ok: true, changed: false, composerShortcut });
       return { ok: true, settings: previousSettings };
     }
 
     globalShortcut.unregisterAll();
     if (!validateAccelerator(composerShortcut)) {
       if (previousSettings) registerComposerShortcut(previousSettings.composerShortcut);
-      trackAnalyticsEvent('shortcut_changed', {
-        ok: false,
-        changed: false,
-        composer_shortcut: composerShortcut
-      });
+      trackShortcutChanged({ ok: false, changed: false, composerShortcut });
       return { ok: false, settings: previousSettings, error: 'That shortcut is already in use or is not available.' };
     }
 
@@ -230,11 +215,11 @@ app.whenReady().then(async () => {
     appSettings = registered ? nextSettings : previousSettings;
     installApplicationMenu(menuActions());
     installStatusItem(menuActions());
-    trackAnalyticsEvent('shortcut_changed', {
+    trackShortcutChanged({
       ok: registered,
       changed: registered,
-      composer_shortcut: nextSettings.composerShortcut,
-      ...(previousSettings?.composerShortcut ? { previous_composer_shortcut: previousSettings.composerShortcut } : {})
+      composerShortcut: nextSettings.composerShortcut,
+      ...(previousSettings?.composerShortcut ? { previousComposerShortcut: previousSettings.composerShortcut } : {})
     });
     return registered
       ? { ok: true, settings: nextSettings }

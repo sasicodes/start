@@ -1,10 +1,14 @@
 import {
-  type AnalyticsEvent,
-  trackAnalyticsEvent,
-  modelAnalyticsProperties,
-  sessionAnalyticsProperties,
-  workspaceAnalyticsProperties
-} from '@main/analytics';
+  trackApiKeyAdded,
+  trackCommandSent,
+  trackModelSelected,
+  trackPromptSent,
+  trackProviderDisconnected,
+  trackSessionCreated,
+  trackSubscriptionLoginStarted,
+  trackThinkingLevelSelected,
+  trackWorkspaceChanged
+} from '@main/analytics/events';
 import type { ChatService } from '@main/chat';
 import type { withComposerBlurSuppressed } from '@main/window';
 import { openWorkspaceDialogOptions, rememberWorkspaceBookmark } from '@main/workspace/access';
@@ -41,24 +45,6 @@ export const registerChatIpc = ({
     return result;
   };
 
-  const statusProperties = async () => {
-    const status = await chat.getStatus();
-    return {
-      ...modelAnalyticsProperties(status.selectedModelKey),
-      ...sessionAnalyticsProperties(status.sessionId),
-      ...workspaceAnalyticsProperties(status.workspacePath),
-      ...(status.thinkingLevel ? { thinking_level: status.thinkingLevel } : {})
-    };
-  };
-
-  const trackStatusAnalyticsEvent = (event: AnalyticsEvent, properties: Record<string, unknown>) => {
-    setImmediate(() => {
-      void statusProperties()
-        .then((status) => trackAnalyticsEvent(event, { ...status, ...properties }))
-        .catch(() => trackAnalyticsEvent(event, properties));
-    });
-  };
-
   ipcMain.handle('chat:tabs', () => chat.getTabs());
   ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
   ipcMain.handle('chat:sessions:archive', (_event, sessionId: string) => chat.archiveSession(sessionId));
@@ -67,14 +53,13 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:slash-commands', () => chat.getSlashCommands());
   ipcMain.handle('chat:send', async (event, prompt: string, attachments = []) => {
     const result = await chat.send(prompt, event.sender as WebContents, attachments);
-    trackStatusAnalyticsEvent('prompt_sent', {
-      attachment_count: attachments.length,
-      has_attachments: attachments.length > 0,
+    trackPromptSent(chat, {
       ok: result.ok,
-      prompt_length: prompt.length,
-      queued: Boolean(result.queued),
+      prompt,
+      attachments,
       source: 'chat',
-      ...(result.sessionId ? sessionAnalyticsProperties(result.sessionId) : {})
+      queued: Boolean(result.queued),
+      ...(result.sessionId ? { sessionId: result.sessionId } : {})
     });
     if (result.ok) notifyRecentSessionsChanged();
     return result;
@@ -82,13 +67,13 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:status', () => chat.getStatus());
   ipcMain.handle('chat:command', async (event, command: string, excludeFromContext: boolean) => {
     const result = await chat.command(command, excludeFromContext, event.sender as WebContents);
-    trackStatusAnalyticsEvent('command_sent', {
-      command_length: command.length,
-      exclude_from_context: excludeFromContext,
-      has_output: Boolean(result.output),
+    trackCommandSent(chat, {
       ok: result.ok,
-      ...(typeof result.exitCode === 'number' ? { exit_code: result.exitCode } : {}),
-      ...(result.sessionId ? sessionAnalyticsProperties(result.sessionId) : {})
+      command,
+      excludeFromContext,
+      hasOutput: Boolean(result.output),
+      ...(typeof result.exitCode === 'number' ? { exitCode: result.exitCode } : {}),
+      ...(result.sessionId ? { sessionId: result.sessionId } : {})
     });
     if (result.ok) notifyRecentSessionsChanged();
     return result;
@@ -106,10 +91,7 @@ export const registerChatIpc = ({
   });
   ipcMain.handle('chat:tabs:create', async (_event, workspacePath?: string) => {
     const tab = await chat.createTab(workspacePath);
-    trackAnalyticsEvent('session_created', {
-      source: 'tab',
-      ...workspaceAnalyticsProperties(tab.workspacePath)
-    });
+    trackSessionCreated('tab', tab.workspacePath);
     notifyWorkspaceChanged(tab.workspacePath);
     return tab;
   });
@@ -123,12 +105,12 @@ export const registerChatIpc = ({
   });
   ipcMain.handle('chat:select-model', async (_event, modelKey: string) => {
     const status = await chat.selectModel(modelKey);
-    trackAnalyticsEvent('model_selected', {
+    trackModelSelected({
       ok: status.ready,
-      ...modelAnalyticsProperties(status.selectedModelKey ?? modelKey),
-      ...sessionAnalyticsProperties(status.sessionId),
-      ...workspaceAnalyticsProperties(status.workspacePath),
-      ...(status.thinkingLevel ? { thinking_level: status.thinkingLevel } : {})
+      modelKey: status.selectedModelKey ?? modelKey,
+      ...(status.sessionId ? { sessionId: status.sessionId } : {}),
+      ...(status.workspacePath ? { workspacePath: status.workspacePath } : {}),
+      ...(status.thinkingLevel ? { thinkingLevel: status.thinkingLevel } : {})
     });
     notifyStatusChanged();
     return status;
@@ -137,14 +119,13 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:tabs:activate', (_event, id: string) => activateTab(id));
   ipcMain.handle('chat:tabs:send', async (event, id: string, prompt: string, attachments = []) => {
     const result = await chat.sendToTab(id, prompt, event.sender as WebContents, attachments);
-    trackStatusAnalyticsEvent('prompt_sent', {
-      attachment_count: attachments.length,
-      has_attachments: attachments.length > 0,
+    trackPromptSent(chat, {
       ok: result.ok,
-      prompt_length: prompt.length,
-      queued: Boolean(result.queued),
+      prompt,
+      attachments,
       source: 'tab',
-      ...(result.sessionId ? sessionAnalyticsProperties(result.sessionId) : {})
+      queued: Boolean(result.queued),
+      ...(result.sessionId ? { sessionId: result.sessionId } : {})
     });
     if (result.ok) {
       notifyStatusChanged();
@@ -162,10 +143,7 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:switch-workspace', async (_event, path: string) => {
     const result = await chat.switchWorkspace(path);
     if (result.ok) {
-      trackAnalyticsEvent('workspace_changed', {
-        source: 'switcher',
-        ...workspaceAnalyticsProperties(result.status?.workspacePath ?? path)
-      });
+      trackWorkspaceChanged('switcher', result.status?.workspacePath ?? path);
       notifyWorkspaceChanged(result.status?.workspacePath);
     }
     return withCachedWorkspace(result);
@@ -176,10 +154,7 @@ export const registerChatIpc = ({
   );
   ipcMain.handle('chat:login-subscription', (event, provider: string) => {
     const providerId = provider.trim().toLowerCase();
-    trackAnalyticsEvent('subscription_login_started', {
-      provider: providerId,
-      ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-    });
+    trackSubscriptionLoginStarted(providerId, chat.getWorkspaceCwd());
     return chat.loginSubscription(provider, event.sender as WebContents);
   });
   ipcMain.handle('chat:notices:mark-seen', async (_event, sessionId: string) => {
@@ -190,20 +165,14 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:set-api-key', (_event, provider: string, apiKey: string) => {
     const providerId = provider.trim().toLowerCase();
     if (providerId && apiKey.trim()) {
-      trackAnalyticsEvent('api_key_added', {
-        provider: providerId,
-        ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-      });
+      trackApiKeyAdded(providerId, chat.getWorkspaceCwd());
     }
     return chat.setApiKey(provider, apiKey);
   });
   ipcMain.handle('chat:disconnect-provider', (_event, provider: string) => {
     const providerId = provider.trim().toLowerCase();
     if (providerId) {
-      trackAnalyticsEvent('provider_disconnected', {
-        provider: providerId,
-        ...workspaceAnalyticsProperties(chat.getWorkspaceCwd())
-      });
+      trackProviderDisconnected(providerId, chat.getWorkspaceCwd());
     }
     return chat.disconnectProvider(provider);
   });
@@ -214,12 +183,12 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:prepare-clipboard-image', () => chat.prepareClipboardImage());
   ipcMain.handle('chat:select-thinking-level', async (_event, level: string) => {
     const status = await chat.selectThinkingLevel(level);
-    trackAnalyticsEvent('thinking_level_selected', {
-      level,
+    trackThinkingLevelSelected({
       ok: status.ready,
-      ...modelAnalyticsProperties(status.selectedModelKey),
-      ...sessionAnalyticsProperties(status.sessionId),
-      ...workspaceAnalyticsProperties(status.workspacePath)
+      level,
+      ...(status.selectedModelKey ? { modelKey: status.selectedModelKey } : {}),
+      ...(status.sessionId ? { sessionId: status.sessionId } : {}),
+      ...(status.workspacePath ? { workspacePath: status.workspacePath } : {})
     });
     notifyStatusChanged();
     return status;
@@ -238,10 +207,7 @@ export const registerChatIpc = ({
     rememberWorkspaceBookmark(path, result.bookmarks?.[0]);
     const nextResult = await chat.switchWorkspace(path);
     if (nextResult.ok) {
-      trackAnalyticsEvent('workspace_changed', {
-        source: 'dialog',
-        ...workspaceAnalyticsProperties(nextResult.status?.workspacePath ?? path)
-      });
+      trackWorkspaceChanged('dialog', nextResult.status?.workspacePath ?? path);
       notifyWorkspaceChanged(nextResult.status?.workspacePath);
     }
     return withCachedWorkspace(nextResult);

@@ -5,6 +5,7 @@ export const ANALYTICS_COMMAND_TIMEOUT_MS = 3000;
 export const ANALYTICS_SHUTDOWN_TIMEOUT_MS = 2000;
 export const ANALYTICS_STORAGE_NAME = 'analytics';
 export const ANALYTICS_USERNAME_STORAGE_NAME = 'analytics-username';
+export const ANALYTICS_LAUNCH_STATS_STORAGE_NAME = 'analytics-launch-stats';
 
 export const POSTHOG_HOST = 'https://us.i.posthog.com';
 export const POSTHOG_PROJECT_KEY = 'phc_uo85J7tZZoW5W2PwmwpzP3HbA59atAmqTGJKAuE2Dg6v';

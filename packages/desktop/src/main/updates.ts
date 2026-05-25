@@ -1,4 +1,4 @@
-import { trackAnalyticsEvent } from '@main/analytics';
+import { trackUpdateInstalled } from '@main/analytics/events';
 import { isProd } from '@main/application';
 import { getAppFocusState, onAppFocusChanged } from '@main/focus';
 import { sendToRendererWindows } from '@main/window';
@@ -111,7 +111,7 @@ export const registerUpdateIpc = () => {
   ipcMain.handle('app:install-update', () => {
     if (state.status !== 'downloaded') return { ok: false };
 
-    trackAnalyticsEvent('update_installed');
+    trackUpdateInstalled();
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };
   });
