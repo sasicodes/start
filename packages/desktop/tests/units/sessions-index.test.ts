@@ -104,7 +104,9 @@ describe('sessions module', () => {
   });
 
   it('listSessionsByCwd returns only non-archived in the right cwd, ordered by updated_at desc', async () => {
-    const { archiveSession, listSessionsByCwd, upsertSessionOnStart, updateSessionOnTurnEnd } = await import('@main/sessions');
+    const { archiveSession, listSessionsByCwd, upsertSessionOnStart, updateSessionOnTurnEnd } = await import(
+      '@main/sessions'
+    );
     upsertSessionOnStart({ id: 'a', cwd: '/x', path: '/p1' });
     await new Promise((resolve) => setTimeout(resolve, 5));
     upsertSessionOnStart({ id: 'b', cwd: '/x', path: '/p2' });
