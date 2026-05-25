@@ -8,6 +8,10 @@ const startPromptsDir = join(baseDir, 'prompts');
 const piConfigSegment = `${sep}.pi${sep}`;
 const systemPrompt = buildStartSystemPrompt(startPromptsDir);
 
+const startPromptsPrefix = `${startPromptsDir}${sep}`;
+
+const isUnderDir = (path: string, dir: string) => path === dir || path.startsWith(`${dir}${sep}`);
+
 export const createStartResourceLoader = async (cwd: string) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
 
@@ -25,11 +29,11 @@ export const createStartResourceLoader = async (cwd: string) => {
     additionalPromptTemplatePaths: [startPromptsDir],
     skillsOverride: (base) => ({
       ...base,
-      skills: base.skills.filter((skill) => skill.sourceInfo.path.startsWith(projectSkillsDir))
+      skills: base.skills.filter((skill) => isUnderDir(skill.sourceInfo.path, projectSkillsDir))
     }),
     promptsOverride: (base) => ({
       ...base,
-      prompts: base.prompts.filter((prompt) => prompt.sourceInfo.path.startsWith(startPromptsDir))
+      prompts: base.prompts.filter((prompt) => prompt.sourceInfo.path.startsWith(startPromptsPrefix))
     }),
     extensionsOverride: (base) => ({
       ...base,
