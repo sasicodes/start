@@ -2,9 +2,9 @@ interface IconProps {
   class?: string;
 }
 
-export const CheckIcon = (props: IconProps) => (
+export const CheckIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path d="M2.5 15.5L9.20588 20.5L21.5 3.5" stroke="currentColor" stroke-linecap="round" />
+    <path d="M2.5 15.5L9.20588 20.5L21.5 3.5" stroke="currentColor" stroke-width={strokeWidth} stroke-linecap="round" />
   </svg>
 );
 
@@ -20,22 +20,24 @@ export const XIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth
   </svg>
 );
 
-export const ChevronLeftIcon = (props: IconProps) => (
+export const ChevronLeftIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
       d="M15 20L9.12136 14.1213C7.94978 12.9498 7.94978 11.0503 9.12135 9.8787L15 4"
       stroke="currentColor"
+      stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
     />
   </svg>
 );
 
-export const ChevronRightIcon = (props: IconProps) => (
+export const ChevronRightIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
       d="M9 4L14.8787 9.87866C16.0503 11.0502 16.0503 12.9497 14.8787 14.1213L9 20"
       stroke="currentColor"
+      stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
     />

@@ -1,7 +1,7 @@
 import type { BrowserActionResult, BrowserStatus } from '@preload/index';
 import { BrowserButton } from '@renderer/shared/browser/button';
 import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
-import { BrowserReloadIcon } from '@renderer/shared/browser/reload-icon';
+import { BrowserReloadIcon } from '@renderer/shared/browser/reload';
 import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
 import { usePanelMotion } from '@renderer/shared/panel/context';
@@ -64,6 +64,8 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
         ok: false,
         error: 'This site cannot be loaded.'
       }));
+      if (!mountedRef.current) return;
+
       if (!result.ok) {
         setActive(false);
         setStatus(emptyStatus);
@@ -125,10 +127,6 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
 
   useEffect(() => {
     return window.pi.app.onBrowserStatus(applyStatus);
-  }, [applyStatus]);
-
-  useEffect(() => {
-    void window.pi.app.browserStatus().then(applyStatus);
   }, [applyStatus]);
 
   useEffect(() => {
