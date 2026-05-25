@@ -42,17 +42,10 @@ const ANALYTICS_EVENTS = [
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
 
-interface LaunchStats {
-  launch_count: number;
-  last_launch_at: string;
-  first_launch_at: string;
-}
-
 const { app } = electron;
 
 let distinctId = '';
 let launchStartMs = 0;
-let launchStats: LaunchStats = { launch_count: 0, last_launch_at: '', first_launch_at: '' };
 let client: PostHog | null = null;
 let identifiedUsername: string | undefined;
 
@@ -91,27 +84,6 @@ const loadDistinctId = () => {
   const id = randomUUID();
   writeAnalyticsValue(ANALYTICS_STORAGE_NAME, id);
   return id;
-};
-
-const readLaunchStats = (): LaunchStats | undefined => {
-  const text = readAnalyticsValue('analytics-launch-stats');
-  if (!text) return;
-  try {
-    return JSON.parse(text) as LaunchStats;
-  } catch {
-    return;
-  }
-};
-
-const bumpLaunchStats = () => {
-  const now = new Date().toISOString();
-  const previous = readLaunchStats();
-  launchStats = {
-    launch_count: (previous?.launch_count ?? 0) + 1,
-    last_launch_at: now,
-    first_launch_at: previous?.first_launch_at || now
-  };
-  writeAnalyticsValue('analytics-launch-stats', JSON.stringify(launchStats));
 };
 
 const baseProperties = (): AnalyticsProperties => ({
@@ -204,7 +176,6 @@ export const initAnalytics = () => {
 
   distinctId = loadDistinctId();
   launchStartMs = Date.now();
-  bumpLaunchStats();
   identifiedUsername = readAnalyticsValue(ANALYTICS_USERNAME_STORAGE_NAME);
   client = new PostHog(POSTHOG_PROJECT_KEY, {
     host: POSTHOG_HOST,
@@ -238,12 +209,7 @@ const launchPersonProperties = () => {
     $set: {
       arch: process.arch,
       os_version: release(),
-      launch_count: launchStats.launch_count,
-      last_launch_at: launchStats.last_launch_at,
       ...(locale ? { locale } : {})
-    },
-    $set_once: {
-      first_launch_at: launchStats.first_launch_at
     }
   };
 };
