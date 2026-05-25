@@ -9,9 +9,9 @@ import {
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
-import { KeychainAuthBackend } from '@main/auth-backend';
 import { closeStartDb, openStartDb } from '@main/db';
-import { InMemorySettingsBackend } from '@main/settings-backend';
+import { resolveAuthBackend } from '@main/pi/auth';
+import { InMemorySettingsBackend } from '@main/pi/settings';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
@@ -144,7 +144,7 @@ export class ChatService {
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
 
   private readonly db = openStartDb();
-  private readonly authStorage = AuthStorage.fromStorage(new KeychainAuthBackend(this.db));
+  private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
   private readonly backgroundSessions = new Map<string, AgentSession>();

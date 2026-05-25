@@ -1,8 +1,8 @@
 import type { ProviderKey } from '@main/types';
 
 export interface AllowedModel {
-  provider: ProviderKey;
   id: string;
+  provider: ProviderKey;
 }
 
 export const models: readonly AllowedModel[] = [
