@@ -10,7 +10,7 @@ import {
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
 import { KeychainAuthBackend } from '@main/auth-backend';
-import { openStartDb } from '@main/db';
+import { closeStartDb, openStartDb } from '@main/db';
 import { InMemorySettingsBackend } from '@main/settings-backend';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
@@ -920,6 +920,7 @@ export class ChatService {
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
     this.attachments.clear();
+    closeStartDb();
   }
 
   private runtimeStateForSessionId(sessionId: string): SessionRuntimeState {

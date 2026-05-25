@@ -134,10 +134,6 @@ const writeOrDeleteRow = (key: string, value: unknown) => {
   writeRow(key, value);
 };
 
-export const resetAppStateCache = (): void => {
-  cachedStatements = undefined;
-};
-
 const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
   const raw: Record<string, unknown> = {};
   for (const row of rows) {
