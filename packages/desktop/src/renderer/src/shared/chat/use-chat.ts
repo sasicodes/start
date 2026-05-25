@@ -11,7 +11,7 @@ import { useChatEvents } from '@renderer/shared/chat/events';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
-import { clearFinderItemsCache } from '@renderer/shared/use-finder-items';
+import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';

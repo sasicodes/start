@@ -1,6 +1,6 @@
 import { Attached } from '@renderer/shared/composer/attached';
-import type { BrowserFinderItem } from '@renderer/shared/finder-items';
-import { BrowserIcon } from '@renderer/ui/icons';
+import type { BrowserFinderItem } from '@renderer/shared/finder/items';
+import { BrowserIcon, FolderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
@@ -43,6 +43,13 @@ export const finderItemKey = (item: FinderItem) => {
 
 export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`;
 
+const FinderRowIcon = ({ type }: { type: FinderItem['type'] }) => {
+  if (type === 'browser') return <BrowserIcon class="size-4 shrink-0 text-soft" />;
+  if (type === 'directory') return <FolderIcon class="size-4 shrink-0 text-soft" />;
+  if (type === 'file') return <FolderIcon class="size-4 shrink-0 text-soft" />;
+  return null;
+};
+
 const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
   const itemKey = finderItemKey(item);
   const selected = itemKey === activeItemKey;
@@ -65,11 +72,11 @@ const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
       }}
       class={tw(
         'flex w-full min-w-0 rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
-        isCommand ? 'flex-col items-start gap-0.5' : 'items-center gap-3',
+        isCommand ? 'flex-col items-start gap-0.5' : 'items-center gap-2',
         selected ? 'bg-control' : 'bg-transparent'
       )}
     >
-      {isBrowser && <BrowserIcon class="size-4 shrink-0 text-soft" />}
+      <FinderRowIcon type={item.type} />
       <span class="min-w-0 flex-1 truncate">{label}</span>
       {description && (
         <span

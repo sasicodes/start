@@ -9,7 +9,7 @@ import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/
 import { activeFinderToken, activeSlashCommandToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
-import { useFinderItems } from '@renderer/shared/use-finder-items';
+import { useFinderItems } from '@renderer/shared/finder/use-items';
 import { useSlashCommandItems } from '@renderer/shared/slash-commands';
 import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
