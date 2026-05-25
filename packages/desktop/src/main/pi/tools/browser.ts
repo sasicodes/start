@@ -36,13 +36,12 @@ const textResult = (text: string) => ({ details: null, content: [{ text, type: '
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitForBrowserOpen = async (expectedUrl: string, previousUrl: string) => {
+const waitForBrowserOpen = async (expectedUrl: string) => {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < openTimeoutMs) {
     const status = getBrowserStatus();
-    const reachedPage = status.url === expectedUrl || !previousUrl || status.url !== previousUrl;
-    if (status.open && status.url && reachedPage) return status;
+    if (status.open && status.url === expectedUrl) return status;
     await wait(openPollMs);
   }
 
@@ -56,9 +55,8 @@ export const createBrowserTools = () => [
       const normalizedUrl = normalizeBrowserUrl(url);
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
-      const previousUrl = getBrowserStatus().url;
       sendToMainWindow('app:browser-open-request', normalizedUrl);
-      const status = await waitForBrowserOpen(normalizedUrl, previousUrl);
+      const status = await waitForBrowserOpen(normalizedUrl);
       if (!status.open || !status.url) throw new Error('Browser did not open.');
 
       return textResult(`Opened ${normalizedUrl} in the in-app browser.`);
