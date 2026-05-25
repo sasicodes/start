@@ -31,7 +31,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(() => Boolean(navigation.url));
   const [status, setStatus] = useState<BrowserStatus>(emptyStatus);
   const { moving: panelMoving } = usePanelMotion();
   const syncBounds = useBrowserBounds({ active, moving: panelMoving, viewportRef });
@@ -150,7 +150,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
-      <div class="flex h-12 min-w-0 shrink-0 items-center gap-2 border-b border-line px-2">
+      <div class="flex h-12 min-w-0 shrink-0 items-center gap-2 border-b border-line px-4">
         <BrowserButton label="Back" disabled={!status.canGoBack} onClick={goBack}>
           <ChevronLeftIcon class="size-4" />
         </BrowserButton>
@@ -163,13 +163,13 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
         <form class="min-w-0 flex-1" onSubmit={submitAddress}>
           <input
             value={address}
-            spellcheck={false}
             aria-label="URL"
+            spellcheck={false}
+            placeholder="Enter a URL"
             onBlur={() => setEditing(false)}
             onFocus={() => setEditing(true)}
             onInput={(event) => setAddress(event.currentTarget.value)}
-            class="h-8 w-full rounded-md border-0 bg-control px-2 text-xs leading-8 text-ink outline-0 transition-colors placeholder:text-soft focus:bg-control/80"
-            placeholder="Enter a URL"
+            class="h-8 w-full border-0 bg-transparent px-2 text-xs leading-8 text-ink outline-0 placeholder:text-soft"
           />
         </form>
         <BrowserButton

@@ -132,6 +132,7 @@ const detachBrowserView = () => {
 };
 
 const closeBrowserView = () => {
+  if (!browserView && !ownerWindow) return;
   detachBrowserView();
   browserView?.webContents.stop();
   browserView?.webContents.close();

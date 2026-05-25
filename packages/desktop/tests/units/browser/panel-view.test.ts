@@ -1,4 +1,5 @@
 import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
+import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 import type { WebContents } from 'electron';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -12,6 +13,7 @@ const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) 
 describe('browser panel view', () => {
   beforeEach(() => {
     resetFakeBrowserWindows();
+    resetBroadcasts();
     destroyBrowser();
   });
 
@@ -31,6 +33,16 @@ describe('browser panel view', () => {
     setBrowserBounds(webContents, null);
     expect(window.contentView.children).toHaveLength(0);
     expect(view?.webContents.closed).toBe(true);
+  });
+
+  it('does not broadcast status when clearing bounds without an attached view', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, null);
+
+    expect(window.contentView.children).toHaveLength(0);
+    expect(broadcastsByChannel('app:browser-status')).toEqual([]);
   });
 
   it('creates a fresh browser view after the panel is reopened', () => {
