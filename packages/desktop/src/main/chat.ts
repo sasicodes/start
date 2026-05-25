@@ -13,6 +13,7 @@ import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slas
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
+import { createStartResourceLoader } from '@main/resource-loader';
 import { historyTurns } from '@main/history';
 import {
   agentEndError,
@@ -220,9 +221,11 @@ export class ChatService {
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
+      const resourceLoader = await createStartResourceLoader(workspacePath);
       const { session } = await createAgentSession({
         model,
         sessionManager,
+        resourceLoader,
         cwd: workspacePath,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
@@ -297,9 +300,11 @@ export class ChatService {
     this.attachments.clear();
 
     const sessionManager = SessionManager.create(workspacePath);
+    const resourceLoader = await createStartResourceLoader(workspacePath);
     const { session } = await createAgentSession({
       model,
       sessionManager,
+      resourceLoader,
       cwd: workspacePath,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
@@ -1269,10 +1274,12 @@ export class ChatService {
 
     const cwd = this.workspaceCwd;
     const sessionManager = this.shouldCreateSession ? SessionManager.create(cwd) : SessionManager.continueRecent(cwd);
+    const resourceLoader = await createStartResourceLoader(cwd);
     const { session } = await createAgentSession({
       cwd,
       model,
       sessionManager,
+      resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
       thinkingLevel: this.selectedThinkingLevel
