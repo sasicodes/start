@@ -1,4 +1,5 @@
 import type { AppSurface } from '@renderer/app/types';
+import { browserLinkHrefFromClick } from '@renderer/shared/browser/link';
 import {
   clearBrowserNavigation,
   emptyBrowserNavigation,
@@ -31,27 +32,15 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
 
   useEffect(() => {
     const openLinkInBrowser = (event: MouseEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey
-      )
-        return;
-      if (!(event.target instanceof Element)) return;
-
-      const anchor = event.target.closest('a[href]');
-      if (!(anchor instanceof HTMLAnchorElement)) return;
-      if (anchor.protocol !== 'http:' && anchor.protocol !== 'https:') return;
+      const href = browserLinkHrefFromClick(event);
+      if (!href) return;
 
       event.preventDefault();
-      open(anchor.href);
+      open(href);
     };
 
-    document.addEventListener('click', openLinkInBrowser);
-    return () => document.removeEventListener('click', openLinkInBrowser);
+    document.addEventListener('click', openLinkInBrowser, true);
+    return () => document.removeEventListener('click', openLinkInBrowser, true);
   }, [open]);
 
   return { clear, navigation };
