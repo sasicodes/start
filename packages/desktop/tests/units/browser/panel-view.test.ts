@@ -93,6 +93,19 @@ describe('browser panel view', () => {
     });
   });
 
+  it('focuses the native browser view before opening a page', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com');
+
+    expect(view.webContents.focusCount).toBe(1);
+  });
+
   it('keeps interrupted browser navigation structured', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

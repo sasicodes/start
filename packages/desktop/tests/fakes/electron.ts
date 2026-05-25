@@ -68,6 +68,8 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   closed: boolean;
   capturePage: () => Promise<{ isEmpty: () => boolean }>;
   close: () => void;
+  focus: () => void;
+  focusCount: number;
   getTitle: () => string;
   getURL: () => string;
   isLoading: () => boolean;
@@ -111,6 +113,10 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     close: () => {
       webContents.closed = true;
     },
+    focus: () => {
+      webContents.focusCount += 1;
+    },
+    focusCount: 0,
     getTitle: () => '',
     getURL: () => '',
     isLoading: () => false,

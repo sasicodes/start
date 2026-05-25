@@ -1,4 +1,9 @@
 import type { AppSurface } from '@renderer/app/types';
+import {
+  clearBrowserNavigation,
+  emptyBrowserNavigation,
+  nextBrowserNavigation
+} from '@renderer/shared/browser/navigation';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 interface UseBrowserPanelInput {
@@ -7,11 +12,11 @@ interface UseBrowserPanelInput {
 }
 
 export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput) => {
-  const [url, setUrl] = useState('');
+  const [navigation, setNavigation] = useState(emptyBrowserNavigation);
 
   const open = useCallback(
     (nextUrl: string) => {
-      setUrl(nextUrl);
+      setNavigation((current) => nextBrowserNavigation(current, nextUrl));
       setSurface('main');
       openPanel();
     },
@@ -19,7 +24,7 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
   );
 
   const clear = useCallback(() => {
-    setUrl('');
+    setNavigation(clearBrowserNavigation);
   }, []);
 
   useEffect(() => window.pi.app.onBrowserOpenRequest(open), [open]);
@@ -49,5 +54,5 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
     return () => document.removeEventListener('click', openLinkInBrowser);
   }, [open]);
 
-  return { clear, url };
+  return { clear, navigation };
 };

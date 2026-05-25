@@ -3,15 +3,15 @@ import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
-import { useRendererRuntime } from '@renderer/app/runtime';
-import { useSessionPanels } from '@renderer/app/session/panels';
-import { useSessionRoute } from '@renderer/app/session/route';
-import { AppShell } from '@renderer/app/shell';
 import {
   AppSidePanel,
   sidePanelLabel as getSidePanelLabel,
   sidePanelMaxRatio as getSidePanelMaxRatio
-} from '@renderer/app/side-panel';
+} from '@renderer/app/panel';
+import { useRendererRuntime } from '@renderer/app/runtime';
+import { useSessionPanels } from '@renderer/app/session/panels';
+import { useSessionRoute } from '@renderer/app/session/route';
+import { AppShell } from '@renderer/app/shell';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
@@ -253,7 +253,7 @@ export const App = () => {
       mode={renderedSidePanelMode}
       providers={authProviders}
       turnId={activityTurnId}
-      browserUrl={browserPanel.url}
+      browserNavigation={browserPanel.navigation}
       workspacePath={workspacePath}
       onSaveApiKey={saveApiKey}
       composerShortcut={composerShortcut}

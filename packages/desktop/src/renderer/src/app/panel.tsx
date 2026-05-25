@@ -1,5 +1,6 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import type { SidePanelMode } from '@renderer/app/types';
+import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
 import { Settings } from '@renderer/shared/settings/panel';
 import { Shortcuts } from '@renderer/shared/shortcuts/panel';
@@ -10,8 +11,8 @@ import { memo } from 'preact/compat';
 interface AppSidePanelProps {
   turnId: string;
   mode: SidePanelMode;
-  browserUrl: string;
   workspacePath: string;
+  browserNavigation: BrowserNavigation;
   composerShortcut: string;
   onBrowserUrlOpened: () => void;
   providers: ProviderAuthStatus[];
@@ -39,9 +40,9 @@ export const AppSidePanel = memo(
   ({
     mode,
     turnId,
-    browserUrl,
     providers,
     workspacePath,
+    browserNavigation,
     onSaveApiKey,
     onBrowserUrlOpened,
     composerShortcut,
@@ -50,7 +51,7 @@ export const AppSidePanel = memo(
     onComposerShortcutChange
   }: AppSidePanelProps) => {
     if (mode === 'git') return <GitChangesPanel path={workspacePath} />;
-    if (mode === 'browser') return <BrowserPanel url={browserUrl} onUrlOpened={onBrowserUrlOpened} />;
+    if (mode === 'browser') return <BrowserPanel navigation={browserNavigation} onUrlOpened={onBrowserUrlOpened} />;
 
     if (mode === 'settings') {
       return (

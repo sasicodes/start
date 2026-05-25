@@ -176,6 +176,7 @@ export const openBrowserUrl = async (sender: WebContents, value: string): Promis
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
   const view = attachBrowserView(window);
+  view.webContents.focus();
   const loadError = await view.webContents
     .loadURL(url)
     .then(() => null)

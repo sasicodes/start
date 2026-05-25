@@ -1,5 +1,6 @@
 import type { BrowserActionResult, BrowserStatus } from '@preload/index';
 import { BrowserButton } from '@renderer/shared/browser/button';
+import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserReloadIcon } from '@renderer/shared/browser/reload-icon';
 import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
@@ -9,7 +10,7 @@ import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 interface BrowserPanelProps {
-  url: string;
+  navigation: BrowserNavigation;
   onUrlOpened: () => void;
 }
 
@@ -22,7 +23,7 @@ const emptyStatus: BrowserStatus = {
   canGoForward: false
 };
 
-export const BrowserPanel = ({ url, onUrlOpened }: BrowserPanelProps) => {
+export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
   const copyTimerRef = useRef<number>(0);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -131,12 +132,13 @@ export const BrowserPanel = ({ url, onUrlOpened }: BrowserPanelProps) => {
   }, [applyStatus]);
 
   useEffect(() => {
+    const url = navigation.url;
     if (!url) return;
 
     setAddress(formatBrowserAddress(url));
     void openAddress(url);
     onUrlOpened();
-  }, [onUrlOpened, openAddress, url]);
+  }, [navigation.id, navigation.url, onUrlOpened, openAddress]);
 
   useEffect(() => {
     return () => {
