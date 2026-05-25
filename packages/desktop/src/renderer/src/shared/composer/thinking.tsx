@@ -6,13 +6,10 @@ interface ThinkingProps {
   disabled: boolean;
   level: EffortLevel;
   label: string;
-  visible: boolean;
   onNext: () => void;
 }
 
-export const Thinking = ({ disabled, label, level, visible, onNext }: ThinkingProps) => {
-  if (!visible) return null;
-
+export const Thinking = ({ disabled, label, level, onNext }: ThinkingProps) => {
   return (
     <Tooltip label={label}>
       <button

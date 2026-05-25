@@ -3,7 +3,8 @@ import { modelProviderId, type ModelProviderId } from '@renderer/shared/models/p
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { AnthropicIcon, CheckIcon, ChevronRightIcon, GearIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSubmenuTrigger } from '@renderer/ui/menu';
-import { useMemo } from 'preact/hooks';
+import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 
 interface ProviderGroup {
   name: string;
@@ -22,6 +23,39 @@ export const ProviderIcon = ({ id }: { id: ModelProviderId }) => {
   if (id === 'openai') return <OpenAIIcon class="size-4" />;
   if (id === 'google') return <GeminiIcon class="size-4" />;
   return <AnthropicIcon class="size-4" />;
+};
+
+const tickerProviders: ModelProviderId[] = ['anthropic', 'openai', 'google'];
+const tickerIntervalMs = 1500;
+
+export const ProviderIconTicker = () => {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setIndex((current) => (current + 1) % tickerProviders.length);
+    }, tickerIntervalMs);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const provider = tickerProviders[index] ?? 'anthropic';
+
+  return (
+    <span class="relative grid size-4 place-items-center">
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.span
+          key={provider}
+          class="absolute inset-0 grid place-items-center"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ ease: 'easeOut', duration: 0.35 }}
+        >
+          <ProviderIcon id={provider} />
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
 };
 
 const ModelCheck = ({ selected }: { selected: boolean }) => {

@@ -2,7 +2,7 @@ import { Menu } from '@base-ui/react/menu';
 import type { EffortLevel, ModelOption } from '@preload/index';
 import { Thinking } from '@renderer/shared/composer/thinking';
 import { effortLevels } from '@renderer/shared/effort';
-import { Models, ProviderIcon } from '@renderer/shared/models';
+import { Models, ProviderIcon, ProviderIconTicker } from '@renderer/shared/models';
 import { modelProviderId } from '@renderer/shared/models/provider';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { playCycleSound } from '@renderer/ui/sounds';
@@ -43,13 +43,12 @@ export const Model = ({
     [selectedModel]
   );
   const selectedModelLabel = selectedModel?.name ?? 'Models';
-  const modelEffortLevels: EffortLevel[] =
-    selectedModel?.effortLevels ?? (!modelsLoaded ? effortLevels.map((level) => level.id) : []);
+  const hasNoConfiguredModels = modelsLoaded && models.length === 0;
+  const modelEffortLevels: EffortLevel[] = selectedModel?.effortLevels ?? effortLevels.map((level) => level.id);
   const availableEfforts = useMemo(
     () => effortLevels.filter((level) => modelEffortLevels.includes(level.id)),
     [modelEffortLevels]
   );
-  const showThinkingPicker = availableEfforts.length > 0;
   const selectedEffort = useMemo(
     () => availableEfforts.find((level) => level.id === thinkingLevel) ?? availableEfforts[0] ?? effortLevels[0],
     [availableEfforts, thinkingLevel]
@@ -65,26 +64,16 @@ export const Model = ({
 
   return (
     <div class={tw('flex flex-none items-center gap-px', layered && 'order-2')}>
-      <div
-        class={tw(
-          'relative flex items-center bg-control',
-          showThinkingPicker && 'h-9.5 rounded-[20px_3px_3px_20px]',
-          !showThinkingPicker && 'size-9.5 rounded-full'
-        )}
-      >
+      <div class="relative flex items-center h-9.5 rounded-[20px_3px_3px_20px] bg-control">
         <Menu.Root modal={false}>
           <Tooltip label={selectedModelLabel}>
             <Menu.Trigger
               disabled={disabled}
               aria-label="Choose model"
-              className={tw(
-                'grid place-items-center rounded-full border-0 bg-transparent text-ink select-none disabled:cursor-not-allowed disabled:opacity-60',
-                showThinkingPicker && 'h-full w-10',
-                !showThinkingPicker && 'size-9.5'
-              )}
+              className="grid place-items-center rounded-full border-0 bg-transparent h-full w-10 text-ink select-none disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span class="flex-none translate-x-px -translate-y-[0.5px]">
-                <ProviderIcon id={selectedProviderId} />
+                {hasNoConfiguredModels ? <ProviderIconTicker /> : <ProviderIcon id={selectedProviderId} />}
               </span>
             </Menu.Trigger>
           </Tooltip>
@@ -108,10 +97,9 @@ export const Model = ({
         </Menu.Root>
       </div>
       <Thinking
-        disabled={disabled}
+        disabled={disabled || availableEfforts.length < 2}
         label={selectedEffort.label}
         level={thinkingLevel}
-        visible={showThinkingPicker}
         onNext={nextEffort}
       />
     </div>

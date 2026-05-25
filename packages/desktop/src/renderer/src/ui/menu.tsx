@@ -14,7 +14,7 @@ export const MenuPanel = ({ className, children }: MenuPanelProps) => {
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
       className={tw(
-        'origin-bottom rounded-2xl bg-panel p-1 shadow-panel outline-0 transition-[opacity,transform] duration-100 ease-out data-[ending-style]:scale-[0.96] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.96] data-[starting-style]:opacity-0',
+        'rounded-2xl bg-panel p-1 shadow-panel outline-0 transition-[opacity,transform] duration-75 ease-out data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0',
         className
       )}
     >

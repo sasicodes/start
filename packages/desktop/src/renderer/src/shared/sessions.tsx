@@ -177,6 +177,7 @@ export const RecentSessions = memo(
     );
 
     const attention = recentSessionsAttention(sessions, activeSessionId);
+    const hasSessions = sessions.length > 0;
 
     useEffect(() => {
       return () => {
@@ -207,6 +208,8 @@ export const RecentSessions = memo(
     useEffect(() => {
       return window.pi.chat.onStatusChanged(() => void loadSessions(Math.max(sessionPageSize, loadedCountRef.current)));
     }, [loadSessions]);
+
+    if (!hasSessions) return null;
 
     return (
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
