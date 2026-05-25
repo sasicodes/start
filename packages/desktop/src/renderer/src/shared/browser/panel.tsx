@@ -34,7 +34,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
   const [active, setActive] = useState(false);
   const [status, setStatus] = useState<BrowserStatus>(emptyStatus);
   const { moving: panelMoving } = usePanelMotion();
-  useBrowserBounds({ active, moving: panelMoving, viewportRef });
+  const syncBounds = useBrowserBounds({ active, moving: panelMoving, viewportRef });
 
   const applyStatus = useCallback(
     (nextStatus: BrowserStatus) => {
@@ -60,6 +60,9 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
 
       setActive(true);
       setError('');
+      await syncBounds();
+      if (!mountedRef.current) return;
+
       const result: BrowserActionResult = await window.pi.app.browserOpen(value).catch(() => ({
         ok: false,
         error: 'This site cannot be loaded.'
@@ -76,7 +79,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
       setError('');
       if (result.status) applyStatus(result.status);
     },
-    [applyStatus]
+    [applyStatus, syncBounds]
   );
 
   const submitAddress = useCallback(

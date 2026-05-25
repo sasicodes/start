@@ -18,7 +18,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
     void window.pi.app.browserBounds(null).catch(() => {});
   }, []);
 
-  const sendBounds = useCallback(() => {
+  const syncBounds = useCallback(async () => {
     const element = viewportRef.current;
     if (!element) {
       clearBounds();
@@ -29,8 +29,12 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
     if (browserBoundsEqual(lastBoundsRef.current, bounds)) return;
 
     lastBoundsRef.current = bounds;
-    void window.pi.app.browserBounds(bounds).catch(() => {});
+    await window.pi.app.browserBounds(bounds).catch(() => {});
   }, [clearBounds, viewportRef]);
+
+  const sendBounds = useCallback(() => {
+    void syncBounds();
+  }, [syncBounds]);
 
   const scheduleBounds = useCallback(() => {
     if (frameRef.current) return;
@@ -81,4 +85,6 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
       sendBounds();
     };
   }, [active, moving, sendBounds]);
+
+  return syncBounds;
 };
