@@ -68,6 +68,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   closed: boolean;
   capturePage: () => Promise<{ isEmpty: () => boolean }>;
   close: () => void;
+  emit: (event: string, ...args: unknown[]) => void;
   focus: () => void;
   focusCount: number;
   getTitle: () => string;
@@ -80,7 +81,8 @@ export interface FakeBrowserWebContents extends FakeWebContents {
     goBack: () => void;
     goForward: () => void;
   };
-  on: (_event: string, _handler: () => void) => void;
+  off: (event: string, handler: Handler) => void;
+  on: (event: string, handler: Handler) => void;
   reload: () => void;
   setWindowOpenHandler: (handler: WindowOpenHandler) => void;
   stop: () => void;
@@ -106,12 +108,16 @@ const windowsByWebContents = new Map<FakeBrowserWebContents, FakeBrowserWindow>(
 
 const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
   const base = createFakeWebContents();
+  const handlersByEvent = new Map<string, Set<Handler>>();
   const webContents: FakeBrowserWebContents = {
     ...base,
     closed: false,
     capturePage: async () => ({ isEmpty: () => false }),
     close: () => {
       webContents.closed = true;
+    },
+    emit: (event, ...args) => {
+      for (const handler of handlersByEvent.get(event) ?? []) handler(...args);
     },
     focus: () => {
       webContents.focusCount += 1;
@@ -127,7 +133,14 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
       goBack: () => {},
       goForward: () => {}
     },
-    on: (_event: string, _handler: () => void) => {},
+    off: (event, handler) => {
+      handlersByEvent.get(event)?.delete(handler);
+    },
+    on: (event, handler) => {
+      const handlers = handlersByEvent.get(event) ?? new Set<Handler>();
+      handlers.add(handler);
+      handlersByEvent.set(event, handlers);
+    },
     reload: () => {},
     setWindowOpenHandler: (_handler: WindowOpenHandler) => {},
     stop: () => {}

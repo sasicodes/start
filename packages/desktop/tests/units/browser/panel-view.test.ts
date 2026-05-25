@@ -47,6 +47,48 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).not.toBe(view);
   });
 
+  it('closes the native browser view when the owner renderer reloads', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    window.webContents.emit('did-start-navigation', {}, 'http://localhost:5173/', false, true);
+
+    expect(window.contentView.children).toHaveLength(0);
+    expect(view.webContents.closed).toBe(true);
+  });
+
+  it('keeps the native browser view during owner in-page navigation', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    window.webContents.emit('did-start-navigation', {}, 'http://localhost:5173/#session', true, false);
+
+    expect(window.contentView.children).toEqual([view]);
+    expect(view.webContents.closed).toBe(false);
+  });
+
+  it('closes the native browser view when the owner renderer process exits', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    window.webContents.emit('render-process-gone');
+
+    expect(window.contentView.children).toHaveLength(0);
+    expect(view.webContents.closed).toBe(true);
+  });
+
   it('refuses browser actions after the panel is closed', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

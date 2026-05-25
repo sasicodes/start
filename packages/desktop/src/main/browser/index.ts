@@ -7,6 +7,7 @@ import {
   clipboard,
   BrowserWindow,
   WebContentsView,
+  type Event as ElectronEvent,
   type WebContents,
   type BrowserWindow as ElectronBrowserWindow,
   type WebContentsView as ElectronWebContentsView
@@ -38,9 +39,13 @@ export interface BrowserSnapshotResult extends BrowserActionResult {
   snapshot?: BrowserSnapshot;
 }
 
+type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace: boolean, mainFrame: boolean) => void;
+
 let browserView: ElectronWebContentsView | null = null;
 let ownerWindow: ElectronBrowserWindow | null = null;
 let ownerWindowClosedHandler: (() => void) | null = null;
+let ownerWindowGoneHandler: (() => void) | null = null;
+let ownerWindowNavigationHandler: OwnerWindowNavigationHandler | null = null;
 let lastBounds: BrowserBounds | null = null;
 
 const browserPartition = 'start-browser';
@@ -111,11 +116,19 @@ const detachBrowserView = () => {
   if (ownerWindowClosedHandler && ownerWindow && !ownerWindow.isDestroyed()) {
     ownerWindow.off('closed', ownerWindowClosedHandler);
   }
+  if (ownerWindowGoneHandler && ownerWindow && !ownerWindow.isDestroyed()) {
+    ownerWindow.webContents.off('render-process-gone', ownerWindowGoneHandler);
+  }
+  if (ownerWindowNavigationHandler && ownerWindow && !ownerWindow.isDestroyed()) {
+    ownerWindow.webContents.off('did-start-navigation', ownerWindowNavigationHandler);
+  }
 
   if (ownerWindow && browserView && !ownerWindow.isDestroyed()) ownerWindow.contentView.removeChildView(browserView);
 
   ownerWindow = null;
   ownerWindowClosedHandler = null;
+  ownerWindowGoneHandler = null;
+  ownerWindowNavigationHandler = null;
 };
 
 const closeBrowserView = () => {
@@ -137,9 +150,17 @@ const attachBrowserView = (window: ElectronBrowserWindow) => {
   ownerWindowClosedHandler = () => {
     if (ownerWindow === window) closeBrowserView();
   };
+  ownerWindowGoneHandler = () => {
+    if (ownerWindow === window) closeBrowserView();
+  };
+  ownerWindowNavigationHandler = (_event, _url, _inPlace, mainFrame) => {
+    if (mainFrame && ownerWindow === window) closeBrowserView();
+  };
 
   window.contentView.addChildView(browserView);
   window.on('closed', ownerWindowClosedHandler);
+  window.webContents.on('render-process-gone', ownerWindowGoneHandler);
+  window.webContents.on('did-start-navigation', ownerWindowNavigationHandler);
   if (lastBounds) browserView.setBounds(lastBounds);
 
   return browserView;
