@@ -5,6 +5,10 @@ export class FakeAuthStorage {
     return new FakeAuthStorage();
   }
 
+  static fromStorage(_backend: unknown) {
+    return new FakeAuthStorage();
+  }
+
   reload() {}
 
   setRuntimeApiKey(_provider: string, _apiKey: string) {}
@@ -35,3 +39,9 @@ export class FakeModelRegistry {
     return getModelRegistryError();
   }
 }
+
+export const FakeSettingsManager = {
+  fromStorage(_storage: unknown) {
+    return {};
+  }
+};

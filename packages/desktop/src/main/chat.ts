@@ -6,8 +6,12 @@ import {
   AuthStorage,
   createAgentSession,
   ModelRegistry,
-  SessionManager
+  SessionManager,
+  SettingsManager
 } from '@earendil-works/pi-coding-agent';
+import { closeStartDb, openStartDb } from '@main/db';
+import { resolveAuthBackend } from '@main/pi/auth';
+import { InMemorySettingsBackend } from '@main/pi/settings';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
@@ -139,8 +143,10 @@ export class ChatService {
   private authInputResolve: ((value: string) => void) | null = null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
 
-  private readonly authStorage = AuthStorage.create();
+  private readonly db = openStartDb();
+  private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
+  private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
@@ -229,6 +235,7 @@ export class ChatService {
         cwd: workspacePath,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
+        settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
       });
 
@@ -308,6 +315,7 @@ export class ChatService {
       cwd: workspacePath,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
+      settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
     enableRegisteredTools(session);
@@ -912,6 +920,7 @@ export class ChatService {
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
     this.attachments.clear();
+    closeStartDb();
   }
 
   private runtimeStateForSessionId(sessionId: string): SessionRuntimeState {
@@ -1282,6 +1291,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
+      settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
     enableRegisteredTools(session);

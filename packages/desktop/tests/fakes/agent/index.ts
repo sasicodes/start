@@ -1,8 +1,8 @@
-import { FakeAuthStorage, FakeModelRegistry } from './auth.js';
+import { FakeAuthStorage, FakeModelRegistry, FakeSettingsManager } from './auth.js';
 import { type CreateAgentSessionOptions, FakeAgentSession } from './session.js';
 import { FakeSessionManager } from './session-manager.js';
 
-export { FakeAuthStorage, FakeModelRegistry } from './auth.js';
+export { FakeAuthStorage, FakeModelRegistry, FakeSettingsManager } from './auth.js';
 export { FakeAgentSession, type FakeAgentSessionEvent } from './session.js';
 export { FakeSessionManager } from './session-manager.js';
 export {
@@ -24,3 +24,4 @@ export const SessionManager = FakeSessionManager;
 export const AgentSession = FakeAgentSession;
 export const AuthStorage = FakeAuthStorage;
 export const ModelRegistry = FakeModelRegistry;
+export const SettingsManager = FakeSettingsManager;
