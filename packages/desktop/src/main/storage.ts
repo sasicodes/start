@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { baseDir } from '@main/application';
 import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {
@@ -17,7 +17,7 @@ const defaultStartState = {
   selectedThinkingLevel: 'medium'
 } satisfies StartState;
 
-export const startDir = () => join(homedir(), '.start');
+export const startDir = () => baseDir;
 export const startCacheDir = () => join(startDir(), 'cache');
 export const startLogPath = () => join(startDir(), 'logs', 'app.log');
 export const startStatePath = () => join(startDir(), 'state.json');

@@ -27,3 +27,4 @@ vi.mock('@main/window', () => import('./fakes/window.js'));
 vi.mock('@main/workspace/access', () => import('./fakes/workspace-access.js'));
 vi.mock('@main/attachments', () => import('./fakes/attachments.js'));
 vi.mock('@main/environment', () => ({ environment: { rendererUrl: undefined } }));
+vi.mock('@main/resource-loader', () => ({ createStartResourceLoader: async () => ({}) }));

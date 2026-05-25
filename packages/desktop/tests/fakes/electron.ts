@@ -41,6 +41,7 @@ export const nativeImage = {
 
 export const app = {
   isPackaged: false,
+  getVersion: () => '0.0.0-test',
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
 };
 
