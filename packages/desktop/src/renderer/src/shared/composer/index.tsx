@@ -140,7 +140,7 @@ export const Composer = memo(
       if (!finderToken) return;
       if (item.type === 'command') return;
       if (item.type === 'browser') {
-        onDraftChange(`${draft.slice(0, finderToken.start)}${finderTokenPrefix(finderToken.marker)}browser `);
+        onDraftChange(`${draft.slice(0, finderToken.start)}${finderTokenPrefix(finderToken.marker)}Browser `);
         return;
       }
 

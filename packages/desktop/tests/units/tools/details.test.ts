@@ -11,7 +11,7 @@ describe('tool details', () => {
         toolName: 'browser_snapshot'
       })
     ).toMatchObject({
-      title: 'Reading browser'
+      title: 'Reading Browser'
     });
 
     expect(
@@ -22,7 +22,7 @@ describe('tool details', () => {
         toolName: 'browser_screenshot'
       })
     ).toMatchObject({
-      title: 'Capturing browser'
+      title: 'Capturing Browser'
     });
   });
 
@@ -35,7 +35,7 @@ describe('tool details', () => {
         toolName: 'browser_open'
       })
     ).toMatchObject({
-      title: 'Opened browser',
+      title: 'Opened Browser',
       detail: 'https://example.com/'
     });
 
@@ -47,7 +47,7 @@ describe('tool details', () => {
         toolName: 'browser_snapshot'
       })
     ).toMatchObject({
-      title: 'Read browser'
+      title: 'Read Browser'
     });
 
     expect(
@@ -58,7 +58,7 @@ describe('tool details', () => {
         toolName: 'browser_click'
       })
     ).toMatchObject({
-      title: 'Clicked browser'
+      title: 'Clicked Browser'
     });
   });
 

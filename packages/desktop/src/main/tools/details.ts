@@ -26,40 +26,40 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
     result: 'Went back'
   },
   browser_open: {
-    done: 'Opened browser',
+    done: 'Opened Browser',
     error: 'Open failed',
-    active: 'Opening browser',
-    result: 'Opened browser'
+    active: 'Opening Browser',
+    result: 'Opened Browser'
   },
   browser_click: {
-    done: 'Clicked browser',
+    done: 'Clicked Browser',
     error: 'Click failed',
-    active: 'Clicking browser',
-    result: 'Clicked browser'
+    active: 'Clicking Browser',
+    result: 'Clicked Browser'
   },
   browser_press: {
-    done: 'Pressed browser',
+    done: 'Pressed Browser',
     error: 'Press failed',
-    active: 'Pressing browser',
-    result: 'Pressed browser'
+    active: 'Pressing Browser',
+    result: 'Pressed Browser'
   },
   browser_reload: {
-    done: 'Reloaded browser',
+    done: 'Reloaded Browser',
     error: 'Reload failed',
-    active: 'Reloading browser',
-    result: 'Reloaded browser'
+    active: 'Reloading Browser',
+    result: 'Reloaded Browser'
   },
   browser_status: {
-    done: 'Checked browser',
+    done: 'Checked Browser',
     error: 'Check failed',
-    active: 'Checking browser',
-    result: 'Checked browser'
+    active: 'Checking Browser',
+    result: 'Checked Browser'
   },
   browser_type: {
-    done: 'Typed browser',
+    done: 'Typed Browser',
     error: 'Type failed',
-    active: 'Typing browser',
-    result: 'Typed browser'
+    active: 'Typing Browser',
+    result: 'Typed Browser'
   },
   browser_forward: {
     done: 'Went forward',
@@ -68,16 +68,16 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
     result: 'Went forward'
   },
   browser_snapshot: {
-    done: 'Read browser',
+    done: 'Read Browser',
     error: 'Read failed',
-    active: 'Reading browser',
-    result: 'Read browser'
+    active: 'Reading Browser',
+    result: 'Read Browser'
   },
   browser_screenshot: {
-    done: 'Captured browser',
+    done: 'Captured Browser',
     error: 'Capture failed',
-    active: 'Capturing browser',
-    result: 'Captured browser'
+    active: 'Capturing Browser',
+    result: 'Captured Browser'
   }
 };
 

@@ -121,35 +121,31 @@ export const BrowserEmptyIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { 
   </svg>
 );
 
-export const BrowserIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+export const BrowserIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
-      d="M18.25 4.75H5.75C4.09315 4.75 2.75 6.09315 2.75 7.75V16.25C2.75 17.9069 4.09315 19.25 5.75 19.25H18.25C19.9069 19.25 21.25 17.9069 21.25 16.25V7.75C21.25 6.09315 19.9069 4.75 18.25 4.75Z"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      clip-rule="evenodd"
+      d="M4.41459 5.4838C9.06327 0.0735695 17.6827 1.14152 20.905 7.46127C18.6367 7.46205 15.0847 7.46065 13.161 7.46127C11.7657 7.46174 10.865 7.43002 9.88935 7.94361C8.74249 8.54735 7.87704 9.6664 7.57501 10.9809L4.41459 5.4838Z"
+      fill="currentColor"
+      fill-rule="evenodd"
     />
     <path
-      d="M5.75 7.75L11.25 7.75"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      clip-rule="evenodd"
+      d="M8.67296 11.9995C8.67296 13.8331 10.1639 15.3249 11.9965 15.3249C13.829 15.3249 15.3199 13.8332 15.3199 11.9995C15.3199 10.1659 13.829 8.67407 11.9965 8.67407C10.1639 8.67407 8.67296 10.1659 8.67296 11.9995Z"
+      fill="currentColor"
+      fill-rule="evenodd"
     />
     <path
-      d="M17.25 7.75H18.25"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      clip-rule="evenodd"
+      d="M13.2863 16.3521C11.4209 16.9064 9.23796 16.2916 8.04219 14.2276C7.12939 12.6521 4.71771 8.45079 3.62163 6.54051C-0.217376 12.4246 3.09133 20.4431 10.0609 21.8117L13.2863 16.3521Z"
+      fill="currentColor"
+      fill-rule="evenodd"
     />
     <path
-      d="M13.75 7.75H14.75"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      clip-rule="evenodd"
+      d="M15.0837 8.67407C16.6374 10.119 16.9758 12.459 15.9233 14.2734C15.1304 15.6404 12.5998 19.9116 11.3732 21.9798C18.5541 22.4225 23.7888 15.3848 21.4243 8.67407H15.0837Z"
+      fill="currentColor"
+      fill-rule="evenodd"
     />
   </svg>
 );
