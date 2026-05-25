@@ -1,4 +1,4 @@
-import { listSessionsByCwd, type SessionRecord } from '@main/session-index';
+import { listSessionsByCwd, type SessionRecord } from '@main/sessions';
 import type {
   AgentTabStatus,
   RecentSession,

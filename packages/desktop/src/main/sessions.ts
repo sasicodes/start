@@ -24,25 +24,25 @@ interface SessionRow {
   id: string;
   cwd: string;
   path: string;
-  title: string | null;
   archived: number;
   created_at: number;
   updated_at: number;
+  title: string | null;
   model_id: string | null;
   app_version: string | null;
   archived_at: number | null;
-  model_provider: string | null;
-  thinking_level: string | null;
   total_input_tokens: number;
   total_output_tokens: number;
+  model_provider: string | null;
+  thinking_level: string | null;
 }
 
 interface UpsertOnStartInput {
   id: string;
   cwd: string;
   path: string;
-  appVersion?: string;
   modelId?: string;
+  appVersion?: string;
   modelProvider?: string;
   thinkingLevel?: string;
 }
@@ -68,16 +68,14 @@ export const truncateTitle = (text: string): string => {
 
 interface Statements {
   insert: Database.Statement;
-  selectById: Database.Statement;
-  listByCwd: Database.Statement;
-  listAll: Database.Statement;
-  updateTurnEnd: Database.Statement;
-  updateTitle: Database.Statement;
-  updateTitleIfEmpty: Database.Statement;
-  updateModel: Database.Statement;
-  updateThinking: Database.Statement;
   archive: Database.Statement;
+  listByCwd: Database.Statement;
   unarchive: Database.Statement;
+  selectById: Database.Statement;
+  updateTitle: Database.Statement;
+  updateTurnEnd: Database.Statement;
+  updateThinking: Database.Statement;
+  updateTitleIfEmpty: Database.Statement;
 }
 
 let cachedStatements: Statements | undefined;
@@ -91,11 +89,13 @@ const statements = (): Statements => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO NOTHING`
     ),
-    selectById: db.prepare('SELECT * FROM sessions WHERE id = ?'),
+    archive: db.prepare('UPDATE sessions SET archived = 1, archived_at = ?, updated_at = ? WHERE id = ?'),
     listByCwd: db.prepare(
       'SELECT * FROM sessions WHERE cwd = ? AND archived = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?'
     ),
-    listAll: db.prepare('SELECT * FROM sessions WHERE archived = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?'),
+    unarchive: db.prepare('UPDATE sessions SET archived = 0, archived_at = NULL, updated_at = ? WHERE id = ?'),
+    selectById: db.prepare('SELECT * FROM sessions WHERE id = ?'),
+    updateTitle: db.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?'),
     updateTurnEnd: db.prepare(
       `UPDATE sessions
          SET total_input_tokens  = total_input_tokens + ?,
@@ -103,12 +103,8 @@ const statements = (): Statements => {
              updated_at          = ?
          WHERE id = ?`
     ),
-    updateTitle: db.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?'),
-    updateTitleIfEmpty: db.prepare('UPDATE sessions SET title = COALESCE(title, ?), updated_at = ? WHERE id = ?'),
-    updateModel: db.prepare('UPDATE sessions SET model_provider = ?, model_id = ?, updated_at = ? WHERE id = ?'),
     updateThinking: db.prepare('UPDATE sessions SET thinking_level = ?, updated_at = ? WHERE id = ?'),
-    archive: db.prepare('UPDATE sessions SET archived = 1, archived_at = ?, updated_at = ? WHERE id = ?'),
-    unarchive: db.prepare('UPDATE sessions SET archived = 0, archived_at = NULL, updated_at = ? WHERE id = ?')
+    updateTitleIfEmpty: db.prepare('UPDATE sessions SET title = COALESCE(title, ?), updated_at = ? WHERE id = ?')
   };
   return cachedStatements;
 };
@@ -153,10 +149,6 @@ export const updateSessionOnTurnEnd = (id: string, input: UpdateOnTurnEndInput):
   }
 };
 
-export const updateSessionModel = (id: string, provider: string, modelId: string): void => {
-  statements().updateModel.run(provider, modelId, Date.now(), id);
-};
-
 export const updateSessionThinkingLevel = (id: string, level: string): void => {
   statements().updateThinking.run(level, Date.now(), id);
 };
@@ -183,11 +175,5 @@ export const getSession = (id: string): SessionRecord | undefined => {
 export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRecord[] => {
   const archived = options.archived ? 1 : 0;
   const rows = statements().listByCwd.all(cwd, archived, options.limit, options.offset) as SessionRow[];
-  return rows.map(rowToRecord);
-};
-
-export const listSessions = (options: ListOptions): SessionRecord[] => {
-  const archived = options.archived ? 1 : 0;
-  const rows = statements().listAll.all(archived, options.limit, options.offset) as SessionRow[];
   return rows.map(rowToRecord);
 };

@@ -22,7 +22,7 @@ import {
   updateSessionThinkingLevel,
   updateSessionTitle,
   upsertSessionOnStart
-} from '@main/session-index';
+} from '@main/sessions';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
