@@ -176,7 +176,8 @@ export const unarchiveSession = (id: string): void => {
 
 export const getSession = (id: string): SessionRecord | undefined => {
   const row = statements().selectById.get(id) as SessionRow | undefined;
-  return row ? rowToRecord(row) : undefined;
+  if (!row) return;
+  return rowToRecord(row);
 };
 
 export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRecord[] => {
@@ -189,8 +190,4 @@ export const listSessions = (options: ListOptions): SessionRecord[] => {
   const archived = options.archived ? 1 : 0;
   const rows = statements().listAll.all(archived, options.limit, options.offset) as SessionRow[];
   return rows.map(rowToRecord);
-};
-
-export const resetSessionIndexCache = (): void => {
-  cachedStatements = undefined;
 };
