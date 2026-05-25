@@ -6,8 +6,6 @@ export const withTimeout = async <T>(task: Promise<T>, timeoutMs: number): Promi
 
   try {
     return await Promise.race([task, timeout]);
-  } catch {
-    return null;
   } finally {
     if (timer) clearTimeout(timer);
   }

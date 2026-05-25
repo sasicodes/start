@@ -59,18 +59,18 @@ const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
 const allowedKeyCodes = new Set([
   'Tab',
+  'End',
+  'Home',
   'Enter',
+  'Delete',
   'Escape',
+  'PageUp',
   'ArrowUp',
+  'PageDown',
   'ArrowDown',
   'ArrowLeft',
-  'ArrowRight',
   'Backspace',
-  'Delete',
-  'Home',
-  'End',
-  'PageUp',
-  'PageDown'
+  'ArrowRight'
 ]);
 const emptyStatus: BrowserStatus = {
   url: '',

@@ -162,6 +162,10 @@ const waitForLoad = async (webContents: WebContents): Promise<void> => {
 
 export const readBrowserSnapshot = async (webContents: WebContents): Promise<BrowserSnapshot | null> => {
   await waitForLoad(webContents);
-  const snapshot = await withTimeout(webContents.executeJavaScript(snapshotScript), snapshotTimeoutMs);
-  return parseBrowserSnapshot(snapshot);
+  try {
+    const snapshot = await withTimeout(webContents.executeJavaScript(snapshotScript), snapshotTimeoutMs);
+    return parseBrowserSnapshot(snapshot);
+  } catch {
+    return null;
+  }
 };

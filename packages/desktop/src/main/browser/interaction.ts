@@ -20,9 +20,13 @@ const parseInteractionResult = (value: unknown): BrowserInteractionResult => {
 };
 
 const runInteractionScript = async (webContents: WebContents, script: string): Promise<BrowserInteractionResult> => {
-  const result = await withTimeout(webContents.executeJavaScript(script, true), interactionTimeoutMs);
-  if (!result) return { ok: false, error: 'Browser action timed out.' };
-  return parseInteractionResult(result);
+  try {
+    const result = await withTimeout(webContents.executeJavaScript(script, true), interactionTimeoutMs);
+    if (!result) return { ok: false, error: 'Browser action timed out.' };
+    return parseInteractionResult(result);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error && error.message ? error.message : 'Browser action failed.' };
+  }
 };
 
 export const clickBrowserElement = (webContents: WebContents, ref: string): Promise<BrowserInteractionResult> =>

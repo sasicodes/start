@@ -231,11 +231,11 @@ export const Composer = memo(
         {!centered && <ScrollToBottom />}
         <Finder
           items={finderItems}
-          emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
-          activeItemKey={selectedFinderKey}
           visible={finderVisible}
+          activeItemKey={selectedFinderKey}
           ariaLabel={slashCommandToken ? 'Slash commands' : 'Project files'}
           onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
+          emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
         />
         <Queue
           messages={queuedMessages}

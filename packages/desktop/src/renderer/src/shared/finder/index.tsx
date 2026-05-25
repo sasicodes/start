@@ -18,7 +18,7 @@ interface FileFinderItem {
   type: 'directory' | 'file';
 }
 
-export type FinderItem = BrowserFinderItem | CommandFinderItem | FileFinderItem;
+export type FinderItem = FileFinderItem | CommandFinderItem | BrowserFinderItem;
 
 interface FinderProps {
   visible: boolean;
@@ -46,25 +46,24 @@ export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`
 const FinderRowIcon = ({ type }: { type: FinderItem['type'] }) => {
   if (type === 'browser') return <BrowserIcon class="size-4 shrink-0 text-soft" />;
   if (type === 'directory') return <FolderIcon class="size-4 shrink-0 text-soft" />;
-  if (type === 'file') return <FolderIcon class="size-4 shrink-0 text-soft" />;
   return null;
 };
 
-const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
+const FinderRow = ({ item, onSelect, activeItemKey }: FinderRowProps) => {
   const itemKey = finderItemKey(item);
-  const selected = itemKey === activeItemKey;
   const isBrowser = item.type === 'browser';
   const isCommand = item.type === 'command';
+  const selected = itemKey === activeItemKey;
   const isDirectory = item.type === 'directory';
   const label = isDirectory ? `${item.name}/` : item.name;
   const description = item.description ? (isBrowser || isCommand ? item.description : `[${item.description}]`) : '';
 
   return (
     <button
-      id={finderItemId(itemKey)}
       role="option"
       tabIndex={-1}
       type="button"
+      id={finderItemId(itemKey)}
       aria-selected={selected}
       onPointerDown={(event) => {
         event.preventDefault();
@@ -92,7 +91,7 @@ const FinderRow = ({ activeItemKey, item, onSelect }: FinderRowProps) => {
   );
 };
 
-export const Finder = ({ activeItemKey, ariaLabel, emptyLabel, items, onSelect, visible }: FinderProps) => {
+export const Finder = ({ items, visible, onSelect, ariaLabel, emptyLabel, activeItemKey }: FinderProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeOptionId = activeItemKey ? finderItemId(activeItemKey) : '';
 
@@ -107,13 +106,13 @@ export const Finder = ({ activeItemKey, ariaLabel, emptyLabel, items, onSelect, 
   return (
     <Attached>
       <div
-        {...(activeOptionId ? { 'aria-activedescendant': activeOptionId } : {})}
-        ref={scrollRef}
-        aria-label={ariaLabel}
-        id="composer-finder"
-        role="listbox"
         tabIndex={-1}
+        role="listbox"
+        ref={scrollRef}
+        id="composer-finder"
+        aria-label={ariaLabel}
         onMouseDown={(event) => event.stopPropagation()}
+        {...(activeOptionId ? { 'aria-activedescendant': activeOptionId } : {})}
         class="flex max-h-52 flex-col gap-1 overflow-y-auto pb-2 [&::-webkit-scrollbar]:hidden"
       >
         {items.length > 0 ? (
@@ -121,8 +120,8 @@ export const Finder = ({ activeItemKey, ariaLabel, emptyLabel, items, onSelect, 
             <FinderRow
               key={finderItemKey(item)}
               item={item}
-              {...(activeItemKey ? { activeItemKey } : {})}
               onSelect={onSelect}
+              {...(activeItemKey ? { activeItemKey } : {})}
             />
           ))
         ) : (
