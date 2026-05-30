@@ -8,10 +8,18 @@ export const inspectScript: string = String.raw`
   const POPUP_GAP = 12;
   const MARKER_SIZE = 22;
   const BADGE_OFFSET = 14;
+  const RING_OUTSET = 4;
   const MAX_BREADCRUMB = 5;
   const MAX_HTML = 320;
   const MAX_TEXT = 120;
   const HOVER_THRESHOLD_PX = 2;
+  const SKIP_TAGS = new Set([
+    'html', 'body',
+    'path', 'circle', 'rect', 'g', 'polyline', 'polygon', 'line', 'ellipse',
+    'use', 'defs', 'symbol', 'tspan', 'text', 'br', 'wbr'
+  ]);
+  const INTERACTIVE_TAGS = new Set(['button', 'a', 'input', 'textarea', 'select', 'label', 'summary']);
+  const INTERACTIVE_ROLES = new Set(['button', 'link', 'menuitem', 'tab', 'checkbox', 'switch', 'radio']);
   const STYLE_KEYS = [
     'display', 'position', 'flex-direction', 'align-items', 'justify-content',
     'gap', 'width', 'height', 'padding', 'margin',
@@ -117,12 +125,36 @@ export const inspectScript: string = String.raw`
     };
   };
 
+  const isInteractive = (node) => {
+    const tag = node.tagName?.toLowerCase();
+    if (tag && INTERACTIVE_TAGS.has(tag)) return true;
+    const role = node.getAttribute?.('role');
+    return Boolean(role && INTERACTIVE_ROLES.has(role));
+  };
+
   const elementBehindHost = (x, y) => {
     const stack = document.elementsFromPoint(x, y);
+    let candidate = null;
+    let walked = 0;
     for (const node of stack) {
-      if (node !== host) return node;
+      if (node === host) continue;
+      const tag = node.tagName?.toLowerCase();
+      if (!tag || SKIP_TAGS.has(tag)) continue;
+      if (!candidate) {
+        candidate = node;
+        continue;
+      }
+      if (isInteractive(node)) return node;
+      walked++;
+      if (walked >= 3) break;
     }
-    return null;
+    return candidate;
+  };
+
+  const positionRing = (box) => {
+    ring.style.transform = 'translate(' + (box.x - RING_OUTSET) + 'px,' + (box.y - RING_OUTSET) + 'px)';
+    ring.style.width = box.width + RING_OUTSET * 2 + 'px';
+    ring.style.height = box.height + RING_OUTSET * 2 + 'px';
   };
 
   const styles = [
@@ -132,9 +164,9 @@ export const inspectScript: string = String.raw`
     '.overlay { position: fixed; inset: 0; pointer-events: none; cursor: crosshair;',
     '  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }',
     '.overlay.active { pointer-events: auto; }',
-    '.ring { position: absolute; top: 0; left: 0; border-radius: 4px;',
+    '.ring { position: absolute; top: 0; left: 0; border-radius: 6px;',
     '  border: 1.5px solid ' + ACCENT + '; pointer-events: none; opacity: 0;',
-    '  transition: transform 120ms ease-out, width 120ms ease-out, height 120ms ease-out, opacity 100ms ease-out;',
+    '  transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1), width 140ms cubic-bezier(0.2, 0.8, 0.2, 1), height 140ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 100ms ease-out;',
     '  will-change: transform, width, height, opacity; }',
     '.badge { position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0;',
     '  display: flex; align-items: center; gap: 6px;',
@@ -388,9 +420,7 @@ export const inspectScript: string = String.raw`
       return;
     }
     const rect = el.getBoundingClientRect();
-    ring.style.transform = 'translate(' + rect.left + 'px,' + rect.top + 'px)';
-    ring.style.width = rect.width + 'px';
-    ring.style.height = rect.height + 'px';
+    positionRing({ x: rect.left, y: rect.top, width: rect.width, height: rect.height });
     ring.style.opacity = '1';
     renderBadge(el);
     positionBadge(pointer.x, pointer.y);
@@ -528,9 +558,7 @@ export const inspectScript: string = String.raw`
       editingId = id;
       detailsOpen = false;
       pickInfo = annotation;
-      ring.style.transform = 'translate(' + annotation.box.x + 'px,' + annotation.box.y + 'px)';
-      ring.style.width = annotation.box.width + 'px';
-      ring.style.height = annotation.box.height + 'px';
+      positionRing(annotation.box);
       ring.style.opacity = '1';
       renderPopup();
       return;
@@ -546,9 +574,7 @@ export const inspectScript: string = String.raw`
     pickInfo = snapshotElement(el, x, y);
     editingId = null;
     detailsOpen = false;
-    ring.style.transform = 'translate(' + pickInfo.box.x + 'px,' + pickInfo.box.y + 'px)';
-    ring.style.width = pickInfo.box.width + 'px';
-    ring.style.height = pickInfo.box.height + 'px';
+    positionRing(pickInfo.box);
     ring.style.opacity = '1';
     badge.classList.remove('visible');
     renderPopup();
