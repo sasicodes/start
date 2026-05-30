@@ -1,6 +1,7 @@
 import '@main/environment';
 
 import { randomUUID } from 'node:crypto';
+import { homedir } from 'node:os';
 import {
   type AgentSession,
   AuthStorage,
@@ -160,7 +161,7 @@ export class ChatService {
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
   private activeSessionId = '';
-  private workspaceCwd = this.appState.lastWorkspace ?? process.cwd();
+  private workspaceCwd = this.appState.lastWorkspace ?? homedir();
   private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;

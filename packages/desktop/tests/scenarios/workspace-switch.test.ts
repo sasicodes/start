@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
 import { activationLog } from '../fakes/workspace-access.js';
@@ -37,6 +38,11 @@ describe('workspace switching', () => {
     expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-c');
     expect(getStorageSnapshot().lastWorkspace).toBe('/tmp/workspace-c');
     expect(activationLog()).toContain('/tmp/workspace-c');
+  });
+
+  it('falls back to the user home directory when no workspace was previously saved', () => {
+    const chat = freshChatService();
+    expect(chat.getWorkspaceCwd()).toBe(homedir());
   });
 
   it('rejects empty workspace paths without mutating state', async () => {
