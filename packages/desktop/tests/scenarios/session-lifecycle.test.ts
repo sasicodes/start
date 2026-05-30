@@ -50,6 +50,27 @@ describe('session lifecycle', () => {
     expect(result.error).toBe('Prompt is empty.');
   });
 
+  it('treats openSessionId on the already-active session as a no-op load', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('seed', webContents);
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+    session?.finishPrompt();
+    await send;
+
+    const beforeTabs = chat.getTabs();
+    const reopen = await chat.openSessionId(tab.id);
+
+    expect(reopen.ok).toBe(true);
+    expect(reopen.id).toBe(tab.id);
+    expect(session?.disposed).toBe(false);
+    const afterTabs = chat.getTabs();
+    expect(afterTabs.map((entry) => entry.id)).toEqual(beforeTabs.map((entry) => entry.id));
+  });
+
   it('parks a superseded open instead of disposing the in-flight session', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

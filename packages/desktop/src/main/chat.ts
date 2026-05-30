@@ -337,6 +337,9 @@ export class ChatService {
   async openSessionId(sessionId: string): Promise<OpenSessionResult> {
     const id = sessionId.trim();
     if (!id) return { ok: false, error: 'Session id is empty.' };
+    if (this.session?.sessionManager.getSessionId() === id) {
+      return { ok: true, id, turns: this.sessionTurns(this.session) };
+    }
     if (this.backgroundSessions.has(id)) return this.activateTab(id);
 
     const sessions = await SessionManager.listAll();
