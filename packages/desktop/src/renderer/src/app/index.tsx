@@ -140,10 +140,10 @@ export const App = () => {
 
   const appendInspectToComposer = useCallback(
     (text: string) => {
-      setDraft(appendInspectToDraft(draft, text));
+      setDraft((previous) => appendInspectToDraft(previous, text));
       textareaRef.current?.focus();
     },
-    [draft, setDraft]
+    [setDraft]
   );
 
   const selectModelFromComposer = useCallback(
