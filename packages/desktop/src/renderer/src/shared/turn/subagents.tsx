@@ -1,25 +1,43 @@
 import type { SubagentActivity } from '@preload/index';
+import { DetailItem } from '@renderer/shared/turn/item';
 import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
 import { tw } from '@renderer/utils/tw';
+import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-const statusLabel: Record<SubagentActivity['status'], string> = {
-  failed: 'failed',
-  queued: 'queued',
-  running: 'working',
-  cancelled: 'cancelled',
-  completed: 'done'
+const logDetail = (agent: SubagentActivity, log: string, index: number): TurnDetail => ({
+  count: 1,
+  id: `${agent.id}:log:${index}`,
+  key: `${agent.id}:log:${index}`,
+  kind: 'metadata',
+  state: 'done',
+  title: log,
+  createdAt: 0,
+  updatedAt: 0
+});
+
+const summaryDetail = (agent: SubagentActivity): TurnDetail | null => {
+  if (!agent.summary) return null;
+
+  return {
+    body: agent.summary,
+    count: 1,
+    id: `${agent.id}:summary`,
+    key: `${agent.id}:summary`,
+    kind: 'metadata',
+    state: 'done',
+    title: `From ${agent.name}`,
+    createdAt: 0,
+    updatedAt: 0
+  };
 };
 
-const statusClass = (status: SubagentActivity['status']) => {
-  if (status === 'running') return 'text-hover';
-  if (status === 'completed') return 'text-success';
-  if (status === 'failed') return 'text-danger';
-  return 'text-soft';
+const agentDetails = (agent: SubagentActivity) => {
+  const details = agent.logs.map((log, index) => logDetail(agent, log, index));
+  const summary = summaryDetail(agent);
+  return summary ? [...details, summary] : details;
 };
-
-const latestLog = (agent: SubagentActivity) => agent.logs.at(-1) ?? statusLabel[agent.status];
 
 const AgentName = ({ agent }: { agent: SubagentActivity }) => (
   <span
@@ -34,25 +52,15 @@ const AgentName = ({ agent }: { agent: SubagentActivity }) => (
 );
 
 const SubagentLogs = ({ agent }: { agent: SubagentActivity }) => {
-  const logs = agent.logs;
-  if (logs.length === 0 && !agent.summary) return null;
+  const details = agentDetails(agent);
+  if (details.length === 0) return null;
 
   return (
-    <div class="mt-2 space-y-1.5 pl-7 text-xs leading-5">
-      <div class="flex list-none flex-col gap-1.5 p-0 text-soft">
-        {logs.map((log, index) => (
-          <p key={`${agent.id}:log:${index}`} class="m-0 [overflow-wrap:anywhere]">
-            {log}
-          </p>
-        ))}
-      </div>
-      {agent.summary && (
-        <div class="space-y-1.5 pt-1">
-          <p class="m-0 text-sm leading-5 text-ink">{`From ${agent.name}`}</p>
-          <p class="m-0 text-sm leading-6 text-soft [overflow-wrap:anywhere]">{agent.summary}</p>
-        </div>
-      )}
-    </div>
+    <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2 p-0">
+      {details.map((detail) => (
+        <DetailItem key={detail.id} detail={detail} />
+      ))}
+    </motion.ul>
   );
 };
 
@@ -72,14 +80,6 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
           <AgentName agent={agent} />
           <span class="shrink-0 text-soft">-</span>
           <span class="min-w-0 truncate text-soft">{agent.task}</span>
-          <span
-            class={tw(
-              'hidden shrink-0 text-xs leading-4 capitalize @min-chat-narrow/chat:inline',
-              statusClass(agent.status)
-            )}
-          >
-            {latestLog(agent)}
-          </span>
         </span>
       </button>
       <AnimatePresence initial={false}>
