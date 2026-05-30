@@ -171,29 +171,31 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                     return (
                       <li
                         key={provider.name}
-                        class="rounded-2xl border border-dashed border-line px-3 pt-3 pb-3 transition-colors hover:border-ink/20"
+                        class="rounded-2xl border border-dashed border-line px-3 pt-3 pb-3"
                       >
                         <div class="flex min-w-0 items-center gap-3">
                           <div class="min-w-0 flex-1 pl-1">
                             <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
                             <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
                           </div>
-                          <button
-                            type="button"
-                            aria-label={`Edit ${provider.name}`}
-                            onClick={() => (isEditing ? resetForm() : startEdit(provider))}
-                            class="grid size-7 flex-none place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-ink"
-                          >
-                            <EditIcon class="size-4" />
-                          </button>
-                          <button
-                            type="button"
-                            aria-label={`Delete ${provider.name}`}
-                            onClick={() => remove(provider.name)}
-                            class="grid size-7 flex-none place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-danger"
-                          >
-                            <TrashIcon class="size-4" />
-                          </button>
+                          <div class="flex flex-none items-center gap-1">
+                            <button
+                              type="button"
+                              aria-label={`Edit ${provider.name}`}
+                              onClick={() => (isEditing ? resetForm() : startEdit(provider))}
+                              class="grid size-7 place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-ink"
+                            >
+                              <EditIcon class="size-4" />
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Delete ${provider.name}`}
+                              onClick={() => remove(provider.name)}
+                              class="grid size-7 place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-danger"
+                            >
+                              <TrashIcon class="size-4" />
+                            </button>
+                          </div>
                         </div>
                         <AnimatePresence initial={false}>
                           {isEditing && (
@@ -241,7 +243,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                   onClick={() => setAdding(true)}
                   class="h-10 w-full rounded-full border border-dashed border-line bg-transparent px-3 text-sm font-medium text-ink transition-colors hover:border-ink/20"
                 >
-                  + Add custom provider
+                  Add custom provider
                 </button>
               )}
             </div>
