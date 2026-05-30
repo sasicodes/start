@@ -80,5 +80,7 @@ export const isCodeMeta = (value: string) => /^`{3,}[^`]*\n/.test(value.trim());
 
 export const splitDiffMetric = (value: string) => {
   const match = diffMetricPattern.exec(value);
-  return match ? { label: match[1], added: match[2], removed: match[3] } : undefined;
+  if (!match) return null;
+
+  return { label: match[1], added: match[2], removed: match[3] };
 };
