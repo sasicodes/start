@@ -9,6 +9,7 @@ import {
   isCodeMeta,
   splitDiffMetric
 } from '@renderer/shared/turn/sequence';
+import { SubagentList } from '@renderer/shared/turn/subagents';
 import { tw } from '@renderer/utils/tw';
 import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -57,11 +58,12 @@ const DetailMetric = ({ value }: { value: string }) => {
 
 const DetailContent = ({ detail, meta }: DetailItemProps & { meta: string }) => (
   <div class="max-w-full text-sm leading-6 text-soft [overflow-wrap:anywhere]">
+    {detail.subagents && <SubagentList agents={detail.subagents} />}
     {meta &&
       (isCodeMeta(meta) ? (
         <Markdown source={meta} density="compact" />
       ) : (
-        <p class="m-0 text-sm leading-6 text-soft">{meta}</p>
+        <p class={tw('m-0 text-sm leading-6 text-soft', detail.subagents && 'mt-2')}>{meta}</p>
       ))}
     {detail.body && (
       <div class={tw('max-w-full text-sm leading-6 text-soft [overflow-wrap:anywhere]', meta && 'mt-1')}>
@@ -87,7 +89,7 @@ export const DetailItem = ({ detail }: DetailItemProps) => {
   const active = detail.state === 'active';
   const error = detail.kind === 'error' || detail.state === 'error';
   const subdued = !active && !error;
-  const expandable = Boolean(meta || detail.body);
+  const expandable = Boolean(meta || detail.body || detail.subagents?.length);
   const title = (
     <span
       class={tw(
