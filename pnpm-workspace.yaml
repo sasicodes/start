@@ -1,7 +1,5 @@
 packages:
   - packages/*
 minimumReleaseAgeExclude:
-  - '@earendil-works/pi-ai'
-  - '@earendil-works/pi-tui'
-  - '@earendil-works/pi-agent-core'
-  - '@earendil-works/pi-coding-agent'
+  - '@earendil-works/*'
+  - '@mariozechner/*'
