@@ -24,15 +24,15 @@ const subagentTimeoutMs = 10 * 60 * 1000;
 interface RunSubagentsOptions {
   cwd: string;
   signal?: AbortSignal;
-  authStorage: AuthStorage;
   tasks: SubagentTaskInput[];
-  model: ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
+  authStorage: AuthStorage;
   modelRegistry: ModelRegistry;
   thinkingLevel: EffortLevel;
   customTools: () => ToolDefinition[];
   settingsManager: SettingsManager;
-  onUpdate: (snapshot: SubagentRunSnapshot) => void;
   nameAllocator: SubagentNameAllocator;
+  onUpdate: (snapshot: SubagentRunSnapshot) => void;
+  model: ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 }
 
 const truncate = (value: string, maxLength = maxSummaryLength) => {
@@ -89,6 +89,13 @@ const abortSession = async (session: AgentSession) => {
   await session.abort();
 };
 
+const rejectAfterAbort = (session: AgentSession, error: Error, reject: (reason?: unknown) => void) => {
+  abortSession(session).then(
+    () => reject(error),
+    () => reject(error)
+  );
+};
+
 const runWithAbort = async (session: AgentSession, signal: AbortSignal | null, task: string) => {
   if (!signal) {
     await session.prompt(finalPrompt(task));
@@ -103,8 +110,7 @@ const runWithAbort = async (session: AgentSession, signal: AbortSignal | null, t
       session.prompt(finalPrompt(task)),
       new Promise<never>((_resolve, reject) => {
         const abort = () => {
-          abortSession(session).catch(() => {});
-          reject(new Error('Sub-agent run cancelled.'));
+          rejectAfterAbort(session, new Error('Sub-agent run cancelled.'), reject);
         };
         signal.addEventListener('abort', abort, { once: true });
         removeAbortListener = () => signal.removeEventListener('abort', abort);
@@ -123,8 +129,7 @@ const runWithTimeout = async (session: AgentSession, signal: AbortSignal | null,
       runWithAbort(session, signal, task),
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(() => {
-          abortSession(session).catch(() => {});
-          reject(new Error('Sub-agent timed out.'));
+          rejectAfterAbort(session, new Error('Sub-agent timed out.'), reject);
         }, subagentTimeoutMs);
       })
     ]);
