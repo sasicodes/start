@@ -35,15 +35,14 @@ const runtimeToolCapabilitySchema = v.union([
   })
 ]);
 
+const singleLineText = (value: string) => value.trim().split(/\s+/u).join(' ');
+
 const readToolCapability = (value: unknown): ToolCapability | null => {
   const result = v.safeParse(runtimeToolCapabilitySchema, value);
   if (!result.success) return null;
 
   const tool = 'definition' in result.output ? result.output.definition : result.output;
-  const description = (tool.promptSnippet || tool.description || fallbackToolDescription)
-    .replace(/[\r\n]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const description = singleLineText(tool.promptSnippet || tool.description || fallbackToolDescription);
 
   return {
     description,
