@@ -1,16 +1,12 @@
 import type { CustomProviderConfig } from '@preload/index';
-import {
-  ProviderForm,
-  type ProviderFormDraft,
-  emptyProviderFormDraft
-} from '@renderer/shared/settings/provider-form';
+import { ProviderForm, type ProviderFormDraft, emptyProviderFormDraft } from '@renderer/shared/settings/provider/form';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { ChevronDownIcon, CustomProviderIcon, EditIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'preact/hooks';
 
-const maxThinkingLabels = 4;
+const serializeModels = (models: CustomProviderConfig['models']) => models.map((model) => model.id).join('\n');
 
 const splitEntries = (text: string) =>
   text
@@ -18,25 +14,21 @@ const splitEntries = (text: string) =>
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
 
-const parseThinkingLabels = (text: string): string[] => splitEntries(text);
-
-const parseModelIds = (text: string) => splitEntries(text).map((id) => ({ id }));
-
-const serializeModels = (models: CustomProviderConfig['models']) => models.map((model) => model.id).join('\n');
-
 const pluralize = (count: number, singular: string, plural: string) =>
   count === 1 ? `1 ${singular}` : `${count} ${plural}`;
+
+const summarizeProvider = (provider: CustomProviderConfig) => {
+  const models = pluralize(provider.models.length, 'model', 'models');
+  const levels = provider.thinkingLabels?.length
+    ? ` · ${pluralize(provider.thinkingLabels.length, 'level', 'levels')}`
+    : '';
+  return `${provider.baseUrl} · ${models}${levels}`;
+};
 
 const headerSummary = (providers: CustomProviderConfig[]) => {
   if (providers.length === 0) return 'Add an OpenAI-compatible endpoint';
   const total = providers.reduce((count, provider) => count + provider.models.length, 0);
   return `${providers.length} configured, ${pluralize(total, 'model', 'models')}`;
-};
-
-const summarizeProvider = (provider: CustomProviderConfig) => {
-  const models = pluralize(provider.models.length, 'model', 'models');
-  const levels = provider.thinkingLabels?.length ? ` · ${pluralize(provider.thinkingLabels.length, 'level', 'levels')}` : '';
-  return `${provider.baseUrl} · ${models}${levels}`;
 };
 
 interface CustomProvidersRowProps {
@@ -48,8 +40,8 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState('');
-  const [draft, setDraft] = useState<ProviderFormDraft>(emptyProviderFormDraft);
   const [providers, setProviders] = useState<CustomProviderConfig[]>([]);
+  const [draft, setDraft] = useState<ProviderFormDraft>(emptyProviderFormDraft);
 
   useEffect(() => {
     let active = true;
@@ -89,29 +81,17 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   };
 
   const submit = async () => {
-    const name = draft.name.trim();
-    const baseUrl = draft.baseUrl.trim();
-    const apiKey = draft.apiKey.trim();
-    const models = parseModelIds(draft.modelIds);
-    const thinkingLabels = parseThinkingLabels(draft.thinking);
-    if (!name || !baseUrl || !apiKey || models.length === 0) {
-      setError('Name, base URL, API key, and at least one model ID are required.');
-      return;
-    }
-    if (thinkingLabels.length > maxThinkingLabels) {
-      setError(`Thinking levels supports at most ${maxThinkingLabels} entries.`);
-      return;
-    }
+    const thinkingLabels = splitEntries(draft.thinking);
     try {
       await window.pi.chat.saveCustomProvider({
-        name,
-        apiKey,
-        baseUrl,
-        models,
+        name: draft.name,
+        apiKey: draft.apiKey,
+        baseUrl: draft.baseUrl,
+        models: splitEntries(draft.modelIds).map((id) => ({ id })),
         ...(thinkingLabels.length > 0 ? { thinkingLabels } : {})
       });
       const next =
-        editing && editing !== name
+        editing && editing !== draft.name.trim()
           ? await window.pi.chat.removeCustomProvider(editing)
           : await window.pi.chat.listCustomProviders();
       setProviders(next);
@@ -123,9 +103,10 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
 
   const remove = async (name: string) => {
     try {
-      const next = await window.pi.chat.removeCustomProvider(name);
-      setProviders(next);
-    } catch {}
+      setProviders(await window.pi.chat.removeCustomProvider(name));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not remove the provider.');
+    }
   };
 
   const canSubmit =
@@ -133,6 +114,10 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
     draft.apiKey.trim().length > 0 &&
     draft.baseUrl.trim().length > 0 &&
     draft.modelIds.trim().length > 0;
+
+  const showAddForm = !editing && adding;
+  const showAddButton = !editing && !adding;
+  const formProps = { draft, error, canSubmit, onSubmit: submit, onCancel: resetForm, onUpdate: updateDraft };
 
   return (
     <div class="border-t border-line py-4">
@@ -169,10 +154,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                   {providers.map((provider) => {
                     const isEditing = editing === provider.name;
                     return (
-                      <li
-                        key={provider.name}
-                        class="rounded-2xl border border-dashed border-line px-3 pt-3 pb-3"
-                      >
+                      <li key={provider.name} class="rounded-2xl border border-dashed border-line px-3 pt-3 pb-3">
                         <div class="flex min-w-0 items-center gap-3">
                           <div class="min-w-0 flex-1 pl-1">
                             <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
@@ -207,14 +189,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                               class="overflow-hidden"
                             >
                               <div class="mt-5 pb-1">
-                                <ProviderForm
-                                  draft={draft}
-                                  error={error}
-                                  canSubmit={canSubmit}
-                                  onCancel={resetForm}
-                                  onUpdate={updateDraft}
-                                  onSubmit={() => submit()}
-                                />
+                                <ProviderForm {...formProps} />
                               </div>
                             </motion.div>
                           )}
@@ -225,19 +200,12 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                 </ul>
               )}
 
-              {!editing && adding && (
+              {showAddForm && (
                 <div class="rounded-2xl border border-dashed border-line p-4">
-                  <ProviderForm
-                    draft={draft}
-                    error={error}
-                    canSubmit={canSubmit}
-                    onCancel={resetForm}
-                    onUpdate={updateDraft}
-                    onSubmit={() => submit()}
-                  />
+                  <ProviderForm {...formProps} />
                 </div>
               )}
-              {!editing && !adding && (
+              {showAddButton && (
                 <button
                   type="button"
                   onClick={() => setAdding(true)}

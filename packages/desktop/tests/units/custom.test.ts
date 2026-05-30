@@ -22,8 +22,7 @@ const makeFakeDb = () => {
     }
     if (sql.startsWith('INSERT INTO custom_models')) {
       return {
-        run: (name: string, ciphertext: Uint8Array, updated_at: number) =>
-          rows.set(name, { ciphertext, updated_at })
+        run: (name: string, ciphertext: Uint8Array, updated_at: number) => rows.set(name, { ciphertext, updated_at })
       };
     }
     if (sql.startsWith('DELETE FROM custom_models')) {
@@ -67,10 +66,36 @@ describe('CustomProviderStore', () => {
 
   it('throws when a required field is missing', () => {
     const store = new CustomProviderStore(makeFakeDb(), plaintextCodec);
-    expect(() => store.save(baseConfig({ name: '   ' }))).toThrow(/requires/);
-    expect(() => store.save(baseConfig({ baseUrl: '' }))).toThrow(/requires/);
-    expect(() => store.save(baseConfig({ apiKey: '' }))).toThrow(/requires/);
-    expect(() => store.save(baseConfig({ models: [] }))).toThrow(/requires/);
+    expect(() => store.save(baseConfig({ name: '   ' }))).toThrow(/required/);
+    expect(() => store.save(baseConfig({ baseUrl: '' }))).toThrow(/required/);
+    expect(() => store.save(baseConfig({ apiKey: '' }))).toThrow(/required/);
+    expect(() => store.save(baseConfig({ models: [] }))).toThrow(/required/);
+  });
+
+  it('rejects a name that collides with a built-in provider, case-insensitively', () => {
+    const store = new CustomProviderStore(makeFakeDb(), plaintextCodec);
+    expect(() => store.save(baseConfig({ name: 'openai' }))).toThrow(/reserved/);
+    expect(() => store.save(baseConfig({ name: ' Anthropic ' }))).toThrow(/reserved/);
+    expect(() => store.save(baseConfig({ name: 'GOOGLE' }))).toThrow(/reserved/);
+    expect(store.list()).toEqual([]);
+  });
+
+  it('persists thinking labels, dropping blanks', () => {
+    const store = new CustomProviderStore(makeFakeDb(), plaintextCodec);
+    const saved = store.save(baseConfig({ thinkingLabels: ['minimal', '  ', 'high'] }));
+    expect(saved.thinkingLabels).toEqual(['minimal', 'high']);
+  });
+
+  it('rejects more thinking labels than the supported maximum', () => {
+    const store = new CustomProviderStore(makeFakeDb(), plaintextCodec);
+    const labels = ['minimal', 'low', 'medium', 'high', 'max'];
+    expect(() => store.save(baseConfig({ thinkingLabels: labels }))).toThrow(/at most/);
+  });
+
+  it('omits thinking labels when none are provided', () => {
+    const store = new CustomProviderStore(makeFakeDb(), plaintextCodec);
+    const saved = store.save(baseConfig());
+    expect(saved.thinkingLabels).toBeUndefined();
   });
 
   it('omits absent optional model name instead of writing undefined', () => {

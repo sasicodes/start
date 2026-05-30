@@ -3,23 +3,21 @@ import type { StartDatabase } from '@main/db';
 import { resolveSecretCodec, type SecretCodec } from '@main/providers/codec';
 import { readRequiredBytes, type SqliteRow } from '@main/sqlite-row';
 import { effortLevels, type EffortLevel } from '@main/types';
+import {
+  customProviderConfigSchema,
+  writableCustomProviderConfigSchema,
+  type CustomProviderConfig
+} from '@main/providers/schema';
+import { safeParse } from 'valibot';
+
+export type { CustomProviderConfig, CustomProviderModel } from '@main/providers/schema';
 
 const customApi = 'openai-completions' as const;
-const defaultContextWindow = 128000;
 const defaultMaxTokens = 32000;
+const defaultContextWindow = 128000;
 const defaultCost = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
-const maxThinkingLabels = effortLevels.length;
-
-const sanitizeThinkingLabels = (raw: readonly string[] | undefined): string[] => {
-  if (!raw) return [];
-  const cleaned: string[] = [];
-  for (const value of raw) {
-    const trimmed = value.trim();
-    if (trimmed.length > 0) cleaned.push(trimmed);
-  }
-  return cleaned.slice(0, maxThinkingLabels);
-};
+const normalizeName = (value: string) => value.trim();
 
 const buildThinkingLevelMap = (labels: readonly string[]) => {
   const map: Record<'off' | EffortLevel, string | null> = {
@@ -36,37 +34,6 @@ const buildThinkingLevelMap = (labels: readonly string[]) => {
   }
   return map;
 };
-
-export interface CustomProviderModel {
-  id: string;
-  name?: string;
-}
-
-export interface CustomProviderConfig {
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  models: CustomProviderModel[];
-  thinkingLabels?: string[];
-}
-
-const normalizeName = (value: string) => value.trim();
-
-const sanitizeConfig = (config: CustomProviderConfig): CustomProviderConfig => {
-  const thinkingLabels = sanitizeThinkingLabels(config.thinkingLabels);
-  return {
-    name: normalizeName(config.name),
-    baseUrl: config.baseUrl.trim(),
-    apiKey: config.apiKey,
-    models: config.models
-      .map((model) => ({ id: model.id.trim(), ...(model.name ? { name: model.name.trim() } : {}) }))
-      .filter((model) => model.id.length > 0),
-    ...(thinkingLabels.length > 0 ? { thinkingLabels } : {})
-  };
-};
-
-const isValidConfig = (config: CustomProviderConfig) =>
-  config.name.length > 0 && config.baseUrl.length > 0 && config.apiKey.length > 0 && config.models.length > 0;
 
 export class CustomProviderStore {
   private readonly codec: SecretCodec;
@@ -98,10 +65,11 @@ export class CustomProviderStore {
     if (!this.codec.available()) {
       throw new Error('Secure storage is not available; cannot save custom providers.');
     }
-    const sanitized = sanitizeConfig(config);
-    if (!isValidConfig(sanitized)) {
-      throw new Error('Custom provider requires a name, base URL, API key, and at least one model.');
+    const result = safeParse(writableCustomProviderConfigSchema, config);
+    if (!result.success) {
+      throw new Error(result.issues[0]?.message ?? 'Custom provider configuration is invalid.');
     }
+    const sanitized = result.output;
     const payload = this.codec.encode(JSON.stringify(sanitized));
     this.writeStmt.run(sanitized.name, payload, Date.now());
     return sanitized;
@@ -117,11 +85,8 @@ export class CustomProviderStore {
     try {
       const ciphertext = readRequiredBytes(row, 'ciphertext');
       const parsed = JSON.parse(this.codec.decode(ciphertext)) as unknown;
-      if (typeof parsed !== 'object' || parsed === null) return null;
-      const candidate = parsed as Partial<CustomProviderConfig>;
-      if (typeof candidate.name !== 'string' || typeof candidate.baseUrl !== 'string') return null;
-      if (typeof candidate.apiKey !== 'string' || !Array.isArray(candidate.models)) return null;
-      return candidate as CustomProviderConfig;
+      const result = safeParse(customProviderConfigSchema, parsed);
+      return result.success ? result.output : null;
     } catch {
       return null;
     }

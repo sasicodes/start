@@ -1,6 +1,6 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import { ComposerShortcut } from '@renderer/shared/settings/composer-shortcut';
-import { CustomProvidersRow } from '@renderer/shared/settings/custom';
+import { CustomProvidersRow } from '@renderer/shared/settings/provider/custom';
 import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
@@ -143,10 +143,7 @@ export const Settings = memo(
                     authDetail={authDetail}
                   />
                   <ChevronDownIcon
-                    class={tw(
-                      'size-4 flex-none text-soft transition-transform duration-150',
-                      open && 'rotate-180'
-                    )}
+                    class={tw('size-4 flex-none text-soft transition-transform duration-150', open && 'rotate-180')}
                   />
                 </button>
               ) : (

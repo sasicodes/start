@@ -1,10 +1,10 @@
-export type ProviderFormDraft = {
+export interface ProviderFormDraft {
   name: string;
   apiKey: string;
   baseUrl: string;
   thinking: string;
   modelIds: string;
-};
+}
 
 export const emptyProviderFormDraft: ProviderFormDraft = {
   name: '',
@@ -15,10 +15,10 @@ export const emptyProviderFormDraft: ProviderFormDraft = {
 };
 
 interface PillInputProps {
-  type: 'text' | 'password';
   value: string;
-  onInput: (value: string) => void;
   placeholder: string;
+  type: 'text' | 'password';
+  onInput: (value: string) => void;
 }
 
 const PillInput = ({ type, value, onInput, placeholder }: PillInputProps) => (
@@ -40,14 +40,7 @@ interface ProviderFormProps {
   onUpdate: <K extends keyof ProviderFormDraft>(key: K, value: ProviderFormDraft[K]) => void;
 }
 
-export const ProviderForm = ({
-  draft,
-  error,
-  onCancel,
-  onSubmit,
-  onUpdate,
-  canSubmit
-}: ProviderFormProps) => (
+export const ProviderForm = ({ draft, error, onCancel, onSubmit, onUpdate, canSubmit }: ProviderFormProps) => (
   <div class="grid gap-2">
     <PillInput
       type="text"
