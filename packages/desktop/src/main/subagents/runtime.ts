@@ -9,7 +9,7 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { randomUUID } from 'node:crypto';
 import { agentEndError } from '@main/helpers';
-import { createStartResourceLoader } from '@main/resource-loader';
+import { createStartResourceLoader } from '@main/prompt/loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
 import type { SubagentRunResult, SubagentTaskInput, SubagentRunSnapshot } from '@main/subagents/types';
