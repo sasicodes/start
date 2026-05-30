@@ -1,33 +1,38 @@
-import { isRecord, stringValue } from '@main/details';
+import * as v from 'valibot';
+import { isRecord } from '@main/details';
 import type { SubagentActivity } from '@main/types';
 
-const validStatuses = new Set(['cancelled', 'completed', 'failed', 'queued', 'running']);
+const subagentStatusSchema = v.picklist(['cancelled', 'completed', 'failed', 'queued', 'running']);
+
+const subagentActivitySchema = v.object({
+  id: v.string(),
+  name: v.string(),
+  task: v.string(),
+  logs: v.optional(v.array(v.string()), []),
+  avatar: v.string(),
+  summary: v.optional(v.string()),
+  accentColor: v.string(),
+  status: subagentStatusSchema
+});
 
 export const subagentTaskCount = (args: Record<string, unknown>) => (Array.isArray(args.tasks) ? args.tasks.length : 0);
 
 const parseSubagentActivity = (value: unknown): SubagentActivity | null => {
-  if (!isRecord(value)) return null;
+  const result = v.safeParse(subagentActivitySchema, value);
+  if (!result.success) return null;
 
-  const id = stringValue(value.id);
-  const name = stringValue(value.name);
-  const task = stringValue(value.task);
-  const logs = Array.isArray(value.logs) ? value.logs.flatMap((log) => (typeof log === 'string' ? [log] : [])) : [];
-  const avatar = stringValue(value.avatar);
-  const status = stringValue(value.status);
-  const summary = stringValue(value.summary);
-  const accentColor = stringValue(value.accentColor);
-  if (!id || !name || !task || !avatar || !accentColor) return null;
-  if (!validStatuses.has(status)) return null;
+  const activity = result.output;
+  if (!activity.id || !activity.name || !activity.task || !activity.avatar || !activity.accentColor) return null;
 
   return {
-    id,
-    name,
-    task,
-    logs,
-    avatar,
-    accentColor,
-    status: status as SubagentActivity['status'],
-    ...(summary ? { summary } : {})
+    id: activity.id,
+    name: activity.name,
+    task: activity.task,
+    logs: activity.logs,
+    avatar: activity.avatar,
+    status: activity.status,
+    accentColor: activity.accentColor,
+    ...(activity.summary ? { summary: activity.summary } : {})
   };
 };
 

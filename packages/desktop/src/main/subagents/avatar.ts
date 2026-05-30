@@ -1,6 +1,6 @@
 import { hashString } from '@main/subagents/hash';
 
-const palettes = [
+export const subagentPalettes = [
   ['#0f766e', '#134e4a'],
   ['#7c3aed', '#4c1d95'],
   ['#c2410c', '#7c2d12'],
@@ -19,13 +19,13 @@ const svgEscape = (value: string) =>
 const svgDataUrl = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
 export const subagentAccentColor = (name: string) => {
-  const palette = palettes[hashString(name) % palettes.length] ?? palettes[0];
+  const palette = subagentPalettes[hashString(name) % subagentPalettes.length] ?? subagentPalettes[0];
   return palette[0];
 };
 
 export const subagentAvatar = (name: string) => {
   const hash = hashString(name);
-  const palette = palettes[hash % palettes.length] ?? palettes[0];
+  const palette = subagentPalettes[hash % subagentPalettes.length] ?? subagentPalettes[0];
   const cells: string[] = [];
 
   for (let y = 0; y < cellCount; y += 1) {

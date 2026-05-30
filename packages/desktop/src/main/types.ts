@@ -99,11 +99,11 @@ export type TurnDetailState = 'done' | 'error' | 'active' | 'queued';
 export type ChatEvent = {
   key: string;
   body?: string;
-  kind: TurnDetailKind;
-  state: TurnDetailState;
   title: string;
   detail?: string;
   metric?: string;
+  kind: TurnDetailKind;
+  state: TurnDetailState;
   subagents?: SubagentActivity[];
 };
 

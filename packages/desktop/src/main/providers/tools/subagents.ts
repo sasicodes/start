@@ -1,6 +1,6 @@
 import {
-  type AuthStorage,
   defineTool,
+  type AuthStorage,
   type ModelRegistry,
   type SettingsManager,
   type ToolDefinition
@@ -41,8 +41,8 @@ interface CreateSubagentToolsOptions {
   cwd: () => string;
   authStorage: AuthStorage;
   modelRegistry: ModelRegistry;
-  settingsManager: SettingsManager;
   thinkingLevel: () => EffortLevel;
+  settingsManager: SettingsManager;
   customTools: () => ToolDefinition[];
   nameAllocator: () => SubagentNameAllocator;
   model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
@@ -55,17 +55,17 @@ const validTasks = (tasks: SubagentTaskInput[]) =>
     .slice(0, maxSubagentTasks);
 
 const toolResult = (text: string, details: SubagentRunSnapshot) => ({
-  details,
-  content: [{ text, type: 'text' as const }]
+  content: [{ text, type: 'text' as const }],
+  details
 });
 
 export const createSubagentTools = ({
   cwd,
   model,
-  customTools,
   authStorage,
-  nameAllocator,
+  customTools,
   modelRegistry,
+  nameAllocator,
   thinkingLevel,
   settingsManager
 }: CreateSubagentToolsOptions) => [
@@ -84,16 +84,16 @@ export const createSubagentTools = ({
       if (runnableTasks.length === 0) throw new Error('Enter at least one sub-agent task.');
 
       const result = await runSubagents({
-        tasks: runnableTasks,
-        model: selectedModel,
         cwd: cwd(),
-        customTools,
         authStorage,
-        nameAllocator: nameAllocator(),
+        customTools,
         modelRegistry,
         settingsManager,
-        thinkingLevel: thinkingLevel(),
+        model: selectedModel,
+        tasks: runnableTasks,
         ...(signal ? { signal } : {}),
+        nameAllocator: nameAllocator(),
+        thinkingLevel: thinkingLevel(),
         onUpdate: (snapshot) => onUpdate?.(toolResult('Sub-agents are working.', snapshot))
       });
 

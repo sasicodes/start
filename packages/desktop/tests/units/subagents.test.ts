@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
-import { subagentAvatar } from '@main/subagents/avatar';
+import { subagentAvatar, subagentPalettes } from '@main/subagents/avatar';
 import { subagentNames } from '@main/subagents/names';
 
 describe('sub-agent identity', () => {
@@ -19,5 +19,11 @@ describe('sub-agent identity', () => {
     expect(subagentAvatar('Arul')).toBe(subagentAvatar('Arul'));
     expect(subagentAvatar('Arul')).not.toBe(subagentAvatar('Mei'));
     expect(subagentAvatar('Arul')).toContain('data:image/svg+xml');
+  });
+
+  it('keeps avatar palette colors unique', () => {
+    const colors = subagentPalettes.flat();
+
+    expect(new Set(colors).size).toBe(colors.length);
   });
 });

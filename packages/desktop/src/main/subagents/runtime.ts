@@ -1,18 +1,18 @@
 import {
-  type AgentSession,
+  SessionManager,
   type AuthStorage,
+  type AgentSession,
   createAgentSession,
   type ModelRegistry,
-  SessionManager,
-  type SettingsManager,
-  type ToolDefinition
+  type ToolDefinition,
+  type SettingsManager
 } from '@earendil-works/pi-coding-agent';
 import { randomUUID } from 'node:crypto';
 import { agentEndError } from '@main/helpers';
 import { createStartResourceLoader } from '@main/resource-loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
-import type { SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
+import type { SubagentRunResult, SubagentTaskInput, SubagentRunSnapshot } from '@main/subagents/types';
 import { countLabel } from '@main/details';
 import type { EffortLevel, SubagentActivity } from '@main/types';
 
@@ -24,18 +24,18 @@ const subagentTimeoutMs = 10 * 60 * 1000;
 interface RunSubagentsOptions {
   cwd: string;
   signal?: AbortSignal;
-  tasks: SubagentTaskInput[];
   authStorage: AuthStorage;
-  modelRegistry: ModelRegistry;
+  tasks: SubagentTaskInput[];
   thinkingLevel: EffortLevel;
-  customTools: () => ToolDefinition[];
+  modelRegistry: ModelRegistry;
   settingsManager: SettingsManager;
+  customTools: () => ToolDefinition[];
   nameAllocator: SubagentNameAllocator;
   onUpdate: (snapshot: SubagentRunSnapshot) => void;
   model: ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 }
 
-const truncate = (value: string, maxLength = maxSummaryLength) => {
+const truncateSummary = (value: string, maxLength = maxSummaryLength) => {
   const text = value.trim();
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 };
@@ -140,27 +140,27 @@ const runWithTimeout = async (session: AgentSession, signal: AbortSignal | null,
 
 export const runSubagents = async ({
   cwd,
-  tasks,
   model,
+  tasks,
   signal,
   onUpdate,
-  customTools,
   authStorage,
-  nameAllocator,
+  customTools,
   modelRegistry,
+  nameAllocator,
   thinkingLevel,
   settingsManager
 }: RunSubagentsOptions): Promise<SubagentRunResult> => {
   const agents: SubagentActivity[] = tasks.map((task, index) => {
     const name = nameAllocator.next(`${task.prompt}:${index}:${randomUUID()}`);
     return {
-      id: randomUUID(),
-      logs: [],
       name,
+      logs: [],
+      id: randomUUID(),
+      status: 'queued',
       task: task.prompt,
       avatar: subagentAvatar(name),
-      accentColor: subagentAccentColor(name),
-      status: 'queued'
+      accentColor: subagentAccentColor(name)
     };
   });
 
@@ -185,13 +185,13 @@ export const runSubagents = async ({
       const result = await createAgentSession({
         cwd,
         model,
-        sessionManager,
-        resourceLoader,
         authStorage,
         modelRegistry,
+        thinkingLevel,
+        sessionManager,
+        resourceLoader,
         customTools: customTools(),
-        settingsManager,
-        thinkingLevel
+        settingsManager
       });
       session = result.session;
       session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
@@ -216,7 +216,7 @@ export const runSubagents = async ({
       if (endError) throw new Error(endError);
 
       agent.status = 'completed';
-      agent.summary = truncate(session.getLastAssistantText() || 'No summary returned.');
+      agent.summary = truncateSummary(session.getLastAssistantText() || 'No summary returned.');
       pushLog(agent, 'Completed');
       update();
     } catch (error) {
@@ -236,7 +236,7 @@ export const runSubagents = async ({
   await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, agents.length) }, () => runNext()));
 
   return {
-    agents,
-    text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`
+    text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`,
+    agents
   };
 };
