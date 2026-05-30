@@ -35,11 +35,27 @@ describe('modelProviderId', () => {
     expect(modelProviderId(model({ id: 'gemini-3.5-flash', name: 'flash', provider: 'unknown' }))).toBe('google');
   });
 
-  it('classifies OpenAI as the default', () => {
+  it('classifies OpenAI by provider name', () => {
     expect(modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }))).toBe('openai');
   });
 
-  it('falls back to OpenAI for unrecognized providers', () => {
-    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('openai');
+  it('classifies GPT models routed through openai-codex as openai', () => {
+    expect(
+      modelProviderId(model({ id: 'gpt-5.3-codex-spark', name: 'GPT 5.3 Codex Spark', provider: 'openai-codex' }))
+    ).toBe('openai');
+  });
+
+  it('classifies unrecognized providers as custom', () => {
+    expect(modelProviderId(model({ id: 'llama3.1:8b', name: 'Llama', provider: 'ollama' }))).toBe('custom');
+    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('custom');
+  });
+
+  it('respects isCustom over any heuristic match', () => {
+    expect(
+      modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'pydantic', isCustom: true }))
+    ).toBe('custom');
+    expect(
+      modelProviderId(model({ id: 'claude-3-haiku', name: 'Claude Haiku', provider: 'my-proxy', isCustom: true }))
+    ).toBe('custom');
   });
 });

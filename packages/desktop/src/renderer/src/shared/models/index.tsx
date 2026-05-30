@@ -1,7 +1,15 @@
 import type { ModelOption } from '@preload/index';
 import { modelProviderId, type ModelProviderId } from '@renderer/shared/models/provider';
 import { selectedModelKeyState } from '@renderer/state/chat';
-import { AnthropicIcon, CheckIcon, ChevronRightIcon, GearIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
+import {
+  AnthropicIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  CustomProviderIcon,
+  GearIcon,
+  GeminiIcon,
+  OpenAIIcon
+} from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSubmenuTrigger } from '@renderer/ui/menu';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'preact/hooks';
@@ -22,10 +30,11 @@ interface ModelsProps {
 export const ProviderIcon = ({ id }: { id: ModelProviderId }) => {
   if (id === 'openai') return <OpenAIIcon class="size-4" />;
   if (id === 'google') return <GeminiIcon class="size-4" />;
+  if (id === 'custom') return <CustomProviderIcon class="size-4" />;
   return <AnthropicIcon class="size-4" />;
 };
 
-const tickerProviders: ModelProviderId[] = ['anthropic', 'openai', 'google'];
+const tickerProviders: ModelProviderId[] = ['custom', 'anthropic', 'openai', 'google'];
 const tickerIntervalMs = 1500;
 
 export const ProviderIconTicker = () => {
@@ -65,10 +74,12 @@ const ModelCheck = ({ selected }: { selected: boolean }) => {
 
 const ModelOptionItem = ({
   model,
+  custom,
   selected,
   onSelectModel
 }: {
   model: ModelOption;
+  custom: boolean;
   selected: boolean;
   onSelectModel: (modelKey: string) => void;
 }) => {
@@ -83,7 +94,7 @@ const ModelOptionItem = ({
       onPointerDown={selectModel}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
-      <span class="block truncate">{model.name}</span>
+      <span class="block truncate">{custom ? `${model.provider} (${model.id})` : model.name}</span>
       <span class="grid size-2.5 place-items-center text-ink">
         <ModelCheck selected={selected} />
       </span>
@@ -92,14 +103,16 @@ const ModelOptionItem = ({
 };
 
 const ModelOptions = ({
+  custom,
   models,
   selectedModel,
   onSelectModel
-}: Pick<ProviderGroup, 'models'> & Pick<ModelsProps, 'selectedModel' | 'onSelectModel'>) => {
+}: Pick<ProviderGroup, 'models'> & Pick<ModelsProps, 'selectedModel' | 'onSelectModel'> & { custom: boolean }) => {
   return models.map((model) => (
     <ModelOptionItem
       key={model.key}
       model={model}
+      custom={custom}
       selected={selectedModel?.key === model.key}
       onSelectModel={onSelectModel}
     />
@@ -122,13 +135,16 @@ const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<
 const ModelMenuContent = ({
   name,
   models,
+  custom,
   selectedModel,
   onSelectModel,
   onOpenSettings
-}: Pick<ProviderGroup, 'models' | 'name'> & Omit<ModelsProps, 'models'>) => {
+}: Pick<ProviderGroup, 'models' | 'name'> & Omit<ModelsProps, 'models'> & { custom: boolean }) => {
   if (models.length === 0) return <SetupItem name={name} onOpenSettings={onOpenSettings} />;
 
-  return <ModelOptions models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
+  return (
+    <ModelOptions custom={custom} models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />
+  );
 };
 
 const ProviderSubmenu = ({
@@ -152,6 +168,7 @@ const ProviderSubmenu = ({
             <ModelMenuContent
               name={name}
               models={models}
+              custom={id === 'custom'}
               selectedModel={selectedModel}
               onSelectModel={onSelectModel}
               onOpenSettings={onOpenSettings}
@@ -165,13 +182,14 @@ const ProviderSubmenu = ({
 
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
   const providers = useMemo<ProviderGroup[]>(() => {
-    const grouped: Record<ModelProviderId, ModelOption[]> = { anthropic: [], google: [], openai: [] };
+    const grouped: Record<ModelProviderId, ModelOption[]> = { custom: [], google: [], openai: [], anthropic: [] };
     for (const model of models) grouped[modelProviderId(model)].push(model);
 
     return [
       { id: 'openai', name: 'OpenAI', models: grouped.openai },
       { id: 'anthropic', name: 'Anthropic', models: grouped.anthropic },
-      { id: 'google', name: 'Google', models: grouped.google }
+      { id: 'google', name: 'Google', models: grouped.google },
+      { id: 'custom', name: 'Custom', models: grouped.custom }
     ];
   }, [models]);
 

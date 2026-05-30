@@ -13,9 +13,16 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { appVersion } from '@main/application';
 import { closeStartDb, openStartDb } from '@main/db';
-import { resolveAuthBackend } from '@main/pi/auth';
-import { InMemorySettingsBackend } from '@main/pi/settings';
-import { createStartCustomTools } from '@main/pi/tools/index';
+import { resolveAuthBackend } from '@main/providers/auth';
+import {
+  type CustomProviderConfig,
+  createCustomProviderStore,
+  registerAllCustomProviders,
+  registerCustomProvider,
+  unregisterCustomProvider
+} from '@main/providers/custom';
+import { InMemorySettingsBackend } from '@main/providers/settings';
+import { createStartCustomTools } from '@main/providers/tools/index';
 import {
   archiveSession,
   getSession,
@@ -170,6 +177,7 @@ export class ChatService {
   private readonly db = openStartDb();
   private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
+  private readonly customProviders = createCustomProviderStore(this.db);
   private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
@@ -177,6 +185,30 @@ export class ChatService {
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
   private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
+
+  constructor() {
+    registerAllCustomProviders(this.modelRegistry, this.customProviders);
+    this.modelRegistry.refresh();
+  }
+
+  listCustomProviders(): CustomProviderConfig[] {
+    return this.customProviders.list();
+  }
+
+  saveCustomProvider(config: CustomProviderConfig): CustomProviderConfig[] {
+    const saved = this.customProviders.save(config);
+    unregisterCustomProvider(this.modelRegistry, saved.name);
+    registerCustomProvider(this.modelRegistry, saved);
+    this.modelRegistry.refresh();
+    return this.customProviders.list();
+  }
+
+  removeCustomProvider(name: string): CustomProviderConfig[] {
+    unregisterCustomProvider(this.modelRegistry, name);
+    this.customProviders.remove(name);
+    this.modelRegistry.refresh();
+    return this.customProviders.list();
+  }
 
   async getStatus(): Promise<ChatStatus> {
     this.refreshAuth();
@@ -229,6 +261,7 @@ export class ChatService {
   }> {
     this.refreshAuth();
     const available = this.getPickerModels();
+    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
     const models = available.map((model) => ({
       key: modelKey(model),
       id: model.id,
@@ -237,7 +270,8 @@ export class ChatService {
       reasoning: model.reasoning,
       effortLevels: getSupportedEffortLevels(model),
       input: model.input,
-      contextWindow: model.contextWindow
+      contextWindow: model.contextWindow,
+      ...(customProviderNames.has(model.provider) ? { isCustom: true } : {})
     }));
     const selected = this.pickModel();
 
@@ -555,10 +589,11 @@ export class ChatService {
 
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {
     this.refreshAuth();
-    const available = this.modelRegistry.getAvailable();
-    const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
-    const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
-    const googleModels = available.filter((model) => isProviderModel(model, 'google'));
+    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
+    const nativeOnly = this.modelRegistry.getAvailable().filter((model) => !customProviderNames.has(model.provider));
+    const openAiModels = nativeOnly.filter((model) => isProviderModel(model, 'openai'));
+    const googleModels = nativeOnly.filter((model) => isProviderModel(model, 'google'));
+    const anthropicModels = nativeOnly.filter((model) => isProviderModel(model, 'anthropic'));
 
     return [
       this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
@@ -603,6 +638,15 @@ export class ChatService {
             message: 'Complete login in your browser, or paste the redirect URL/code below.'
           });
           void shell.openExternal(info.url).catch(() => {});
+        },
+        onDeviceCode: (info) => {
+          webContents.send('chat:subscription-auth-update', {
+            provider,
+            url: info.verificationUri,
+            instructions: `Enter code ${info.userCode} after opening the verification page.`,
+            message: 'Open the verification page and enter the device code to finish login.'
+          });
+          void shell.openExternal(info.verificationUri).catch(() => {});
         },
         onManualCodeInput: () => this.createSubscriptionAuthInput(),
         onProgress: (progress) => {
@@ -1443,7 +1487,8 @@ export class ChatService {
   }
 
   private getPickerModels() {
-    return getVisibleModels(this.modelRegistry.getAvailable());
+    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
+    return getVisibleModels(this.modelRegistry.getAvailable(), customProviderNames);
   }
 
   private isThinkingLevel(level: string): level is EffortLevel {

@@ -17,7 +17,7 @@
   --color-soft: oklch(20% 0.01 255 / 0.62);
   --color-hover: oklch(20% 0.01 255 / 0.86);
   --color-brand: oklch(0% 0 0);
-  --color-danger: oklch(55% 0.18 27);
+  --color-danger: oklch(47% 0.19 27);
   --color-success: oklch(52% 0.14 145);
   --color-link: oklch(54% 0.16 255);
   --color-brand-ink: oklch(100% 0 0);
@@ -86,6 +86,7 @@
     --color-soft: oklch(100% 0 0 / 0.58);
     --color-hover: oklch(100% 0 0 / 0.86);
     --color-brand: oklch(100% 0 0);
+    --color-danger: oklch(78% 0.16 22);
     --color-success: oklch(72% 0.15 145);
     --color-link: oklch(72% 0.13 255);
     --color-composer: oklch(18% 0.005 285);
@@ -100,6 +101,11 @@
 
 * {
   box-sizing: border-box;
+}
+
+:focus,
+:focus-visible {
+  outline: none;
 }
 
 html,

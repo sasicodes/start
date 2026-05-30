@@ -23,7 +23,7 @@ vi.mock('@main/browser/index', () => ({
   captureBrowserScreenshot: captureBrowserScreenshotMock
 }));
 
-const { createBrowserTools } = await import('@main/pi/tools/browser');
+const { createBrowserTools } = await import('@main/providers/tools/browser');
 
 interface TestToolResult {
   details: null;

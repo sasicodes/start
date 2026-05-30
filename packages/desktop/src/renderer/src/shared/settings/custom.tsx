@@ -1,0 +1,249 @@
+import type { CustomProviderConfig } from '@preload/index';
+import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
+import { ChevronDownIcon, CustomProviderIcon } from '@renderer/ui/icons';
+import { tw } from '@renderer/utils/tw';
+import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useState } from 'preact/hooks';
+
+const maxThinkingLabels = 4;
+
+const parseThinkingLabels = (text: string): string[] =>
+  text
+    .split(/[\n,]/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+interface CustomProvidersRowProps {
+  open: boolean;
+  onToggle: () => void;
+}
+
+interface PillInputProps {
+  type: 'text' | 'password';
+  value: string;
+  onInput: (value: string) => void;
+  placeholder: string;
+}
+
+const PillInput = ({ type, value, onInput, placeholder }: PillInputProps) => (
+  <input
+    type={type}
+    value={value}
+    placeholder={placeholder}
+    onInput={(event) => onInput(event.currentTarget.value)}
+    class="h-10 w-full rounded-full border border-line bg-composer px-4 text-sm text-ink outline-none placeholder:text-soft"
+  />
+);
+
+const parseModelIds = (text: string) =>
+  text
+    .split(/[\n,]/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .map((id) => ({ id }));
+
+const summary = (providers: CustomProviderConfig[]) => {
+  if (providers.length === 0) return 'Add an OpenAI-compatible endpoint';
+  const total = providers.reduce((count, provider) => count + provider.models.length, 0);
+  const noun = total === 1 ? 'model' : 'models';
+  return `${providers.length} configured, ${total} ${noun}`;
+};
+
+export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) => {
+  const [providers, setProviders] = useState<CustomProviderConfig[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftBaseUrl, setDraftBaseUrl] = useState('');
+  const [draftApiKey, setDraftApiKey] = useState('');
+  const [draftModelIds, setDraftModelIds] = useState('');
+  const [draftThinking, setDraftThinking] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    void window.pi.chat
+      .listCustomProviders()
+      .then((next) => {
+        if (active) setProviders(next);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const resetForm = () => {
+    setAdding(false);
+    setError('');
+    setDraftName('');
+    setDraftApiKey('');
+    setDraftBaseUrl('');
+    setDraftThinking('');
+    setDraftModelIds('');
+  };
+
+  const submit = async () => {
+    const name = draftName.trim();
+    const baseUrl = draftBaseUrl.trim();
+    const apiKey = draftApiKey.trim();
+    const models = parseModelIds(draftModelIds);
+    const thinkingLabels = parseThinkingLabels(draftThinking);
+    if (!name || !baseUrl || !apiKey || models.length === 0) {
+      setError('Name, base URL, API key, and at least one model ID are required.');
+      return;
+    }
+    if (thinkingLabels.length > maxThinkingLabels) {
+      setError(`Thinking levels supports at most ${maxThinkingLabels} entries.`);
+      return;
+    }
+    try {
+      const next = await window.pi.chat.saveCustomProvider({
+        name,
+        apiKey,
+        baseUrl,
+        models,
+        ...(thinkingLabels.length > 0 ? { thinkingLabels } : {})
+      });
+      setProviders(next);
+      resetForm();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not save the provider.');
+    }
+  };
+
+  const remove = async (name: string) => {
+    try {
+      const next = await window.pi.chat.removeCustomProvider(name);
+      setProviders(next);
+    } catch {}
+  };
+
+  const canSubmit =
+    draftName.trim().length > 0 &&
+    draftBaseUrl.trim().length > 0 &&
+    draftApiKey.trim().length > 0 &&
+    draftModelIds.trim().length > 0;
+
+  return (
+    <div class="border-t border-line py-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        class="flex w-full min-w-0 items-center gap-3 border-0 bg-transparent p-0 text-left"
+      >
+        <div class="grid size-10 flex-none place-items-center rounded-full bg-[linear-gradient(145deg,var(--color-panel),var(--color-control))] text-ink">
+          <CustomProviderIcon class="size-5" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="m-0 text-sm leading-5 font-medium text-ink">Custom</h3>
+          <p class="m-0 text-xs leading-4 text-soft">{summary(providers)}</p>
+        </div>
+        <ChevronDownIcon
+          class={tw('size-4 flex-none text-soft transition-transform duration-150', open && 'rotate-180')}
+        />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="custom-content"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto', transition: openMotionTransition }}
+            exit={{ opacity: 0, height: 0, transition: closeMotionTransition }}
+            class="overflow-hidden"
+          >
+            <div class="mt-5 grid gap-3">
+              {providers.length > 0 && (
+                <ul class="m-0 grid list-none gap-2 p-0">
+                  {providers.map((provider) => (
+                    <li
+                      key={provider.name}
+                      class="flex min-w-0 items-center gap-3 rounded-2xl border border-line bg-composer px-3 py-2"
+                    >
+                      <div class="min-w-0 flex-1">
+                        <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
+                        <p class="m-0 truncate text-xs leading-4 text-soft">
+                          {provider.baseUrl} · {provider.models.length === 1 ? '1 model' : `${provider.models.length} models`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void remove(provider.name)}
+                        class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {adding ? (
+                <div class={tw('grid gap-2', providers.length > 0 && 'mt-3 border-t border-line pt-4')}>
+                  <PillInput
+                    type="text"
+                    value={draftName}
+                    onInput={setDraftName}
+                    placeholder="Provider name (e.g. Ollama Home)"
+                  />
+                  <PillInput
+                    type="text"
+                    value={draftBaseUrl}
+                    onInput={setDraftBaseUrl}
+                    placeholder="Base URL (e.g. http://localhost:11434/v1)"
+                  />
+                  <PillInput
+                    type="password"
+                    value={draftApiKey}
+                    onInput={setDraftApiKey}
+                    placeholder="API key"
+                  />
+                  <textarea
+                    rows={3}
+                    value={draftModelIds}
+                    placeholder="Model IDs, one per line (e.g. llama3.1:8b)"
+                    onInput={(event) => setDraftModelIds(event.currentTarget.value)}
+                    class="w-full rounded-2xl border border-line bg-composer px-4 py-2 text-sm text-ink outline-none placeholder:text-soft"
+                  />
+                  <PillInput
+                    type="text"
+                    value={draftThinking}
+                    onInput={setDraftThinking}
+                    placeholder="Thinking levels (optional, up to 4, e.g. minimal, low, medium, high)"
+                  />
+                  {error && <p class="m-0 text-xs leading-4 text-danger">{error}</p>}
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      class="h-8 rounded-full border-0 bg-transparent px-3 text-xs font-medium text-soft transition-opacity duration-100 ease-in hover:opacity-80"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void submit()}
+                      disabled={!canSubmit}
+                      class="h-8 rounded-full border-0 bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  class="h-10 rounded-full border border-dashed border-line bg-transparent px-3 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                >
+                  + Add custom provider
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

@@ -299,7 +299,7 @@ export const Composer = memo(
                 onStop={onStop}
                 commandMode={isCommandMode}
                 isGenerating={isGenerating}
-                {...(noProvidersConfigured ? { disabledReason: 'Choose a provider' } : {})}
+                {...(noProvidersConfigured ? { disabledReason: 'Choose a model' } : {})}
               />
             </div>
           </div>

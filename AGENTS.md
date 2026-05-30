@@ -47,6 +47,7 @@
 - Extract long boolean expressions, chained fallbacks, and repeated validation checks into named helpers when a name makes the condition easier to scan.
 - Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
 - Avoid placeholder ternaries such as `condition ? '' : value`; split branches or extract helpers so each path computes only what it uses.
+- In conditional ternary expressions, the truthy branch should produce the meaningful value; reserve the falsy branch for the empty or absent fallback. Flip predicates like `state === target ? '' : target` to `state !== target ? target : ''` so the affirmative path carries the value.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
 - For small icon-only controls, keep the visual size stable and expand the clickable hit area with a pseudo-element such as `before:absolute before:-inset-2` when precision clicking would be frustrating.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.

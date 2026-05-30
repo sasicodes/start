@@ -98,6 +98,17 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:tabs:status', () => chat.getStatus());
   ipcMain.handle('chat:notices:list', () => chat.getNotices());
   ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());
+  ipcMain.handle('chat:custom-providers:list', () => chat.listCustomProviders());
+  ipcMain.handle('chat:custom-providers:save', (_event, config) => {
+    const result = chat.saveCustomProvider(config);
+    notifyStatusChanged();
+    return result;
+  });
+  ipcMain.handle('chat:custom-providers:remove', (_event, name: string) => {
+    const result = chat.removeCustomProvider(name);
+    notifyStatusChanged();
+    return result;
+  });
   ipcMain.handle('chat:open-session', async (_event, path: string) => {
     const result = await chat.openSession(path);
     if (result.ok) notifyWorkspaceChanged();
