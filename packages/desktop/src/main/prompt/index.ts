@@ -63,7 +63,12 @@ const toolCapabilitiesFromSource = (source: ToolCapabilitySource): ToolCapabilit
   }
 
   return uniqueStrings(source.getActiveToolNames()).map(
-    (name) => toolsByName.get(name) ?? { name, description: fallbackToolDescription, promptGuidelines: [] }
+    (name) =>
+      toolsByName.get(name) ?? {
+        name,
+        promptGuidelines: [],
+        description: fallbackToolDescription
+      }
   );
 };
 
