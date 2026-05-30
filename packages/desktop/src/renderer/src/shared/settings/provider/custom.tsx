@@ -104,6 +104,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   const remove = async (name: string) => {
     try {
       setProviders(await window.pi.chat.removeCustomProvider(name));
+      if (editing === name) resetForm();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not remove the provider.');
     }
