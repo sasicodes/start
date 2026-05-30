@@ -162,7 +162,9 @@ const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
   }
 
   const isGitWorkspace = await isGitRepository(cwd);
-  const iconDataUrlPromise = workspaceIconDataUrl(cwd, folderName);
+  const iconDataUrlPromise = isGitWorkspace
+    ? workspaceIconDataUrl(cwd, folderName)
+    : Promise.resolve(generatedWorkspaceIconDataUrl(folderName));
   let branchName: string | undefined;
   let git: GitChangeSummary | undefined;
 
