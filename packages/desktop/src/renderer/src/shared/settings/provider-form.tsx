@@ -1,5 +1,3 @@
-import { tw } from '@renderer/utils/tw';
-
 export type ProviderFormDraft = {
   name: string;
   apiKey: string;
@@ -34,25 +32,21 @@ const PillInput = ({ type, value, onInput, placeholder }: PillInputProps) => (
 );
 
 interface ProviderFormProps {
-  draft: ProviderFormDraft;
   error: string;
   canSubmit: boolean;
-  secondaryLabel: string;
-  secondaryDanger?: boolean;
   onSubmit: () => void;
-  onSecondary: () => void;
+  onCancel: () => void;
+  draft: ProviderFormDraft;
   onUpdate: <K extends keyof ProviderFormDraft>(key: K, value: ProviderFormDraft[K]) => void;
 }
 
 export const ProviderForm = ({
   draft,
   error,
-  canSubmit,
-  secondaryLabel,
-  secondaryDanger,
+  onCancel,
   onSubmit,
   onUpdate,
-  onSecondary
+  canSubmit
 }: ProviderFormProps) => (
   <div class="grid gap-2">
     <PillInput
@@ -87,16 +81,13 @@ export const ProviderForm = ({
       placeholder="Thinking levels (optional, up to 4, e.g. minimal, low, medium, high)"
     />
     {error && <p class="m-0 text-xs leading-4 text-danger">{error}</p>}
-    <div class="mt-1 flex items-center justify-between gap-2">
+    <div class="mt-1 flex items-center justify-end gap-4">
       <button
         type="button"
-        onClick={onSecondary}
-        class={tw(
-          'h-8 rounded-full border-0 px-4 text-sm font-medium transition-opacity duration-100 ease-in hover:opacity-80',
-          secondaryDanger ? 'bg-danger/15 text-danger' : 'bg-control text-soft'
-        )}
+        onClick={onCancel}
+        class="border-0 bg-transparent p-0 text-sm font-medium text-soft transition-opacity duration-100 ease-in hover:opacity-80"
       >
-        {secondaryLabel}
+        Cancel
       </button>
       <button
         type="button"

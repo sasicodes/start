@@ -5,26 +5,37 @@ import {
   emptyProviderFormDraft
 } from '@renderer/shared/settings/provider-form';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
-import { ChevronDownIcon, CustomProviderIcon } from '@renderer/ui/icons';
+import { ChevronDownIcon, CustomProviderIcon, EditIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'preact/hooks';
 
 const maxThinkingLabels = 4;
 
-const parseThinkingLabels = (text: string): string[] =>
+const splitEntries = (text: string) =>
   text
     .split(/[\n,]/)
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
 
+const parseThinkingLabels = (text: string): string[] => splitEntries(text);
+
+const parseModelIds = (text: string) => splitEntries(text).map((id) => ({ id }));
+
 const serializeModels = (models: CustomProviderConfig['models']) => models.map((model) => model.id).join('\n');
 
+const pluralize = (count: number, singular: string, plural: string) =>
+  count === 1 ? `1 ${singular}` : `${count} ${plural}`;
+
+const headerSummary = (providers: CustomProviderConfig[]) => {
+  if (providers.length === 0) return 'Add an OpenAI-compatible endpoint';
+  const total = providers.reduce((count, provider) => count + provider.models.length, 0);
+  return `${providers.length} configured, ${pluralize(total, 'model', 'models')}`;
+};
+
 const summarizeProvider = (provider: CustomProviderConfig) => {
-  const models = provider.models.length === 1 ? '1 model' : `${provider.models.length} models`;
-  const levels = provider.thinkingLabels?.length
-    ? ` · ${provider.thinkingLabels.length === 1 ? '1 level' : `${provider.thinkingLabels.length} levels`}`
-    : '';
+  const models = pluralize(provider.models.length, 'model', 'models');
+  const levels = provider.thinkingLabels?.length ? ` · ${pluralize(provider.thinkingLabels.length, 'level', 'levels')}` : '';
   return `${provider.baseUrl} · ${models}${levels}`;
 };
 
@@ -32,21 +43,6 @@ interface CustomProvidersRowProps {
   open: boolean;
   onToggle: () => void;
 }
-
-
-const parseModelIds = (text: string) =>
-  text
-    .split(/[\n,]/)
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-    .map((id) => ({ id }));
-
-const summary = (providers: CustomProviderConfig[]) => {
-  if (providers.length === 0) return 'Add an OpenAI-compatible endpoint';
-  const total = providers.reduce((count, provider) => count + provider.models.length, 0);
-  const noun = total === 1 ? 'model' : 'models';
-  return `${providers.length} configured, ${total} ${noun}`;
-};
 
 export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) => {
   const [error, setError] = useState('');
@@ -57,7 +53,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
 
   useEffect(() => {
     let active = true;
-    void window.pi.chat
+    window.pi.chat
       .listCustomProviders()
       .then((next) => {
         if (active) setProviders(next);
@@ -151,7 +147,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
         </div>
         <div class="min-w-0 flex-1">
           <h3 class="m-0 text-sm leading-5 font-medium text-ink">Custom</h3>
-          <p class="m-0 text-xs leading-4 text-soft">{summary(providers)}</p>
+          <p class="m-0 text-xs leading-4 text-soft">{headerSummary(providers)}</p>
         </div>
         <ChevronDownIcon
           class={tw('size-4 flex-none text-soft transition-transform duration-150', open && 'rotate-180')}
@@ -173,15 +169,32 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                   {providers.map((provider) => {
                     const isEditing = editing === provider.name;
                     return (
-                      <li key={provider.name} class="rounded-2xl border border-dashed border-line px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => (isEditing ? resetForm() : startEdit(provider))}
-                          class="block w-full min-w-0 border-0 bg-transparent p-0 text-left"
-                        >
-                          <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
-                          <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
-                        </button>
+                      <li
+                        key={provider.name}
+                        class="rounded-2xl border border-dashed border-line px-3 pt-3 pb-3 transition-colors hover:border-ink/20"
+                      >
+                        <div class="flex min-w-0 items-center gap-3">
+                          <div class="min-w-0 flex-1 pl-1">
+                            <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
+                            <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Edit ${provider.name}`}
+                            onClick={() => (isEditing ? resetForm() : startEdit(provider))}
+                            class="grid size-7 flex-none place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-ink"
+                          >
+                            <EditIcon class="size-4" />
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Delete ${provider.name}`}
+                            onClick={() => remove(provider.name)}
+                            class="grid size-7 flex-none place-items-center rounded-full border-0 bg-transparent text-soft transition-colors hover:text-danger"
+                          >
+                            <TrashIcon class="size-4" />
+                          </button>
+                        </div>
                         <AnimatePresence initial={false}>
                           {isEditing && (
                             <motion.div
@@ -191,16 +204,14 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                               exit={{ opacity: 0, height: 0, transition: closeMotionTransition }}
                               class="overflow-hidden"
                             >
-                              <div class="mt-3">
+                              <div class="mt-5 pb-1">
                                 <ProviderForm
                                   draft={draft}
                                   error={error}
                                   canSubmit={canSubmit}
-                                  secondaryDanger
-                                  secondaryLabel="Delete"
+                                  onCancel={resetForm}
                                   onUpdate={updateDraft}
-                                  onSubmit={() => void submit()}
-                                  onSecondary={() => void remove(provider.name)}
+                                  onSubmit={() => submit()}
                                 />
                               </div>
                             </motion.div>
@@ -212,30 +223,26 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                 </ul>
               )}
 
-              {!editing && (
-                <div class={tw(providers.length > 0 && 'mt-3 border-t border-line pt-4')}>
-                  {adding ? (
-                    <div class="rounded-2xl border border-dashed border-line p-3">
-                      <ProviderForm
-                        draft={draft}
-                        error={error}
-                        canSubmit={canSubmit}
-                        secondaryLabel="Cancel"
-                        onUpdate={updateDraft}
-                        onSubmit={() => void submit()}
-                        onSecondary={resetForm}
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAdding(true)}
-                      class="h-10 w-full rounded-full border border-dashed border-line bg-transparent px-3 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                    >
-                      + Add custom provider
-                    </button>
-                  )}
+              {!editing && adding && (
+                <div class="rounded-2xl border border-dashed border-line p-4">
+                  <ProviderForm
+                    draft={draft}
+                    error={error}
+                    canSubmit={canSubmit}
+                    onCancel={resetForm}
+                    onUpdate={updateDraft}
+                    onSubmit={() => submit()}
+                  />
                 </div>
+              )}
+              {!editing && !adding && (
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  class="h-10 w-full rounded-full border border-dashed border-line bg-transparent px-3 text-sm font-medium text-ink transition-colors hover:border-ink/20"
+                >
+                  + Add custom provider
+                </button>
               )}
             </div>
           </motion.div>
