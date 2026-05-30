@@ -179,7 +179,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
-      <div class="flex h-12 min-w-0 shrink-0 items-center gap-2 border-b border-line px-4">
+      <div class="flex h-12 min-w-0 shrink-0 items-center gap-0.5 border-b border-line">
         <BrowserButton label="Back" disabled={!status.canGoBack} onClick={goBack}>
           <ChevronLeftIcon class="size-4" />
         </BrowserButton>

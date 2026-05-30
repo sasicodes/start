@@ -127,6 +127,7 @@ export const inspectScript: string = String.raw`
 
   const styles = [
     ':host { all: initial; }',
+    '[hidden] { display: none !important; }',
     '* { box-sizing: border-box; margin: 0; padding: 0; }',
     '.overlay { position: fixed; inset: 0; pointer-events: none; cursor: crosshair;',
     '  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }',
@@ -251,6 +252,7 @@ export const inspectScript: string = String.raw`
   let lastPointerY = Number.NEGATIVE_INFINITY;
   let pillPos = null;
   let pillDrag = null;
+  let pillTilt = 0;
   let dragCursorStyle = null;
 
   const host = document.createElement('div');
@@ -291,14 +293,20 @@ export const inspectScript: string = String.raw`
   popupInput.autocomplete = 'off';
   popupRoot.appendChild(popupInput);
   const popupActions = create('div', 'popup-actions');
+  const trashBtn = create('button', 'popup-btn');
+  trashBtn.type = 'button';
+  trashBtn.title = 'Delete annotation';
+  trashBtn.innerHTML = ICONS.trash;
+  trashBtn.hidden = true;
   const cancelBtn = create('button', 'popup-btn');
   cancelBtn.type = 'button';
-  cancelBtn.title = 'Discard';
+  cancelBtn.title = 'Close';
   cancelBtn.innerHTML = ICONS.close;
   const confirmBtn = create('button', 'popup-btn');
   confirmBtn.type = 'button';
   confirmBtn.title = 'Save (Enter)';
   confirmBtn.innerHTML = ICONS.check;
+  popupActions.appendChild(trashBtn);
   popupActions.appendChild(cancelBtn);
   popupActions.appendChild(confirmBtn);
   popupRoot.appendChild(popupActions);
@@ -454,11 +462,16 @@ export const inspectScript: string = String.raw`
     renderDetails();
     const existing = editingId ? annotations.find((a) => a.id === editingId) : null;
     popupInput.value = existing?.comment ?? '';
+    trashBtn.hidden = !editingId;
     setTimeout(() => popupInput.focus({ preventScroll: true }), 0);
   };
 
   const renderPill = () => {
     const hasAnnotations = annotations.length > 0;
+    if (!hasAnnotations) {
+      pillRoot.hidden = true;
+      return;
+    }
     pillRoot.hidden = false;
     pillRoot.classList.toggle('has-annotations', hasAnnotations);
     pillCursorBtn.classList.toggle('active', active);
@@ -578,6 +591,7 @@ export const inspectScript: string = String.raw`
     annotations = [];
     renderMarkers();
     renderPill();
+    if (!active) teardownHost();
   };
 
   const copyAnnotations = () => {
@@ -591,6 +605,7 @@ export const inspectScript: string = String.raw`
     annotations = [];
     renderMarkers();
     renderPill();
+    if (!active) teardownHost();
     relay('annotations-cleared', {});
   };
 
@@ -618,8 +633,14 @@ export const inspectScript: string = String.raw`
     relay('mode-changed', { active: true });
   };
 
+  const teardownHost = () => {
+    if (host.parentNode) host.parentNode.removeChild(host);
+    pillPos = null;
+  };
+
   function deactivate() {
     if (!active) {
+      if (annotations.length === 0) teardownHost();
       relay('mode-changed', { active: false });
       return;
     }
@@ -635,6 +656,7 @@ export const inspectScript: string = String.raw`
     ring.style.opacity = '0';
     renderPill();
     window.removeEventListener('keydown', onKeyDown);
+    if (annotations.length === 0) teardownHost();
     relay('mode-changed', { active: false });
   }
 
@@ -661,9 +683,11 @@ export const inspectScript: string = String.raw`
       startX: event.clientX,
       startY: event.clientY,
       originLeft: pillPos.left,
-      originTop: pillPos.top
+      originTop: pillPos.top,
+      prevX: event.clientX
     };
     pillRoot.classList.add('dragging');
+    pillRoot.style.transition = 'none';
     if (!dragCursorStyle) {
       dragCursorStyle = document.createElement('style');
       dragCursorStyle.textContent = '* { cursor: grabbing !important; }';
@@ -673,21 +697,29 @@ export const inspectScript: string = String.raw`
 
   const handleDocumentPointerMove = (event) => {
     if (!pillDrag) return;
+    const instantDx = event.clientX - pillDrag.prevX;
+    pillDrag.prevX = event.clientX;
     pillPos = {
       left: pillDrag.originLeft + (event.clientX - pillDrag.startX),
       top: pillDrag.originTop + (event.clientY - pillDrag.startY)
     };
     clampPillPos();
+    const targetTilt = Math.max(-14, Math.min(14, instantDx * 2));
+    pillTilt += (targetTilt - pillTilt) * 0.18;
     pillRoot.style.left = pillPos.left + 'px';
     pillRoot.style.top = pillPos.top + 'px';
     pillRoot.style.right = 'auto';
     pillRoot.style.bottom = 'auto';
+    pillRoot.style.transform = 'rotate(' + pillTilt.toFixed(2) + 'deg)';
   };
 
   const handleDocumentPointerUp = () => {
     if (!pillDrag) return;
     pillDrag = null;
     pillRoot.classList.remove('dragging');
+    pillRoot.style.transition = 'transform 320ms ease-out';
+    pillTilt = 0;
+    pillRoot.style.transform = 'rotate(0deg)';
     if (dragCursorStyle?.parentNode) dragCursorStyle.parentNode.removeChild(dragCursorStyle);
   };
 
@@ -702,13 +734,18 @@ export const inspectScript: string = String.raw`
   });
   cancelBtn.addEventListener('click', (event) => {
     event.stopPropagation();
-    if (editingId) {
-      annotations = annotations.filter((entry) => entry.id !== editingId);
-      relay('annotation-deleted', { id: editingId });
-    }
+    dismissPopup();
+  });
+  trashBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (!editingId) return;
+    annotations = annotations.filter((entry) => entry.id !== editingId);
+    const wasEditingId = editingId;
+    relay('annotation-deleted', { id: wasEditingId });
     dismissPopup();
     renderMarkers();
     renderPill();
+    if (annotations.length === 0 && !active) teardownHost();
   });
   confirmBtn.addEventListener('click', (event) => {
     event.stopPropagation();
