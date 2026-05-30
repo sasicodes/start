@@ -57,6 +57,7 @@ describe('sub-agent tool details', () => {
     });
 
     expect(detail.title).toBe('Spawning 1 agent');
+    expect(detail.detail).toBeUndefined();
     expect(detail.metric).toBeUndefined();
     expect(detail.subagents?.[0]?.name).toBe('Arul');
     expect(detail.subagents?.[0]?.task).toBe('Review renderer activity UI.');
