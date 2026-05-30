@@ -8,6 +8,8 @@ import {
   bottomBubbleRevealTransition,
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
+import { EditIcon } from '@renderer/ui/icons';
+import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
@@ -60,9 +62,18 @@ export const WorkspaceDock = memo(
                 isGenerating={isGenerating}
                 workspacePath={workspacePath}
                 activeSessionId={activeSessionId}
-                onNewSession={onNewSession}
                 onOpenSession={onOpenSession}
               />
+              <Tooltip label="New session">
+                <button
+                  type="button"
+                  aria-label="New session"
+                  onClick={onNewSession}
+                  class="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
+                >
+                  <EditIcon class="size-5" />
+                </button>
+              </Tooltip>
             </motion.div>
           )}
         </AnimatePresence>

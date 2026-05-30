@@ -20,18 +20,6 @@ export const XIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth
   </svg>
 );
 
-export const PlusIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path
-      d="M12 3.75V12M12 12V20.25M12 12H3.75M12 12H20.25"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>
-);
-
 export const ChevronLeftIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path

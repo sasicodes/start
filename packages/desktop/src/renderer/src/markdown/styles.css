@@ -32,6 +32,10 @@
   @apply my-0 whitespace-pre-wrap;
 }
 
+.markdown-compact p:has(+ [data-streamdown^="heading-"]) {
+  @apply pb-4;
+}
+
 .markdown-default [data-streamdown^="heading-"],
 .markdown-compact [data-streamdown^="heading-"] {
   @apply mb-1 font-semibold tracking-normal text-ink;
@@ -54,7 +58,7 @@
 }
 
 .markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
-  @apply mt-4;
+  @apply mt-2;
 }
 
 .markdown-default [data-streamdown="link"],

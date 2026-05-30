@@ -1,6 +1,6 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import { attentionStatus, topAttentionStatus, type AttentionState } from '@renderer/shared/attention-status';
-import { HistoryIcon, PlusIcon } from '@renderer/ui/icons';
+import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Indicator } from '@renderer/shared/indicator';
 import { tw } from '@renderer/utils/tw';
@@ -53,7 +53,6 @@ interface RecentSessionsProps {
   isGenerating: boolean;
   workspacePath: string;
   activeSessionId: string;
-  onNewSession: () => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
@@ -66,16 +65,6 @@ const SessionAttention = ({ session }: { session: RecentSession }) => {
     </span>
   );
 };
-
-const NewSessionRow = ({ onNewSession }: { onNewSession: () => void }) => (
-  <AppMenu.Item
-    onClick={onNewSession}
-    className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control"
-  >
-    <PlusIcon class="size-4.5 text-soft" />
-    <span class="truncate">New Session</span>
-  </AppMenu.Item>
-);
 
 const SessionRow = ({ active, session, onOpen }: SessionRowProps) => (
   <AppMenu.Item
@@ -102,7 +91,7 @@ const SessionRows = ({ sessions, activeSessionId, onOpenSession }: SessionRowsPr
   ));
 
 export const RecentSessions = memo(
-  ({ isGenerating, workspacePath, activeSessionId, onNewSession, onOpenSession }: RecentSessionsProps) => {
+  ({ isGenerating, workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
     const mountedRef = useRef(true);
     const loadedCountRef = useRef(0);
     const loadingMoreRef = useRef(false);
@@ -251,7 +240,6 @@ export const RecentSessions = memo(
                 class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
                 onScroll={handleSessionsScroll}
               >
-                <NewSessionRow onNewSession={onNewSession} />
                 <SessionRows sessions={sessions} activeSessionId={activeSessionId} onOpenSession={openSession} />
               </div>
             </MenuPanel>
