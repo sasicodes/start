@@ -13,7 +13,7 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
   if (!visible || messages.length === 0) return null;
 
   return (
-    <Attached contentClass="max-h-56 overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden">
+    <Attached contentClass="max-h-56 overflow-y-auto [&::-webkit-scrollbar]:hidden">
       <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
         {messages.map((message) => {
           const steering = message.kind === 'steer';
