@@ -66,6 +66,16 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).not.toBe(view);
   });
 
+  it('scales native browser bounds by the owner renderer zoom factor', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+    window.webContents.getZoomFactor = () => 1.25;
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+
+    expect(window.contentView.children[0]?.bounds.at(-1)).toEqual({ x: 13, y: 25, width: 375, height: 250 });
+  });
+
   it('closes the native browser view when the owner renderer reloads', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

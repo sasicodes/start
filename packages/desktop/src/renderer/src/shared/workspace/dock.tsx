@@ -17,6 +17,7 @@ interface WorkspaceDockProps {
   workspacePath: string;
   activeSessionId: string;
   onChooseDirectory: () => void;
+  onNewSession: () => void;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -26,6 +27,7 @@ export const WorkspaceDock = memo(
     workspacePath,
     isGenerating,
     activeSessionId,
+    onNewSession,
     onOpenSession,
     onChooseDirectory,
     onSelectWorkspace
@@ -58,6 +60,7 @@ export const WorkspaceDock = memo(
                 isGenerating={isGenerating}
                 workspacePath={workspacePath}
                 activeSessionId={activeSessionId}
+                onNewSession={onNewSession}
                 onOpenSession={onOpenSession}
               />
             </motion.div>

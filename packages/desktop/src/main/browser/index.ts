@@ -82,6 +82,13 @@ const emptyStatus: BrowserStatus = {
   canGoForward: false
 };
 
+const scaleBrowserBounds = (bounds: BrowserBounds, scale: number): BrowserBounds => ({
+  x: Math.round(bounds.x * scale),
+  y: Math.round(bounds.y * scale),
+  width: Math.max(0, Math.round(bounds.width * scale)),
+  height: Math.max(0, Math.round(bounds.height * scale))
+});
+
 const statusFromView = (): BrowserStatus => {
   if (!browserView) return emptyStatus;
 
@@ -210,8 +217,9 @@ export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | nu
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
   const view = attachBrowserView(window);
-  lastBounds = bounds;
-  view.setBounds(bounds);
+  const scaledBounds = scaleBrowserBounds(bounds, sender.getZoomFactor());
+  lastBounds = scaledBounds;
+  view.setBounds(scaledBounds);
   return { ok: true, status: statusFromView() };
 };
 

@@ -30,16 +30,16 @@ export const TurnActivity = ({ items, details, working, thinking, createdAt }: T
     <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
   );
 
-  if (!hasDetails) return <div class="mb-1.5 max-w-full text-xs text-soft">{label}</div>;
+  if (!hasDetails) return <div class="mb-1.5 max-w-full text-sm text-soft">{label}</div>;
 
   return (
-    <div class="mb-1.5 max-w-full text-xs text-soft">
+    <div class="mb-1.5 max-w-full text-sm text-soft">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOverride(!open)}
         class={tw(
-          'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-xs text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
+          'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-sm text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
           open && 'text-hover'
         )}
       >

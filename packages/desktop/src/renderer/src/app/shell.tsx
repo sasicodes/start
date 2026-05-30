@@ -31,6 +31,7 @@ interface MainSessionSurfaceProps {
   onToggleGitPanel: () => void;
   settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
+  onNewSession: () => void;
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   sidePanelMaxRatio?: number;
@@ -53,6 +54,7 @@ interface AppShellProps {
   onToggleGitPanel: () => void;
   settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
+  onNewSession: () => void;
   onDiscardComposer: () => void;
   fileHandlers: FileDropHandlers;
   mainComposer: ComponentChildren;
@@ -79,6 +81,7 @@ const MainSessionSurface = memo(
     settingsPanelVisible,
     onToggleGitPanel,
     onChooseDirectory,
+    onNewSession,
     onSidePanelCollapse,
     onSelectWorkspace,
     onOpenSession
@@ -97,6 +100,7 @@ const MainSessionSurface = memo(
         onOpenSession={onOpenSession}
         activeSessionId={activeSessionId}
         onChooseDirectory={onChooseDirectory}
+        onNewSession={onNewSession}
         onSelectWorkspace={onSelectWorkspace}
       />
       <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
@@ -129,6 +133,7 @@ export const AppShell = memo(
     onOpenSettings,
     onToggleGitPanel,
     onChooseDirectory,
+    onNewSession,
     onDiscardComposer,
     sessionViewActive,
     onSelectWorkspace,
@@ -163,6 +168,7 @@ export const AppShell = memo(
           onToggleGitPanel={onToggleGitPanel}
           sidePanelVisible={sidePanelVisible}
           onChooseDirectory={onChooseDirectory}
+          onNewSession={onNewSession}
           {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
           onSelectWorkspace={onSelectWorkspace}
           onSidePanelCollapse={onSidePanelCollapse}

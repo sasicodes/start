@@ -1,5 +1,5 @@
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
-import { detailCount } from '@renderer/shared/turn/sequence';
+import { detailMetric } from '@renderer/shared/turn/sequence';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
 import type { ChatEvent } from '@preload/index';
 import { describe, expect, it } from 'vitest';
@@ -33,6 +33,11 @@ const detailState = (item: TurnActivityItem | undefined) => {
   return item.detail.state;
 };
 
+const detailItem = (item: TurnActivityItem | undefined) => {
+  if (!item || item.type !== 'detail') throw new Error('expected detail item');
+  return item.detail;
+};
+
 const detailWithCount = (count: number) => ({
   id: 'read',
   key: 'read',
@@ -44,10 +49,26 @@ const detailWithCount = (count: number) => ({
   updatedAt: 0
 });
 
+const subagentDetailWithCount = (count: number) => ({
+  ...detailWithCount(count),
+  metric: '3 agents',
+  subagents: [
+    {
+      id: 'agent-1',
+      name: 'Marisol',
+      task: 'Review activity UI',
+      logs: [],
+      avatar: 'data:image/svg+xml;utf8,<svg/>',
+      status: 'completed' as const,
+      accentColor: '#0f766e'
+    }
+  ]
+});
+
 describe('turn activity sequence', () => {
-  it('formats repeat counts only for grouped events', () => {
-    expect(detailCount(detailWithCount(1))).toBe('');
-    expect(detailCount(detailWithCount(3))).toBe(' ×3');
+  it('omits trailing metrics for sub-agent event titles', () => {
+    expect(detailMetric({ ...detailWithCount(1), metric: '3 lines' })).toBe('3 lines');
+    expect(detailMetric(subagentDetailWithCount(3))).toBe('');
   });
 
   it('interleaves thinking and detail items in arrival order', () => {
@@ -114,5 +135,20 @@ describe('turn activity sequence', () => {
     expect(items.map((item) => item.type)).toEqual(['detail', 'detail']);
     expect(detailState(items[0])).toBe('done');
     expect(detailState(items[1])).toBe('active');
+  });
+
+  it('keeps repeated browser event titles clean while preserving count metadata', () => {
+    let turns: Turn[] = [baseTurn()];
+    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
+      turns = fn(turns);
+    };
+
+    appendTurnDetails(setTurns, 't1', [toolEvent('browser_snapshot', 'Reading Browser', 'active')]);
+    appendTurnDetails(setTurns, 't1', [toolEvent('browser_snapshot', 'Read Browser')]);
+
+    const detail = detailItem(turns[0]?.activityItems?.[0]);
+    expect(detail.title).toBe('Read Browser');
+    expect(detail.count).toBe(2);
+    expect(detail.title).not.toContain('×');
   });
 });
