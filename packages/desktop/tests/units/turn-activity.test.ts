@@ -1,5 +1,6 @@
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { detailMetric } from '@renderer/shared/turn/sequence';
+import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
 import type { ChatEvent } from '@preload/index';
 import { describe, expect, it } from 'vitest';
@@ -69,6 +70,12 @@ describe('turn activity sequence', () => {
   it('omits trailing metrics for sub-agent event titles', () => {
     expect(detailMetric({ ...detailWithCount(1), metric: '3 lines' })).toBe('3 lines');
     expect(detailMetric(subagentDetailWithCount(3))).toBe('');
+  });
+
+  it('normalizes bold thinking titles into compact headings', () => {
+    expect(thinkingMarkdown('**Reviewing files**\nI need context.\n**Summarizing**\nDone.')).toBe(
+      '### Reviewing files\nI need context.\n### Summarizing\nDone.'
+    );
   });
 
   it('interleaves thinking and detail items in arrival order', () => {

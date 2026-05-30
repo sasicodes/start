@@ -9,6 +9,7 @@ import {
   splitDiffMetric
 } from '@renderer/shared/turn/sequence';
 import { SubagentAvatars } from '@renderer/shared/turn/avatars';
+import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
 import { ChevronRightIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
@@ -85,7 +86,7 @@ export const ThinkingSection = ({ thinking }: { thinking: string }) => {
 
   return (
     <div class="text-xs leading-5 text-soft">
-      <Markdown source={thinking} density="compact" />
+      <Markdown source={thinkingMarkdown(thinking)} density="compact" />
     </div>
   );
 };
