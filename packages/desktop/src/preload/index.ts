@@ -338,6 +338,8 @@ const api = {
     browserOpen: (url: string): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-open', url),
     browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
       ipcRenderer.invoke('app:browser-bounds', bounds),
+    browserInspectStart: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-start'),
+    browserInspectStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-stop'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),
     revealPath: (workspacePath: string, filePath: string): Promise<void> =>
@@ -358,6 +360,10 @@ const api = {
       onIpc<[string]>('app:browser-open-request', listener),
     onBrowserStatus: (listener: (status: BrowserStatus) => void): IpcDisposer =>
       onIpc<[BrowserStatus]>('app:browser-status', listener),
+    onBrowserInspectSent: (listener: (text: string) => void): IpcDisposer =>
+      onIpc<[string]>('app:browser-inspect-sent', listener),
+    onBrowserInspectState: (listener: (active: boolean) => void): IpcDisposer =>
+      onIpc<[boolean]>('app:browser-inspect-state', listener),
     onFocusStateChanged: (listener: (state: AppFocusState) => void): IpcDisposer =>
       onIpc<[AppFocusState]>('app:focus-state-changed', listener),
     onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>

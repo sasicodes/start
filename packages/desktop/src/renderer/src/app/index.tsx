@@ -1,6 +1,7 @@
 import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
+import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
 import {
@@ -137,6 +138,14 @@ export const App = () => {
     textareaRef.current?.focus();
   }, [previousUserTurn, setDraft]);
 
+  const appendInspectToComposer = useCallback(
+    (text: string) => {
+      setDraft(appendInspectToDraft(draft, text));
+      textareaRef.current?.focus();
+    },
+    [draft, setDraft]
+  );
+
   const selectModelFromComposer = useCallback(
     (modelKey: string) => {
       void selectModel(modelKey);
@@ -254,6 +263,7 @@ export const App = () => {
       onSaveApiKey={saveApiKey}
       composerShortcut={composerShortcut}
       onBrowserUrlOpened={browserPanel.clear}
+      onBrowserInspectText={appendInspectToComposer}
       onLoginSubscription={loginSubscription}
       onDisconnectProvider={disconnectProvider}
       onComposerShortcutChange={updateComposerShortcut}

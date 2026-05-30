@@ -5,13 +5,21 @@ import { BrowserReloadIcon } from '@renderer/shared/browser/reload';
 import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
 import { usePanelMotion } from '@renderer/shared/panel/context';
-import { CheckIcon, BrowserEmptyIcon, ScreenshotIcon, ChevronLeftIcon, ChevronRightIcon } from '@renderer/ui/icons';
+import {
+  BrowserEmptyIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ScreenshotIcon,
+  SquareCursorIcon
+} from '@renderer/ui/icons';
 import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 interface BrowserPanelProps {
   navigation: BrowserNavigation;
   onUrlOpened: () => void;
+  onInspectText: (text: string) => void;
 }
 
 const emptyStatus: BrowserStatus = {
@@ -23,7 +31,7 @@ const emptyStatus: BrowserStatus = {
   canGoForward: false
 };
 
-export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => {
+export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
   const copyTimerRef = useRef<number>(0);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -31,6 +39,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [inspecting, setInspecting] = useState(false);
   const [active, setActive] = useState(() => Boolean(navigation.url));
   const [status, setStatus] = useState<BrowserStatus>(emptyStatus);
   const { moving: panelMoving } = usePanelMotion();
@@ -128,9 +137,24 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
       .catch(() => applyScreenshotStatus({ ok: false, error: 'Could not capture the page.' }));
   }, [applyScreenshotStatus]);
 
+  const toggleInspect = useCallback(() => {
+    const next = !inspecting;
+    setInspecting(next);
+    const action = next ? window.pi.app.browserInspectStart : window.pi.app.browserInspectStop;
+    void action().catch(() => setInspecting(false));
+  }, [inspecting]);
+
   useEffect(() => {
     return window.pi.app.onBrowserStatus(applyStatus);
   }, [applyStatus]);
+
+  useEffect(() => {
+    return window.pi.app.onBrowserInspectSent(onInspectText);
+  }, [onInspectText]);
+
+  useEffect(() => {
+    return window.pi.app.onBrowserInspectState(setInspecting);
+  }, []);
 
   useEffect(() => {
     const url = navigation.url;
@@ -145,8 +169,13 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
     return () => {
       mountedRef.current = false;
       window.clearTimeout(copyTimerRef.current);
+      void window.pi.app.browserInspectStop().catch(() => {});
     };
   }, []);
+
+  useEffect(() => {
+    if (!status.url) setInspecting(false);
+  }, [status.url]);
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
@@ -172,6 +201,16 @@ export const BrowserPanel = ({ navigation, onUrlOpened }: BrowserPanelProps) => 
             class="h-8 w-full border-0 bg-transparent px-2 text-xs leading-8 text-ink outline-0 placeholder:text-soft"
           />
         </form>
+        <BrowserButton
+          label={inspecting ? 'Stop inspect' : 'Inspect element'}
+          active={inspecting}
+          disabled={!status.url}
+          onClick={toggleInspect}
+          tooltipLabel={inspecting ? 'Stop inspect' : 'Inspect element'}
+          tooltipSide="left"
+        >
+          <SquareCursorIcon class="size-4" strokeWidth={inspecting ? 2 : 1.5} />
+        </BrowserButton>
         <BrowserButton
           label={screenshotLabel}
           disabled={!status.url}

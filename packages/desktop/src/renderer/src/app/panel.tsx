@@ -13,6 +13,7 @@ interface AppSidePanelProps {
   browserNavigation: BrowserNavigation;
   composerShortcut: string;
   onBrowserUrlOpened: () => void;
+  onBrowserInspectText: (text: string) => void;
   providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
@@ -41,13 +42,21 @@ export const AppSidePanel = memo(
     browserNavigation,
     onSaveApiKey,
     onBrowserUrlOpened,
+    onBrowserInspectText,
     composerShortcut,
     onLoginSubscription,
     onDisconnectProvider,
     onComposerShortcutChange
   }: AppSidePanelProps) => {
     if (mode === 'git') return <GitChangesPanel path={workspacePath} />;
-    if (mode === 'browser') return <BrowserPanel navigation={browserNavigation} onUrlOpened={onBrowserUrlOpened} />;
+    if (mode === 'browser')
+      return (
+        <BrowserPanel
+          navigation={browserNavigation}
+          onUrlOpened={onBrowserUrlOpened}
+          onInspectText={onBrowserInspectText}
+        />
+      );
 
     if (mode === 'settings') {
       return (

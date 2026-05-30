@@ -83,6 +83,25 @@ export const RefreshIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strok
   </svg>
 );
 
+export const SquareCursorIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M20.25 10.75V6.75C20.25 5.09315 18.9069 3.75 17.25 3.75H6.75C5.09315 3.75 3.75 5.09315 3.75 6.75V17.25C3.75 18.9069 5.09315 20.25 6.75 20.25H10.75"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M12.087 13.0057L14.188 20.8367C14.3033 21.2666 14.8806 21.3429 15.1036 20.9577L17.1499 17.4232C17.2155 17.3098 17.3098 17.2155 17.4232 17.1499L20.9577 15.1036C21.3429 14.8806 21.2666 14.3033 20.8367 14.188L13.0057 12.087C12.4479 11.9373 11.9373 12.4479 12.087 13.0057Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const ScreenshotIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path

@@ -1,4 +1,5 @@
 import { isDev } from '@main/application';
+import { attachInspectListener, startBrowserInspectIn, stopBrowserInspectIn } from '@main/browser/inspect';
 import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { readBrowserSnapshot, type BrowserSnapshot } from '@main/browser/snapshot';
@@ -131,6 +132,7 @@ const createBrowserView = () => {
   view.webContents.on('did-navigate', sendStatus);
   view.webContents.on('did-navigate-in-page', sendStatus);
   view.webContents.on('page-title-updated', sendStatus);
+  attachInspectListener(view.webContents);
   return view;
 };
 
@@ -261,6 +263,12 @@ export const stopBrowser = (): BrowserActionResult => {
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
+
+export const startBrowserInspect = (): Promise<BrowserActionResult> =>
+  startBrowserInspectIn(browserView?.webContents ?? null);
+
+export const stopBrowserInspect = (): Promise<BrowserActionResult> =>
+  stopBrowserInspectIn(browserView?.webContents ?? null);
 
 export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> => {
   if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };

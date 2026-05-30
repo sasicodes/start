@@ -16,7 +16,9 @@ import {
   openBrowserUrl,
   reloadBrowser,
   setBrowserBounds,
-  stopBrowser
+  startBrowserInspect,
+  stopBrowser,
+  stopBrowserInspect
 } from '@main/browser/index';
 import { ChatService } from '@main/chat';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
@@ -167,6 +169,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('app:browser-stop', stopBrowser);
   ipcMain.handle('app:browser-status', getBrowserStatus);
   ipcMain.handle('app:browser-screenshot', captureBrowserScreenshot);
+  ipcMain.handle('app:browser-inspect-start', startBrowserInspect);
+  ipcMain.handle('app:browser-inspect-stop', stopBrowserInspect);
   ipcMain.handle('app:browser-open', (event, url: string) => openBrowserUrl(event.sender, url));
   ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
   registerUpdateIpc();
