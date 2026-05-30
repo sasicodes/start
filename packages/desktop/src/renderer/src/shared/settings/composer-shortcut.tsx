@@ -25,6 +25,7 @@ const keyLabel = (key: string) => {
 };
 
 export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcutProps) => {
+  const [error, setError] = useState('');
   const [recording, setRecording] = useState(false);
 
   const record = async (event: KeyboardEvent) => {
@@ -41,7 +42,12 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
     }
 
     const shortcut = [...modifiers, key].join('+');
-    await onChange(shortcut).catch(() => {});
+    const result = await onChange(shortcut).catch(() => ({
+      ok: false,
+      error: 'That shortcut could not be saved.',
+      settings: null
+    }));
+    setError(result.error ?? '');
     setRecording(false);
   };
 
@@ -54,7 +60,10 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
         </div>
         <button
           type="button"
-          onClick={() => setRecording(true)}
+          onClick={() => {
+            setError('');
+            setRecording(true);
+          }}
           onKeyDown={(event) => {
             if (recording) record(event);
           }}
@@ -63,6 +72,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
           {recording ? 'Recording shortcut' : composerShortcut.replaceAll('+', ' + ')}
         </button>
       </div>
+      {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
     </div>
   );
 };

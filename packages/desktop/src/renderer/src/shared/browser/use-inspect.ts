@@ -23,7 +23,12 @@ export const useBrowserInspect = ({ onText }: UseBrowserInspectOptions) => {
       return;
     }
     setInspecting(true);
-    window.pi.app.browserInspectStart().catch(() => setInspecting(false));
+    window.pi.app
+      .browserInspectStart()
+      .then((result) => {
+        if (!result.ok) setInspecting(false);
+      })
+      .catch(() => setInspecting(false));
   }, [inspecting]);
 
   return { inspecting, toggle };

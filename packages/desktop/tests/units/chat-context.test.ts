@@ -32,4 +32,16 @@ describe('contextPercent', () => {
   it('returns 0 when no input tokens are consumed', () => {
     expect(contextPercent(usage(0), 200_000)).toBe(0);
   });
+
+  it('excludes output tokens from the fallback when totalTokens is absent', () => {
+    const noTotal: Usage = {
+      input: 100_000,
+      output: 100_000,
+      cacheRead: 0,
+      cacheWrite: 0,
+      totalTokens: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 }
+    };
+    expect(contextPercent(noTotal, 200_000)).toBe(50);
+  });
 });

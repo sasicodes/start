@@ -1,7 +1,6 @@
 import type { Usage } from '@earendil-works/pi-ai';
 
-const usedTokens = (usage: Usage) =>
-  usage.totalTokens || usage.input + usage.output + usage.cacheRead + usage.cacheWrite;
+const usedTokens = (usage: Usage) => usage.totalTokens || usage.input + usage.cacheRead + usage.cacheWrite;
 
 export const contextPercent = (usage: Usage | undefined, contextWindow: number): number => {
   if (!usage || contextWindow <= 0) return 0;
