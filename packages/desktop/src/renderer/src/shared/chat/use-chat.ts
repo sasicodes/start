@@ -226,6 +226,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);
       textareaRef.current?.focus();
+      if (result.id) window.pi.chat.markNoticeSeen(result.id).catch(() => {});
       return true;
     },
     [applyStatus, clearQueuedMessages, setTurns, textareaRef, updateActiveSessionId]

@@ -58,6 +58,27 @@ describe('background notices', () => {
     expect(payload.payload).toBe('network exploded');
   });
 
+  it('keeps the notice until the renderer confirms the session was seen', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tabA = await chat.createTab('/tmp/workspace-a');
+    const sendA = chat.send('hello', webContents);
+    const sessionA = getFakeSession(tabA.id);
+    await sessionA?.awaitPromptCall();
+    await chat.switchWorkspace('/tmp/workspace-b');
+    sessionA?.finishPrompt();
+    await sendA;
+
+    expect((await chat.getNotices()).length).toBe(1);
+
+    await chat.activateTab(tabA.id);
+    expect((await chat.getNotices()).length).toBe(1);
+
+    await chat.markSessionNoticeSeen(tabA.id);
+    expect((await chat.getNotices()).length).toBe(0);
+  });
+
   it('clears a persisted notice when the user opens that tab again', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();
@@ -75,6 +96,11 @@ describe('background notices', () => {
 
     const reopened = await chat.activateTab(tabA.id);
     expect(reopened.ok).toBe(true);
+
+    expect((await chat.getNotices()).length).toBe(1);
+    expect(getStorageSnapshot().sessionNotices?.[tabA.id]).toBeDefined();
+
+    await chat.markSessionNoticeSeen(tabA.id);
 
     expect((await chat.getNotices()).length).toBe(0);
     expect(getStorageSnapshot().sessionNotices?.[tabA.id]).toBeUndefined();

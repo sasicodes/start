@@ -1225,7 +1225,6 @@ export class ChatService {
   private setActiveSession(sessionManager: SessionManager): void {
     this.activeSessionId = sessionManager.getSessionId();
     this.activeSessionByWorkspace.set(this.workspaceCwd, this.activeSessionId);
-    this.markNoticeSeen(this.activeSessionId);
   }
 
   private subscribeIndexSync(session: AgentSession, modelProvider: string, modelId: string): void {
