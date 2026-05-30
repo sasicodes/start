@@ -12,16 +12,26 @@ const statusLabel: Record<SubagentActivity['status'], string> = {
   completed: 'done'
 };
 
-const latestLog = (agent: SubagentActivity) => agent.logs.at(-1) ?? statusLabel[agent.status];
-
-const statusText = (status: SubagentActivity['status']) => `[${statusLabel[status]}]`;
-
 const statusClass = (status: SubagentActivity['status']) => {
   if (status === 'running') return 'text-hover';
   if (status === 'completed') return 'text-success';
   if (status === 'failed') return 'text-danger';
   return 'text-soft';
 };
+
+const latestLog = (agent: SubagentActivity) => agent.logs.at(-1) ?? statusLabel[agent.status];
+
+const AgentName = ({ agent }: { agent: SubagentActivity }) => (
+  <span
+    class={tw(
+      'shrink-0 text-ink group-hover/subagent:text-hover group-focus-visible/subagent:text-hover',
+      agent.status === 'running' &&
+        'inline-block max-w-full truncate bg-[linear-gradient(100deg,var(--color-soft)_0_42%,oklch(48%_0.16_35_/_0.92)_49%,oklch(70%_0.19_35_/_0.72)_52%,var(--color-soft)_59%_100%)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] animate-[activity-text-shimmer_1.8s_linear_infinite] motion-reduce:bg-none motion-reduce:text-soft motion-reduce:animate-none'
+    )}
+  >
+    {agent.name}
+  </span>
+);
 
 const SubagentLogs = ({ agent }: { agent: SubagentActivity }) => {
   const logs = agent.logs;
@@ -55,19 +65,20 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        class="group/subagent flex w-full min-w-0 items-start gap-2 border-0 bg-transparent p-0 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
+        class="group/subagent flex w-full min-w-0 items-center gap-1.5 border-0 bg-transparent p-0 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
       >
-        <img alt="" src={agent.avatar} class="mt-0.5 size-5 flex-none" />
-        <span class="grid min-w-0 flex-1 gap-0.5">
-          <span class="flex min-w-0 items-baseline gap-1.5 text-sm leading-5 text-soft">
-            <span class="shrink-0 text-ink group-hover/subagent:text-hover group-focus-visible/subagent:text-hover">
-              {agent.name}
-            </span>
-            <span class="shrink-0 text-soft">-</span>
-            <span class="min-w-0 truncate text-soft">{agent.task}</span>
-          </span>
-          <span class={tw('truncate text-xs leading-4 capitalize', statusClass(agent.status))}>
-            {`${statusText(agent.status)} ${latestLog(agent)}`}
+        <img alt="" src={agent.avatar} class="size-4 flex-none rounded-full" />
+        <span class="flex min-w-0 flex-1 items-center gap-1.5 text-sm leading-5 text-soft">
+          <AgentName agent={agent} />
+          <span class="shrink-0 text-soft">-</span>
+          <span class="min-w-0 truncate text-soft">{agent.task}</span>
+          <span
+            class={tw(
+              'hidden shrink-0 text-xs leading-4 capitalize @min-chat-narrow/chat:inline',
+              statusClass(agent.status)
+            )}
+          >
+            {latestLog(agent)}
           </span>
         </span>
       </button>
