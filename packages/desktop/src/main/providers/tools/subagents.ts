@@ -39,13 +39,13 @@ const spawnToolParameters = {
 
 interface CreateSubagentToolsOptions {
   cwd: () => string;
-  model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
   authStorage: AuthStorage;
   customTools: () => ToolDefinition[];
+  model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
   modelRegistry: ModelRegistry;
+  nameAllocator: () => SubagentNameAllocator;
   thinkingLevel: () => EffortLevel;
   settingsManager: SettingsManager;
-  nameAllocator: () => SubagentNameAllocator;
 }
 
 const validTasks = (tasks: SubagentTaskInput[]) =>

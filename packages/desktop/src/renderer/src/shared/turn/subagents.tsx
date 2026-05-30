@@ -89,7 +89,9 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
       <AnimatePresence initial={false}>
         {open && (
           <motion.div key="subagent-logs" {...accordionContentMotion} class="overflow-hidden">
-            <SubagentLogs agent={agent} />
+            <div class="pt-2">
+              <SubagentLogs agent={agent} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

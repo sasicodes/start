@@ -220,8 +220,11 @@ export const runSubagents = async ({
       pushLog(agent, agent.status === 'cancelled' ? 'Cancelled' : 'Failed');
       update();
     } finally {
-      session?.dispose();
-      await runNext();
+      try {
+        session?.dispose();
+      } finally {
+        await runNext();
+      }
     }
   };
 
