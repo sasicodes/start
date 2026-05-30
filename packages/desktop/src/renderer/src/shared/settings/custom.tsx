@@ -170,35 +170,15 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                   {providers.map((provider) => {
                     const isEditing = editing === provider.name;
                     return (
-                      <li
-                        key={provider.name}
-                        class={tw(
-                          'rounded-2xl border border-dashed border-line transition-colors',
-                          isEditing ? 'p-3' : 'px-3 py-2'
-                        )}
-                      >
-                        <div class="flex min-w-0 items-center gap-3">
-                          <div class="min-w-0 flex-1">
-                            <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
-                            <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
-                          </div>
-                          <div class="flex flex-none items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => (isEditing ? resetForm() : startEdit(provider))}
-                              class="h-8 rounded-full border-0 bg-transparent px-2 text-xs font-medium text-soft transition-opacity duration-100 ease-in hover:opacity-80"
-                            >
-                              {isEditing ? 'Cancel' : 'Edit'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void remove(provider.name)}
-                              class="h-8 rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
+                      <li key={provider.name} class="rounded-2xl border border-dashed border-line px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => (isEditing ? resetForm() : startEdit(provider))}
+                          class="block w-full min-w-0 border-0 bg-transparent p-0 text-left"
+                        >
+                          <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
+                          <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
+                        </button>
                         <AnimatePresence initial={false}>
                           {isEditing && (
                             <motion.div
@@ -208,22 +188,26 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                               exit={{ opacity: 0, height: 0, transition: closeMotionTransition }}
                               class="overflow-hidden"
                             >
-                              <ProviderForm
-                                error={error}
-                                draftName={draftName}
-                                draftApiKey={draftApiKey}
-                                draftBaseUrl={draftBaseUrl}
-                                draftThinking={draftThinking}
-                                draftModelIds={draftModelIds}
-                                canSubmit={canSubmit}
-                                onCancel={resetForm}
-                                onSubmit={() => void submit()}
-                                onChangeName={setDraftName}
-                                onChangeApiKey={setDraftApiKey}
-                                onChangeBaseUrl={setDraftBaseUrl}
-                                onChangeThinking={setDraftThinking}
-                                onChangeModelIds={setDraftModelIds}
-                              />
+                              <div class="mt-3">
+                                <ProviderForm
+                                  error={error}
+                                  draftName={draftName}
+                                  draftApiKey={draftApiKey}
+                                  draftBaseUrl={draftBaseUrl}
+                                  draftThinking={draftThinking}
+                                  draftModelIds={draftModelIds}
+                                  canSubmit={canSubmit}
+                                  secondaryLabel="Delete"
+                                  secondaryDanger
+                                  onSubmit={() => void submit()}
+                                  onSecondary={() => void remove(provider.name)}
+                                  onChangeName={setDraftName}
+                                  onChangeApiKey={setDraftApiKey}
+                                  onChangeBaseUrl={setDraftBaseUrl}
+                                  onChangeThinking={setDraftThinking}
+                                  onChangeModelIds={setDraftModelIds}
+                                />
+                              </div>
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -245,8 +229,9 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                         draftThinking={draftThinking}
                         draftModelIds={draftModelIds}
                         canSubmit={canSubmit}
-                        onCancel={resetForm}
+                        secondaryLabel="Cancel"
                         onSubmit={() => void submit()}
+                        onSecondary={resetForm}
                         onChangeName={setDraftName}
                         onChangeApiKey={setDraftApiKey}
                         onChangeBaseUrl={setDraftBaseUrl}

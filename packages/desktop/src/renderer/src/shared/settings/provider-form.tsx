@@ -1,3 +1,5 @@
+import { tw } from '@renderer/utils/tw';
+
 interface PillInputProps {
   type: 'text' | 'password';
   value: string;
@@ -23,8 +25,10 @@ interface ProviderFormProps {
   draftThinking: string;
   draftModelIds: string;
   canSubmit: boolean;
-  onCancel: () => void;
+  secondaryLabel: string;
+  secondaryDanger?: boolean;
   onSubmit: () => void;
+  onSecondary: () => void;
   onChangeName: (value: string) => void;
   onChangeApiKey: (value: string) => void;
   onChangeBaseUrl: (value: string) => void;
@@ -40,8 +44,10 @@ export const ProviderForm = ({
   draftThinking,
   draftModelIds,
   canSubmit,
-  onCancel,
+  secondaryLabel,
+  secondaryDanger,
   onSubmit,
+  onSecondary,
   onChangeName,
   onChangeApiKey,
   onChangeBaseUrl,
@@ -71,13 +77,16 @@ export const ProviderForm = ({
       placeholder="Thinking levels (optional, up to 4, e.g. minimal, low, medium, high)"
     />
     {error && <p class="m-0 text-xs leading-4 text-danger">{error}</p>}
-    <div class="flex items-center justify-end gap-2">
+    <div class="mt-1 flex items-center justify-between gap-2">
       <button
         type="button"
-        onClick={onCancel}
-        class="h-8 rounded-full border-0 bg-transparent px-3 text-xs font-medium text-soft transition-opacity duration-100 ease-in hover:opacity-80"
+        onClick={onSecondary}
+        class={tw(
+          'h-8 rounded-full border-0 bg-transparent px-3 text-xs font-medium transition-opacity duration-100 ease-in hover:opacity-80',
+          secondaryDanger ? 'text-danger' : 'text-soft'
+        )}
       >
-        Cancel
+        {secondaryLabel}
       </button>
       <button
         type="button"
