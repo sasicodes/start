@@ -189,8 +189,8 @@ export const inspectScript: string = String.raw`
     '  box-shadow: 0 1px 3px rgba(0,0,0,0.18); }',
     '.marker.pending { pointer-events: none; }',
     '.popup { position: absolute; width: ' + POPUP_WIDTH + 'px;',
-    '  display: flex; flex-direction: column; gap: 10px; padding: 14px;',
-    '  border-radius: 10px; background: rgb(24,24,27); color: rgb(244,244,245);',
+    '  display: flex; flex-direction: column; gap: 14px; padding: 14px;',
+    '  border-radius: 12px; background: rgb(24,24,27); color: rgb(244,244,245);',
     '  border: 1px solid rgba(255,255,255,0.06);',
     '  box-shadow: 0 12px 32px rgba(0,0,0,0.32);',
     '  pointer-events: auto; }',
@@ -220,25 +220,25 @@ export const inspectScript: string = String.raw`
     '.popup-btn:hover { color: rgb(244,244,245); background: rgba(255,255,255,0.06); }',
     '.popup-btn svg { width: 14px; height: 14px; }',
     '.pill { position: fixed; bottom: 16px; right: 16px;',
-    '  display: flex; align-items: center; padding: 4px;',
+    '  display: flex; align-items: center; gap: 2px; padding: 4px 6px 4px 8px;',
     '  border-radius: 9999px; background: rgb(24,24,27); color: rgb(244,244,245);',
     '  border: 1px solid rgba(255,255,255,0.06);',
     '  box-shadow: 0 8px 24px rgba(0,0,0,0.28);',
     '  pointer-events: auto; cursor: grab;',
-    '  transition: transform 150ms ease-out, opacity 150ms ease-out, padding 200ms ease-out; }',
+    '  transition: transform 150ms ease-out, opacity 150ms ease-out; }',
     '.pill.dragging { cursor: grabbing; transition: none; }',
-    '.pill.has-annotations { padding: 4px 6px 4px 8px; gap: 2px; }',
+    '.pill-count { width: ' + MARKER_SIZE + 'px; height: ' + MARKER_SIZE + 'px;',
+    '  display: grid; place-items: center; margin-right: 4px;',
+    '  background: ' + ACCENT + '; color: #fff; border-radius: 50%;',
+    '  font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums;',
+    '  line-height: 1; pointer-events: none; }',
     '.pill-btn { width: 30px; height: 30px; border-radius: 9999px;',
     '  display: grid; place-items: center; background: none; border: 0; padding: 0;',
     '  color: rgb(161,161,170); cursor: pointer;',
     '  transition: background 120ms ease-out, color 120ms ease-out; }',
     '.pill-btn:hover { color: rgb(244,244,245); background: rgba(255,255,255,0.06); }',
-    '.pill-btn.active { color: ' + ACCENT + '; }',
     '.pill-btn svg { width: 16px; height: 16px; }',
-    '.pill-extras { display: flex; align-items: center; gap: 2px;',
-    '  max-width: 0; opacity: 0; overflow: hidden;',
-    '  transition: max-width 200ms ease-out, opacity 150ms ease-out; }',
-    '.pill.has-annotations .pill-extras { max-width: 200px; opacity: 1; }',
+    '.pill-extras { display: flex; align-items: center; gap: 2px; }',
     '.pill-send { width: 30px; height: 30px; margin-left: 4px; border-radius: 9999px;',
     '  display: grid; place-items: center;',
     '  background: rgb(244,244,245); color: rgb(24,24,27); border: 0; padding: 0;',
@@ -253,9 +253,6 @@ export const inspectScript: string = String.raw`
     path + '</svg>';
 
   const ICONS = {
-    cursor: svgIcon(
-      '<path d="M20.25 10.75V6.75C20.25 5.09315 18.9069 3.75 17.25 3.75H6.75C5.09315 3.75 3.75 5.09315 3.75 6.75V17.25C3.75 18.9069 5.09315 20.25 6.75 20.25H10.75"/><path d="M12.087 13.0057L14.188 20.8367C14.3033 21.2666 14.8806 21.3429 15.1036 20.9577L17.1499 17.4232C17.2155 17.3098 17.3098 17.2155 17.4232 17.1499L20.9577 15.1036C21.3429 14.8806 21.2666 14.3033 20.8367 14.188L13.0057 12.087C12.4479 11.9373 11.9373 12.4479 12.087 13.0057Z"/>'
-    ),
     copy: svgIcon(
       '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'
     ),
@@ -325,20 +322,13 @@ export const inspectScript: string = String.raw`
   popupInput.autocomplete = 'off';
   popupRoot.appendChild(popupInput);
   const popupActions = create('div', 'popup-actions');
-  const trashBtn = create('button', 'popup-btn');
-  trashBtn.type = 'button';
-  trashBtn.title = 'Delete annotation';
-  trashBtn.innerHTML = ICONS.trash;
-  trashBtn.hidden = true;
   const cancelBtn = create('button', 'popup-btn');
   cancelBtn.type = 'button';
-  cancelBtn.title = 'Close';
   cancelBtn.innerHTML = ICONS.close;
   const confirmBtn = create('button', 'popup-btn');
   confirmBtn.type = 'button';
   confirmBtn.title = 'Save (Enter)';
   confirmBtn.innerHTML = ICONS.check;
-  popupActions.appendChild(trashBtn);
   popupActions.appendChild(cancelBtn);
   popupActions.appendChild(confirmBtn);
   popupRoot.appendChild(popupActions);
@@ -346,10 +336,7 @@ export const inspectScript: string = String.raw`
 
   const pillRoot = create('div', 'pill');
   pillRoot.hidden = true;
-  const pillCursorBtn = create('button', 'pill-btn');
-  pillCursorBtn.type = 'button';
-  pillCursorBtn.title = 'Toggle inspect';
-  pillCursorBtn.innerHTML = ICONS.cursor;
+  const pillCount = create('div', 'pill-count');
   const pillExtras = create('div', 'pill-extras');
   const pillCopyBtn = create('button', 'pill-btn');
   pillCopyBtn.type = 'button';
@@ -366,7 +353,7 @@ export const inspectScript: string = String.raw`
   pillExtras.appendChild(pillCopyBtn);
   pillExtras.appendChild(pillClearBtn);
   pillExtras.appendChild(pillSendBtn);
-  pillRoot.appendChild(pillCursorBtn);
+  pillRoot.appendChild(pillCount);
   pillRoot.appendChild(pillExtras);
   shadow.appendChild(pillRoot);
 
@@ -493,20 +480,17 @@ export const inspectScript: string = String.raw`
     renderDetails();
     const existing = editingId ? annotations.find((a) => a.id === editingId) : null;
     popupInput.value = existing?.comment ?? '';
-    trashBtn.hidden = !editingId;
+    cancelBtn.title = editingId ? 'Delete annotation' : 'Discard';
     setTimeout(() => popupInput.focus({ preventScroll: true }), 0);
   };
 
   const renderPill = () => {
-    const hasAnnotations = annotations.length > 0;
-    if (!hasAnnotations) {
+    if (annotations.length === 0) {
       pillRoot.hidden = true;
       return;
     }
     pillRoot.hidden = false;
-    pillRoot.classList.toggle('has-annotations', hasAnnotations);
-    pillCursorBtn.classList.toggle('active', active);
-    pillSendBtn.classList.toggle('disabled', !hasAnnotations);
+    pillCount.textContent = String(annotations.length);
     if (pillPos) {
       pillRoot.style.left = pillPos.left + 'px';
       pillRoot.style.top = pillPos.top + 'px';
@@ -770,18 +754,17 @@ export const inspectScript: string = String.raw`
   });
   cancelBtn.addEventListener('click', (event) => {
     event.stopPropagation();
+    if (editingId) {
+      const removedId = editingId;
+      annotations = annotations.filter((entry) => entry.id !== removedId);
+      relay('annotation-deleted', { id: removedId });
+      dismissPopup();
+      renderMarkers();
+      renderPill();
+      if (annotations.length === 0 && !active) teardownHost();
+      return;
+    }
     dismissPopup();
-  });
-  trashBtn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (!editingId) return;
-    annotations = annotations.filter((entry) => entry.id !== editingId);
-    const wasEditingId = editingId;
-    relay('annotation-deleted', { id: wasEditingId });
-    dismissPopup();
-    renderMarkers();
-    renderPill();
-    if (annotations.length === 0 && !active) teardownHost();
   });
   confirmBtn.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -798,11 +781,6 @@ export const inspectScript: string = String.raw`
     }
   });
 
-  pillCursorBtn.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (active) deactivate();
-    else activate();
-  });
   pillCopyBtn.addEventListener('click', (event) => {
     event.stopPropagation();
     copyAnnotations();
