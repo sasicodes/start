@@ -50,7 +50,11 @@
 }
 
 .markdown-compact [data-streamdown^="heading-"] {
-  @apply mt-0.5 text-xs leading-5;
+  @apply mt-0 text-xs leading-5;
+}
+
+.markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
+  @apply mt-2;
 }
 
 .markdown-default [data-streamdown="link"],

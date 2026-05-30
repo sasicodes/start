@@ -1,22 +1,26 @@
 import type { SubagentActivity } from '@preload/index';
 import { Markdown } from '@renderer/markdown';
+import { ShimmerText } from '@renderer/shared/turn/shimmer';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
 import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
-import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-const AgentName = ({ agent }: { agent: SubagentActivity }) => (
-  <span
-    class={tw(
-      'shrink-0 text-ink group-hover/subagent:text-hover group-focus-visible/subagent:text-hover',
-      agent.status === 'running' &&
-        'inline-block max-w-full truncate bg-[linear-gradient(100deg,var(--color-soft)_0_42%,oklch(48%_0.16_35_/_0.92)_49%,oklch(70%_0.19_35_/_0.72)_52%,var(--color-soft)_59%_100%)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] animate-[activity-text-shimmer_1.8s_linear_infinite] motion-reduce:bg-none motion-reduce:text-soft motion-reduce:animate-none'
-    )}
-  >
-    {agent.name}
-  </span>
-);
+const AgentName = ({ agent }: { agent: SubagentActivity }) => {
+  if (agent.status === 'running') {
+    return (
+      <ShimmerText className="shrink-0 text-ink group-hover/subagent:text-hover group-focus-visible/subagent:text-hover">
+        {agent.name}
+      </ShimmerText>
+    );
+  }
+
+  return (
+    <span class="shrink-0 text-ink group-hover/subagent:text-hover group-focus-visible/subagent:text-hover">
+      {agent.name}
+    </span>
+  );
+};
 
 const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
   const [open, setOpen] = useState(false);
