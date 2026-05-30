@@ -13,6 +13,16 @@ const parseThinkingLabels = (text: string): string[] =>
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
 
+const serializeModels = (models: CustomProviderConfig['models']) => models.map((model) => model.id).join('\n');
+
+const summarizeProvider = (provider: CustomProviderConfig) => {
+  const models = provider.models.length === 1 ? '1 model' : `${provider.models.length} models`;
+  const levels = provider.thinkingLabels?.length
+    ? ` · ${provider.thinkingLabels.length === 1 ? '1 level' : `${provider.thinkingLabels.length} levels`}`
+    : '';
+  return `${provider.baseUrl} · ${models}${levels}`;
+};
+
 interface CustomProvidersRowProps {
   open: boolean;
   onToggle: () => void;
@@ -52,6 +62,7 @@ const summary = (providers: CustomProviderConfig[]) => {
 export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) => {
   const [providers, setProviders] = useState<CustomProviderConfig[]>([]);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState('');
   const [draftName, setDraftName] = useState('');
   const [draftBaseUrl, setDraftBaseUrl] = useState('');
   const [draftApiKey, setDraftApiKey] = useState('');
@@ -74,12 +85,24 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
 
   const resetForm = () => {
     setAdding(false);
+    setEditing('');
     setError('');
     setDraftName('');
     setDraftApiKey('');
     setDraftBaseUrl('');
     setDraftThinking('');
     setDraftModelIds('');
+  };
+
+  const startEdit = (provider: CustomProviderConfig) => {
+    setEditing(provider.name);
+    setAdding(true);
+    setError('');
+    setDraftName(provider.name);
+    setDraftBaseUrl(provider.baseUrl);
+    setDraftApiKey(provider.apiKey);
+    setDraftModelIds(serializeModels(provider.models));
+    setDraftThinking(provider.thinkingLabels?.join(', ') ?? '');
   };
 
   const submit = async () => {
@@ -97,13 +120,16 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
       return;
     }
     try {
-      const next = await window.pi.chat.saveCustomProvider({
+      await window.pi.chat.saveCustomProvider({
         name,
         apiKey,
         baseUrl,
         models,
         ...(thinkingLabels.length > 0 ? { thinkingLabels } : {})
       });
+      const next = editing && editing !== name
+        ? await window.pi.chat.removeCustomProvider(editing)
+        : await window.pi.chat.listCustomProviders();
       setProviders(next);
       resetForm();
     } catch (caught) {
@@ -163,17 +189,24 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                     >
                       <div class="min-w-0 flex-1">
                         <p class="m-0 truncate text-sm leading-5 font-medium text-ink">{provider.name}</p>
-                        <p class="m-0 truncate text-xs leading-4 text-soft">
-                          {provider.baseUrl} · {provider.models.length === 1 ? '1 model' : `${provider.models.length} models`}
-                        </p>
+                        <p class="m-0 truncate text-xs leading-4 text-soft">{summarizeProvider(provider)}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => void remove(provider.name)}
-                        class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                      >
-                        Remove
-                      </button>
+                      <div class="flex flex-none items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(provider)}
+                          class="h-8 rounded-full border-0 bg-transparent px-2 text-xs font-medium text-soft transition-opacity duration-100 ease-in hover:opacity-80"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void remove(provider.name)}
+                          class="h-8 rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
