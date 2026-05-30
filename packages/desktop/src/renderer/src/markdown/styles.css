@@ -8,7 +8,7 @@
 }
 
 .markdown-compact {
-  @apply text-sm leading-6 text-soft;
+  @apply text-xs leading-5 text-soft;
 }
 
 .markdown-default > :not(:first-child) {
@@ -16,7 +16,7 @@
 }
 
 .markdown-compact > :not(:first-child) {
-  @apply mt-1;
+  @apply mt-0.5;
 }
 
 .markdown-default > :not(:last-child),
@@ -24,9 +24,24 @@
   @apply mb-0;
 }
 
-.markdown-default p,
-.markdown-compact p {
+.markdown-default p {
   @apply my-1 whitespace-pre-wrap;
+}
+
+.markdown-compact p {
+  @apply my-0 whitespace-pre-wrap;
+}
+
+.markdown-compact p:has(> strong:only-child):not(:first-child) {
+  @apply mt-4;
+}
+
+.markdown-compact p:has(+ p > strong:only-child) {
+  @apply pb-3;
+}
+
+.markdown-compact p:has(+ [data-streamdown^="heading-"]) {
+  @apply pb-4;
 }
 
 .markdown-default [data-streamdown^="heading-"],
@@ -42,9 +57,16 @@
 .markdown-default [data-streamdown="heading-3"],
 .markdown-default [data-streamdown="heading-4"],
 .markdown-default [data-streamdown="heading-5"],
-.markdown-default [data-streamdown="heading-6"],
-.markdown-compact [data-streamdown^="heading-"] {
+.markdown-default [data-streamdown="heading-6"] {
   @apply mt-1 text-sm leading-6;
+}
+
+.markdown-compact [data-streamdown^="heading-"] {
+  @apply mt-0 text-xs leading-5;
+}
+
+.markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
+  @apply mt-2;
 }
 
 .markdown-default [data-streamdown="link"],
@@ -124,7 +146,7 @@
 }
 
 .markdown-compact [data-streamdown="code-block-body"] {
-  @apply text-sm leading-6;
+  @apply text-xs leading-5;
 }
 
 .markdown-default [data-streamdown="code-block-body"] pre,

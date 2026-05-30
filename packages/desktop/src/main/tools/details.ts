@@ -177,6 +177,7 @@ export const toolBody = (toolName: string, args: Record<string, unknown>, result
 const toolDetail = (toolName: string, args: Record<string, unknown>) => {
   if (toolName === 'browser_open') return stringValue(args.url);
   if (toolName.startsWith('browser_')) return '';
+  if (toolName === 'subagent_spawn') return '';
   if (toolName === 'bash') return stringValue(args.command).replace(/\s+/g, ' ').trim();
   if (toolName === 'find') return stringValue(args.pattern);
   if (toolName === 'grep') return stringValue(args.pattern);

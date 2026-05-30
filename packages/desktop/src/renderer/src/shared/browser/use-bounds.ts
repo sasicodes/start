@@ -56,8 +56,23 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
 
     scheduleBounds();
     const resizeObserver = new ResizeObserver(scheduleBounds);
+    const viewport = window.visualViewport;
+    let pixelRatioMedia: MediaQueryList | null = null;
+    const bindPixelRatioListener = () => {
+      pixelRatioMedia?.removeEventListener('change', handlePixelRatioChange);
+      pixelRatioMedia = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      pixelRatioMedia.addEventListener('change', handlePixelRatioChange);
+    };
+    const handlePixelRatioChange = () => {
+      scheduleBounds();
+      bindPixelRatioListener();
+    };
+
+    bindPixelRatioListener();
     resizeObserver.observe(element);
     window.addEventListener('resize', scheduleBounds);
+    viewport?.addEventListener('resize', scheduleBounds, { passive: true });
+    viewport?.addEventListener('scroll', scheduleBounds, { passive: true });
     return () => {
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current);
@@ -67,6 +82,9 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
       clearBounds();
       resizeObserver.disconnect();
       window.removeEventListener('resize', scheduleBounds);
+      viewport?.removeEventListener('resize', scheduleBounds);
+      viewport?.removeEventListener('scroll', scheduleBounds);
+      pixelRatioMedia?.removeEventListener('change', handlePixelRatioChange);
     };
   }, [active, clearBounds, scheduleBounds, viewportRef]);
 

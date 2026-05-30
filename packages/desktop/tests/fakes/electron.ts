@@ -74,6 +74,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   focusCount: number;
   getTitle: () => string;
   getURL: () => string;
+  getZoomFactor: () => number;
   inputEvents: unknown[];
   isLoading: () => boolean;
   loadURL: (url: string) => Promise<void>;
@@ -129,6 +130,7 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     focusCount: 0,
     getTitle: () => '',
     getURL: () => '',
+    getZoomFactor: () => 1,
     inputEvents: [],
     isLoading: () => false,
     loadURL: async (_url: string) => {},
