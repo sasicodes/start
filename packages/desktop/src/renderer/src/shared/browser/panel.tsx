@@ -51,7 +51,6 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
       setStatus(nextStatus);
       setActive(Boolean(nextStatus.url || nextStatus.loading));
-      if (!nextStatus.url && !nextStatus.loading) setError('');
       if (!editing) setAddress(formatBrowserAddress(nextStatus.url));
     },
     [editing]
@@ -114,7 +113,6 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
   const refreshLabel = status.loading ? 'Stop loading' : 'Refresh';
   const screenshotLabel = copied ? 'Copied' : 'Screenshot';
-  const viewportMessage = error || 'Enter a URL to browse';
 
   const applyScreenshotStatus = useCallback((result: BrowserActionResult) => {
     if (!mountedRef.current) return;
@@ -179,7 +177,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
-      <div class="flex h-12 min-w-0 shrink-0 items-center gap-0.5 border-b border-line">
+      <div class="flex h-12 min-w-0 shrink-0 items-center gap-0 border-b border-line px-2">
         <BrowserButton label="Back" disabled={!status.canGoBack} onClick={goBack}>
           <ChevronLeftIcon class="size-4" />
         </BrowserButton>
@@ -221,15 +219,13 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
           {copied ? <CheckIcon class="size-4" /> : <ScreenshotIcon class="size-4" strokeWidth={1.5} />}
         </BrowserButton>
       </div>
-      {error && active && (
-        <div class="shrink-0 border-b border-line px-3 py-2 text-xs leading-5 text-danger">{error}</div>
-      )}
+      {error && <div class="shrink-0 border-b border-line px-3 py-2 text-xs leading-5 text-danger">{error}</div>}
       <div ref={viewportRef} class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         {!active && (
           <div class="absolute inset-0 grid place-items-center px-8 text-center">
             <div class="grid justify-items-center gap-3 text-soft">
-              <BrowserEmptyIcon class="size-9" strokeWidth={1.5} />
-              <p class="max-w-56 text-sm leading-5">{viewportMessage}</p>
+              <BrowserEmptyIcon class="size-7" strokeWidth={1.5} />
+              <p class="max-w-56 text-sm leading-5">Enter a URL to browse</p>
             </div>
           </div>
         )}
