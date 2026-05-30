@@ -1,5 +1,5 @@
 import { Attached } from '@renderer/shared/composer/attached';
-import type { BrowserFinderItem } from '@renderer/shared/finder/items';
+import type { BrowserFinderItem } from '@renderer/shared/finder/browser';
 import { BrowserIcon, FolderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';

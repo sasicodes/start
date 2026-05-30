@@ -14,7 +14,7 @@ export class FakeAuthStorage {
   setRuntimeApiKey(_provider: string, _apiKey: string) {}
 
   get(_provider: string): { type: 'oauth' | 'api_key' } | undefined {
-    return undefined;
+    return;
   }
 
   getAuthStatus(_provider: string): { configured: boolean } {

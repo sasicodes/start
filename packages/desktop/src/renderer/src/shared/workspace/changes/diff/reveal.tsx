@@ -6,7 +6,7 @@ export const Reveal = ({ cwd, filePath }: { cwd: string; filePath: string }) => 
   return (
     <button
       type="button"
-      onClick={() => void window.pi.app.revealPath(cwd, filePath).catch(() => {})}
+      onClick={() => window.pi.app.revealPath(cwd, filePath).catch(() => {})}
       class="border-0 bg-transparent p-0 text-sm leading-6 text-soft transition-colors hover:text-hover"
     >
       {revealLabel(window.pi.app.platform)}

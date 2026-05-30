@@ -381,8 +381,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, []);
 
   const refreshSettings = useCallback(() => {
-    void loadModels().catch(() => {});
-    void loadAuthProviders().catch(() => {});
+    loadModels().catch(() => {});
+    loadAuthProviders().catch(() => {});
   }, [loadAuthProviders, loadModels]);
 
   return {

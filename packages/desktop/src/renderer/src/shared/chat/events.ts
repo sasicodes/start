@@ -42,9 +42,9 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
   optionsRef.current = options;
 
   const refreshChatState = useCallback(() => {
-    void optionsRef.current.syncStatus().catch(() => {});
-    void optionsRef.current.loadModels().catch(() => {});
-    void optionsRef.current.loadAuthProviders().catch(() => {});
+    optionsRef.current.syncStatus().catch(() => {});
+    optionsRef.current.loadModels().catch(() => {});
+    optionsRef.current.loadAuthProviders().catch(() => {});
   }, []);
 
   useAppFocusChange((focused) => {
@@ -122,7 +122,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       clearSlashCommandsCache();
       if (optionsRef.current.assistantIdRef.current || optionsRef.current.terminalIdRef.current) {
         optionsRef.current.onShowChat();
-        void optionsRef.current.syncStatus().catch(() => {});
+        optionsRef.current.syncStatus().catch(() => {});
         return;
       }
 

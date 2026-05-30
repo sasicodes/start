@@ -58,11 +58,11 @@ export const primeWorkspaceFolders = (workspacePath: string | undefined) => {
     emitWorkspaceFolders();
   }
 
-  void loadWorkspaceFolders().catch(emitWorkspaceFolders);
+  loadWorkspaceFolders().catch(emitWorkspaceFolders);
 };
 
 const refreshWorkspaceFolders = () => {
-  void loadWorkspaceFolders().catch(emitWorkspaceFolders);
+  loadWorkspaceFolders().catch(emitWorkspaceFolders);
 };
 
 const watchWorkspaceFolders = () => {

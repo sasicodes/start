@@ -15,7 +15,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
 
   const clearBounds = useCallback(() => {
     lastBoundsRef.current = null;
-    void window.pi.app.browserBounds(null).catch(() => {});
+    window.pi.app.browserBounds(null).catch(() => {});
   }, []);
 
   const syncBounds = useCallback(async () => {

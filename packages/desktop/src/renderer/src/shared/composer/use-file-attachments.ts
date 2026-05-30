@@ -26,7 +26,7 @@ const distinctPaths = (paths: string[]) => [...new Set(paths.filter((path) => pa
 
 const releaseAttachments = (attachments: ImageAttachment[]) => {
   if (attachments.length > 0) {
-    void window.pi.chat.releaseAttachments(attachments.map((attachment) => attachment.id)).catch(() => {});
+    window.pi.chat.releaseAttachments(attachments.map((attachment) => attachment.id)).catch(() => {});
   }
 };
 

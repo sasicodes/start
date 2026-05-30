@@ -76,7 +76,7 @@ const sweep = (audioContext: AudioContext, time: number) => {
 
 export const playCycleSound = () => {
   const audioContext = getContext();
-  if (audioContext.state === 'suspended') void audioContext.resume().catch(() => {});
+  if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
 
   const time = audioContext.currentTime;
   burst(audioContext, time, getCycleBuffer(audioContext));

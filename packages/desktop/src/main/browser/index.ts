@@ -100,7 +100,7 @@ const sendStatus = () => {
 };
 
 const externalUrl = (url: string) => {
-  if (url.startsWith('mailto:')) void shell.openExternal(url).catch(() => {});
+  if (url.startsWith('mailto:')) shell.openExternal(url).catch(() => {});
 };
 
 const isInterruptedNavigation = (error: unknown) => String(error).includes('ERR_ABORTED');

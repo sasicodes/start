@@ -1,5 +1,5 @@
 import type { RootItem } from '@preload/index';
-import { browserFinderItem, browserFinderItems, withBrowserFinderItems } from '@renderer/shared/finder/items';
+import { browserFinderItem, browserFinderItems, withBrowserFinderItems } from '@renderer/shared/finder/browser';
 import { activeFinderToken, type FinderToken } from '@renderer/shared/input';
 import { describe, expect, it } from 'vitest';
 

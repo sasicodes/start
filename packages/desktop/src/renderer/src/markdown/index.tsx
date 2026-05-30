@@ -24,7 +24,7 @@ const loadMarkdownRenderer = () => {
 const MarkdownRenderer = lazy(loadMarkdownRenderer);
 
 export const prewarmMarkdownRenderer = () => {
-  void loadMarkdownRenderer().catch(() => {});
+  loadMarkdownRenderer().catch(() => {});
 };
 
 export const Markdown = (props: MarkdownProps) => (

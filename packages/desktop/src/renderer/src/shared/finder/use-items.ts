@@ -1,5 +1,5 @@
 import type { RootItem } from '@preload/index';
-import { browserFinderItems, withBrowserFinderItems, type FinderItems } from '@renderer/shared/finder/items';
+import { browserFinderItems, withBrowserFinderItems, type FinderItems } from '@renderer/shared/finder/browser';
 import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useState } from 'preact/hooks';
 

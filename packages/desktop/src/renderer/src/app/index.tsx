@@ -46,7 +46,7 @@ export const App = () => {
 
   const showSettings = useCallback(() => {
     if (surface === 'composer') {
-      void window.pi.app.openSettings().catch(() => {});
+      window.pi.app.openSettings().catch(() => {});
       return;
     }
 
@@ -56,7 +56,7 @@ export const App = () => {
 
   const showShortcuts = useCallback(() => {
     if (surface === 'composer') {
-      void window.pi.app.openShortcuts().catch(() => {});
+      window.pi.app.openShortcuts().catch(() => {});
       return;
     }
 
@@ -204,7 +204,7 @@ export const App = () => {
   });
 
   const stopResponse = useCallback(() => {
-    void window.pi.chat.abort().catch(() => {});
+    window.pi.chat.abort().catch(() => {});
   }, []);
 
   const submitDraft = useCallback(() => {
@@ -215,7 +215,7 @@ export const App = () => {
     if (surface === 'composer') {
       finishComposerExit(() => {
         setAttachments([]);
-        void window.pi.app.submitComposer(draft, pendingAttachments).catch(() => {});
+        window.pi.app.submitComposer(draft, pendingAttachments).catch(() => {});
         setDraft('');
       });
       return;
@@ -228,7 +228,7 @@ export const App = () => {
   const discardComposerOverlay = useCallback(() => {
     if (surface !== 'composer' || composerExiting) return;
     finishComposerExit(() => {
-      void window.pi.app.hideComposer().catch(() => {});
+      window.pi.app.hideComposer().catch(() => {});
     });
   }, [composerExiting, finishComposerExit, surface]);
 
@@ -237,7 +237,7 @@ export const App = () => {
   }, [discardComposerOverlay]);
 
   const openAttachment = useCallback((path: string) => {
-    void window.pi.app.openPath(path).catch(() => {});
+    window.pi.app.openPath(path).catch(() => {});
   }, []);
 
   const chooseWorkspaceFromDock = useCallback(

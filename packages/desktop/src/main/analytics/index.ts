@@ -47,12 +47,9 @@ const { app } = electron;
 let distinctId = '';
 let launchStartMs = 0;
 let client: PostHog | null = null;
-let identifiedUsername: string | undefined;
+let identifiedUsername = '';
 
-const readText = (path: string) => {
-  const text = readFileSync(path, 'utf8').trim();
-  return text ? text : undefined;
-};
+const readText = (path: string) => readFileSync(path, 'utf8').trim();
 
 const writeText = (path: string, value: string) => {
   mkdirSync(dirname(path), { recursive: true });
@@ -140,35 +137,34 @@ export const workspaceAnalyticsProperties = (workspacePath?: string): AnalyticsP
 };
 
 const runCommand = (command: string, args: string[]) =>
-  new Promise<string | undefined>((resolve) => {
+  new Promise<string>((resolve) => {
     execFile(command, args, { timeout: ANALYTICS_COMMAND_TIMEOUT_MS }, (error, stdout) => {
       if (error) {
-        resolve(undefined);
+        resolve('');
         return;
       }
 
-      const output = stdout.trim();
-      resolve(output ? output : undefined);
+      resolve(stdout.trim());
     });
   });
 
 const readGithubUsername = async () => {
   const login = await runCommand('gh', ['api', 'user', '--jq', '.login']);
-  return login ? `gh:${login}` : undefined;
+  return login ? `gh:${login}` : '';
 };
 
 const readGitlabUsername = async () => {
   const username = await runCommand('glab', ['api', 'user', '--jq', '.username']);
-  return username ? `gl:${username}` : undefined;
+  return username ? `gl:${username}` : '';
 };
 
 const readGitUsername = async () => {
   const username = await runCommand('git', ['config', '--global', 'user.name']);
-  return username ? `git:${username}` : undefined;
+  return username ? `git:${username}` : '';
 };
 
 const readDeviceUsername = async () =>
-  (await readGithubUsername()) ?? (await readGitlabUsername()) ?? (await readGitUsername());
+  (await readGithubUsername()) || (await readGitlabUsername()) || (await readGitUsername());
 
 export const initAnalytics = () => {
   if (!isProd) return;
@@ -176,7 +172,7 @@ export const initAnalytics = () => {
 
   distinctId = loadDistinctId();
   launchStartMs = Date.now();
-  identifiedUsername = readAnalyticsValue(ANALYTICS_USERNAME_STORAGE_NAME);
+  identifiedUsername = readAnalyticsValue(ANALYTICS_USERNAME_STORAGE_NAME) || '';
   client = new PostHog(POSTHOG_PROJECT_KEY, {
     host: POSTHOG_HOST,
     flushAt: ANALYTICS_FLUSH_AT,
