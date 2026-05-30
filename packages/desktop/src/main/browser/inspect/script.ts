@@ -374,10 +374,17 @@ export const inspectScript: string = String.raw`
     const role = el.getAttribute('role');
     const name = accessibleName(el);
     const dim = Math.round(rect.width) + ' × ' + Math.round(rect.height);
-    const parts = ['<span class="badge-tag">' + tag + (role ? '[role=' + role + ']' : '') + '</span>'];
-    if (name) parts.push('<span class="badge-name">' + name + '</span>');
-    parts.push('<span class="badge-dim">' + dim + '</span>');
-    badge.innerHTML = parts.join('');
+    const tagSpan = create('span', 'badge-tag');
+    tagSpan.textContent = tag + (role ? '[role=' + role + ']' : '');
+    badge.replaceChildren(tagSpan);
+    if (name) {
+      const nameSpan = create('span', 'badge-name');
+      nameSpan.textContent = name;
+      badge.appendChild(nameSpan);
+    }
+    const dimSpan = create('span', 'badge-dim');
+    dimSpan.textContent = dim;
+    badge.appendChild(dimSpan);
   };
 
   const positionBadge = (x, y) => {
