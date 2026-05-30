@@ -64,38 +64,36 @@ export const Model = ({
 
   return (
     <div class={tw('flex flex-none items-center gap-px', layered && 'order-2')}>
-      <div class="relative flex items-center h-9.5 rounded-[20px_3px_3px_20px] bg-control">
-        <Menu.Root modal={false}>
-          <Tooltip label={selectedModelLabel}>
-            <Menu.Trigger
-              disabled={disabled}
-              aria-label="Choose model"
-              className="grid place-items-center rounded-full border-0 bg-transparent h-full w-10 text-ink select-none disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span class="flex-none translate-x-px -translate-y-[0.5px]">
-                {hasNoConfiguredModels ? <ProviderIconTicker /> : <ProviderIcon id={selectedProviderId} />}
-              </span>
-            </Menu.Trigger>
-          </Tooltip>
-          <Menu.Portal>
-            <Menu.Positioner
-              side="top"
-              align="start"
-              sideOffset={12}
-              alignOffset={-6}
-              className="z-50"
-              collisionPadding={12}
-            >
-              <Models
-                models={models}
-                selectedModel={selectedModel}
-                onSelectModel={onSelectModel}
-                onOpenSettings={onOpenSettings}
-              />
-            </Menu.Positioner>
-          </Menu.Portal>
-        </Menu.Root>
-      </div>
+      <Menu.Root modal={false}>
+        <Tooltip label={selectedModelLabel}>
+          <Menu.Trigger
+            disabled={disabled}
+            aria-label="Choose model"
+            className="grid h-9.5 w-10 place-items-center rounded-[20px_3px_3px_20px] border-0 bg-control text-ink select-none disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span class="flex-none translate-x-px -translate-y-[0.5px]">
+              {hasNoConfiguredModels ? <ProviderIconTicker /> : <ProviderIcon id={selectedProviderId} />}
+            </span>
+          </Menu.Trigger>
+        </Tooltip>
+        <Menu.Portal>
+          <Menu.Positioner
+            side="top"
+            align="start"
+            sideOffset={12}
+            alignOffset={-6}
+            className="z-50"
+            collisionPadding={12}
+          >
+            <Models
+              models={models}
+              selectedModel={selectedModel}
+              onSelectModel={onSelectModel}
+              onOpenSettings={onOpenSettings}
+            />
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
       <Thinking
         disabled={disabled || availableEfforts.length < 2}
         label={selectedEffort.label}
