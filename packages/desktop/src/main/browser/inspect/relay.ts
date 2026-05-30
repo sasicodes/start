@@ -18,6 +18,11 @@ export const parseInspectRelay = <TPayload = unknown>(message: string): InspectR
   }
 };
 
+export const resolveInspectRelay = <TPayload = unknown>(
+  active: boolean,
+  message: string
+): InspectRelay<TPayload> | null => (active ? parseInspectRelay<TPayload>(message) : null);
+
 export const routeInspectRelay = (message: InspectRelay) => {
   if (message.event === 'mode-changed') {
     const payload = message.payload as { active?: boolean } | undefined;

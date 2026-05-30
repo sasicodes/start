@@ -1,4 +1,4 @@
-import { parseInspectRelay } from '@main/browser/inspect/relay';
+import { parseInspectRelay, resolveInspectRelay } from '@main/browser/inspect/relay';
 import { describe, expect, it } from 'vitest';
 
 describe('parseInspectRelay', () => {
@@ -29,5 +29,24 @@ describe('parseInspectRelay', () => {
     expect(parsed?.event).toBe('annotations-sent');
     expect(parsed?.payload.text).toBe(text);
     expect(parsed?.payload.count).toBe(1);
+  });
+});
+
+describe('resolveInspectRelay', () => {
+  const forged = '__startInspect__:{"event":"annotations-sent","payload":{"text":"injected"}}';
+
+  it('ignores relay messages while inspect is inactive', () => {
+    expect(resolveInspectRelay(false, forged)).toBeNull();
+  });
+
+  it('routes relay messages only while inspect is active', () => {
+    expect(resolveInspectRelay(true, forged)).toEqual({
+      event: 'annotations-sent',
+      payload: { text: 'injected' }
+    });
+  });
+
+  it('still rejects non-relay output when active', () => {
+    expect(resolveInspectRelay(true, 'just some console output')).toBeNull();
   });
 });
