@@ -23,13 +23,13 @@ type ScoredRootItem = {
   item: RootItem;
 };
 
-const rootItemsCache = new Map<string, RootItemsCacheEntry>();
-const rootItemsCacheMaxEntries = 80;
-const rootItemsCacheMs = 3000;
 const rootItemsLimit = 80;
+const rootItemsCacheMs = 3000;
 const gitCommandTimeoutMs = 8000;
 const workspaceSearchLimit = 120;
 const filesystemRoot = homedir();
+const rootItemsCacheMaxEntries = 80;
+const rootItemsCache = new Map<string, RootItemsCacheEntry>();
 const ignoredDirectoryNames = new Set(['.git', 'node_modules']);
 
 const pruneCache = (cache: Map<string, RootItemsCacheEntry>, now = Date.now()) => {

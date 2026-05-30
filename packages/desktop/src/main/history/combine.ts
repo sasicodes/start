@@ -36,11 +36,11 @@ const mergeWork = (turn: HistoryTurn, details: HistoryTurnDetail[], thinking: st
 };
 
 export const combineHistoryTurns = (turns: HistoryTurn[]) => {
-  const result: HistoryTurn[] = [];
-  let pendingDetails: HistoryTurnDetail[] = [];
   let pendingThinking = '';
   let pendingCreatedAt = 0;
   let lastAssistantIndex = -1;
+  const result: HistoryTurn[] = [];
+  let pendingDetails: HistoryTurnDetail[] = [];
 
   const clearPending = () => {
     pendingDetails = [];

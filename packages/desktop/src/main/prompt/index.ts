@@ -12,11 +12,11 @@ interface ToolCapabilitySource {
   getActiveToolNames: () => readonly string[];
 }
 
-const fallbackToolDescription = 'Available runtime tool.';
 const toolsHeading = 'Available tools:';
 const guidelinesHeading = 'Guidelines:';
-const filePathGuideline = '- Show file paths clearly when working with files.';
 const trimmed = v.pipe(v.string(), v.trim());
+const fallbackToolDescription = 'Available runtime tool.';
+const filePathGuideline = '- Show file paths clearly when working with files.';
 
 const promptGuidelinesSchema = v.pipe(
   v.array(trimmed),
@@ -72,7 +72,7 @@ const toolCapabilitiesFromSource = (source: ToolCapabilitySource): ToolCapabilit
 const runtimeToolsList = (capabilities: readonly ToolCapability[]) => {
   if (capabilities.length === 0) return '- Runtime tools are loaded from the active session.';
 
-  return capabilities.map(({ description, name }) => `- ${name}: ${description}`).join('\n');
+  return capabilities.map(({ name, description }) => `- ${name}: ${description}`).join('\n');
 };
 
 const toolGuidelinesList = (capabilities: readonly ToolCapability[]) => {

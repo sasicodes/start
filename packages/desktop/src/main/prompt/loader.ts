@@ -5,11 +5,11 @@ import { baseDir } from '@main/application';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
 
 const piConfigSegment = `${sep}.pi${sep}`;
-const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const startAgentDir = join(baseDir, 'agent');
-const startSkillsDir = join(startAgentDir, 'skills');
 const startPromptsDir = join(baseDir, 'prompts');
+const startSkillsDir = join(startAgentDir, 'skills');
 const startPromptsPrefix = `${startPromptsDir}${sep}`;
+const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const systemPrompt = buildStartSystemPrompt(startPromptsDir, startSkillsDir);
 
 export const createStartResourceLoader = async (cwd: string) => {

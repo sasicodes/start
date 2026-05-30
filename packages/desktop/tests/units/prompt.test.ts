@@ -43,12 +43,12 @@ describe('buildStartSystemPrompt', () => {
 
   it('lists active runtime tools from sdk tool info', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
+      getActiveToolNames: () => ['grep', 'browser_open'],
       getAllTools: () => [
         { name: 'read', description: 'Read file contents.' },
         { name: 'grep', description: 'Search file contents.', promptGuidelines: ['Prefer targeted searches.'] },
         { name: 'browser_open', description: 'Open an HTTP or HTTPS URL in the browser panel.' }
-      ],
-      getActiveToolNames: () => ['grep', 'browser_open']
+      ]
     });
 
     expect(prompt).toContain('- grep: Search file contents.');
@@ -59,6 +59,7 @@ describe('buildStartSystemPrompt', () => {
 
   it('accepts custom tool definition shapes', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
+      getActiveToolNames: () => ['browser_snapshot'],
       getAllTools: () => [
         {
           definition: {
@@ -67,8 +68,7 @@ describe('buildStartSystemPrompt', () => {
             promptSnippet: 'Use to summarize an open page or find refs for browser_click/browser_type.'
           }
         }
-      ],
-      getActiveToolNames: () => ['browser_snapshot']
+      ]
     });
 
     expect(prompt).toContain(
@@ -96,8 +96,8 @@ Current working directory: /tmp/workspace`;
 
     const registered: { handler?: BeforeAgentStartHandler } = {};
     const pi = {
-      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
       getActiveTools: () => ['grep'],
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
       on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
         registered.handler = nextHandler;
       }
@@ -117,6 +117,7 @@ Current working directory: /tmp/workspace`;
   it('applies runtime capabilities through the pi extension prompt hook', async () => {
     const registered: { handler?: BeforeAgentStartHandler } = {};
     const pi = {
+      getActiveTools: () => ['browser_snapshot'],
       getAllTools: () => [
         {
           name: 'browser_snapshot',
@@ -124,7 +125,6 @@ Current working directory: /tmp/workspace`;
           promptSnippet: 'Use to summarize an open page or find refs for browser_click/browser_type.'
         }
       ],
-      getActiveTools: () => ['browser_snapshot'],
       on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
         registered.handler = nextHandler;
       }
@@ -147,8 +147,8 @@ Current date: 2026-05-30`
   it('keeps existing prompt content if the runtime prompt block is missing', async () => {
     const registered: { handler?: BeforeAgentStartHandler } = {};
     const pi = {
-      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
       getActiveTools: () => ['grep'],
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
       on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
         registered.handler = nextHandler;
       }
