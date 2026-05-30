@@ -1,4 +1,4 @@
-import { diagramConfig } from '@renderer/markdown/options';
+import { createDiagramConfig } from '@renderer/markdown/options';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { PluginConfig } from 'streamdown';
 
@@ -26,7 +26,9 @@ const pluginModules = {
       createMathPlugin({ errorColor: 'var(--color-soft)', singleDollarTextMath: true })
     ),
   mermaid: () =>
-    import('@streamdown/mermaid').then(({ createMermaidPlugin }) => createMermaidPlugin({ config: diagramConfig }))
+    import('@streamdown/mermaid').then(({ createMermaidPlugin }) =>
+      createMermaidPlugin({ config: createDiagramConfig() })
+    )
 } as const;
 
 const pluginPromises: {
