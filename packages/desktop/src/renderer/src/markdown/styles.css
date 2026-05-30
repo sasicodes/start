@@ -32,6 +32,14 @@
   @apply my-0 whitespace-pre-wrap;
 }
 
+.markdown-compact p:has(> strong:only-child):not(:first-child) {
+  @apply mt-4;
+}
+
+.markdown-compact p:has(+ p > strong:only-child) {
+  @apply pb-3;
+}
+
 .markdown-compact p:has(+ [data-streamdown^="heading-"]) {
   @apply pb-4;
 }
