@@ -2,13 +2,13 @@ import { Markdown } from '@renderer/markdown';
 import {
   accordionContentMotion,
   accordionLayoutTransition,
-  activityPanelItems,
+  activitySequence,
   detailCount,
   detailMeta,
   detailTarget,
   isCodeMeta,
   splitDiffMetric
-} from '@renderer/shared/turn/activity';
+} from '@renderer/shared/turn/sequence';
 import { tw } from '@renderer/utils/tw';
 import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -160,12 +160,12 @@ interface ActivityItemsProps {
 }
 
 export const ActivityItems = ({ items, details, thinking }: ActivityItemsProps) => {
-  const panelItems = activityPanelItems(details, thinking, items);
-  if (panelItems.length === 0) return null;
+  const sequence = activitySequence(details, thinking, items);
+  if (sequence.length === 0) return null;
 
   return (
     <motion.div layout="position" transition={accordionLayoutTransition} class="flex flex-col gap-2">
-      <ActivitySequence items={panelItems} />
+      <ActivitySequence items={sequence} />
     </motion.div>
   );
 };

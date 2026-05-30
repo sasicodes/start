@@ -31,20 +31,17 @@ export const App = () => {
   const { composerShortcut, updateComposerShortcut } = useRendererRuntime();
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const {
-    activityTurnId,
+    sidePanelMode,
     sidePanelVisible,
     gitPanelVisible,
     closeSidePanel,
-    openActivityPanel,
     openSettingsPanel,
     openBrowserPanel,
     openShortcutsPanel,
-    activityPanelVisible,
     settingsPanelVisible,
-    renderedSidePanelMode,
     toggleSettingsPanel,
     toggleGitChangesPanel
-  } = useSessionPanels({ sessionViewActive, surface });
+  } = useSessionPanels({ surface });
 
   const showSettings = useCallback(() => {
     if (surface === 'composer') {
@@ -246,13 +243,12 @@ export const App = () => {
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const noProvidersConfigured = modelsLoaded && models.length === 0;
-  const sidePanelLabel = getSidePanelLabel(renderedSidePanelMode);
-  const sidePanelMaxRatio = getSidePanelMaxRatio(renderedSidePanelMode);
+  const sidePanelLabel = getSidePanelLabel(sidePanelMode);
+  const sidePanelMaxRatio = getSidePanelMaxRatio(sidePanelMode);
   const sidePanel = (
     <AppSidePanel
-      mode={renderedSidePanelMode}
+      mode={sidePanelMode}
       providers={authProviders}
-      turnId={activityTurnId}
       browserNavigation={browserPanel.navigation}
       workspacePath={workspacePath}
       onSaveApiKey={saveApiKey}
@@ -337,8 +333,6 @@ export const App = () => {
       onDiscardComposer={discardComposerOverlay}
       sessionViewActive={sessionViewActive}
       onSelectWorkspace={selectWorkspaceFromDock}
-      activityPanelTurnId={activityPanelVisible ? activityTurnId : ''}
-      onOpenActivityPanel={openActivityPanel}
       onSidePanelCollapse={closeSidePanel}
       mainComposer={renderComposer(false, turnCount > 0 || sessionRoutePending)}
       overlayComposer={renderComposer(true, false)}

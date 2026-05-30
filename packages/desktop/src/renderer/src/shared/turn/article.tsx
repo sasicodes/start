@@ -1,12 +1,11 @@
 import { Markdown } from '@renderer/markdown';
-import { TurnDetails } from '@renderer/shared/turn/details';
+import { TurnActivity } from '@renderer/shared/turn/activity';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
 import { tw } from '@renderer/utils/tw';
 import { formatTurnTime } from '@renderer/utils/time';
 import type { Turn } from '@renderer/utils/types';
 import { memo } from 'preact/compat';
-import { useCallback } from 'preact/hooks';
 
 const fallbackText = (turn: Turn) => {
   if (turn.text) return turn.text;
@@ -77,15 +76,13 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
 interface TurnArticleProps {
   turn: Turn;
-  activityPanelOpen: boolean;
-  onOpenActivityPanel: (turnId: string) => void;
 }
 
-interface TurnArticleByIdProps extends Omit<TurnArticleProps, 'turn'> {
+interface TurnArticleByIdProps {
   turnId: string;
 }
 
-export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn }: TurnArticleProps) => {
+export const TurnArticle = memo(({ turn }: TurnArticleProps) => {
   const details = turn.details ?? [];
   const items = turn.activityItems ?? [];
   const thinking = turn.thinking ?? '';
@@ -93,7 +90,6 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
   const isEvent = turn.role === 'event';
   const activityWorking = turn.role === 'assistant' && Boolean(turn.streaming) && !turn.text;
   const fullWidth = turn.role === 'assistant' || hasSupplement(turn) || turn.role === 'terminal';
-  const openActivityPanel = useCallback(() => onOpenActivityPanel(turn.id), [onOpenActivityPanel, turn.id]);
 
   return (
     <article
@@ -107,14 +103,12 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
         fullWidth && 'w-full max-w-full self-start'
       )}
     >
-      <TurnDetails
+      <TurnActivity
         items={items}
         details={details}
         thinking={thinking}
         createdAt={turn.createdAt}
         working={activityWorking}
-        panelOpen={activityPanelOpen}
-        onOpenPanel={openActivityPanel}
       />
       <TurnBody turn={turn} />
       <TurnActions turn={turn} />
@@ -122,11 +116,11 @@ export const TurnArticle = memo(({ activityPanelOpen, onOpenActivityPanel, turn 
   );
 });
 
-export const TurnArticleById = memo(({ activityPanelOpen, onOpenActivityPanel, turnId }: TurnArticleByIdProps) => {
+export const TurnArticleById = memo(({ turnId }: TurnArticleByIdProps) => {
   const signal = turnSignal(turnId);
   const turn = signal?.value;
 
   if (!turn) return null;
 
-  return <TurnArticle turn={turn} activityPanelOpen={activityPanelOpen} onOpenActivityPanel={onOpenActivityPanel} />;
+  return <TurnArticle turn={turn} />;
 });

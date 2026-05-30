@@ -26,7 +26,6 @@ interface MainSessionSurfaceProps {
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
   onOpenSettings: () => void;
-  activityPanelTurnId: string;
   sidePanel: ComponentChildren;
   sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
@@ -36,7 +35,6 @@ interface MainSessionSurfaceProps {
   onSidePanelCollapse: () => void;
   sidePanelMaxRatio?: number;
   onSelectWorkspace: (path: string) => void;
-  onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
@@ -50,7 +48,6 @@ interface AppShellProps {
   sidePanelVisible: boolean;
   sessionViewActive: boolean;
   onOpenSettings: () => void;
-  activityPanelTurnId: string;
   sidePanel: ComponentChildren;
   sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
@@ -63,7 +60,6 @@ interface AppShellProps {
   sidePanelMaxRatio?: number;
   overlayComposer: ComponentChildren;
   onSelectWorkspace: (path: string) => void;
-  onOpenActivityPanel: (turnId: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
@@ -78,7 +74,6 @@ const MainSessionSurface = memo(
     activeSessionId,
     sidePanelVisible,
     sidePanelMaxRatio,
-    activityPanelTurnId,
     onOpenSettings,
     sessionRoutePending,
     settingsPanelVisible,
@@ -86,7 +81,6 @@ const MainSessionSurface = memo(
     onChooseDirectory,
     onSidePanelCollapse,
     onSelectWorkspace,
-    onOpenActivityPanel,
     onOpenSession
   }: MainSessionSurfaceProps) => (
     <PanelLayout
@@ -96,9 +90,7 @@ const MainSessionSurface = memo(
       onSidePanelCollapse={onSidePanelCollapse}
       {...(sidePanelMaxRatio !== undefined ? { maxSidePanelWidthRatio: sidePanelMaxRatio } : {})}
     >
-      {!sessionRoutePending && (
-        <TurnFeed activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
-      )}
+      {!sessionRoutePending && <TurnFeed />}
       <WorkspaceDock
         isGenerating={isGenerating}
         workspacePath={workspacePath}
@@ -139,10 +131,8 @@ export const AppShell = memo(
     onChooseDirectory,
     onDiscardComposer,
     sessionViewActive,
-    activityPanelTurnId,
     onSelectWorkspace,
-    onSidePanelCollapse,
-    onOpenActivityPanel
+    onSidePanelCollapse
   }: AppShellProps) => (
     <main
       aria-label="start"
@@ -175,8 +165,6 @@ export const AppShell = memo(
           onChooseDirectory={onChooseDirectory}
           {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
           onSelectWorkspace={onSelectWorkspace}
-          activityPanelTurnId={activityPanelTurnId}
-          onOpenActivityPanel={onOpenActivityPanel}
           onSidePanelCollapse={onSidePanelCollapse}
         />
       ) : (

@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'preact/hooks';
 
 interface SessionPanelsOptions {
   surface: AppSurface;
-  sessionViewActive: boolean;
 }
 
 const isEditableTarget = (target: EventTarget | null) => {
@@ -16,8 +15,7 @@ const isBracketToggle = (event: KeyboardEvent) => {
   return event.code === 'BracketRight' || event.key === ']';
 };
 
-export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOptions) => {
-  const [activityTurnId, setActivityTurnId] = useState('');
+export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [sidePanelMode, setSidePanelMode] = useState<SidePanelMode>('settings');
 
@@ -27,12 +25,6 @@ export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOp
 
   const toggleSidePanel = useCallback(() => {
     setSidePanelOpen((open) => !open);
-  }, []);
-
-  const openActivityPanel = useCallback((turnId: string) => {
-    setActivityTurnId(turnId);
-    setSidePanelOpen(true);
-    setSidePanelMode('activity');
   }, []);
 
   const openSettingsPanel = useCallback(() => {
@@ -82,28 +74,22 @@ export const useSessionPanels = ({ surface, sessionViewActive }: SessionPanelsOp
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [closeSidePanel, sidePanelOpen, surface, toggleSidePanel]);
 
-  const renderedSidePanelMode: SidePanelMode =
-    sidePanelMode === 'activity' && (!sessionViewActive || !activityTurnId) ? 'settings' : sidePanelMode;
   const sidePanelVisible = surface === 'main' && sidePanelOpen;
-  const gitPanelVisible = sidePanelVisible && renderedSidePanelMode === 'git';
-  const browserPanelVisible = sidePanelVisible && renderedSidePanelMode === 'browser';
-  const settingsPanelVisible = sidePanelVisible && renderedSidePanelMode === 'settings';
-  const activityPanelVisible = sidePanelVisible && renderedSidePanelMode === 'activity';
-  const shortcutsPanelVisible = sidePanelVisible && renderedSidePanelMode === 'shortcuts';
+  const gitPanelVisible = sidePanelVisible && sidePanelMode === 'git';
+  const browserPanelVisible = sidePanelVisible && sidePanelMode === 'browser';
+  const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
+  const shortcutsPanelVisible = sidePanelVisible && sidePanelMode === 'shortcuts';
 
   return {
-    activityTurnId,
     sidePanelVisible,
     gitPanelVisible,
     browserPanelVisible,
     closeSidePanel,
     openSettingsPanel,
-    openActivityPanel,
     openBrowserPanel,
     openShortcutsPanel,
-    renderedSidePanelMode,
+    sidePanelMode,
     settingsPanelVisible,
-    activityPanelVisible,
     shortcutsPanelVisible,
     toggleSettingsPanel,
     toggleGitChangesPanel

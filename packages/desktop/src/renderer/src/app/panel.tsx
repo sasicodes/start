@@ -4,12 +4,10 @@ import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
 import { Settings } from '@renderer/shared/settings/panel';
 import { Shortcuts } from '@renderer/shared/shortcuts/panel';
-import { ActivityPanel } from '@renderer/shared/turn/panel';
 import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { memo } from 'preact/compat';
 
 interface AppSidePanelProps {
-  turnId: string;
   mode: SidePanelMode;
   workspacePath: string;
   browserNavigation: BrowserNavigation;
@@ -26,7 +24,6 @@ export const sidePanelLabel = (mode: SidePanelMode) => {
   if (mode === 'git') return 'Git changes';
   if (mode === 'settings') return 'Settings';
   if (mode === 'browser') return 'Browser';
-  if (mode === 'activity') return 'Agent activity';
   if (mode === 'shortcuts') return 'Keyboard shortcuts';
   return 'Side panel';
 };
@@ -39,7 +36,6 @@ export const sidePanelMaxRatio = (mode: SidePanelMode): number | undefined => {
 export const AppSidePanel = memo(
   ({
     mode,
-    turnId,
     providers,
     workspacePath,
     browserNavigation,
@@ -65,8 +61,6 @@ export const AppSidePanel = memo(
         />
       );
     }
-
-    if (mode === 'activity') return <ActivityPanel turnId={turnId} />;
 
     if (mode === 'shortcuts') return <Shortcuts composerShortcut={composerShortcut} />;
 

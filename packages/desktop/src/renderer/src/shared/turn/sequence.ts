@@ -33,7 +33,7 @@ export const accordionContentMotion = {
   initial: { height: 0, opacity: 0, y: -2 }
 };
 
-export const activityPanelItems = (
+export const activitySequence = (
   details: TurnDetail[],
   thinking: string,
   items: TurnActivityItem[] = []
@@ -61,7 +61,7 @@ export const activityPanelItems = (
 };
 
 export const hasActivityDetails = (details: TurnDetail[], thinking: string, items: TurnActivityItem[] = []) =>
-  activityPanelItems(details, thinking, items).length > 0;
+  activitySequence(details, thinking, items).length > 0;
 
 export const detailCount = (detail: TurnDetail) => (detail.count > 1 ? ` ×${detail.count}` : '');
 

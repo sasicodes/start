@@ -5,12 +5,7 @@ import { turnIdsState } from '@renderer/state/chat';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 
-interface TurnFeedProps {
-  activityPanelTurnId: string;
-  onOpenActivityPanel: (turnId: string) => void;
-}
-
-export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: TurnFeedProps) => {
+export const TurnFeed = memo(() => {
   const turnIds = turnIdsState.value;
   const { roomRef, scrollRef, contentRef, positioned, roomVisible } = useTurnRoom({ turnCount: turnIds.length });
   useScrollToBottom(scrollRef, turnIds.length);
@@ -26,7 +21,7 @@ export const TurnFeed = memo(({ activityPanelTurnId, onOpenActivityPanel }: Turn
       )}
     >
       <div ref={contentRef} class="mx-auto flex min-h-full max-w-3xl flex-col justify-end gap-3 px-5">
-        <TurnArticles activityPanelTurnId={activityPanelTurnId} onOpenActivityPanel={onOpenActivityPanel} />
+        <TurnArticles />
         {roomVisible && <div ref={roomRef} class="shrink-0" aria-hidden="true" />}
       </div>
     </section>
