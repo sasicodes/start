@@ -28,8 +28,8 @@
       "@main/*": ["src/main/*.ts"],
       "@preload/*.js": ["src/preload/*.ts"],
       "@preload/*": ["src/preload/*.ts"],
-      "@renderer/*.js": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx"],
-      "@renderer/*": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx"]
+      "@renderer/*.js": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx", "src/renderer/src/*/index.ts"],
+      "@renderer/*": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx", "src/renderer/src/*/index.ts"]
     }
   },
   "include": ["tests/**/*.ts", "vitest.config.ts"]

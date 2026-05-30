@@ -15,10 +15,11 @@ export interface AppSettingsResult {
 export interface ChatStatus {
   ready: boolean;
   error?: string;
-  isGenerating?: boolean;
   sessionId?: string;
   modelLabel?: string;
   workspacePath: string;
+  isGenerating?: boolean;
+  contextPercent?: number;
   selectedModelKey?: string;
   thinkingLevel?: EffortLevel;
 }

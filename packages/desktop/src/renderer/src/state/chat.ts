@@ -2,6 +2,7 @@ import { batch, signal, untracked, type Signal } from '@preact/signals';
 import type { Turn } from '@renderer/utils/types';
 
 export const selectedModelKeyState = signal('');
+export const contextPercentState = signal(0);
 export const turnIdsState = signal<string[]>([]);
 
 const turnSignals = new Map<string, Signal<Turn>>();

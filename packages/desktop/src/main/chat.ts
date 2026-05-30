@@ -32,6 +32,7 @@ import {
   updateSessionTitle,
   upsertSessionOnStart
 } from '@main/sessions';
+import { contextPercent } from '@main/chat/context';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
@@ -225,6 +226,7 @@ export class ChatService {
     }
 
     const sessionId = this.reportableActiveSessionId();
+    const percent = this.sessionContextPercent(model.contextWindow);
 
     return {
       ready: true,
@@ -233,8 +235,15 @@ export class ChatService {
       isGenerating: Boolean(this.session && this.sessionIsGenerating(this.session)),
       selectedModelKey: modelKey(model),
       ...(sessionId ? { sessionId } : {}),
+      ...(percent > 0 ? { contextPercent: percent } : {}),
       thinkingLevel: this.selectedThinkingLevel
     };
+  }
+
+  private sessionContextPercent(contextWindow: number): number {
+    if (!this.session) return 0;
+    const entries = this.session.sessionManager.getEntries();
+    return contextPercent(getLastAssistantUsage(entries), contextWindow);
   }
 
   async getSlashCommands(): Promise<SlashCommandItem[]> {

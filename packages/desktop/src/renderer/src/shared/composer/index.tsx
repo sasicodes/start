@@ -7,7 +7,7 @@ import type { ComposerProps } from '@renderer/shared/composer/types';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
 import { activeFinderToken, activeSlashCommandToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
-import { usePromptPlaceholder } from '@renderer/shared/placeholder';
+import { usePromptPlaceholder } from '@renderer/shared/placeholder/use-placeholder';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { useFinderItems } from '@renderer/shared/finder/use-items';
 import { useSlashCommandItems } from '@renderer/shared/slash-commands';
@@ -102,7 +102,7 @@ export const Composer = memo(
     const selectedFinderKey = selectedFinderItem ? finderItemKey(selectedFinderItem) : '';
     const centered = overlay || !hasTurns;
     const layered = hasAttachments || (!singleLine && isMultiline);
-    const promptPlaceholder = usePromptPlaceholder({ centered, draft, hasTurns, isCommandMode });
+    const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
 
     const moveFinderSelection = useCallback(
       (delta: number) => {

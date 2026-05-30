@@ -11,6 +11,7 @@ export type ChatStatus = {
   modelLabel?: string;
   workspacePath: string;
   isGenerating?: boolean;
+  contextPercent?: number;
   selectedModelKey?: string;
   thinkingLevel?: EffortLevel;
 };

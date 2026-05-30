@@ -16,7 +16,7 @@ import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';
-import { selectedModelKeyState } from '@renderer/state/chat';
+import { contextPercentState, selectedModelKeyState } from '@renderer/state/chat';
 import type { RefObject } from 'preact';
 import { useCallback, useRef, useState } from 'preact/hooks';
 
@@ -97,6 +97,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
       updateActiveSessionId(nextStatus.sessionId && turnCount > 0 ? nextStatus.sessionId : '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
+      contextPercentState.value = nextStatus.contextPercent ?? 0;
     },
     [turnCount, updateActiveSessionId]
   );
@@ -127,6 +128,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       clearQueuedMessages();
       setIsGenerating(false);
       setLoadedSessionId('');
+      contextPercentState.value = 0;
       updateActiveSessionId('');
     },
     [clearQueuedMessages, setTurns, updateActiveSessionId]
