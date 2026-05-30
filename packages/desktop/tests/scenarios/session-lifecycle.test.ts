@@ -71,6 +71,36 @@ describe('session lifecycle', () => {
     expect(afterTabs.map((entry) => entry.id)).toEqual(beforeTabs.map((entry) => entry.id));
   });
 
+  it('keeps both sessions alive when the user toggles between them in quick succession', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tabA = await chat.createTab('/tmp/workspace-a');
+    const sendA = chat.send('a', webContents);
+    const sessionA = getFakeSession(tabA.id);
+    await sessionA?.awaitPromptCall();
+    sessionA?.finishPrompt();
+    await sendA;
+
+    await chat.newSession();
+    const tabB = await chat.createTab('/tmp/workspace-a');
+    const sendB = chat.send('b', webContents);
+    const sessionB = getFakeSession(tabB.id);
+    await sessionB?.awaitPromptCall();
+    sessionB?.finishPrompt();
+    await sendB;
+
+    await chat.openSessionId(tabA.id);
+    await chat.openSessionId(tabB.id);
+    await chat.openSessionId(tabA.id);
+
+    expect(sessionA?.disposed).toBe(false);
+    expect(sessionB?.disposed).toBe(false);
+    const tabs = chat.getTabs();
+    expect(tabs.some((entry) => entry.id === tabA.id)).toBe(true);
+    expect(tabs.some((entry) => entry.id === tabB.id)).toBe(true);
+  });
+
   it('parks a superseded open instead of disposing the in-flight session', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();
