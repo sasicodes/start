@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCssVar, resolveDiagramThemeVariables } from '@renderer/markdown/diagram-theme';
+import { resolveCssVar, resolveDiagramThemeVariables } from '@renderer/markdown/diagram/theme';
 
 const fakeLookup = (table: Record<string, string>) => (name: string) => table[name] ?? '';
 
@@ -57,10 +57,7 @@ describe('resolveDiagramThemeVariables', () => {
   });
 
   it('keeps unresolved vars intact so the failure stays visible', () => {
-    const resolved = resolveDiagramThemeVariables(
-      { primaryColor: 'var(--missing)' },
-      fakeLookup({})
-    );
+    const resolved = resolveDiagramThemeVariables({ primaryColor: 'var(--missing)' }, fakeLookup({}));
     expect(resolved.primaryColor).toBe('var(--missing)');
   });
 });

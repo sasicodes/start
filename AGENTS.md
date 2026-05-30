@@ -27,6 +27,7 @@
 - Do not show loaders, spinners, or hidden status text while session messages hydrate; keep the session surface empty and layout-stable until content arrives.
 - Keep primary conversational content direct; place diagnostics, metadata, and tool output behind concise collapsed details.
 - Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files.
+- Prefer single-word filenames. When two or more files share a multi-word prefix (e.g. `provider-form`, `provider-list`), promote that prefix to a folder and shorten each child to its distinguishing word (`provider/form.tsx`, `provider/list.tsx`). A lone, unambiguous multi-word name is fine; do not fold framework conventions such as `use-*` hooks.
 - Inside domain folders, keep child filenames short and precise; avoid repeating the folder/domain name unless it improves clarity.
 - Prefer descriptive file names over generic ones (`items`, `panels`, etc.) so module purpose is obvious from filename.
 - Name component files with clear component words only; avoid unnecessary domain prefixes or role suffixes like `composer-model-picker`, `thinking-button`, `list`, or `card` when the parent folder or component purpose is already clear.

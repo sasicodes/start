@@ -1,8 +1,6 @@
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
-import type { MermaidConfig } from '@streamdown/mermaid';
 import type { AllowElement, StreamdownProps } from 'streamdown';
-import { resolveDiagramThemeVariables } from './diagram-theme';
 
 interface MarkdownIconProps {
   className?: string;
@@ -61,31 +59,3 @@ export const markdownLinkSafety = {
 export const markdownRepair = {
   linkMode: 'text-only'
 } as const;
-
-const diagramThemeVariables = {
-  fontFamily: 'system-ui',
-  background: 'transparent',
-  tertiaryColor: 'transparent',
-  lineColor: 'var(--color-soft)',
-  nodeBorder: 'var(--color-line)',
-  mainBkg: 'var(--color-composer)',
-  primaryTextColor: 'var(--color-ink)',
-  secondaryColor: 'var(--color-muted)',
-  primaryColor: 'var(--color-composer)',
-  tertiaryTextColor: 'var(--color-soft)',
-  secondaryTextColor: 'var(--color-ink)',
-  primaryBorderColor: 'var(--color-line)',
-  tertiaryBorderColor: 'var(--color-line)',
-  secondaryBorderColor: 'var(--color-line)'
-} as const;
-
-export const createDiagramConfig = (): MermaidConfig => ({
-  theme: 'base',
-  startOnLoad: false,
-  fontFamily: 'system-ui',
-  securityLevel: 'strict',
-  suppressErrorRendering: true,
-  themeVariables: resolveDiagramThemeVariables(diagramThemeVariables, (name) =>
-    getComputedStyle(document.documentElement).getPropertyValue(name)
-  )
-});

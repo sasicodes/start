@@ -1,4 +1,4 @@
-import { createDiagramConfig } from '@renderer/markdown/options';
+import { createDiagramConfig } from '@renderer/markdown/diagram';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import type { PluginConfig } from 'streamdown';
 
