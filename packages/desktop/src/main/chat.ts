@@ -311,7 +311,7 @@ export class ChatService {
       });
 
       if (this.sessionOpenSequence !== openSequence) {
-        session.dispose();
+        this.parkSupersededSession(session);
         return { ok: false, error: 'Session open was superseded.' };
       }
 
@@ -1295,14 +1295,20 @@ export class ChatService {
     this.activeSessionByWorkspace.set(workspacePath, sessionId);
   }
 
+  private parkSupersededSession(session: AgentSession): void {
+    if (!this.sessionIsReportable(session)) {
+      session.dispose();
+      return;
+    }
+    this.backgroundSessions.set(session.sessionManager.getSessionId(), session);
+  }
+
   private sessionTurns(session: AgentSession): HistoryTurn[] {
     const turns = historyTurns(session.sessionManager.getEntries());
     if (!session.isStreaming) return turns;
-
     const liveTurn = this.runtimeStateForSession(session).liveAssistantTurn;
-    if (liveTurn) return [...turns, liveAssistantHistoryTurn(liveTurn)];
-
-    return [...turns, liveAssistantHistoryTurn(liveAssistantPlaceholder(session))];
+    if (!liveTurn) return turns;
+    return [...turns, liveAssistantHistoryTurn(liveTurn)];
   }
 
   private resetLiveAssistantTurn(session: AgentSession, runtimeState = this.runtimeStateForSession(session)): void {

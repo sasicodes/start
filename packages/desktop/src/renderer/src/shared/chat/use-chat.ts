@@ -7,6 +7,7 @@ import type {
   QueuedMessage,
   SwitchWorkspaceResult
 } from '@preload/index';
+import { createTurn } from '@renderer/functions/chat';
 import { useChatEvents } from '@renderer/shared/chat/events';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
@@ -209,9 +210,18 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       terminalIdRef.current = null;
       setDraft('');
       clearQueuedMessages();
-      setTurns(() => result.turns ?? []);
-      assistantIdRef.current = streamingAssistantId(result.turns);
-      setIsGenerating(Boolean(nextStatus.isGenerating));
+      const baseTurns = result.turns ?? [];
+      const restoredStreamingId = streamingAssistantId(baseTurns);
+      const generating = Boolean(nextStatus.isGenerating);
+      if (restoredStreamingId || !generating) {
+        setTurns(() => baseTurns);
+        assistantIdRef.current = restoredStreamingId;
+      } else {
+        const liveTurn = { ...createTurn('assistant', ''), streaming: true };
+        setTurns(() => [...baseTurns, liveTurn]);
+        assistantIdRef.current = liveTurn.id;
+      }
+      setIsGenerating(generating);
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');
       updateActiveSessionId(result.id);

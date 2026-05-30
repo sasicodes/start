@@ -49,4 +49,28 @@ describe('session lifecycle', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe('Prompt is empty.');
   });
+
+  it('parks a superseded open instead of disposing the in-flight session', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const firstTab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('keep me alive', webContents);
+    const firstSession = getFakeSession(firstTab.id);
+    await firstSession?.awaitPromptCall();
+    firstSession?.finishPrompt();
+    await firstSend;
+
+    const firstResult = await chat.openSession(firstTab.id);
+    expect(firstResult.ok).toBe(true);
+
+    const supersedingResult = await Promise.all([
+      chat.openSession(firstTab.id),
+      chat.newSession().then(() => ({ ok: true }))
+    ]);
+
+    expect(firstSession?.disposed).toBe(false);
+    expect(supersedingResult[0].ok || supersedingResult[0].error === 'Session open was superseded.').toBe(true);
+    expect(chat.getTabs().some((entry) => entry.id === firstTab.id)).toBe(true);
+  });
 });
