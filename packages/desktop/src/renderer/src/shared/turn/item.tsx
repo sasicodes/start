@@ -8,6 +8,7 @@ import {
   isCodeMeta,
   splitDiffMetric
 } from '@renderer/shared/turn/sequence';
+import { ChevronRightIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -133,6 +134,9 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
       >
         {title}
         {detail.metric && <DetailMetric value={detail.metric} />}
+        <ChevronRightIcon
+          class={tw('size-3 flex-none text-soft transition-transform duration-150', open && 'rotate-90')}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (
