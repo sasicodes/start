@@ -1,7 +1,7 @@
 import { ActivityItems } from '@renderer/shared/turn/details';
 import { activityLabel } from '@renderer/shared/turn/label';
 import { hasActivityDetails } from '@renderer/shared/turn/sequence';
-import { WorkingLabel } from '@renderer/shared/turn/working-label';
+import { Working } from '@renderer/shared/turn/working';
 import { ChevronRightIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
@@ -25,7 +25,7 @@ export const TurnActivity = ({ items, details, working, thinking, createdAt }: T
   if (!working && !hasDetails) return null;
 
   const label = working ? (
-    <WorkingLabel details={details} createdAt={createdAt} />
+    <Working details={details} createdAt={createdAt} />
   ) : (
     <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
   );
