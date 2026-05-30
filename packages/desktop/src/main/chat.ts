@@ -34,11 +34,11 @@ import {
 } from '@main/sessions';
 import { contextPercent } from '@main/chat/context';
 import { recentSessionsPage } from '@main/chat/recents';
-import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/slash-commands';
+import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { createStartResourceLoader } from '@main/resource-loader';
+import { createStartResourceLoader } from '@main/prompt/loader';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
 import { historyTurns } from '@main/history';
 import {

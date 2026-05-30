@@ -1,7 +1,7 @@
 import type { AuthStorageBackend } from '@earendil-works/pi-coding-agent';
 import type { StartDatabase } from '@main/db';
 import { resolveSecretCodec, type SecretCodec } from '@main/providers/codec';
-import { readRequiredBytes } from '@main/sqlite-row';
+import { readRequiredBytes } from '@main/sqlite/row';
 
 const allProvidersKey = '__all__';
 

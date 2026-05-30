@@ -26,7 +26,7 @@ import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } fro
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
-import { listRootItems, type RootItemsScope } from '@main/root-items';
+import { listRootItems, type RootItemsScope } from '@main/root/items';
 import {
   type AppSettings,
   defaultAppSettings,

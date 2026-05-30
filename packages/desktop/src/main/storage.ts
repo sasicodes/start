@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { baseDir } from '@main/application';
 import { openStartDb, runStartTransaction, type StartStatement } from '@main/db';
-import { readRequiredString, type SqliteRow } from '@main/sqlite-row';
+import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {

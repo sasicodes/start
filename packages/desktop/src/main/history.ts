@@ -10,7 +10,7 @@ import {
   thinkingContent,
   timestampValue
 } from '@main/details';
-import { combineHistoryTurns } from '@main/history-combine';
+import { combineHistoryTurns } from '@main/history/combine';
 import { codeBlock, toolBody, toolEventDetail, toolResultTitle } from '@main/tools/details';
 import type { ChatEvent, HistoryTurn, HistoryTurnDetail } from '@main/types';
 

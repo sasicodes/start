@@ -1,7 +1,7 @@
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
 import type { StartDatabase } from '@main/db';
 import { resolveSecretCodec, type SecretCodec } from '@main/providers/codec';
-import { readRequiredBytes, type SqliteRow } from '@main/sqlite-row';
+import { readRequiredBytes, type SqliteRow } from '@main/sqlite/row';
 import { effortLevels, type EffortLevel } from '@main/types';
 import {
   customProviderConfigSchema,

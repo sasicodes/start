@@ -5,7 +5,7 @@ import {
   readRequiredNumber,
   readRequiredString,
   type SqliteRow
-} from '@main/sqlite-row';
+} from '@main/sqlite/row';
 
 const titleMaxLength = 120;
 

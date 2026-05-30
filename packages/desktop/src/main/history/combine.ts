@@ -9,10 +9,10 @@ const detailOnlyTurn = (turn: HistoryTurn) => {
 
 const pendingTurn = (details: HistoryTurnDetail[], thinking: string, createdAt: number, index: number): HistoryTurn => {
   const turn: HistoryTurn = {
-    id: `work:${createdAt}:${index}`,
-    role: 'event',
     text: '',
-    createdAt
+    createdAt,
+    role: 'event',
+    id: `work:${createdAt}:${index}`
   };
 
   if (details.length > 0) turn.details = details;
