@@ -130,7 +130,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
   const refreshLabel = status.loading ? 'Stop loading' : 'Refresh';
   const screenshotLabel = copied ? 'Copied' : 'Screenshot';
-  const inspectLabel = inspecting ? 'Stop inspect' : 'Inspect element';
+  const inspectLabel = inspecting ? 'Stop annotating' : 'Annotate';
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
