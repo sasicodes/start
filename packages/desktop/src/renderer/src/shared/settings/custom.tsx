@@ -1,5 +1,9 @@
 import type { CustomProviderConfig } from '@preload/index';
-import { ProviderForm } from '@renderer/shared/settings/provider-form';
+import {
+  ProviderForm,
+  type ProviderFormDraft,
+  emptyProviderFormDraft
+} from '@renderer/shared/settings/provider-form';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { ChevronDownIcon, CustomProviderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
@@ -45,15 +49,11 @@ const summary = (providers: CustomProviderConfig[]) => {
 };
 
 export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) => {
-  const [providers, setProviders] = useState<CustomProviderConfig[]>([]);
+  const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState('');
-  const [draftName, setDraftName] = useState('');
-  const [draftBaseUrl, setDraftBaseUrl] = useState('');
-  const [draftApiKey, setDraftApiKey] = useState('');
-  const [draftModelIds, setDraftModelIds] = useState('');
-  const [draftThinking, setDraftThinking] = useState('');
-  const [error, setError] = useState('');
+  const [draft, setDraft] = useState<ProviderFormDraft>(emptyProviderFormDraft);
+  const [providers, setProviders] = useState<CustomProviderConfig[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -68,34 +68,36 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
     };
   }, []);
 
+  const updateDraft = <K extends keyof ProviderFormDraft>(key: K, value: ProviderFormDraft[K]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
   const resetForm = () => {
+    setError('');
     setAdding(false);
     setEditing('');
-    setError('');
-    setDraftName('');
-    setDraftApiKey('');
-    setDraftBaseUrl('');
-    setDraftThinking('');
-    setDraftModelIds('');
+    setDraft(emptyProviderFormDraft);
   };
 
   const startEdit = (provider: CustomProviderConfig) => {
-    setEditing(provider.name);
-    setAdding(true);
     setError('');
-    setDraftName(provider.name);
-    setDraftBaseUrl(provider.baseUrl);
-    setDraftApiKey(provider.apiKey);
-    setDraftModelIds(serializeModels(provider.models));
-    setDraftThinking(provider.thinkingLabels?.join(', ') ?? '');
+    setAdding(true);
+    setEditing(provider.name);
+    setDraft({
+      name: provider.name,
+      apiKey: provider.apiKey,
+      baseUrl: provider.baseUrl,
+      modelIds: serializeModels(provider.models),
+      thinking: provider.thinkingLabels?.join(', ') ?? ''
+    });
   };
 
   const submit = async () => {
-    const name = draftName.trim();
-    const baseUrl = draftBaseUrl.trim();
-    const apiKey = draftApiKey.trim();
-    const models = parseModelIds(draftModelIds);
-    const thinkingLabels = parseThinkingLabels(draftThinking);
+    const name = draft.name.trim();
+    const baseUrl = draft.baseUrl.trim();
+    const apiKey = draft.apiKey.trim();
+    const models = parseModelIds(draft.modelIds);
+    const thinkingLabels = parseThinkingLabels(draft.thinking);
     if (!name || !baseUrl || !apiKey || models.length === 0) {
       setError('Name, base URL, API key, and at least one model ID are required.');
       return;
@@ -112,9 +114,10 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
         models,
         ...(thinkingLabels.length > 0 ? { thinkingLabels } : {})
       });
-      const next = editing && editing !== name
-        ? await window.pi.chat.removeCustomProvider(editing)
-        : await window.pi.chat.listCustomProviders();
+      const next =
+        editing && editing !== name
+          ? await window.pi.chat.removeCustomProvider(editing)
+          : await window.pi.chat.listCustomProviders();
       setProviders(next);
       resetForm();
     } catch (caught) {
@@ -130,10 +133,10 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   };
 
   const canSubmit =
-    draftName.trim().length > 0 &&
-    draftBaseUrl.trim().length > 0 &&
-    draftApiKey.trim().length > 0 &&
-    draftModelIds.trim().length > 0;
+    draft.name.trim().length > 0 &&
+    draft.apiKey.trim().length > 0 &&
+    draft.baseUrl.trim().length > 0 &&
+    draft.modelIds.trim().length > 0;
 
   return (
     <div class="border-t border-line py-4">
@@ -190,22 +193,14 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                             >
                               <div class="mt-3">
                                 <ProviderForm
+                                  draft={draft}
                                   error={error}
-                                  draftName={draftName}
-                                  draftApiKey={draftApiKey}
-                                  draftBaseUrl={draftBaseUrl}
-                                  draftThinking={draftThinking}
-                                  draftModelIds={draftModelIds}
                                   canSubmit={canSubmit}
-                                  secondaryLabel="Delete"
                                   secondaryDanger
+                                  secondaryLabel="Delete"
+                                  onUpdate={updateDraft}
                                   onSubmit={() => void submit()}
                                   onSecondary={() => void remove(provider.name)}
-                                  onChangeName={setDraftName}
-                                  onChangeApiKey={setDraftApiKey}
-                                  onChangeBaseUrl={setDraftBaseUrl}
-                                  onChangeThinking={setDraftThinking}
-                                  onChangeModelIds={setDraftModelIds}
                                 />
                               </div>
                             </motion.div>
@@ -222,21 +217,13 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
                   {adding ? (
                     <div class="rounded-2xl border border-dashed border-line p-3">
                       <ProviderForm
+                        draft={draft}
                         error={error}
-                        draftName={draftName}
-                        draftApiKey={draftApiKey}
-                        draftBaseUrl={draftBaseUrl}
-                        draftThinking={draftThinking}
-                        draftModelIds={draftModelIds}
                         canSubmit={canSubmit}
                         secondaryLabel="Cancel"
+                        onUpdate={updateDraft}
                         onSubmit={() => void submit()}
                         onSecondary={resetForm}
-                        onChangeName={setDraftName}
-                        onChangeApiKey={setDraftApiKey}
-                        onChangeBaseUrl={setDraftBaseUrl}
-                        onChangeThinking={setDraftThinking}
-                        onChangeModelIds={setDraftModelIds}
                       />
                     </div>
                   ) : (
