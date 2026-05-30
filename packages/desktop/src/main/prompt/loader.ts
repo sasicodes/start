@@ -7,13 +7,14 @@ import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt
 const piConfigSegment = `${sep}.pi${sep}`;
 const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const startAgentDir = join(baseDir, 'agent');
+const startSkillsDir = join(startAgentDir, 'skills');
 const startPromptsDir = join(baseDir, 'prompts');
 const startPromptsPrefix = `${startPromptsDir}${sep}`;
-const systemPrompt = buildStartSystemPrompt(startPromptsDir);
+const systemPrompt = buildStartSystemPrompt(startPromptsDir, startSkillsDir);
 
 export const createStartResourceLoader = async (cwd: string) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
-  const skillDirs = [globalSkillsDir, projectSkillsDir];
+  const skillDirs = [startSkillsDir, globalSkillsDir, projectSkillsDir];
 
   const loader = new DefaultResourceLoader({
     cwd,
@@ -41,7 +42,7 @@ export const createStartResourceLoader = async (cwd: string) => {
     }),
     additionalSkillPaths: skillDirs,
     additionalPromptTemplatePaths: [startPromptsDir],
-    extensionFactories: [createStartPromptExtension(startPromptsDir)]
+    extensionFactories: [createStartPromptExtension(startPromptsDir, startSkillsDir)]
   });
 
   await loader.reload();

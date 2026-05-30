@@ -91,17 +91,26 @@ const replacePromptSection = (prompt: string, heading: string, nextHeading: stri
   return `${prompt.slice(0, contentStart)}\n${body}\n\n${prompt.slice(contentEnd)}`;
 };
 
-const promptWithToolCapabilities = (prompt: string, promptsDir: string, capabilitySource: ToolCapabilitySource) => {
+const promptWithToolCapabilities = (
+  prompt: string,
+  promptsDir: string,
+  skillsDir: string,
+  capabilitySource: ToolCapabilitySource
+) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
   const nextPrompt = replacePromptSection(prompt, toolsHeading, guidelinesHeading, runtimeToolsList(capabilities));
 
-  if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, capabilitySource)}\n\n${prompt}`.trim();
+  if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource)}\n\n${prompt}`.trim();
 
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
 
-export const buildStartSystemPrompt = (promptsDir: string, capabilitySource?: ToolCapabilitySource): string => {
+export const buildStartSystemPrompt = (
+  promptsDir: string,
+  skillsDir: string,
+  capabilitySource?: ToolCapabilitySource
+): string => {
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
@@ -117,15 +126,21 @@ ${filePathGuideline}${toolGuidelines}
 
 Project and user resources:
 - Project rules come from AGENTS.md and CLAUDE.md files in or above the current working directory.
-- Skills belong in ~/.agents/skills/<skill-name>/SKILL.md for global skills or <cwd>/.agents/skills/<skill-name>/SKILL.md for workspace skills.
+- Existing skills can be loaded from ~/.agents/skills/<skill-name>/SKILL.md or <cwd>/.agents/skills/<skill-name>/SKILL.md.
+- Create Start-managed skills in ${skillsDir}/<skill-name>/SKILL.md with YAML frontmatter and instructions.
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
 };
 
-export const createStartPromptExtension = (promptsDir: string) => (pi: ExtensionAPI) => {
+export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {
   pi.on('before_agent_start', async (event) => ({
-    systemPrompt: promptWithToolCapabilities(event.systemPrompt || buildStartSystemPrompt(promptsDir), promptsDir, {
-      getAllTools: pi.getAllTools,
-      getActiveToolNames: pi.getActiveTools
-    })
+    systemPrompt: promptWithToolCapabilities(
+      event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir),
+      promptsDir,
+      skillsDir,
+      {
+        getAllTools: pi.getAllTools,
+        getActiveToolNames: pi.getActiveTools
+      }
+    )
   }));
 };

@@ -8,28 +8,31 @@ interface BeforeAgentStartEvent {
 
 type BeforeAgentStartHandler = (event: BeforeAgentStartEvent) => Promise<{ systemPrompt: string }>;
 
+const promptsDir = '/home/u/.start/prompts';
+const skillsDir = '/home/u/.start/agent/skills';
+
 describe('buildStartSystemPrompt', () => {
   it('does not mention pi or any sdk-specific harness', () => {
-    const prompt = buildStartSystemPrompt('/home/u/.start/prompts');
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).not.toMatch(/\bpi\b/i);
     expect(prompt).not.toMatch(/TUI/);
     expect(prompt).not.toMatch(/Pi documentation/);
   });
 
   it('embeds the runtime prompts directory in the documentation block', () => {
-    const prompt = buildStartSystemPrompt('/home/u/.start-dev/prompts');
+    const prompt = buildStartSystemPrompt('/home/u/.start-dev/prompts', '/home/u/.start-dev/agent/skills');
     expect(prompt).toContain('/home/u/.start-dev/prompts/<name>.md');
   });
 
   it('describes start resource locations without pi docs', () => {
-    const prompt = buildStartSystemPrompt('/whatever');
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('Project and user resources:');
     expect(prompt).toContain('Project rules come from AGENTS.md and CLAUDE.md');
     expect(prompt).not.toContain('Pi documentation');
   });
 
   it('defers tool listing until runtime capabilities are available', () => {
-    const prompt = buildStartSystemPrompt('/whatever');
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('- Runtime tools are loaded from the active session.');
     expect(prompt).not.toContain('other custom tools depending on the project');
     expect(prompt).not.toContain('- read:');
@@ -39,7 +42,7 @@ describe('buildStartSystemPrompt', () => {
   });
 
   it('lists active runtime tools from sdk tool info', () => {
-    const prompt = buildStartSystemPrompt('/whatever', {
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
       getAllTools: () => [
         { name: 'read', description: 'Read file contents.' },
         { name: 'grep', description: 'Search file contents.', promptGuidelines: ['Prefer targeted searches.'] },
@@ -55,7 +58,7 @@ describe('buildStartSystemPrompt', () => {
   });
 
   it('accepts custom tool definition shapes', () => {
-    const prompt = buildStartSystemPrompt('/whatever', {
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
       getAllTools: () => [
         {
           definition: {
@@ -74,7 +77,7 @@ describe('buildStartSystemPrompt', () => {
   });
 
   it('keeps active runtime names even when detailed tool info is absent', () => {
-    const prompt = buildStartSystemPrompt('/whatever', {
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
       getAllTools: () => [],
       getActiveToolNames: () => ['dynamic_tool']
     });
@@ -83,7 +86,7 @@ describe('buildStartSystemPrompt', () => {
   });
 
   it('preserves pi-appended prompt sections when applying capabilities', async () => {
-    const prompt = `${buildStartSystemPrompt('/whatever')}
+    const prompt = `${buildStartSystemPrompt(promptsDir, skillsDir)}
 
 <project_context>
 Project-specific instructions.
@@ -100,7 +103,7 @@ Current working directory: /tmp/workspace`;
       }
     } as unknown as ExtensionAPI;
 
-    createStartPromptExtension('/whatever')(pi);
+    createStartPromptExtension(promptsDir, skillsDir)(pi);
     if (!registered.handler) throw new Error('Expected prompt hook registration.');
 
     const result = await registered.handler({ systemPrompt: prompt });
@@ -127,11 +130,11 @@ Current working directory: /tmp/workspace`;
       }
     } as unknown as ExtensionAPI;
 
-    createStartPromptExtension('/mock/prompts')(pi);
+    createStartPromptExtension(promptsDir, skillsDir)(pi);
     if (!registered.handler) throw new Error('Expected prompt hook registration.');
 
     const result = await registered.handler({
-      systemPrompt: `${buildStartSystemPrompt('/mock/prompts')}
+      systemPrompt: `${buildStartSystemPrompt(promptsDir, skillsDir)}
 Current date: 2026-05-30`
     });
 
@@ -151,7 +154,7 @@ Current date: 2026-05-30`
       }
     } as unknown as ExtensionAPI;
 
-    createStartPromptExtension('/mock/prompts')(pi);
+    createStartPromptExtension(promptsDir, skillsDir)(pi);
     if (!registered.handler) throw new Error('Expected prompt hook registration.');
 
     const result = await registered.handler({ systemPrompt: 'Current working directory: /tmp/workspace' });
@@ -160,14 +163,15 @@ Current date: 2026-05-30`
     expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
   });
 
-  it('points the model at .agents/skills/ for new skills', () => {
-    const prompt = buildStartSystemPrompt('/whatever');
+  it('points the model at standard and start-managed skill paths', () => {
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('~/.agents/skills/<skill-name>/SKILL.md');
+    expect(prompt).toContain(`${skillsDir}/<skill-name>/SKILL.md`);
     expect(prompt).toContain('<cwd>/.agents/skills/<skill-name>/SKILL.md');
   });
 
   it('mentions AGENTS.md and CLAUDE.md as project-context sources', () => {
-    const prompt = buildStartSystemPrompt('/whatever');
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('AGENTS.md');
     expect(prompt).toContain('CLAUDE.md');
   });
