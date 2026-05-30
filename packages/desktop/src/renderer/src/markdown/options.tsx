@@ -2,7 +2,7 @@ import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { MermaidConfig } from '@streamdown/mermaid';
 import type { AllowElement, StreamdownProps } from 'streamdown';
-import { documentCssVarLookup, resolveDiagramThemeVariables } from './diagram-theme';
+import { resolveDiagramThemeVariables } from './diagram-theme';
 
 interface MarkdownIconProps {
   className?: string;
@@ -85,5 +85,7 @@ export const createDiagramConfig = (): MermaidConfig => ({
   fontFamily: 'system-ui',
   securityLevel: 'strict',
   suppressErrorRendering: true,
-  themeVariables: resolveDiagramThemeVariables(diagramThemeVariables, documentCssVarLookup)
+  themeVariables: resolveDiagramThemeVariables(diagramThemeVariables, (name) =>
+    getComputedStyle(document.documentElement).getPropertyValue(name)
+  )
 });

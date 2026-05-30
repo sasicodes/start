@@ -9,16 +9,8 @@ export const resolveCssVar = (value: string, lookup: CssVarLookup): string => {
   return resolved || value;
 };
 
-export const resolveDiagramThemeVariables = <T extends Record<string, string>>(
-  variables: T,
+export const resolveDiagramThemeVariables = (
+  variables: Record<string, string>,
   lookup: CssVarLookup
-): T => {
-  const out: Record<string, string> = {};
-  for (const [key, value] of Object.entries(variables)) {
-    out[key] = resolveCssVar(value, lookup);
-  }
-  return out as T;
-};
-
-export const documentCssVarLookup: CssVarLookup = (name) =>
-  getComputedStyle(document.documentElement).getPropertyValue(name);
+): Record<string, string> =>
+  Object.fromEntries(Object.entries(variables).map(([key, value]) => [key, resolveCssVar(value, lookup)]));

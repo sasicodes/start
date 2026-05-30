@@ -39,8 +39,8 @@ describe('resolveDiagramThemeVariables', () => {
     });
     const resolved = resolveDiagramThemeVariables(
       {
-        background: 'transparent',
         fontFamily: 'system-ui',
+        background: 'transparent',
         lineColor: 'var(--color-soft)',
         nodeBorder: 'var(--color-line)',
         primaryTextColor: 'var(--color-ink)'
@@ -48,11 +48,11 @@ describe('resolveDiagramThemeVariables', () => {
       lookup
     );
     expect(resolved).toEqual({
-      background: 'transparent',
-      fontFamily: 'system-ui',
-      lineColor: 'oklch(20% 0.01 255 / 0.62)',
       nodeBorder: '#eee',
-      primaryTextColor: '#111'
+      primaryTextColor: '#111',
+      fontFamily: 'system-ui',
+      background: 'transparent',
+      lineColor: 'oklch(20% 0.01 255 / 0.62)'
     });
   });
 
