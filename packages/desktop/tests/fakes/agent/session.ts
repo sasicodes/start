@@ -72,6 +72,14 @@ export class FakeAgentSession {
     return this.activeToolNames;
   }
 
+  get messages() {
+    return [];
+  }
+
+  getLastAssistantText() {
+    return '';
+  }
+
   setThinkingLevel(level: string) {
     this.thinkingLevel = level;
   }

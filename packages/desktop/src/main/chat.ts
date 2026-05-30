@@ -39,6 +39,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { createStartResourceLoader } from '@main/resource-loader';
+import { SubagentNameAllocator } from '@main/subagents/allocator';
 import { historyTurns } from '@main/history';
 import {
   agentEndError,
@@ -185,6 +186,7 @@ export class ChatService {
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
   private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
+  private readonly subagentNameAllocators = new Map<string, SubagentNameAllocator>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   constructor() {
@@ -314,7 +316,7 @@ export class ChatService {
         resourceLoader,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
-        customTools: createStartCustomTools(),
+        customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
         settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
       });
@@ -399,7 +401,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(),
+      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -428,6 +430,7 @@ export class ChatService {
       await this.session.abort();
       this.session.dispose();
       this.deleteRuntimeState(id);
+      this.deleteSubagentNameAllocator(id);
       this.session = null;
       this.activeSessionByWorkspace.delete(this.workspaceCwd);
       this.activeSessionId = '';
@@ -441,6 +444,7 @@ export class ChatService {
       session.dispose();
       this.backgroundSessions.delete(id);
       this.deleteRuntimeState(id);
+      this.deleteSubagentNameAllocator(id);
     }
 
     this.deleteWorkspaceSessionReferences(id);
@@ -1298,6 +1302,7 @@ export class ChatService {
     if (!this.sessionIsReportable(session)) {
       session.dispose();
       this.deleteRuntimeState(sessionId);
+      this.deleteSubagentNameAllocator(sessionId);
       this.deleteWorkspaceSessionReferences(sessionId);
       return;
     }
@@ -1449,7 +1454,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(),
+      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), cwd)),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -1461,6 +1466,34 @@ export class ChatService {
     this.session = session;
     this.setActiveSession(sessionManager);
     return session;
+  }
+
+  private subagentToolsOptions(sessionId: string, cwd: string): Parameters<typeof createStartCustomTools>[0] {
+    const allocator = this.subagentNameAllocator(sessionId);
+
+    return {
+      authStorage: this.authStorage,
+      modelRegistry: this.modelRegistry,
+      settingsManager: this.settingsManager,
+      cwd: () => cwd,
+      model: () => this.pickModel() ?? null,
+      thinkingLevel: () => this.selectedThinkingLevel,
+      nameAllocator: () => allocator,
+      customTools: () => createStartCustomTools()
+    };
+  }
+
+  private subagentNameAllocator(sessionId: string): SubagentNameAllocator {
+    const current = this.subagentNameAllocators.get(sessionId);
+    if (current) return current;
+
+    const allocator = new SubagentNameAllocator();
+    this.subagentNameAllocators.set(sessionId, allocator);
+    return allocator;
+  }
+
+  private deleteSubagentNameAllocator(sessionId: string): void {
+    this.subagentNameAllocators.delete(sessionId);
   }
 
   private refreshAuth(): void {

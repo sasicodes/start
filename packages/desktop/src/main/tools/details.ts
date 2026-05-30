@@ -1,4 +1,5 @@
 import { countLabel, isRecord, numberValue, stringValue, textContent } from '@main/details';
+import { subagentActivityList, subagentTaskCount } from '@main/subagents/activity';
 import type { ChatEvent, TurnDetailState } from '@main/types';
 
 const detailValue = (event: ChatEvent, value: string) => {
@@ -164,6 +165,7 @@ const diffMarkdown = (details: unknown) => {
 };
 
 export const toolBody = (toolName: string, args: Record<string, unknown>, result: unknown) => {
+  if (toolName === 'subagent_spawn') return '';
   if (!isRecord(result)) return '';
 
   const output = toolOutput(toolName, args, textContent(result.content));
@@ -199,6 +201,7 @@ const diffStats = (details: unknown) => {
 };
 
 const toolMetric = (toolName: string, args: Record<string, unknown>, result?: unknown) => {
+  if (toolName === 'subagent_spawn') return '';
   if (toolName === 'edit') {
     const stats = isRecord(result) ? diffStats(result.details) : '';
     const changes = Array.isArray(args.edits) ? countLabel(args.edits.length, 'change') : '';
@@ -210,6 +213,8 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
 };
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
+  if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
+
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
 
@@ -250,6 +255,12 @@ const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
+  if (toolName === 'subagent_spawn') {
+    const count = countLabel(subagentTaskCount(args), 'agent');
+    if (state === 'error') return 'Sub-agents failed';
+    return state === 'active' ? `Spawning ${count}` : `Finished ${count}`;
+  }
+
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) {
     if (state === 'error') return browserTitle.error;
@@ -303,5 +314,7 @@ export const toolEventDetail = ({
   bodyValue(event, body);
   detailValue(event, detail);
   metricValue(event, metric);
+  const subagents = subagentActivityList(result);
+  if (subagents.length > 0) event.subagents = subagents;
   return event;
 };

@@ -19,6 +19,10 @@ export class FakeSessionManager {
     return new FakeSessionManager(cwd);
   }
 
+  static inMemory(cwd: string) {
+    return new FakeSessionManager(cwd);
+  }
+
   static continueRecent(cwd: string) {
     for (const manager of sessionStore.values()) {
       if (manager.cwd === cwd) return manager;

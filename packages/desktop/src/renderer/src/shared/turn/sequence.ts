@@ -1,13 +1,14 @@
-import { closeMotionTransition, openMotionTransition, quickLayoutTransition } from '@renderer/ui/motion';
 import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import type { Transition } from 'motion/react';
 
 const diffMetricPattern = /^(.*?)(\+\d+)\s+(-\d+)$/;
 
 const closeAccordionTextTransition = { duration: 0.05, ease: 'easeOut' } as const satisfies Transition;
+const closeAccordionHeightTransition = { duration: 0.07, ease: 'easeOut' } as const satisfies Transition;
 const openAccordionTextTransition = { duration: 0.12, ease: 'easeOut' } as const satisfies Transition;
+const openAccordionHeightTransition = { duration: 0.12, ease: 'easeOut' } as const satisfies Transition;
 
-export const accordionLayoutTransition = quickLayoutTransition;
+export const accordionLayoutTransition = { duration: 0.08, ease: 'easeOut' } as const satisfies Transition;
 
 export const accordionContentMotion = {
   animate: {
@@ -15,7 +16,7 @@ export const accordionContentMotion = {
     opacity: 1,
     y: 0,
     transition: {
-      height: openMotionTransition,
+      height: openAccordionHeightTransition,
       opacity: openAccordionTextTransition,
       y: openAccordionTextTransition
     }
@@ -25,7 +26,7 @@ export const accordionContentMotion = {
     opacity: 0,
     y: -2,
     transition: {
-      height: closeMotionTransition,
+      height: closeAccordionHeightTransition,
       opacity: closeAccordionTextTransition,
       y: closeAccordionTextTransition
     }
@@ -63,8 +64,6 @@ export const activitySequence = (
 export const hasActivityDetails = (details: TurnDetail[], thinking: string, items: TurnActivityItem[] = []) =>
   activitySequence(details, thinking, items).length > 0;
 
-export const detailCount = (detail: TurnDetail) => (detail.count > 1 ? ` ×${detail.count}` : '');
-
 export const detailMeta = (detail: TurnDetail) => {
   const meta = detail.detail ?? '';
   return meta && !detail.title.includes(meta) ? meta : '';
@@ -79,5 +78,7 @@ export const isCodeMeta = (value: string) => /^`{3,}[^`]*\n/.test(value.trim());
 
 export const splitDiffMetric = (value: string) => {
   const match = diffMetricPattern.exec(value);
-  return match ? { label: match[1], added: match[2], removed: match[3] } : undefined;
+  if (!match) return null;
+
+  return { label: match[1], added: match[2], removed: match[3] };
 };

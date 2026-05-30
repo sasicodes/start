@@ -104,7 +104,21 @@ export type ChatEvent = {
   metric?: string;
   kind: TurnDetailKind;
   state: TurnDetailState;
+  subagents?: SubagentActivity[];
 };
+
+export type SubagentStatus = 'cancelled' | 'completed' | 'failed' | 'queued' | 'running';
+
+export interface SubagentActivity {
+  id: string;
+  name: string;
+  task: string;
+  logs: string[];
+  avatar: string;
+  summary?: string;
+  accentColor: string;
+  status: SubagentStatus;
+}
 
 export type HistoryTurnDetail = ChatEvent & {
   id: string;
