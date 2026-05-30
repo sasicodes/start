@@ -316,7 +316,7 @@ export class ChatService {
         resourceLoader,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
-        customTools: createStartCustomTools(this.subagentToolsOptions()),
+        customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
         settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
       });
@@ -401,7 +401,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(this.subagentToolsOptions()),
+      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -1454,7 +1454,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(this.subagentToolsOptions()),
+      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), cwd)),
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -1468,21 +1468,22 @@ export class ChatService {
     return session;
   }
 
-  private subagentToolsOptions(): Parameters<typeof createStartCustomTools>[0] {
+  private subagentToolsOptions(sessionId: string, cwd: string): Parameters<typeof createStartCustomTools>[0] {
+    const allocator = this.subagentNameAllocator(sessionId);
+
     return {
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
       settingsManager: this.settingsManager,
-      cwd: () => this.workspaceCwd,
+      cwd: () => cwd,
       model: () => this.pickModel() ?? null,
       thinkingLevel: () => this.selectedThinkingLevel,
-      nameAllocator: () => this.subagentNameAllocator(),
+      nameAllocator: () => allocator,
       customTools: () => createStartCustomTools()
     };
   }
 
-  private subagentNameAllocator(): SubagentNameAllocator {
-    const sessionId = this.activeSessionId || this.session?.sessionManager.getSessionId() || this.workspaceCwd;
+  private subagentNameAllocator(sessionId: string): SubagentNameAllocator {
     const current = this.subagentNameAllocators.get(sessionId);
     if (current) return current;
 

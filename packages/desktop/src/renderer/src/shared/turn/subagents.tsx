@@ -1,6 +1,7 @@
 import type { SubagentActivity } from '@preload/index';
 import { DetailItem } from '@renderer/shared/turn/detail';
 import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
+import { ChevronRightIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -81,6 +82,9 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
           <span class="shrink-0 text-soft">-</span>
           <span class="min-w-0 truncate text-soft">{agent.task}</span>
         </span>
+        <ChevronRightIcon
+          class={tw('size-3 flex-none text-soft transition-transform duration-150', open && 'rotate-90')}
+        />
       </button>
       <AnimatePresence initial={false}>
         {open && (

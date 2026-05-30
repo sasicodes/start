@@ -109,7 +109,7 @@ export type ChatEvent = {
 
 export type SubagentStatus = 'cancelled' | 'completed' | 'failed' | 'queued' | 'running';
 
-export type SubagentActivity = {
+export interface SubagentActivity {
   id: string;
   name: string;
   task: string;
@@ -118,7 +118,7 @@ export type SubagentActivity = {
   summary?: string;
   accentColor: string;
   status: SubagentStatus;
-};
+}
 
 export type HistoryTurnDetail = ChatEvent & {
   id: string;
