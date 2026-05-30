@@ -9,11 +9,11 @@ describe('models allowlist', () => {
 
   it('returns a set for each provider with the right ids', () => {
     const anthropic = allowedLatestModelIds('anthropic');
-    expect(anthropic.has('claude-opus-4-7')).toBe(true);
+    expect(anthropic.has('claude-opus-4-8')).toBe(true);
     expect(anthropic.has('claude-sonnet-4-6')).toBe(true);
 
     const openai = allowedLatestModelIds('openai');
-    expect(openai.has('gpt-5.5-pro')).toBe(true);
+    expect(openai.has('gpt-5.5')).toBe(true);
 
     const google = allowedLatestModelIds('google');
     expect(google.has('gemini-3.5-flash')).toBe(true);

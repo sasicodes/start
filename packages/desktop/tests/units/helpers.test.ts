@@ -44,7 +44,7 @@ describe('helpers', () => {
   it('classifies OpenAI, Anthropic, and Google models from identifiers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'openai')).toBe(true);
     expect(
-      isProviderModel({ id: 'claude-opus-4-7', name: 'Claude Opus 4 7', provider: 'anthropic' }, 'anthropic')
+      isProviderModel({ id: 'claude-opus-4-8', name: 'Claude Opus 4 7', provider: 'anthropic' }, 'anthropic')
     ).toBe(true);
     expect(
       isProviderModel({ id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'google' }, 'google')
@@ -59,10 +59,10 @@ describe('helpers', () => {
   it('sorts the latest provider models into the configured display order', () => {
     const sorted = getLatestProviderModels('anthropic', [
       { id: 'claude-sonnet-4-6', name: 'Sonnet', provider: 'anthropic' },
-      { id: 'claude-opus-4-7', name: 'Opus 4 7', provider: 'anthropic' },
-      { id: 'claude-opus-4-6', name: 'Opus 4 6', provider: 'anthropic' }
+      { id: 'claude-haiku-4-5', name: 'Haiku 4 5', provider: 'anthropic' },
+      { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5']);
   });
 
   it('orders Google models smartest to cheapest', () => {
@@ -75,8 +75,8 @@ describe('helpers', () => {
   });
 
   it('exposes labels and keys for models', () => {
-    expect(modelKey({ id: 'claude-opus-4-7', provider: 'anthropic' })).toBe('anthropic:claude-opus-4-7');
-    expect(modelLabel({ name: 'claude-opus-4-7', provider: 'anthropic' })).toBe('claude opus 4 7');
+    expect(modelKey({ id: 'claude-opus-4-8', provider: 'anthropic' })).toBe('anthropic:claude-opus-4-8');
+    expect(modelLabel({ name: 'claude-opus-4-8', provider: 'anthropic' })).toBe('claude opus 4 8');
   });
 
   it('extracts text and thinking deltas from agent session events', () => {
@@ -105,12 +105,12 @@ describe('helpers', () => {
     const models = [
       { id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' },
       { id: 'gpt-5.4', name: 'GPT 5.4', provider: 'openai' },
-      { id: 'claude-opus-4-7', name: 'Claude Opus', provider: 'anthropic' },
+      { id: 'claude-opus-4-8', name: 'Claude Opus', provider: 'anthropic' },
       { id: 'llama3.1:8b', name: 'Llama 3.1 8B', provider: 'ollama-home' },
       { id: 'gpt-4', name: 'GPT 4', provider: 'pydantic-proxy' }
     ];
     const visible = getVisibleModels(models, new Set(['ollama-home', 'pydantic-proxy']));
-    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-7', 'llama3.1:8b', 'gpt-4']);
+    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-8', 'llama3.1:8b', 'gpt-4']);
   });
 
   it('drops non-registered provider models even when their ids look familiar', () => {
