@@ -4,6 +4,8 @@ import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserReloadIcon } from '@renderer/shared/browser/reload';
 import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
+import { useBrowserInspect } from '@renderer/shared/browser/use-inspect';
+import { useBrowserScreenshot } from '@renderer/shared/browser/use-screenshot';
 import { usePanelMotion } from '@renderer/shared/panel/context';
 import {
   BrowserEmptyIcon,
@@ -33,22 +35,20 @@ const emptyStatus: BrowserStatus = {
 
 export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
-  const copyTimerRef = useRef<number>(0);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const [address, setAddress] = useState('');
-  const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [inspecting, setInspecting] = useState(false);
   const [status, setStatus] = useState<BrowserStatus>(emptyStatus);
   const [active, setActive] = useState(() => Boolean(navigation.url));
   const { moving: panelMoving } = usePanelMotion();
   const syncBounds = useBrowserBounds({ active, moving: panelMoving, viewportRef });
+  const { inspecting, toggle: toggleInspect } = useBrowserInspect({ onText: onInspectText });
+  const { copied, capture: captureScreenshot } = useBrowserScreenshot({ onError: setError });
 
   const applyStatus = useCallback(
     (nextStatus: BrowserStatus) => {
       if (!mountedRef.current) return;
-
       setStatus(nextStatus);
       setActive(Boolean(nextStatus.url || nextStatus.loading));
       if (!editing) setAddress(formatBrowserAddress(nextStatus.url));
@@ -58,8 +58,8 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
 
   const openAddress = useCallback(
     async (value: string) => {
-      const nextAddress = value.trim();
-      if (!nextAddress) {
+      const next = value.trim();
+      if (!next) {
         setActive(false);
         setError('');
         setStatus(emptyStatus);
@@ -99,80 +99,38 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
   );
 
   const goBack = useCallback(() => {
-    void window.pi.app.browserBack().then((result) => result.status && applyStatus(result.status));
+    window.pi.app.browserBack().then((result) => result.status && applyStatus(result.status));
   }, [applyStatus]);
 
   const goForward = useCallback(() => {
-    void window.pi.app.browserForward().then((result) => result.status && applyStatus(result.status));
+    window.pi.app.browserForward().then((result) => result.status && applyStatus(result.status));
   }, [applyStatus]);
 
   const reloadOrStop = useCallback(() => {
     const action = status.loading ? window.pi.app.browserStop : window.pi.app.browserReload;
-    void action().then((result) => result.status && applyStatus(result.status));
+    action().then((result) => result.status && applyStatus(result.status));
   }, [applyStatus, status.loading]);
 
-  const refreshLabel = status.loading ? 'Stop loading' : 'Refresh';
-  const screenshotLabel = copied ? 'Copied' : 'Screenshot';
-
-  const applyScreenshotStatus = useCallback((result: BrowserActionResult) => {
-    if (!mountedRef.current) return;
-
-    if (!result.ok) {
-      setError(result.error ?? 'Could not capture the page.');
-      return;
-    }
-
-    setError('');
-    setCopied(true);
-    copyTimerRef.current = window.setTimeout(() => setCopied(false), 1400);
-  }, []);
-
-  const captureScreenshot = useCallback(() => {
-    window.clearTimeout(copyTimerRef.current);
-    void window.pi.app
-      .browserScreenshot()
-      .then(applyScreenshotStatus)
-      .catch(() => applyScreenshotStatus({ ok: false, error: 'Could not capture the page.' }));
-  }, [applyScreenshotStatus]);
-
-  const toggleInspect = useCallback(() => {
-    if (inspecting) {
-      setInspecting(false);
-      window.pi.app.browserInspectStop().catch(() => {});
-      return;
-    }
-    setInspecting(true);
-    window.pi.app.browserInspectStart().catch(() => setInspecting(false));
-  }, [inspecting]);
-
-  useEffect(() => {
-    return window.pi.app.onBrowserStatus(applyStatus);
-  }, [applyStatus]);
-
-  useEffect(() => {
-    return window.pi.app.onBrowserInspectSent(onInspectText);
-  }, [onInspectText]);
-
-  useEffect(() => {
-    return window.pi.app.onBrowserInspectState(setInspecting);
-  }, []);
+  useEffect(() => window.pi.app.onBrowserStatus(applyStatus), [applyStatus]);
 
   useEffect(() => {
     const url = navigation.url;
     if (!url) return;
-
     setAddress(formatBrowserAddress(url));
     void openAddress(url);
     onUrlOpened();
   }, [navigation.id, navigation.url, onUrlOpened, openAddress]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       mountedRef.current = false;
-      window.clearTimeout(copyTimerRef.current);
-      window.pi.app.browserInspectStop().catch(() => {});
-    };
-  }, []);
+    },
+    []
+  );
+
+  const refreshLabel = status.loading ? 'Stop loading' : 'Refresh';
+  const screenshotLabel = copied ? 'Copied' : 'Screenshot';
+  const inspectLabel = inspecting ? 'Stop inspect' : 'Inspect element';
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
@@ -199,11 +157,11 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
           />
         </form>
         <BrowserButton
-          label={inspecting ? 'Stop inspect' : 'Inspect element'}
+          label={inspectLabel}
           active={inspecting}
           disabled={!status.url}
           onClick={toggleInspect}
-          tooltipLabel={inspecting ? 'Stop inspect' : 'Inspect element'}
+          tooltipLabel={inspectLabel}
           tooltipSide="left"
         >
           <SquareCursorIcon class="size-4" strokeWidth={inspecting ? 2 : 1.5} />

@@ -428,6 +428,7 @@ export const inspectScript: string = String.raw`
   };
 
   const handleOverlayMove = (event) => {
+    if (pillDrag) return;
     pendingPointer = { x: event.clientX, y: event.clientY };
     if (hoverFrame === null) hoverFrame = requestAnimationFrame(flushHover);
   };
@@ -713,6 +714,13 @@ export const inspectScript: string = String.raw`
       prevX: event.clientX
     };
     pillRoot.classList.add('dragging');
+    pendingPointer = null;
+    if (hoverFrame !== null) {
+      cancelAnimationFrame(hoverFrame);
+      hoverFrame = null;
+    }
+    ring.style.opacity = '0';
+    badge.classList.remove('visible');
     if (!dragCursorStyle) {
       dragCursorStyle = document.createElement('style');
       dragCursorStyle.textContent = '* { cursor: grabbing !important; }';

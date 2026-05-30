@@ -1,4 +1,4 @@
-import { parseInspectRelay } from '@main/browser/inspect/index';
+import { parseInspectRelay } from '@main/browser/inspect/relay';
 import { describe, expect, it } from 'vitest';
 
 describe('parseInspectRelay', () => {
