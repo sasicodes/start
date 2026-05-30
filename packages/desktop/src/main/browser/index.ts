@@ -163,6 +163,7 @@ const closeBrowserView = () => {
   browserView = null;
   lastBounds = null;
   sendStatus();
+  sendToRendererWindows('app:browser-inspect-state', false);
 };
 
 const attachBrowserView = (window: ElectronBrowserWindow) => {

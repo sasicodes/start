@@ -17,8 +17,8 @@ import type { JSX } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 interface BrowserPanelProps {
-  navigation: BrowserNavigation;
   onUrlOpened: () => void;
+  navigation: BrowserNavigation;
   onInspectText: (text: string) => void;
 }
 
@@ -35,13 +35,13 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
   const mountedRef = useRef(true);
   const copyTimerRef = useRef<number>(0);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [address, setAddress] = useState('');
   const [error, setError] = useState('');
-  const [editing, setEditing] = useState(false);
+  const [address, setAddress] = useState('');
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [inspecting, setInspecting] = useState(false);
-  const [active, setActive] = useState(() => Boolean(navigation.url));
   const [status, setStatus] = useState<BrowserStatus>(emptyStatus);
+  const [active, setActive] = useState(() => Boolean(navigation.url));
   const { moving: panelMoving } = usePanelMotion();
   const syncBounds = useBrowserBounds({ active, moving: panelMoving, viewportRef });
 
@@ -139,7 +139,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
     const next = !inspecting;
     setInspecting(next);
     const action = next ? window.pi.app.browserInspectStart : window.pi.app.browserInspectStop;
-    void action().catch(() => setInspecting(false));
+    action().catch(() => setInspecting(false));
   }, [inspecting]);
 
   useEffect(() => {
@@ -167,13 +167,9 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
     return () => {
       mountedRef.current = false;
       window.clearTimeout(copyTimerRef.current);
-      void window.pi.app.browserInspectStop().catch(() => {});
+      window.pi.app.browserInspectStop().catch(() => {});
     };
   }, []);
-
-  useEffect(() => {
-    if (!status.url) setInspecting(false);
-  }, [status.url]);
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">

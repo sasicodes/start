@@ -10,11 +10,11 @@ import { memo } from 'preact/compat';
 interface AppSidePanelProps {
   mode: SidePanelMode;
   workspacePath: string;
-  browserNavigation: BrowserNavigation;
   composerShortcut: string;
   onBrowserUrlOpened: () => void;
-  onBrowserInspectText: (text: string) => void;
   providers: ProviderAuthStatus[];
+  browserNavigation: BrowserNavigation;
+  onBrowserInspectText: (text: string) => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
@@ -39,12 +39,12 @@ export const AppSidePanel = memo(
     mode,
     providers,
     workspacePath,
-    browserNavigation,
     onSaveApiKey,
-    onBrowserUrlOpened,
-    onBrowserInspectText,
     composerShortcut,
+    browserNavigation,
+    onBrowserUrlOpened,
     onLoginSubscription,
+    onBrowserInspectText,
     onDisconnectProvider,
     onComposerShortcutChange
   }: AppSidePanelProps) => {

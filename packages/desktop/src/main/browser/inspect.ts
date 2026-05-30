@@ -8,9 +8,8 @@ interface BrowserActionResult {
 }
 
 const RELAY_PREFIX = '__startInspect__:';
-const closedPanelError = 'Open the in-app browser panel first.';
-
 const attached = new WeakSet<WebContents>();
+const closedPanelError = 'Open the in-app browser panel first.';
 
 interface InspectRelayMessage<TPayload = unknown> {
   event: string;

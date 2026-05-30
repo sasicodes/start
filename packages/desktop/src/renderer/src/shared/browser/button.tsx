@@ -6,17 +6,17 @@ interface BrowserButtonProps {
   label: string;
   active?: boolean;
   disabled?: boolean;
-  children: ComponentChildren;
   onClick: () => void;
   tooltipLabel?: string;
+  children: ComponentChildren;
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
 }
 
 export const BrowserButton = ({
   label,
-  active = false,
-  children,
   onClick,
+  children,
+  active = false,
   disabled = false,
   tooltipLabel = '',
   tooltipSide = 'top'
@@ -24,9 +24,9 @@ export const BrowserButton = ({
   const button = (
     <button
       type="button"
-      disabled={disabled}
-      aria-label={label}
       onClick={onClick}
+      aria-label={label}
+      disabled={disabled}
       class={tw(
         'group/browser-button relative grid size-8 shrink-0 place-items-center rounded-md outline-0 transition-colors before:absolute before:-inset-1 before:content-[""] focus-visible:text-ink disabled:pointer-events-none disabled:opacity-35',
         active ? 'text-ink' : 'text-soft',

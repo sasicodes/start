@@ -638,7 +638,7 @@ export const inspectScript: string = String.raw`
     pillPos = null;
   };
 
-  function deactivate() {
+  const deactivate = () => {
     if (!active) {
       if (annotations.length === 0) teardownHost();
       relay('mode-changed', { active: false });
@@ -658,7 +658,7 @@ export const inspectScript: string = String.raw`
     window.removeEventListener('keydown', onKeyDown);
     if (annotations.length === 0) teardownHost();
     relay('mode-changed', { active: false });
-  }
+  };
 
   const clampPillPos = () => {
     const padding = 8;
@@ -687,12 +687,13 @@ export const inspectScript: string = String.raw`
       prevX: event.clientX
     };
     pillRoot.classList.add('dragging');
-    pillRoot.style.transition = 'none';
     if (!dragCursorStyle) {
       dragCursorStyle = document.createElement('style');
       dragCursorStyle.textContent = '* { cursor: grabbing !important; }';
     }
     document.head.appendChild(dragCursorStyle);
+    document.addEventListener('mousemove', handleDocumentPointerMove);
+    document.addEventListener('mouseup', handleDocumentPointerUp);
   };
 
   const handleDocumentPointerMove = (event) => {
@@ -716,11 +717,12 @@ export const inspectScript: string = String.raw`
   const handleDocumentPointerUp = () => {
     if (!pillDrag) return;
     pillDrag = null;
-    pillRoot.classList.remove('dragging');
-    pillRoot.style.transition = 'transform 320ms ease-out';
     pillTilt = 0;
+    pillRoot.classList.remove('dragging');
     pillRoot.style.transform = 'rotate(0deg)';
     if (dragCursorStyle?.parentNode) dragCursorStyle.parentNode.removeChild(dragCursorStyle);
+    document.removeEventListener('mousemove', handleDocumentPointerMove);
+    document.removeEventListener('mouseup', handleDocumentPointerUp);
   };
 
   overlay.addEventListener('mousemove', handleOverlayMove);
@@ -780,8 +782,6 @@ export const inspectScript: string = String.raw`
     sendAnnotations();
   });
   pillRoot.addEventListener('mousedown', handlePillPointerDown);
-  document.addEventListener('mousemove', handleDocumentPointerMove);
-  document.addEventListener('mouseup', handleDocumentPointerUp);
 
   if (!host.parentNode) document.body.appendChild(host);
   renderMarkers();
