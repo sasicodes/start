@@ -43,7 +43,7 @@ const truncate = (value: string, maxLength = maxSummaryLength) => {
 const resultText = (agents: SubagentActivity[]) =>
   agents
     .map((agent) => {
-      const heading = `${agent.name} (${agent.status})`;
+      const heading = `From ${agent.name}`;
       const summary = agent.summary ? `\n${agent.summary}` : '';
       return `## ${heading}\nTask: ${agent.task}${summary}`;
     })

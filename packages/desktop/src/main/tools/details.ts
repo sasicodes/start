@@ -165,6 +165,7 @@ const diffMarkdown = (details: unknown) => {
 };
 
 export const toolBody = (toolName: string, args: Record<string, unknown>, result: unknown) => {
+  if (toolName === 'subagent_spawn') return '';
   if (!isRecord(result)) return '';
 
   const output = toolOutput(toolName, args, textContent(result.content));
@@ -200,10 +201,7 @@ const diffStats = (details: unknown) => {
 };
 
 const toolMetric = (toolName: string, args: Record<string, unknown>, result?: unknown) => {
-  if (toolName === 'subagent_spawn') {
-    const agents = subagentActivities(result);
-    return agents.length > 0 ? '' : countLabel(subagentTaskCount(args), 'agent');
-  }
+  if (toolName === 'subagent_spawn') return '';
   if (toolName === 'edit') {
     const stats = isRecord(result) ? diffStats(result.details) : '';
     const changes = Array.isArray(args.edits) ? countLabel(args.edits.length, 'change') : '';

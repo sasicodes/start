@@ -63,7 +63,7 @@ export const activitySequence = (
 export const hasActivityDetails = (details: TurnDetail[], thinking: string, items: TurnActivityItem[] = []) =>
   activitySequence(details, thinking, items).length > 0;
 
-export const detailCount = (detail: TurnDetail) => (detail.count > 1 ? ` ×${detail.count}` : '');
+export const detailCount = (_detail: TurnDetail) => '';
 
 export const detailMeta = (detail: TurnDetail) => {
   const meta = detail.detail ?? '';

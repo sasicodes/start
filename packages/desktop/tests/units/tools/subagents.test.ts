@@ -17,7 +17,7 @@ describe('sub-agent tool details', () => {
     });
 
     expect(detail.title).toBe('Spawning 2 agents');
-    expect(detail.metric).toBe('2 agents');
+    expect(detail.metric).toBeUndefined();
     expect(detail.subagents).toBeUndefined();
   });
 
