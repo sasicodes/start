@@ -15,7 +15,7 @@ export type StartState = {
 
 const defaultStartState = {
   composerShortcut: 'Control+Space',
-  selectedThinkingLevel: 'medium'
+  selectedThinkingLevel: 'high'
 } satisfies StartState;
 
 export const startDir = () => baseDir;

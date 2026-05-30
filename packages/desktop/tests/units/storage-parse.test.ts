@@ -8,12 +8,12 @@ describe('parseStartState', () => {
   it('falls back to defaults for missing or invalid values', () => {
     const state = parseStartState({});
     expect(state.composerShortcut).toBe('Control+Space');
-    expect(state.selectedThinkingLevel).toBe('medium');
+    expect(state.selectedThinkingLevel).toBe('high');
   });
 
   it('keeps a valid thinking level and ignores unknown ones', () => {
-    expect(parseStartState({ selectedThinkingLevel: 'high' }).selectedThinkingLevel).toBe('high');
-    expect(parseStartState({ selectedThinkingLevel: 'wat' }).selectedThinkingLevel).toBe('medium');
+    expect(parseStartState({ selectedThinkingLevel: 'low' }).selectedThinkingLevel).toBe('low');
+    expect(parseStartState({ selectedThinkingLevel: 'wat' }).selectedThinkingLevel).toBe('high');
   });
 
   it('keeps trimmed strings for paths and drops blank ones', () => {
