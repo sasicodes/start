@@ -38,7 +38,7 @@ export const PanelFrame = ({
       <div
         style={{ transform: 'translate3d(var(--panel-offset, 0px), 0, 0)' }}
         class={tw(
-          'absolute inset-0 transform-gpu shadow-[-10px_0_24px_-18px_oklch(0%_0_0_/_0.16)] dark:shadow-[-10px_0_22px_-16px_oklch(0%_0_0_/_0.3)]',
+          'absolute inset-0 transform-gpu shadow-[-14px_0_40px_-16px_oklch(0%_0_0_/_0.12)] dark:shadow-[-14px_0_36px_-14px_oklch(0%_0_0_/_0.24)]',
           settling && 'transition-transform duration-150 ease-out'
         )}
       >

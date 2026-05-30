@@ -22,7 +22,7 @@ export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => 
       <div
         class={tw(
           'absolute inset-y-0 left-1/2 w-0 opacity-0 transition-opacity',
-          active && 'border-l border-dashed border-ink/10 opacity-100'
+          active && 'border-l-2 border-ink/20 opacity-100 dark:border-l-[3px] dark:border-ink/35'
         )}
       />
     </div>
