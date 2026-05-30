@@ -110,13 +110,7 @@ describe('helpers', () => {
       { id: 'gpt-4', name: 'GPT 4', provider: 'pydantic-proxy' }
     ];
     const visible = getVisibleModels(models, new Set(['ollama-home', 'pydantic-proxy']));
-    expect(visible.map((model) => model.id)).toEqual([
-      'gpt-5.5',
-      'gpt-5.4',
-      'claude-opus-4-7',
-      'llama3.1:8b',
-      'gpt-4'
-    ]);
+    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-7', 'llama3.1:8b', 'gpt-4']);
   });
 
   it('drops non-registered provider models even when their ids look familiar', () => {

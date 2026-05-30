@@ -57,9 +57,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Composer shortcut</h2>
-          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">
-            Open the composer from anywhere while Start is running.
-          </p>
+          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Open the composer from anywhere while Start is running.</p>
         </div>
         <button
           type="button"

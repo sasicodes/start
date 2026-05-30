@@ -58,4 +58,5 @@ class DbAuthBackend implements AuthStorageBackend {
   }
 }
 
-export const resolveAuthBackend = (db: StartDatabase): AuthStorageBackend => new DbAuthBackend(db, resolveSecretCodec());
+export const resolveAuthBackend = (db: StartDatabase): AuthStorageBackend =>
+  new DbAuthBackend(db, resolveSecretCodec());

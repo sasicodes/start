@@ -142,9 +142,7 @@ const ModelMenuContent = ({
 }: Pick<ProviderGroup, 'models' | 'name'> & Omit<ModelsProps, 'models'> & { custom: boolean }) => {
   if (models.length === 0) return <SetupItem name={name} onOpenSettings={onOpenSettings} />;
 
-  return (
-    <ModelOptions custom={custom} models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />
-  );
+  return <ModelOptions custom={custom} models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
 };
 
 const ProviderSubmenu = ({

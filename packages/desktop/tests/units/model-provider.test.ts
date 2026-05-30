@@ -51,9 +51,9 @@ describe('modelProviderId', () => {
   });
 
   it('respects isCustom over any heuristic match', () => {
-    expect(
-      modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'pydantic', isCustom: true }))
-    ).toBe('custom');
+    expect(modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'pydantic', isCustom: true }))).toBe(
+      'custom'
+    );
     expect(
       modelProviderId(model({ id: 'claude-3-haiku', name: 'Claude Haiku', provider: 'my-proxy', isCustom: true }))
     ).toBe('custom');
