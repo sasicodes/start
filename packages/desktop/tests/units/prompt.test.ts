@@ -117,17 +117,22 @@ Current working directory: /tmp/workspace`;
   it('applies runtime capabilities through the pi extension prompt hook', async () => {
     const registered: { handler?: BeforeAgentStartHandler } = {};
     const pi = {
-      getActiveTools: () => ['browser_snapshot'],
-      getAllTools: () => [
+      getActiveTools() {
+        return ['browser_snapshot'];
+      },
+      getAllTools(this: { tools: readonly unknown[] }) {
+        return this.tools;
+      },
+      on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
+        registered.handler = nextHandler;
+      },
+      tools: [
         {
           name: 'browser_snapshot',
           description: 'Read page text, links, headings, and element refs.',
           promptSnippet: 'Use to summarize an open page or find refs for browser_click/browser_type.'
         }
-      ],
-      on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
-        registered.handler = nextHandler;
-      }
+      ]
     } as unknown as ExtensionAPI;
 
     createStartPromptExtension(promptsDir, skillsDir)(pi);

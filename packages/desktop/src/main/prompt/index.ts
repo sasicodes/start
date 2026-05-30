@@ -42,15 +42,15 @@ const readToolCapability = (value: unknown): ToolCapability | null => {
   if (!result.success) return null;
 
   const tool = 'definition' in result.output ? result.output.definition : result.output;
-  const description = tool.promptSnippet || tool.description || fallbackToolDescription;
+  const description = (tool.promptSnippet || tool.description || fallbackToolDescription)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   return {
+    description,
     name: tool.name,
-    promptGuidelines: tool.promptGuidelines,
-    description: description
-      .replace(/[\r\n]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+    promptGuidelines: tool.promptGuidelines
   };
 };
 
@@ -138,8 +138,8 @@ export const createStartPromptExtension = (promptsDir: string, skillsDir: string
       promptsDir,
       skillsDir,
       {
-        getAllTools: pi.getAllTools,
-        getActiveToolNames: pi.getActiveTools
+        getAllTools: () => pi.getAllTools(),
+        getActiveToolNames: () => pi.getActiveTools()
       }
     )
   }));
