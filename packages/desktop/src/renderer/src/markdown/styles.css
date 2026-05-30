@@ -54,7 +54,7 @@
 }
 
 .markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
-  @apply mt-2;
+  @apply mt-4;
 }
 
 .markdown-default [data-streamdown="link"],
