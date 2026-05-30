@@ -6,6 +6,8 @@ interface ComposerShortcutProps {
   onChange: (shortcut: string) => Promise<AppSettingsResult>;
 }
 
+const modifierKeys = new Set(['Control', 'Meta', 'Alt', 'Shift']);
+
 const modifierLabel = (event: KeyboardEvent) => {
   const modifiers = [];
   if (event.ctrlKey) modifiers.push('Control');
@@ -23,32 +25,23 @@ const keyLabel = (key: string) => {
 };
 
 export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcutProps) => {
-  const [error, setError] = useState('');
   const [recording, setRecording] = useState(false);
 
   const record = async (event: KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
 
+    if (modifierKeys.has(event.key)) return;
+
     const key = keyLabel(event.key);
     const modifiers = modifierLabel(event);
-    if (!key) {
+    if (!key || modifiers.length === 0) {
       setRecording(false);
       return;
     }
 
-    if (modifiers.length === 0) {
-      setError('Use at least one modifier key.');
-      return;
-    }
-
     const shortcut = [...modifiers, key].join('+');
-    try {
-      const result = await onChange(shortcut);
-      setError(result.error ?? '');
-    } catch {
-      setError('That shortcut could not be saved.');
-    }
+    await onChange(shortcut).catch(() => {});
     setRecording(false);
   };
 
@@ -61,10 +54,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
         </div>
         <button
           type="button"
-          onClick={() => {
-            setError('');
-            setRecording(true);
-          }}
+          onClick={() => setRecording(true)}
           onKeyDown={(event) => {
             if (recording) record(event);
           }}
@@ -73,7 +63,6 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
           {recording ? 'Recording shortcut' : composerShortcut.replaceAll('+', ' + ')}
         </button>
       </div>
-      {error && <p class="m-0 mt-3 text-xs leading-4 text-danger">{error}</p>}
     </div>
   );
 };
