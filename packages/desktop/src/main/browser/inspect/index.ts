@@ -1,25 +1,25 @@
-import { inspectScript } from '@main/browser/inspect-script';
+import { inspectScript } from '@main/browser/inspect/script';
 import { sendToRendererWindows } from '@main/window';
 import type { WebContents } from 'electron';
 
-interface BrowserActionResult {
+interface InspectResult {
   ok: boolean;
   error?: string;
 }
 
-const RELAY_PREFIX = '__startInspect__:';
-const attached = new WeakSet<WebContents>();
-const closedPanelError = 'Open the in-app browser panel first.';
-
-interface InspectRelayMessage<TPayload = unknown> {
+interface InspectRelay<TPayload = unknown> {
   event: string;
   payload: TPayload;
 }
 
-export const parseInspectRelay = <TPayload = unknown>(message: string): InspectRelayMessage<TPayload> | null => {
-  if (!message.startsWith(RELAY_PREFIX)) return null;
+const relayPrefix = '__startInspect__:';
+const noPanelError = 'Open the in-app browser panel first.';
+const instrumented = new WeakSet<WebContents>();
+
+export const parseInspectRelay = <TPayload = unknown>(message: string): InspectRelay<TPayload> | null => {
+  if (!message.startsWith(relayPrefix)) return null;
   try {
-    const parsed = JSON.parse(message.slice(RELAY_PREFIX.length)) as Partial<InspectRelayMessage<TPayload>>;
+    const parsed = JSON.parse(message.slice(relayPrefix.length)) as Partial<InspectRelay<TPayload>>;
     if (typeof parsed?.event !== 'string') return null;
     return { event: parsed.event, payload: parsed.payload as TPayload };
   } catch {
@@ -27,7 +27,7 @@ export const parseInspectRelay = <TPayload = unknown>(message: string): InspectR
   }
 };
 
-const handleRelay = (message: InspectRelayMessage) => {
+const routeRelay = (message: InspectRelay) => {
   if (message.event === 'mode-changed') {
     const payload = message.payload as { active?: boolean } | undefined;
     sendToRendererWindows('app:browser-inspect-state', Boolean(payload?.active));
@@ -41,18 +41,18 @@ const handleRelay = (message: InspectRelayMessage) => {
 };
 
 export const attachInspectListener = (webContents: WebContents) => {
-  if (attached.has(webContents)) return;
-  attached.add(webContents);
+  if (instrumented.has(webContents)) return;
+  instrumented.add(webContents);
   webContents.on('console-message', (event) => {
     const parsed = parseInspectRelay(event.message);
-    if (parsed) handleRelay(parsed);
+    if (parsed) routeRelay(parsed);
   });
   webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
     if (isMainFrame) sendToRendererWindows('app:browser-inspect-state', false);
   });
 };
 
-const runInPage = async (webContents: WebContents, code: string): Promise<BrowserActionResult> => {
+const runInPage = async (webContents: WebContents, code: string): Promise<InspectResult> => {
   try {
     await webContents.executeJavaScript(code, true);
     return { ok: true };
@@ -61,8 +61,8 @@ const runInPage = async (webContents: WebContents, code: string): Promise<Browse
   }
 };
 
-export const startBrowserInspectIn = async (webContents: WebContents | null): Promise<BrowserActionResult> => {
-  if (!webContents) return { ok: false, error: closedPanelError };
+export const startInspect = async (webContents: WebContents | null): Promise<InspectResult> => {
+  if (!webContents) return { ok: false, error: noPanelError };
   attachInspectListener(webContents);
   return runInPage(
     webContents,
@@ -70,7 +70,7 @@ export const startBrowserInspectIn = async (webContents: WebContents | null): Pr
   );
 };
 
-export const stopBrowserInspectIn = async (webContents: WebContents | null): Promise<BrowserActionResult> => {
-  if (!webContents) return { ok: false, error: closedPanelError };
+export const stopInspect = async (webContents: WebContents | null): Promise<InspectResult> => {
+  if (!webContents) return { ok: false, error: noPanelError };
   return runInPage(webContents, 'window.__startInspect__?.deactivate();');
 };

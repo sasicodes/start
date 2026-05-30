@@ -1,5 +1,5 @@
 import { isDev } from '@main/application';
-import { attachInspectListener, startBrowserInspectIn, stopBrowserInspectIn } from '@main/browser/inspect';
+import { attachInspectListener, startInspect, stopInspect } from '@main/browser/inspect/index';
 import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { readBrowserSnapshot, type BrowserSnapshot } from '@main/browser/snapshot';
@@ -265,11 +265,9 @@ export const stopBrowser = (): BrowserActionResult => {
   return { ok: true, status: statusFromView() };
 };
 
-export const startBrowserInspect = (): Promise<BrowserActionResult> =>
-  startBrowserInspectIn(browserView?.webContents ?? null);
+export const startBrowserInspect = (): Promise<BrowserActionResult> => startInspect(browserView?.webContents ?? null);
 
-export const stopBrowserInspect = (): Promise<BrowserActionResult> =>
-  stopBrowserInspectIn(browserView?.webContents ?? null);
+export const stopBrowserInspect = (): Promise<BrowserActionResult> => stopInspect(browserView?.webContents ?? null);
 
 export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> => {
   if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };

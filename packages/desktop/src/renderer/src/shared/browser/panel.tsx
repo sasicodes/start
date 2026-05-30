@@ -136,10 +136,13 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
   }, [applyScreenshotStatus]);
 
   const toggleInspect = useCallback(() => {
-    const next = !inspecting;
-    setInspecting(next);
-    const action = next ? window.pi.app.browserInspectStart : window.pi.app.browserInspectStop;
-    action().catch(() => setInspecting(false));
+    if (inspecting) {
+      setInspecting(false);
+      window.pi.app.browserInspectStop().catch(() => {});
+      return;
+    }
+    setInspecting(true);
+    window.pi.app.browserInspectStart().catch(() => setInspecting(false));
   }, [inspecting]);
 
   useEffect(() => {
