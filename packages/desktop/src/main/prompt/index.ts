@@ -12,8 +12,6 @@ interface ToolCapabilitySource {
   getActiveToolNames: () => readonly string[];
 }
 
-const toolsHeading = 'Available tools:';
-const guidelinesHeading = 'Guidelines:';
 const trimmed = v.pipe(v.string(), v.trim());
 const fallbackToolDescription = 'Available runtime tool.';
 const filePathGuideline = '- Show file paths clearly when working with files.';
@@ -99,7 +97,7 @@ const promptWithToolCapabilities = (
 ) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
-  const nextPrompt = replacePromptSection(prompt, toolsHeading, guidelinesHeading, runtimeToolsList(capabilities));
+  const nextPrompt = replacePromptSection(prompt, 'Available tools:', 'Guidelines:', runtimeToolsList(capabilities));
 
   if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource)}\n\n${prompt}`.trim();
 
