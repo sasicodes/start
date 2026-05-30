@@ -1,5 +1,5 @@
 import { countLabel, isRecord, numberValue, stringValue, textContent } from '@main/details';
-import { subagentActivities, subagentTaskCount } from '@main/subagents/details';
+import { subagentActivityList, subagentTaskCount } from '@main/subagents/activity';
 import type { ChatEvent, TurnDetailState } from '@main/types';
 
 const detailValue = (event: ChatEvent, value: string) => {
@@ -314,7 +314,7 @@ export const toolEventDetail = ({
   bodyValue(event, body);
   detailValue(event, detail);
   metricValue(event, metric);
-  const subagents = subagentActivities(result);
+  const subagents = subagentActivityList(result);
   if (subagents.length > 0) event.subagents = subagents;
   return event;
 };

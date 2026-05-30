@@ -1,4 +1,4 @@
-import { DetailItem, ThinkingSection } from '@renderer/shared/turn/item';
+import { DetailItem, ThinkingSection } from '@renderer/shared/turn/detail';
 import { accordionLayoutTransition, activitySequence } from '@renderer/shared/turn/sequence';
 import { SubagentList } from '@renderer/shared/turn/subagents';
 import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';

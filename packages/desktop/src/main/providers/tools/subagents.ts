@@ -10,14 +10,14 @@ import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import type { SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
 import type { EffortLevel } from '@main/types';
 
-const maxTaskCount = 8;
+const maxSubagentTasks = 8;
 
-const subagentSpawnSchema = {
+const spawnToolParameters = {
   properties: {
     tasks: {
       type: 'array',
       minItems: 1,
-      maxItems: maxTaskCount,
+      maxItems: maxSubagentTasks,
       description: 'Focused tasks to run in parallel sub-agents.',
       items: {
         type: 'object',
@@ -48,13 +48,13 @@ interface CreateSubagentToolsOptions {
   nameAllocator: () => SubagentNameAllocator;
 }
 
-const cleanTasks = (tasks: SubagentTaskInput[]) =>
+const validTasks = (tasks: SubagentTaskInput[]) =>
   tasks
     .map((task) => ({ prompt: task.prompt.trim() }))
     .filter((task) => task.prompt)
-    .slice(0, maxTaskCount);
+    .slice(0, maxSubagentTasks);
 
-const textResult = (text: string, details: SubagentRunSnapshot) => ({
+const toolResult = (text: string, details: SubagentRunSnapshot) => ({
   details,
   content: [{ text, type: 'text' as const }]
 });
@@ -72,7 +72,7 @@ export const createSubagentTools = ({
   defineTool({
     label: 'sub-agents',
     name: 'subagent_spawn',
-    parameters: subagentSpawnSchema,
+    parameters: spawnToolParameters,
     executionMode: 'sequential',
     description: 'Run focused sub-agents in parallel.',
     promptSnippet: 'Use for independent research, review, or mapping work.',
@@ -80,11 +80,11 @@ export const createSubagentTools = ({
       const selectedModel = model();
       if (!selectedModel) throw new Error('No configured model is available for sub-agents.');
 
-      const clean = cleanTasks(tasks);
-      if (clean.length === 0) throw new Error('Enter at least one sub-agent task.');
+      const runnableTasks = validTasks(tasks);
+      if (runnableTasks.length === 0) throw new Error('Enter at least one sub-agent task.');
 
       const result = await runSubagents({
-        tasks: clean,
+        tasks: runnableTasks,
         model: selectedModel,
         cwd: cwd(),
         customTools,
@@ -94,10 +94,10 @@ export const createSubagentTools = ({
         settingsManager,
         thinkingLevel: thinkingLevel(),
         ...(signal ? { signal } : {}),
-        onUpdate: (snapshot) => onUpdate?.(textResult('Sub-agents are working.', snapshot))
+        onUpdate: (snapshot) => onUpdate?.(toolResult('Sub-agents are working.', snapshot))
       });
 
-      return textResult(result.text, result);
+      return toolResult(result.text, result);
     }
   })
 ];

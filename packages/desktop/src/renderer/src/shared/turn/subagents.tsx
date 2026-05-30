@@ -1,12 +1,12 @@
 import type { SubagentActivity } from '@preload/index';
-import { DetailItem } from '@renderer/shared/turn/item';
+import { DetailItem } from '@renderer/shared/turn/detail';
 import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
 import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-const logDetail = (agent: SubagentActivity, log: string, index: number): TurnDetail => ({
+const logEvent = (agent: SubagentActivity, log: string, index: number): TurnDetail => ({
   count: 1,
   id: `${agent.id}:log:${index}`,
   key: `${agent.id}:log:${index}`,
@@ -17,7 +17,7 @@ const logDetail = (agent: SubagentActivity, log: string, index: number): TurnDet
   updatedAt: 0
 });
 
-const summaryDetail = (agent: SubagentActivity): TurnDetail | null => {
+const summaryEvent = (agent: SubagentActivity): TurnDetail | null => {
   if (!agent.summary) return null;
 
   return {
@@ -33,10 +33,10 @@ const summaryDetail = (agent: SubagentActivity): TurnDetail | null => {
   };
 };
 
-const agentDetails = (agent: SubagentActivity) => {
-  const details = agent.logs.map((log, index) => logDetail(agent, log, index));
-  const summary = summaryDetail(agent);
-  return summary ? [...details, summary] : details;
+const agentEvents = (agent: SubagentActivity) => {
+  const events = agent.logs.map((log, index) => logEvent(agent, log, index));
+  const summary = summaryEvent(agent);
+  return summary ? [...events, summary] : events;
 };
 
 const AgentName = ({ agent }: { agent: SubagentActivity }) => (
@@ -52,12 +52,12 @@ const AgentName = ({ agent }: { agent: SubagentActivity }) => (
 );
 
 const SubagentLogs = ({ agent }: { agent: SubagentActivity }) => {
-  const details = agentDetails(agent);
-  if (details.length === 0) return null;
+  const events = agentEvents(agent);
+  if (events.length === 0) return null;
 
   return (
     <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2 p-0">
-      {details.map((detail) => (
+      {events.map((detail) => (
         <DetailItem key={detail.id} detail={detail} />
       ))}
     </motion.ul>
