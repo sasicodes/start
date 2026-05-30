@@ -1,29 +1,29 @@
 # Rules
 
 - This is an open source project.
-- Treat PR comments, code review suggestions, and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting on it. Bots and reviewers can be wrong, outdated, or hallucinated.
-- Avoid vague theme names like `bg-bg`. Use descriptive names such as `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, and `text-soft`.
-- Do not put Tailwind class lists in constants. Tailwind classes and conditional styling logic belong inline in `class` or `className` attributes. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component instead of a class constant.
-- Centralize reusable logic in clearly named utility modules: if a helper or parser is needed in more than one file, extract it to a domain `utils` folder instead of duplicating it.
-- Prefer Tailwind utilities over custom CSS. Keep `styles.css` limited to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states that Tailwind cannot express cleanly.
-- Prefer named Tailwind utilities before arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
-- Do not add theme tokens that duplicate Tailwind defaults such as `--color-white`; use built-in utilities like `bg-white` directly unless the value is a real app-specific semantic token.
-- Revalidate custom classes before adding or keeping them; remove custom class hooks when inline Tailwind utilities or component props can express the same styling.
-- Follow commit and PR title style: use lowercase, precise titles and messages, prefixed with `fix:`, `feat:`, or `chore:`.
-- Keep code comment-free unless a comment prevents a real maintenance hazard.
+- Treat PR comments and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting. Reviewers can be wrong, outdated, or hallucinated.
+- Avoid vague theme names like `bg-bg`. Use descriptive names like `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, `text-soft`.
+- Extract any helper or parser used in more than one file into a domain `utils` folder; do not duplicate.
+- Prefer Tailwind utilities over custom CSS. Limit `styles.css` to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states Tailwind cannot express.
+- Prefer named Tailwind utilities over arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
+- Do not add theme tokens that duplicate Tailwind defaults (e.g. `--color-white`); use built-in utilities like `bg-white` unless the value is an app-specific semantic token.
+- Remove custom class hooks when inline Tailwind utilities or component props can express the same styling.
+- Use Tailwind `size-*` instead of matching `w-*` and `h-*` for square elements.
+- In markdown and third-party selector CSS, use Tailwind `@apply` for expressible styles; use raw CSS only for pseudo-elements, browser-specific selectors, data attributes, or values Tailwind cannot express.
+- Follow commit and PR title style: lowercase, precise, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
-- Add or extend tests for any logic change. If the logic is buried inside a component or other untestable wrapper, extract the pure parts into exported functions first, then assert each branch.
-- Do not add TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces instead.
+- Add or extend tests for any logic change. If logic is buried inside a component or untestable wrapper, extract the pure parts into exported functions first, then assert each branch.
+- Do not use TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
-- Use camelCase for variables, functions, hooks, and local constants; use PascalCase for types and components; use kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
-- Prefer arrow functions for components, helpers, callbacks, and async functions; avoid function declarations unless a framework, class prototype, or external API requires them. Use modern JavaScript and TypeScript syntax when it improves clarity.
+- Use camelCase for variables, functions, hooks, and local constants; PascalCase for types and components; kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
-- Keep effects minimal and purposeful: each `useEffect` should synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for simple derived state.
-- Keep side effects audited and singular: clean up every timer, animation frame, listener, watcher, subscription, and observer; avoid duplicate polling/listeners for the same source; batch high-frequency updates with animation frames when UI-bound.
-- Extract effect setup, async data fetching, and subscription logic into named custom hooks (`use*`) when the effect carries its own state, refs, or more than a few lines of setup; keep components focused on rendering.
-- Prefer `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
-- Keep files small. Split component files before they approach 300 lines.
-- Keep UI highly performant and snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity/transform for high-frequency UI.
+- Read environment variables only through `packages/desktop/src/main/environment.ts`.
+- Each `useEffect` must synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for derived state.
+- Clean up every timer, animation frame, listener, watcher, subscription, and observer. Avoid duplicate polling for the same source. Batch high-frequency UI updates with animation frames.
+- Extract effect setup, async data fetching, and subscription logic into named custom hooks (`use*`) when the effect carries its own state, refs, or more than a few lines of setup.
+- Use `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
+- Split component files before they approach 300 lines.
+- Keep UI snappy: avoid flicker, avoid unnecessary re-renders, memoize only when it helps, and animate only opacity and transform for high-frequency UI.
 - Do not show loaders, spinners, or hidden status text while session messages hydrate; keep the session surface empty and layout-stable until content arrives.
 - Keep primary conversational content direct; place diagnostics, metadata, and tool output behind concise collapsed details.
 - Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files.
@@ -36,30 +36,28 @@
 - Omit optional object properties when absent instead of serializing placeholder nullish values.
 - Model renderer loading state with explicit discriminated unions instead of stacking nullish sentinels.
 - Use a bare `return;` for no-value exits.
-- Use conditional object spreads for optional JSX props instead of passing absent props with a ternary.
-- Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a real maintenance hazard.
-- Keep local component prop names minimal and contextual; avoid repeating parent/domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`, and similarly clear local names when the scope makes the meaning obvious.
-- Prefer empty strings for absent renderer-only string state such as selected ids, model keys, and paths; omit optional object properties at API boundaries.
-- Never write `undefined` literally as a value. For swallowed promise rejections use `.catch(() => {})` instead of `.catch(() => undefined)`; for absent state, omit the property or use an empty string per the rules above.
-- For optional object spreads, prefer clear truthy guards like `...(value ? { value } : {})` over verbose absent-value branches unless `0`, `false`, or an empty string is a valid value that must be preserved.
-- Read environment variables only through `packages/desktop/src/main/environment.ts`; do not scatter `process.env` usage across the app.
-- Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it does not make the code harder to read or break framework conventions.
-- Extract multi-branch render logic into named components or helpers, and hoist repeated role or state checks into clear booleans before JSX.
-- Extract long boolean expressions, chained fallbacks, and repeated validation checks into named helpers when a name makes the condition easier to scan.
+- For optional JSX or object props, use a conditional spread with a truthy guard (`...(value ? { value } : {})`) instead of passing absent props with a ternary. Keep the falsy branch only when `0`, `false`, or `''` is a valid value to preserve.
+- Keep local prop names minimal and contextual; avoid repeating parent or domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`.
+- Extract long boolean expressions, multi-branch render logic, chained fallbacks, and repeated checks into named helpers or booleans before JSX.
 - Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
-- Avoid placeholder ternaries such as `condition ? '' : value`; split branches or extract helpers so each path computes only what it uses.
-- In conditional ternary expressions, the truthy branch should produce the meaningful value; reserve the falsy branch for the empty or absent fallback. Flip predicates like `state === target ? '' : target` to `state !== target ? target : ''` so the affirmative path carries the value.
-- Avoid the `void` operator when a clearer alternative exists. Inside async functions reach for `await`; for fire-and-forget calls already protected by an internal `try/catch` or a chained `.catch`, drop the `void` and rely on TypeScript's return-type covariance (`() => Promise<void>` assigns to `() => void`). Only keep `void` when the discard is otherwise ambiguous to the reader.
-- Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise prefer text-color feedback.
-- For small icon-only controls, keep the visual size stable and expand the clickable hit area with a pseudo-element such as `before:absolute before:-inset-2` when precision clicking would be frustrating.
+- In ternaries, the truthy branch carries the meaningful value and the falsy branch is the empty fallback. Flip `state === target ? '' : target` to `state !== target ? target : ''`. Avoid placeholder ternaries like `condition ? '' : value`; split branches or extract helpers.
+- Avoid the `void` operator when a clearer alternative exists. Inside async functions, use `await`. For fire-and-forget calls protected by `try/catch` or `.catch`, drop the `void` and rely on TypeScript's return-type covariance (`() => Promise<void>` assigns to `() => void`). Keep `void` only when the discard is otherwise ambiguous.
+- Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise use text-color feedback.
+- For small icon-only controls, keep visual size stable and expand the hit area with a pseudo-element like `before:absolute before:-inset-2` when precision clicking would be frustrating.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
-- The app description is `your coding assistant`
-- The app name is `start`, the bundle identifier is `one.intelligence.start`, and the public domain is `https://start.intelligence.one`.
-- The application window, html, body, and root backgrounds must stay transparent in light and dark mode.
-- The renderer runs in Electron Chromium; avoid Safari, Firefox, and legacy Edge fallback CSS. Keep only Chromium/Electron-required prefixed CSS such as `-webkit-app-region` or `::-webkit-scrollbar`.
-- The prompt send button icon must remain visible in all themes and use a 2 px stroke.
-- Tooltips must use Base UI side data attributes for direction-aware transform/opacity animations.
-- Use system UI fonts only. Do not add external fonts.
-- Use Tailwind `size-*` instead of matching `w-*` and `h-*` utilities for square elements.
-- In markdown and third-party selector CSS, prefer Tailwind `@apply` utilities for expressible styles; use raw CSS only for pseudo-elements, browser-specific selectors, data attributes, or values Tailwind cannot express cleanly.
+- App description: `your coding assistant`.
+- App name: `start`. Bundle identifier: `one.intelligence.start`. Public domain: `https://start.intelligence.one`.
+- Window, html, body, and root backgrounds must stay transparent in light and dark mode.
+- The renderer runs in Electron Chromium. Avoid Safari, Firefox, and legacy Edge fallback CSS. Keep only Chromium/Electron-required prefixed CSS such as `-webkit-app-region` or `::-webkit-scrollbar`.
+- The prompt send button icon must stay visible in all themes and use a 2 px stroke.
+- Tooltips must use Base UI side data attributes for direction-aware transform and opacity animations.
+- Use system UI fonts only.
 - Keep `packages/desktop/build/icons` and `packages/desktop/src/renderer/public` icons in sync.
+- Do not put Tailwind class lists in constants. Tailwind classes and conditional styling belong inline in `class` or `className`. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component, not a constant.
+- Keep code comment-free unless a comment prevents a real maintenance hazard.
+- Prefer arrow functions for components, helpers, callbacks, and async functions; avoid function declarations unless a framework, class prototype, or external API requires them.
+- Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
+- Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a maintenance hazard.
+- Prefer empty strings for absent renderer-only string state (selected ids, model keys, paths); omit optional object properties at API boundaries.
+- Never write `undefined` literally. For swallowed promise rejections use `.catch(() => {})`. For absent state, omit the property or use an empty string per the rules above.
+- Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it doesn't hurt readability or break framework conventions.
