@@ -213,14 +213,9 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       const baseTurns = result.turns ?? [];
       const restoredStreamingId = streamingAssistantId(baseTurns);
       const generating = Boolean(nextStatus.isGenerating);
-      if (restoredStreamingId || !generating) {
-        setTurns(() => baseTurns);
-        assistantIdRef.current = restoredStreamingId;
-      } else {
-        const liveTurn = { ...createTurn('assistant', ''), streaming: true };
-        setTurns(() => [...baseTurns, liveTurn]);
-        assistantIdRef.current = liveTurn.id;
-      }
+      const liveTurn = generating && !restoredStreamingId ? { ...createTurn('assistant', ''), streaming: true } : null;
+      setTurns(() => (liveTurn ? [...baseTurns, liveTurn] : baseTurns));
+      assistantIdRef.current = liveTurn?.id ?? restoredStreamingId;
       setIsGenerating(generating);
       scrollSessionToBottom();
       setLoadedSessionId(result.id ?? '');

@@ -66,7 +66,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
             setRecording(true);
           }}
           onKeyDown={(event) => {
-            if (recording) void record(event);
+            if (recording) record(event);
           }}
           class="h-9 min-w-36 rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
         >

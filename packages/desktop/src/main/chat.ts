@@ -640,7 +640,7 @@ export class ChatService {
             instructions: info.instructions,
             message: 'Complete login in your browser, or paste the redirect URL/code below.'
           });
-          void shell.openExternal(info.url).catch(() => {});
+          shell.openExternal(info.url).catch(() => {});
         },
         onDeviceCode: (info) => {
           webContents.send('chat:subscription-auth-update', {
@@ -649,7 +649,7 @@ export class ChatService {
             instructions: `Enter code ${info.userCode} after opening the verification page.`,
             message: 'Open the verification page and enter the device code to finish login.'
           });
-          void shell.openExternal(info.verificationUri).catch(() => {});
+          shell.openExternal(info.verificationUri).catch(() => {});
         },
         onManualCodeInput: () => this.createSubscriptionAuthInput(),
         onProgress: (progress) => {
