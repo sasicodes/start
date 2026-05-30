@@ -1,9 +1,11 @@
+import { homedir } from 'node:os';
 import { join, sep } from 'node:path';
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
 
 const piConfigSegment = `${sep}.pi${sep}`;
+const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const startAgentDir = join(baseDir, 'agent');
 const startPromptsDir = join(baseDir, 'prompts');
 const startPromptsPrefix = `${startPromptsDir}${sep}`;
@@ -11,7 +13,7 @@ const systemPrompt = buildStartSystemPrompt(startPromptsDir);
 
 export const createStartResourceLoader = async (cwd: string) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
-  const projectSkillsPrefix = `${projectSkillsDir}${sep}`;
+  const skillDirs = [globalSkillsDir, projectSkillsDir];
 
   const loader = new DefaultResourceLoader({
     cwd,
@@ -25,8 +27,8 @@ export const createStartResourceLoader = async (cwd: string) => {
     noPromptTemplates: false,
     skillsOverride: (base) => ({
       ...base,
-      skills: base.skills.filter(
-        (skill) => skill.sourceInfo.path === projectSkillsDir || skill.sourceInfo.path.startsWith(projectSkillsPrefix)
+      skills: base.skills.filter((skill) =>
+        skillDirs.some((dir) => skill.sourceInfo.path === dir || skill.sourceInfo.path.startsWith(`${dir}${sep}`))
       )
     }),
     promptsOverride: (base) => ({
@@ -37,7 +39,7 @@ export const createStartResourceLoader = async (cwd: string) => {
       ...base,
       extensions: base.extensions.filter((extension) => !extension.sourceInfo?.path?.includes(piConfigSegment))
     }),
-    additionalSkillPaths: [projectSkillsDir],
+    additionalSkillPaths: skillDirs,
     additionalPromptTemplatePaths: [startPromptsDir],
     extensionFactories: [createStartPromptExtension(startPromptsDir)]
   });

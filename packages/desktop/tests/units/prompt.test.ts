@@ -141,8 +141,28 @@ Current date: 2026-05-30`
     expect(result?.systemPrompt).toContain('Current date: 2026-05-30');
   });
 
+  it('keeps existing prompt content if the runtime prompt block is missing', async () => {
+    const registered: { handler?: BeforeAgentStartHandler } = {};
+    const pi = {
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
+      getActiveTools: () => ['grep'],
+      on: (_event: 'before_agent_start', nextHandler: BeforeAgentStartHandler) => {
+        registered.handler = nextHandler;
+      }
+    } as unknown as ExtensionAPI;
+
+    createStartPromptExtension('/mock/prompts')(pi);
+    if (!registered.handler) throw new Error('Expected prompt hook registration.');
+
+    const result = await registered.handler({ systemPrompt: 'Current working directory: /tmp/workspace' });
+
+    expect(result.systemPrompt).toContain('- grep: Search file contents.');
+    expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
+  });
+
   it('points the model at .agents/skills/ for new skills', () => {
     const prompt = buildStartSystemPrompt('/whatever');
+    expect(prompt).toContain('~/.agents/skills/<skill-name>/SKILL.md');
     expect(prompt).toContain('<cwd>/.agents/skills/<skill-name>/SKILL.md');
   });
 

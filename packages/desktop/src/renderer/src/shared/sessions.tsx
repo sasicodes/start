@@ -25,6 +25,9 @@ const sessionAttention = (session: RecentSession, activeSessionId: string): Atte
 const recentSessionsAttention = (sessions: RecentSession[], activeSessionId: string) =>
   topAttentionStatus(sessions.map((session) => sessionAttention(session, activeSessionId)));
 
+const recentSessionsAttentionCount = (sessions: RecentSession[], activeSessionId: string) =>
+  sessions.filter((session) => sessionAttention(session, activeSessionId)).length;
+
 const acknowledgeSession = (session: RecentSession): RecentSession => {
   const { noticeKind, status, ...rest } = session;
   if (status && status !== 'completed' && status !== 'failed') return { ...rest, status };
@@ -180,6 +183,8 @@ export const RecentSessions = memo(
     );
 
     const attention = recentSessionsAttention(sessions, activeSessionId);
+    const attentionCount = recentSessionsAttentionCount(sessions, activeSessionId);
+    const attentionLabel = attentionCount > 99 ? '99+' : String(attentionCount);
 
     useEffect(() => {
       return () => {
@@ -221,8 +226,15 @@ export const RecentSessions = memo(
         >
           <HistoryIcon class="size-5" />
           {attention && (
-            <span class="pointer-events-none absolute top-[3px] right-[3px] z-10">
-              <Indicator kind={attention} />
+            <span
+              class={tw(
+                'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
+                attention === 'failed' && 'bg-danger',
+                attention === 'completed' && 'bg-success',
+                attention === 'generating' && 'bg-blue-500'
+              )}
+            >
+              {attentionLabel}
             </span>
           )}
         </AppMenu.Trigger>

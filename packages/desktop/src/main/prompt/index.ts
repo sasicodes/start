@@ -13,6 +13,9 @@ interface ToolCapabilitySource {
 }
 
 const fallbackToolDescription = 'Available runtime tool.';
+const toolsHeading = 'Available tools:';
+const guidelinesHeading = 'Guidelines:';
+const filePathGuideline = '- Show file paths clearly when working with files.';
 const trimmed = v.pipe(v.string(), v.trim());
 
 const promptGuidelinesSchema = v.pipe(
@@ -34,22 +37,20 @@ const runtimeToolCapabilitySchema = v.union([
   })
 ]);
 
-const normalizeToolDescription = (value: string) =>
-  value
-    .replace(/[\r\n]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const toolCapabilityFromValue = (value: unknown): ToolCapability | null => {
+const readToolCapability = (value: unknown): ToolCapability | null => {
   const result = v.safeParse(runtimeToolCapabilitySchema, value);
   if (!result.success) return null;
 
   const tool = 'definition' in result.output ? result.output.definition : result.output;
+  const description = tool.promptSnippet || tool.description || fallbackToolDescription;
 
   return {
     name: tool.name,
     promptGuidelines: tool.promptGuidelines,
-    description: normalizeToolDescription(tool.promptSnippet || tool.description || fallbackToolDescription)
+    description: description
+      .replace(/[\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
   };
 };
 
@@ -59,7 +60,7 @@ const toolCapabilitiesFromSource = (source: ToolCapabilitySource): ToolCapabilit
   const toolsByName = new Map<string, ToolCapability>();
 
   for (const value of source.getAllTools()) {
-    const tool = toolCapabilityFromValue(value);
+    const tool = readToolCapability(value);
     if (tool) toolsByName.set(tool.name, tool);
   }
 
@@ -79,19 +80,25 @@ const toolGuidelinesList = (capabilities: readonly ToolCapability[]) => {
   return guidelines.length > 0 ? `\n${guidelines.map((guideline) => `- ${guideline}`).join('\n')}` : '';
 };
 
-const promptWithToolCapabilities = (prompt: string, capabilitySource: ToolCapabilitySource) => {
+const replacePromptSection = (prompt: string, heading: string, nextHeading: string, body: string) => {
+  const start = prompt.indexOf(heading);
+  if (start < 0) return '';
+
+  const contentStart = start + heading.length;
+  const contentEnd = prompt.indexOf(nextHeading, contentStart);
+  if (contentEnd < 0) return '';
+
+  return `${prompt.slice(0, contentStart)}\n${body}\n\n${prompt.slice(contentEnd)}`;
+};
+
+const promptWithToolCapabilities = (prompt: string, promptsDir: string, capabilitySource: ToolCapabilitySource) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
+  const nextPrompt = replacePromptSection(prompt, toolsHeading, guidelinesHeading, runtimeToolsList(capabilities));
 
-  return prompt
-    .replace(
-      /Available tools:\n[\s\S]*?\n\nGuidelines:/u,
-      `Available tools:\n${runtimeToolsList(capabilities)}\n\nGuidelines:`
-    )
-    .replace(
-      '- Show file paths clearly when working with files.',
-      `- Show file paths clearly when working with files.${toolGuidelines}`
-    );
+  if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, capabilitySource)}\n\n${prompt}`.trim();
+
+  return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
 
 export const buildStartSystemPrompt = (promptsDir: string, capabilitySource?: ToolCapabilitySource): string => {
@@ -106,17 +113,17 @@ ${runtimeToolsList(capabilities)}
 Guidelines:
 - Prefer grep/find/ls tools over bash for file exploration (faster, respects .gitignore).
 - Be concise in your responses.
-- Show file paths clearly when working with files.${toolGuidelines}
+${filePathGuideline}${toolGuidelines}
 
 Project and user resources:
 - Project rules come from AGENTS.md and CLAUDE.md files in or above the current working directory.
-- Skills belong in <cwd>/.agents/skills/<skill-name>/SKILL.md with YAML frontmatter and instructions.
+- Skills belong in ~/.agents/skills/<skill-name>/SKILL.md for global skills or <cwd>/.agents/skills/<skill-name>/SKILL.md for workspace skills.
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
 };
 
 export const createStartPromptExtension = (promptsDir: string) => (pi: ExtensionAPI) => {
   pi.on('before_agent_start', async (event) => ({
-    systemPrompt: promptWithToolCapabilities(event.systemPrompt || buildStartSystemPrompt(promptsDir), {
+    systemPrompt: promptWithToolCapabilities(event.systemPrompt || buildStartSystemPrompt(promptsDir), promptsDir, {
       getAllTools: pi.getAllTools,
       getActiveToolNames: pi.getActiveTools
     })
