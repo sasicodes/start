@@ -60,7 +60,7 @@ export const WorkspaceMenu = ({
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl px-3 py-3 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control"
     >
       <FolderIcon class="size-4.5" />
-      <span class="text-sm leading-5">Choose a directory</span>
+      <span>Choose a directory</span>
     </AppMenu.Item>
   </div>
 );
