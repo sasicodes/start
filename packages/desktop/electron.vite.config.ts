@@ -12,23 +12,20 @@ const aliases = {
   '@renderer': resolve(root, 'src/renderer/src')
 } as const;
 
-const mainExternal = ['electron', '@silvia-odwyer/photon-node'];
-
 export default defineConfig({
   main: {
     resolve: { alias: aliases },
     build: {
       minify: true,
       sourcemap: false,
-      reportCompressedSize: false,
       externalizeDeps: false,
+      reportCompressedSize: false,
       rollupOptions: {
-        external: [...mainExternal, /^node:/],
-        treeshake: { moduleSideEffects: true },
+        external: ['electron', /^node:/, '@silvia-odwyer/photon-node'],
         output: {
           format: 'cjs',
-          entryFileNames: 'index.cjs',
-          inlineDynamicImports: true
+          codeSplitting: false,
+          entryFileNames: 'index.cjs'
         }
       }
     }

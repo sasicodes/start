@@ -1,7 +1,7 @@
 {
   "name": "@start/web",
   "private": true,
-  "version": "0.1.0-alpha.2",
+  "version": "0.0.0",
   "license": "MIT",
   "description": "your coding assistant",
   "type": "module",
@@ -19,7 +19,7 @@
     "vite",
     "coding-agent"
   ],
-  "author": "Intelligence One",
+  "author": "sasicodes",
   "dependencies": {
     "lenis": "1.3.23",
     "react": "19.2.6",
