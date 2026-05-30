@@ -2,6 +2,7 @@ import { Markdown } from '@renderer/markdown';
 import {
   accordionContentMotion,
   accordionLayoutTransition,
+  detailCount,
   detailMeta,
   detailTarget,
   isCodeMeta,
@@ -27,7 +28,7 @@ interface DetailTitleProps {
 const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
   const target = detailTarget(detail);
   const index = target ? detail.title.lastIndexOf(target) : -1;
-  if (index < 0) return <>{detail.title}</>;
+  if (index < 0) return <>{`${detail.title}${detailCount(detail)}`}</>;
 
   const before = detail.title.slice(0, index);
   const after = detail.title.slice(index + target.length);
@@ -40,6 +41,7 @@ const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
         {target}
       </span>
       {after}
+      {detailCount(detail)}
     </>
   );
 };

@@ -1,4 +1,5 @@
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
+import { detailCount } from '@renderer/shared/turn/sequence';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
 import type { ChatEvent } from '@preload/index';
 import { describe, expect, it } from 'vitest';
@@ -32,7 +33,23 @@ const detailState = (item: TurnActivityItem | undefined) => {
   return item.detail.state;
 };
 
+const detailWithCount = (count: number) => ({
+  id: 'read',
+  key: 'read',
+  count,
+  kind: 'tool' as const,
+  state: 'done' as const,
+  title: 'Read',
+  createdAt: 0,
+  updatedAt: 0
+});
+
 describe('turn activity sequence', () => {
+  it('formats repeat counts only for grouped events', () => {
+    expect(detailCount(detailWithCount(1))).toBe('');
+    expect(detailCount(detailWithCount(3))).toBe(' ×3');
+  });
+
   it('interleaves thinking and detail items in arrival order', () => {
     let turns: Turn[] = [baseTurn()];
     const setTurns = (fn: (current: Turn[]) => Turn[]) => {
