@@ -212,6 +212,11 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
   return '';
 };
 
+const nonErrorResult = (toolName: string, result: unknown) => {
+  if (!isRecord(result)) return false;
+  return toolName === 'find' && textContent(result.content).trim() === 'No files found matching pattern';
+};
+
 export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
 
@@ -304,11 +309,12 @@ export const toolEventDetail = ({
   const detail = toolDetail(toolName, safeArgs);
   const metric = toolMetric(toolName, safeArgs, result);
   const body = toolBody(toolName, safeArgs, result);
+  const nextState = state === 'error' && nonErrorResult(toolName, result) ? 'done' : state;
   const event: ChatEvent = {
     key,
-    kind: state === 'error' ? 'error' : 'tool',
-    title: toolTitle(toolName, safeArgs, state),
-    state
+    state: nextState,
+    kind: nextState === 'error' ? 'error' : 'tool',
+    title: toolTitle(toolName, safeArgs, nextState)
   };
 
   bodyValue(event, body);

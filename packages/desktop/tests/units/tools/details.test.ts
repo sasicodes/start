@@ -76,4 +76,22 @@ describe('tool details', () => {
       title: 'Read failed'
     });
   });
+
+  it('renders find no-results as a normal tool detail', () => {
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        state: 'error',
+        args: { pattern: '*' },
+        toolName: 'find',
+        result: {
+          content: [{ type: 'text', text: 'No files found matching pattern' }]
+        }
+      })
+    ).toMatchObject({
+      kind: 'tool',
+      state: 'done',
+      title: 'Found files matching *'
+    });
+  });
 });
