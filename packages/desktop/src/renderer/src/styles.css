@@ -107,6 +107,16 @@
   }
 }
 
+:root[data-solid-window-background="true"] {
+  --color-canvas: oklch(98% 0.002 264);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-solid-window-background="true"] {
+    --color-canvas: oklch(22% 0.01 255);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -124,6 +134,10 @@ body,
 
 body {
   @apply overflow-hidden bg-transparent;
+}
+
+.no-scroll-bar::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes activity-text-shimmer {

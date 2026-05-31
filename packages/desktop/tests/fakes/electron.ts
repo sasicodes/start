@@ -112,6 +112,7 @@ const windowsByWebContents = new Map<FakeBrowserWebContents, FakeBrowserWindow>(
 
 const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
   const base = createFakeWebContents();
+  let currentUrl = '';
   const handlersByEvent = new Map<string, Set<Handler>>();
   const webContents: FakeBrowserWebContents = {
     ...base,
@@ -129,11 +130,13 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     },
     focusCount: 0,
     getTitle: () => '',
-    getURL: () => '',
+    getURL: () => currentUrl,
     getZoomFactor: () => 1,
     inputEvents: [],
     isLoading: () => false,
-    loadURL: async (_url: string) => {},
+    loadURL: async (url: string) => {
+      currentUrl = url;
+    },
     navigationHistory: {
       canGoBack: () => false,
       canGoForward: () => false,

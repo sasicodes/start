@@ -5,16 +5,18 @@ import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {
-  composerShortcut: string;
   lastWorkspace?: string;
+  composerShortcut: string;
   selectedModelKey?: string;
+  solidWindowBackground: boolean;
+  selectedThinkingLevel: EffortLevel;
   sessionNotices?: Record<string, SessionNotice>;
   workspaceBookmarks?: Record<string, string>;
-  selectedThinkingLevel: EffortLevel;
 };
 
 const defaultStartState = {
   composerShortcut: 'Control+Space',
+  solidWindowBackground: false,
   selectedThinkingLevel: 'high'
 } satisfies StartState;
 
@@ -55,9 +57,9 @@ const cleanSessionNotices = (value: unknown) => {
     if (notice.kind !== 'completed' && notice.kind !== 'failed') continue;
     notices[sessionId] = {
       sessionId,
+      kind: notice.kind,
       createdAt,
       workspacePath,
-      kind: notice.kind,
       ...(seenAt ? { seenAt } : {})
     };
   }
@@ -80,6 +82,7 @@ export const parseStartState = (value: unknown): StartState => {
   const workspaceBookmarks = cleanStringRecord(state.workspaceBookmarks);
   return {
     composerShortcut: cleanString(state.composerShortcut) ?? defaultStartState.composerShortcut,
+    solidWindowBackground: state.solidWindowBackground === true,
     selectedThinkingLevel: cleanThinkingLevel(state.selectedThinkingLevel),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
@@ -89,33 +92,34 @@ export const parseStartState = (value: unknown): StartState => {
 };
 
 const stateKey = {
-  composerShortcut: 'composer_shortcut',
   lastWorkspace: 'last_workspace',
+  composerShortcut: 'composer_shortcut',
   selectedModelKey: 'selected_model_key',
-  selectedThinkingLevel: 'selected_thinking_level',
   sessionNotices: 'session_notices',
+  selectedThinkingLevel: 'selected_thinking_level',
+  solidWindowBackground: 'solid_window_background',
   workspaceBookmarks: 'workspace_bookmarks'
 } as const satisfies Record<keyof StartState, string>;
 
 type StateRow = { key: string; value_json: string };
 
 interface AppStateStatements {
-  selectAll: StartStatement;
-  upsert: StartStatement;
   remove: StartStatement;
+  upsert: StartStatement;
+  selectAll: StartStatement;
 }
 
-let cachedStatements: AppStateStatements | undefined;
+let cachedStatements: AppStateStatements | null = null;
 
 const statements = (): AppStateStatements => {
   if (cachedStatements) return cachedStatements;
   const db = openStartDb();
   cachedStatements = {
+    remove: db.prepare('DELETE FROM app_state WHERE key = ?'),
     selectAll: db.prepare('SELECT key, value_json FROM app_state'),
     upsert: db.prepare(
       'INSERT INTO app_state (key, value_json, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at'
-    ),
-    remove: db.prepare('DELETE FROM app_state WHERE key = ?')
+    )
   };
   return cachedStatements;
 };
@@ -132,7 +136,7 @@ const writeRow = (key: string, value: unknown) => statements().upsert.run(key, J
 const deleteRow = (key: string) => statements().remove.run(key);
 
 const writeOrDeleteRow = (key: string, value: unknown) => {
-  if (value === undefined || value === null) {
+  if (value == null) {
     deleteRow(key);
     return;
   }
@@ -150,11 +154,12 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
 };
 
 const rawToStartStateShape = (raw: Record<string, unknown>) => ({
-  composerShortcut: raw[stateKey.composerShortcut],
   lastWorkspace: raw[stateKey.lastWorkspace],
+  composerShortcut: raw[stateKey.composerShortcut],
   selectedModelKey: raw[stateKey.selectedModelKey],
-  selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
   sessionNotices: raw[stateKey.sessionNotices],
+  selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
+  solidWindowBackground: raw[stateKey.solidWindowBackground],
   workspaceBookmarks: raw[stateKey.workspaceBookmarks]
 });
 
@@ -171,6 +176,7 @@ export const writeStartState = (state: StartState): StartState => {
   runStartTransaction(() => {
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
+    writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
     writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);

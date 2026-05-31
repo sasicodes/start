@@ -17,37 +17,59 @@ const openPollMs = 100;
 const openTimeoutMs = 5000;
 
 const emptySchema = {
-  required: [],
   type: 'object',
+  required: [],
   properties: {},
   additionalProperties: false
 } as const;
 
 const browserOpenSchema = {
+  type: 'object',
+  required: ['url'],
   properties: {
     url: {
       type: 'string',
       description: 'HTTP or HTTPS URL.'
+    },
+    tabId: {
+      type: 'string',
+      description: 'Existing browser tab id from browser_status.'
+    },
+    newTab: {
+      type: 'boolean',
+      description: 'Open the URL in a separate browser tab when true.'
     }
   },
+  additionalProperties: false
+} as const;
+
+const browserSelectSchema = {
   type: 'object',
-  required: ['url'],
+  required: ['tabId'],
+  properties: {
+    tabId: {
+      type: 'string',
+      description: 'Browser tab id from browser_status.'
+    }
+  },
   additionalProperties: false
 } as const;
 
 const browserClickSchema = {
+  type: 'object',
+  required: ['ref'],
   properties: {
     ref: {
       type: 'string',
       description: 'Element ref from browser_snapshot, such as e1.'
     }
   },
-  type: 'object',
-  required: ['ref'],
   additionalProperties: false
 } as const;
 
 const browserTypeSchema = {
+  type: 'object',
+  required: ['ref', 'text'],
   properties: {
     ref: {
       type: 'string',
@@ -62,20 +84,18 @@ const browserTypeSchema = {
       description: 'Replace existing text when true.'
     }
   },
-  type: 'object',
-  required: ['ref', 'text'],
   additionalProperties: false
 } as const;
 
 const browserPressSchema = {
+  type: 'object',
+  required: ['key'],
   properties: {
     key: {
       type: 'string',
       description: 'One supported key, such as Enter, Tab, Escape, or ArrowDown.'
     }
   },
-  type: 'object',
-  required: ['key'],
   additionalProperties: false
 } as const;
 
@@ -100,14 +120,30 @@ const waitForBrowserOpen = async (expectedUrl: string) => {
   return getBrowserStatus();
 };
 
+const waitForBrowserSelection = async (tabId: string) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < openTimeoutMs) {
+    const status = getBrowserStatus();
+    if (status.open && status.activeTabId === tabId) return status;
+    await wait(openPollMs);
+  }
+
+  return getBrowserStatus();
+};
+
 export const createBrowserTools = () => [
   defineTool({
     label: 'browser',
-    async execute(_toolCallId, { url }) {
+    async execute(_toolCallId, { url, newTab, tabId }) {
       const normalizedUrl = normalizeBrowserUrl(url);
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
-      sendToMainWindow('app:browser-open-request', normalizedUrl);
+      const tabIdValue = typeof tabId === 'string' ? tabId.trim() : '';
+      sendToMainWindow('app:browser-open-request', {
+        url: normalizedUrl,
+        ...(tabIdValue ? { tabId: tabIdValue, newTab: newTab === true } : { newTab: newTab !== false })
+      });
       const status = await waitForBrowserOpen(normalizedUrl);
       if (!status.open || !status.url) throw new Error('Browser did not open.');
 
@@ -120,6 +156,21 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     label: 'browser',
+    async execute(_toolCallId, { tabId }) {
+      const tabIdValue = requiredString(tabId, 'tab id');
+      sendToMainWindow('app:browser-select-request', { tabId: tabIdValue });
+      const status = await waitForBrowserSelection(tabIdValue);
+      if (status.activeTabId !== tabIdValue) throw new Error('Browser tab did not open.');
+
+      return textResult(`Selected browser tab ${tabIdValue}.`);
+    },
+    name: 'browser_select',
+    parameters: browserSelectSchema,
+    description: 'Select an existing browser tab by id.',
+    promptSnippet: 'Use browser_status first, then select a listed tab id.'
+  }),
+  defineTool({
+    label: 'browser',
     async execute() {
       const status = getBrowserStatus();
       return textResult(
@@ -129,7 +180,9 @@ export const createBrowserTools = () => [
           title: status.title,
           loading: status.loading,
           canGoBack: status.canGoBack,
-          canGoForward: status.canGoForward
+          activeTabId: status.activeTabId,
+          canGoForward: status.canGoForward,
+          tabs: status.tabs
         })
       );
     },

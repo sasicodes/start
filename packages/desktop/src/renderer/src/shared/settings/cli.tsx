@@ -2,7 +2,8 @@ import type { CliInstallStatus } from '@preload/index';
 import { useEffect, useState } from 'preact/hooks';
 
 const statusText = (status: CliInstallStatus | null) => {
-  if (!status || status.status === 'installed' || status.status === 'not-installed') return '';
+  if (!status || status.status === 'installed' || status.status === 'not-installed' || status.status === 'unavailable')
+    return '';
   return status.reason;
 };
 
@@ -69,7 +70,7 @@ export const CliInstall = () => {
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Command line</h2>
-          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Open workspaces from Terminal with start .</p>
+          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Use start . to open folders in Start.</p>
         </div>
         <button
           type="button"

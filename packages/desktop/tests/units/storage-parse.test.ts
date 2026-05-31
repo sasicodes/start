@@ -8,7 +8,14 @@ describe('parseStartState', () => {
   it('falls back to defaults for missing or invalid values', () => {
     const state = parseStartState({});
     expect(state.composerShortcut).toBe('Control+Space');
+    expect(state.solidWindowBackground).toBe(false);
     expect(state.selectedThinkingLevel).toBe('high');
+  });
+
+  it('keeps only an explicit solid window background preference', () => {
+    expect(parseStartState({ solidWindowBackground: true }).solidWindowBackground).toBe(true);
+    expect(parseStartState({ solidWindowBackground: false }).solidWindowBackground).toBe(false);
+    expect(parseStartState({ solidWindowBackground: 'true' }).solidWindowBackground).toBe(false);
   });
 
   it('keeps a valid thinking level and ignores unknown ones', () => {

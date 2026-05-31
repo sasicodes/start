@@ -1,16 +1,18 @@
 import type { EffortLevel, SessionNotice } from '@main/types';
 
 export interface StartState {
-  composerShortcut: string;
   lastWorkspace?: string;
+  composerShortcut: string;
   selectedModelKey?: string;
+  solidWindowBackground: boolean;
+  selectedThinkingLevel: EffortLevel;
   sessionNotices?: Record<string, SessionNotice>;
   workspaceBookmarks?: Record<string, string>;
-  selectedThinkingLevel: EffortLevel;
 }
 
 const defaultStartState: StartState = {
   composerShortcut: 'Control+Space',
+  solidWindowBackground: false,
   selectedThinkingLevel: 'medium'
 };
 

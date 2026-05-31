@@ -1,7 +1,7 @@
 import type { CustomProviderConfig } from '@preload/index';
 import { ProviderForm, type ProviderFormDraft, emptyProviderFormDraft } from '@renderer/shared/settings/provider/form';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
-import { ChevronDownIcon, CustomProviderIcon, EditIcon, TrashIcon } from '@renderer/ui/icons';
+import { EditIcon, TrashIcon, ChevronDownIcon, CustomProviderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'preact/hooks';
@@ -121,7 +121,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   const formProps = { draft, error, canSubmit, onSubmit: submit, onCancel: resetForm, onUpdate: updateDraft };
 
   return (
-    <div class="border-t border-line py-4">
+    <div class="py-4">
       <button
         type="button"
         aria-expanded={open}

@@ -3,7 +3,8 @@ import { browserLinkHrefFromClick } from '@renderer/shared/browser/link';
 import {
   clearBrowserNavigation,
   emptyBrowserNavigation,
-  nextBrowserNavigation
+  nextBrowserNavigation,
+  nextBrowserTabSelection
 } from '@renderer/shared/browser/navigation';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
@@ -16,8 +17,8 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
   const [navigation, setNavigation] = useState(emptyBrowserNavigation);
 
   const open = useCallback(
-    (nextUrl: string) => {
-      setNavigation((current) => nextBrowserNavigation(current, nextUrl));
+    (nextUrl: string, newTab = false, tabId = '') => {
+      setNavigation((current) => nextBrowserNavigation(current, nextUrl, newTab, tabId));
       setSurface('main');
       openPanel();
     },
@@ -28,7 +29,21 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
     setNavigation(clearBrowserNavigation);
   }, []);
 
-  useEffect(() => window.pi.app.onBrowserOpenRequest(open), [open]);
+  useEffect(
+    () =>
+      window.pi.app.onBrowserOpenRequest((request) => open(request.url, request.newTab === true, request.tabId ?? '')),
+    [open]
+  );
+
+  useEffect(
+    () =>
+      window.pi.app.onBrowserSelectRequest((request) => {
+        setNavigation((current) => nextBrowserTabSelection(current, request.tabId));
+        setSurface('main');
+        openPanel();
+      }),
+    [openPanel, setSurface]
+  );
 
   useEffect(() => {
     const openLinkInBrowser = (event: MouseEvent) => {
@@ -36,7 +51,7 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
       if (!href) return;
 
       event.preventDefault();
-      open(href);
+      open(href, true);
     };
 
     document.addEventListener('click', openLinkInBrowser, true);

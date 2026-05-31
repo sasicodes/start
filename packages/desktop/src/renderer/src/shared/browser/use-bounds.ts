@@ -25,7 +25,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
       return;
     }
 
-    const bounds = readBrowserBounds(element);
+    const bounds = readBrowserBounds(element, 4);
     if (browserBoundsEqual(lastBoundsRef.current, bounds)) return;
 
     lastBoundsRef.current = bounds;
@@ -33,7 +33,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
   }, [clearBounds, viewportRef]);
 
   const sendBounds = useCallback(() => {
-    void syncBounds();
+    syncBounds().catch(() => {});
   }, [syncBounds]);
 
   const scheduleBounds = useCallback(() => {

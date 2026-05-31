@@ -8,17 +8,21 @@ import {
 } from '@main/analytics/events';
 import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main/application';
 import {
+  closeBrowserTab,
   captureBrowserScreenshot,
   destroyBrowser,
   getBrowserStatus,
   goBackInBrowser,
   goForwardInBrowser,
+  newBrowserTab,
   openBrowserUrl,
   reloadBrowser,
+  selectBrowserTab,
   setBrowserBounds,
   startBrowserInspect,
   stopBrowser,
-  stopBrowserInspect
+  stopBrowserInspect,
+  type BrowserOpenOptions
 } from '@main/browser/index';
 import { ChatService } from '@main/chat';
 import {
@@ -60,6 +64,7 @@ import electron from 'electron';
 const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+app.commandLine.appendSwitch('enable-features', 'CanvasDrawElement');
 if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
 
@@ -241,10 +246,15 @@ if (!singleInstanceLock) {
     ipcMain.handle('app:browser-reload', reloadBrowser);
     ipcMain.handle('app:browser-stop', stopBrowser);
     ipcMain.handle('app:browser-status', getBrowserStatus);
+    ipcMain.handle('app:browser-new-tab', (event) => newBrowserTab(event.sender));
+    ipcMain.handle('app:browser-select-tab', (event, tabId: string) => selectBrowserTab(event.sender, tabId));
+    ipcMain.handle('app:browser-close-tab', (event, tabId: string) => closeBrowserTab(event.sender, tabId));
     ipcMain.handle('app:browser-screenshot', captureBrowserScreenshot);
     ipcMain.handle('app:browser-inspect-start', startBrowserInspect);
     ipcMain.handle('app:browser-inspect-stop', stopBrowserInspect);
-    ipcMain.handle('app:browser-open', (event, url: string) => openBrowserUrl(event.sender, url));
+    ipcMain.handle('app:browser-open', (event, url: string, options: BrowserOpenOptions = {}) =>
+      openBrowserUrl(event.sender, url, options)
+    );
     ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
     registerUpdateIpc();
     ipcMain.handle('app:hide-composer', () => {
@@ -287,7 +297,7 @@ if (!singleInstanceLock) {
         return { ok: false, settings: previousSettings, error: 'That shortcut is already in use or is not available.' };
       }
 
-      const nextSettings = await writeAppSettings({ ...(appSettings ?? {}), composerShortcut });
+      const nextSettings = await writeAppSettings({ ...(appSettings ?? defaultAppSettings), composerShortcut });
       const registered = registerComposerShortcut(nextSettings.composerShortcut);
       appSettings = registered ? nextSettings : previousSettings;
       installApplicationMenu(menuActions());
@@ -301,6 +311,19 @@ if (!singleInstanceLock) {
       return registered
         ? { ok: true, settings: nextSettings }
         : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
+    });
+    ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
+      const previousSettings = appSettings;
+      if (previousSettings?.solidWindowBackground === solidWindowBackground) {
+        return { ok: true, settings: previousSettings };
+      }
+
+      const nextSettings = await writeAppSettings({
+        ...(appSettings ?? defaultAppSettings),
+        solidWindowBackground
+      });
+      appSettings = nextSettings;
+      return { ok: true, settings: nextSettings };
     });
     registerChatIpc({
       chat,
