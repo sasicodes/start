@@ -293,6 +293,12 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
+    const offWorkspaceOpened = window.pi.chat.onWorkspaceOpened(() => {
+      clearSlashCommandsCache();
+      optionsRef.current.clearSession();
+      optionsRef.current.syncStatus().catch(() => {});
+      optionsRef.current.onShowChat();
+    });
 
     return () => {
       offDone();
@@ -302,6 +308,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       offNewSession();
       offQueueUpdate();
       offStatusChanged();
+      offWorkspaceOpened();
       offScopedDone();
       offScopedError();
       offScopedEvent();

@@ -12,6 +12,19 @@ export interface AppSettingsResult {
   settings: AppSettings | null;
 }
 
+export type CliInstallStatus =
+  | { status: 'installed'; path: string }
+  | { status: 'conflict'; path: string; reason: string }
+  | { status: 'outdated'; path: string; reason: string }
+  | { status: 'not-installed'; path: string }
+  | { status: 'unavailable'; path: string; reason: string };
+
+export interface CliInstallResult {
+  ok: boolean;
+  error?: string;
+  status: CliInstallStatus;
+}
+
 export interface ChatStatus {
   ready: boolean;
   error?: string;
@@ -342,6 +355,8 @@ const api = {
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
+    cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
+    installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
     browserBack: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-back'),
     browserForward: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-forward'),
@@ -413,6 +428,7 @@ const api = {
     onRecentSessionsChanged: (listener: (event: RecentSessionsChanged) => void): IpcDisposer =>
       onIpc<[RecentSessionsChanged]>('chat:recent-sessions-changed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),
+    onWorkspaceOpened: (listener: () => void): IpcDisposer => onIpc<[]>('chat:workspace-opened', listener),
     workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
     prepareDroppedFiles: (paths: string[]): Promise<PreparedDropFiles> =>
       ipcRenderer.invoke('chat:prepare-dropped-files', paths),

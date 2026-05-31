@@ -1,4 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
+import { CliInstall } from '@renderer/shared/settings/cli';
 import { ComposerShortcut } from '@renderer/shared/settings/composer-shortcut';
 import { CustomProvidersRow } from '@renderer/shared/settings/provider/custom';
 import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
@@ -215,6 +216,7 @@ export const Settings = memo(
         <CustomProvidersRow open={openProvider === 'custom'} onToggle={() => toggleProvider('custom')} />
 
         <ComposerShortcut composerShortcut={composerShortcut} onChange={onComposerShortcutChange} />
+        <CliInstall />
       </section>
     );
   }
