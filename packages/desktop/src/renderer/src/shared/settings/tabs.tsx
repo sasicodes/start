@@ -19,37 +19,35 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
   const activeIndex = settingsTabs.findIndex((tab) => tab.value === value);
 
   return (
-    <div class="flex justify-center pb-3">
-      <div role="tablist" aria-label="Settings" class="rounded-full border border-line bg-composer p-1 shadow-nav">
-        <div class="relative flex items-center">
-          <div
-            class="pointer-events-none absolute top-0 bottom-0 left-0 rounded-full bg-control shadow-shell transition-transform duration-200 ease-out"
-            style={{
-              transform: `translateX(calc(${activeIndex} * ${tabWidth}rem))`,
-              width: `${tabWidth}rem`
-            }}
-          />
-          {settingsTabs.map((tab) => {
-            const selected = value === tab.value;
+    <div role="tablist" aria-label="Settings" class="rounded-full border border-line bg-composer p-1 shadow-nav">
+      <div class="relative flex items-center">
+        <div
+          class="pointer-events-none absolute top-0 bottom-0 left-0 rounded-full bg-control shadow-shell transition-transform duration-200 ease-out"
+          style={{
+            transform: `translateX(calc(${activeIndex} * ${tabWidth}rem))`,
+            width: `${tabWidth}rem`
+          }}
+        />
+        {settingsTabs.map((tab) => {
+          const selected = value === tab.value;
 
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                style={{ width: `${tabWidth}rem` }}
-                onClick={() => onChange(tab.value)}
-                class={tw(
-                  'relative z-10 flex h-8 items-center justify-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-xs leading-none font-medium outline-0 transition-colors duration-150 ease-out',
-                  selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
-                )}
-              >
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={tab.value}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              style={{ width: `${tabWidth}rem` }}
+              onClick={() => onChange(tab.value)}
+              class={tw(
+                'relative z-10 flex h-8 items-center justify-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-xs leading-none font-medium outline-0 transition-colors duration-150 ease-out',
+                selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
+              )}
+            >
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

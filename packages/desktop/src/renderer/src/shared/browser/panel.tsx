@@ -6,6 +6,7 @@ import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
 import { useBrowserInspect } from '@renderer/shared/browser/use-inspect';
 import { useBrowserScreenshot } from '@renderer/shared/browser/use-screenshot';
+import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { usePanelMotion } from '@renderer/shared/panel/context';
 import {
   BrowserEmptyIcon,
@@ -22,6 +23,7 @@ interface BrowserPanelProps {
   onUrlOpened: () => void;
   navigation: BrowserNavigation;
   onInspectText: (text: string) => void;
+  onSidePanelToggle: () => void;
 }
 
 const emptyStatus: BrowserStatus = {
@@ -33,7 +35,7 @@ const emptyStatus: BrowserStatus = {
   canGoForward: false
 };
 
-export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: BrowserPanelProps) => {
+export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText, onSidePanelToggle }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
@@ -175,6 +177,7 @@ export const BrowserPanel = ({ navigation, onUrlOpened, onInspectText }: Browser
         >
           {copied ? <CheckIcon class="size-4" /> : <ScreenshotIcon class="size-4" strokeWidth={1.5} />}
         </BrowserButton>
+        <PanelCloseButton onClick={onSidePanelToggle} />
       </div>
       {error && <div class="shrink-0 border-b border-line px-3 py-2 text-xs leading-5 text-danger">{error}</div>}
       <div ref={viewportRef} class="relative min-h-0 min-w-0 flex-1 overflow-hidden">

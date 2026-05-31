@@ -1,4 +1,5 @@
 import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
+import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { Personalization } from '@renderer/shared/settings/personalization';
 import { Providers } from '@renderer/shared/settings/providers';
 import { Shortcuts } from '@renderer/shared/settings/shortcuts';
@@ -11,6 +12,7 @@ interface SettingsProps {
   solidWindowBackground: boolean;
   providers: ProviderAuthStatus[];
   onTabChange: (tab: SettingsTab) => void;
+  onSidePanelToggle: () => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
@@ -25,6 +27,7 @@ export const Settings = memo(
     tab,
     composerShortcut,
     onTabChange,
+    onSidePanelToggle,
     onLoginSubscription,
     onDisconnectProvider,
     solidWindowBackground,
@@ -35,7 +38,10 @@ export const Settings = memo(
 
     return (
       <section class="min-h-full px-5 py-3 outline-0">
-        <SettingsTabs value={tab} onChange={onTabChange} />
+        <header class="flex items-center justify-between gap-3 pb-3">
+          <SettingsTabs value={tab} onChange={onTabChange} />
+          <PanelCloseButton onClick={onSidePanelToggle} />
+        </header>
         {tab === 'personalization' ? (
           <Personalization
             composerShortcut={composerShortcut}

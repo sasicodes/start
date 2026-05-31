@@ -1,4 +1,5 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
+import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import {
   bottomBubbleHiddenMotion,
@@ -38,6 +39,7 @@ interface GitChangesProps {
 
 interface GitChangesPanelProps {
   path: string;
+  onSidePanelToggle: () => void;
 }
 
 interface GitSummaryLike {
@@ -94,7 +96,7 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   );
 });
 
-export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
+export const GitChangesPanel = memo(({ path, onSidePanelToggle }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
@@ -160,6 +162,7 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
             >
               <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
             </button>
+            <PanelCloseButton onClick={onSidePanelToggle} />
           </div>
         </header>
       )}
