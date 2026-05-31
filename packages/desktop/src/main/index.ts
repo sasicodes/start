@@ -288,7 +288,7 @@ if (!singleInstanceLock) {
         return { ok: false, settings: previousSettings, error: 'That shortcut is already in use or is not available.' };
       }
 
-      const nextSettings = await writeAppSettings({ ...(appSettings ?? {}), composerShortcut });
+      const nextSettings = await writeAppSettings({ ...(appSettings ?? defaultAppSettings), composerShortcut });
       const registered = registerComposerShortcut(nextSettings.composerShortcut);
       appSettings = registered ? nextSettings : previousSettings;
       installApplicationMenu(menuActions());
@@ -302,6 +302,19 @@ if (!singleInstanceLock) {
       return registered
         ? { ok: true, settings: nextSettings }
         : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
+    });
+    ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
+      const previousSettings = appSettings;
+      if (previousSettings?.solidWindowBackground === solidWindowBackground) {
+        return { ok: true, settings: previousSettings };
+      }
+
+      const nextSettings = await writeAppSettings({
+        ...(appSettings ?? defaultAppSettings),
+        solidWindowBackground
+      });
+      appSettings = nextSettings;
+      return { ok: true, settings: nextSettings };
     });
     registerChatIpc({
       chat,

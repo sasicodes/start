@@ -2,6 +2,7 @@ import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import { CliInstall } from '@renderer/shared/settings/cli';
 import { ComposerShortcut } from '@renderer/shared/settings/composer-shortcut';
 import { CustomProvidersRow } from '@renderer/shared/settings/provider/custom';
+import { WindowBackground } from '@renderer/shared/settings/window-background';
 import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
@@ -36,11 +37,13 @@ const providers: {
 
 interface SettingsProps {
   composerShortcut: string;
+  solidWindowBackground: boolean;
   providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
+  onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
 const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) =>
@@ -87,10 +90,12 @@ export const Settings = memo(
   ({
     onSaveApiKey,
     composerShortcut,
+    solidWindowBackground,
     onLoginSubscription,
     onDisconnectProvider,
     providers: authProviders,
-    onComposerShortcutChange
+    onComposerShortcutChange,
+    onSolidWindowBackgroundChange
   }: SettingsProps) => {
     const [openProvider, setOpenProvider] = useState<AccordionKey>('');
     const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', google: '', openai: '' });
@@ -216,6 +221,7 @@ export const Settings = memo(
         <CustomProvidersRow open={openProvider === 'custom'} onToggle={() => toggleProvider('custom')} />
 
         <ComposerShortcut composerShortcut={composerShortcut} onChange={onComposerShortcutChange} />
+        <WindowBackground enabled={solidWindowBackground} onChange={onSolidWindowBackgroundChange} />
         <CliInstall />
       </section>
     );

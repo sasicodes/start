@@ -5,10 +5,12 @@ const { globalShortcut } = electron;
 
 export type AppSettings = {
   composerShortcut: string;
+  solidWindowBackground: boolean;
 };
 
 export const defaultAppSettings = {
-  composerShortcut: 'Control+Space'
+  composerShortcut: 'Control+Space',
+  solidWindowBackground: false
 } satisfies AppSettings;
 
 const parseSettings = (value: unknown): AppSettings => {
@@ -18,7 +20,8 @@ const parseSettings = (value: unknown): AppSettings => {
     composerShortcut:
       typeof settings.composerShortcut === 'string' && settings.composerShortcut.trim()
         ? settings.composerShortcut
-        : defaultAppSettings.composerShortcut
+        : defaultAppSettings.composerShortcut,
+    solidWindowBackground: settings.solidWindowBackground === true
   };
 };
 
@@ -26,7 +29,10 @@ export const readAppSettings = async (): Promise<AppSettings> => parseSettings(r
 
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
   const nextSettings = parseSettings(settings);
-  updateStartState({ composerShortcut: nextSettings.composerShortcut });
+  updateStartState({
+    composerShortcut: nextSettings.composerShortcut,
+    solidWindowBackground: nextSettings.solidWindowBackground
+  });
   return nextSettings;
 };
 

@@ -11,6 +11,7 @@ interface AppSidePanelProps {
   mode: SidePanelMode;
   workspacePath: string;
   composerShortcut: string;
+  solidWindowBackground: boolean;
   onBrowserUrlOpened: () => void;
   providers: ProviderAuthStatus[];
   browserNavigation: BrowserNavigation;
@@ -19,6 +20,7 @@ interface AppSidePanelProps {
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
+  onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
 export const sidePanelLabel = (mode: SidePanelMode) => {
@@ -41,12 +43,14 @@ export const AppSidePanel = memo(
     workspacePath,
     onSaveApiKey,
     composerShortcut,
+    solidWindowBackground,
     browserNavigation,
     onBrowserUrlOpened,
     onLoginSubscription,
     onBrowserInspectText,
     onDisconnectProvider,
-    onComposerShortcutChange
+    onComposerShortcutChange,
+    onSolidWindowBackgroundChange
   }: AppSidePanelProps) => {
     if (mode === 'git') return <GitChangesPanel path={workspacePath} />;
     if (mode === 'browser')
@@ -64,9 +68,11 @@ export const AppSidePanel = memo(
           providers={providers}
           onSaveApiKey={onSaveApiKey}
           composerShortcut={composerShortcut}
+          solidWindowBackground={solidWindowBackground}
           onLoginSubscription={onLoginSubscription}
           onDisconnectProvider={onDisconnectProvider}
           onComposerShortcutChange={onComposerShortcutChange}
+          onSolidWindowBackgroundChange={onSolidWindowBackgroundChange}
         />
       );
     }

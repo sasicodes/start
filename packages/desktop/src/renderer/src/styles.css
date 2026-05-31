@@ -9,7 +9,7 @@
 @source "../../../node_modules/@streamdown/cjk/dist/*.js";
 
 @theme {
-  --color-canvas: oklch(95.8% 0.008 84);
+  --color-canvas: transparent;
   --color-panel: oklch(99.8% 0.002 264);
   --color-muted: oklch(96.8% 0.003 264);
   --color-line: oklch(0% 0 0 / 0.06);
@@ -73,7 +73,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-canvas: oklch(19.5% 0.006 255);
+    --color-canvas: transparent;
     --overlay-edge-indigo: oklch(68% 0.04 268 / 0.2);
     --overlay-edge-sakura: oklch(72% 0.04 23 / 0.12);
     --overlay-corner-indigo: oklch(67% 0.05 268 / 0.3);
@@ -104,6 +104,16 @@
     --shadow-shell: 0 0 0 1px oklch(100% 0 0 / 0.045), 0 0 20px oklch(0% 0 0 / 0.22);
     --shadow-panel: 0 0 0 1px oklch(100% 0 0 / 0.06), 0 0 20px oklch(0% 0 0 / 0.32);
     --shadow-nav: 0 0 0 1px oklch(100% 0 0 / 0.045), 0 0 18px oklch(0% 0 0 / 0.2);
+  }
+}
+
+:root[data-solid-window-background="true"] {
+  --color-canvas: oklch(95.8% 0.008 84);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-solid-window-background="true"] {
+    --color-canvas: oklch(19.5% 0.006 255);
   }
 }
 

@@ -6,6 +6,7 @@ import type { EffortLevel, SessionNotice } from '@main/types';
 
 export type StartState = {
   composerShortcut: string;
+  solidWindowBackground: boolean;
   lastWorkspace?: string;
   selectedModelKey?: string;
   sessionNotices?: Record<string, SessionNotice>;
@@ -15,6 +16,7 @@ export type StartState = {
 
 const defaultStartState = {
   composerShortcut: 'Control+Space',
+  solidWindowBackground: false,
   selectedThinkingLevel: 'high'
 } satisfies StartState;
 
@@ -80,6 +82,7 @@ export const parseStartState = (value: unknown): StartState => {
   const workspaceBookmarks = cleanStringRecord(state.workspaceBookmarks);
   return {
     composerShortcut: cleanString(state.composerShortcut) ?? defaultStartState.composerShortcut,
+    solidWindowBackground: state.solidWindowBackground === true,
     selectedThinkingLevel: cleanThinkingLevel(state.selectedThinkingLevel),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
@@ -93,6 +96,7 @@ const stateKey = {
   lastWorkspace: 'last_workspace',
   selectedModelKey: 'selected_model_key',
   selectedThinkingLevel: 'selected_thinking_level',
+  solidWindowBackground: 'solid_window_background',
   sessionNotices: 'session_notices',
   workspaceBookmarks: 'workspace_bookmarks'
 } as const satisfies Record<keyof StartState, string>;
@@ -154,6 +158,7 @@ const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   lastWorkspace: raw[stateKey.lastWorkspace],
   selectedModelKey: raw[stateKey.selectedModelKey],
   selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
+  solidWindowBackground: raw[stateKey.solidWindowBackground],
   sessionNotices: raw[stateKey.sessionNotices],
   workspaceBookmarks: raw[stateKey.workspaceBookmarks]
 });
@@ -171,6 +176,7 @@ export const writeStartState = (state: StartState): StartState => {
   runStartTransaction(() => {
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
+    writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
     writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);

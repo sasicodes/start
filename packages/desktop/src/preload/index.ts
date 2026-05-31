@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer, webUtils } = electron;
 
 export interface AppSettings {
   composerShortcut: string;
+  solidWindowBackground: boolean;
 }
 
 export interface AppSettingsResult {
@@ -376,6 +377,8 @@ const api = {
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
+    setSolidWindowBackground: (enabled: boolean): Promise<AppSettingsResult> =>
+      ipcRenderer.invoke('app:set-solid-window-background', enabled),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),
     showMain: (): Promise<void> => ipcRenderer.invoke('app:show-main'),
     openSettings: (): Promise<void> => ipcRenderer.invoke('app:open-settings'),
