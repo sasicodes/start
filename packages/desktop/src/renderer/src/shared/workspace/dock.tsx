@@ -56,6 +56,7 @@ export const WorkspaceDock = memo(
               exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
             >
               <Workspace
+                collapsed={showNewSession}
                 workspacePath={workspacePath}
                 onChooseDirectory={onChooseDirectory}
                 onSelectWorkspace={onSelectWorkspace}
