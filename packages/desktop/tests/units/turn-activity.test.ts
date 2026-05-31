@@ -58,7 +58,6 @@ const subagentDetailWithCount = (count: number) => ({
       id: 'agent-1',
       name: 'Marisol',
       task: 'Review activity UI',
-      logs: [],
       avatar: 'data:image/svg+xml;utf8,<svg/>',
       status: 'completed' as const,
       accentColor: '#0f766e'

@@ -7,7 +7,6 @@ describe('sub-agent tool details', () => {
     id: 'agent-1',
     name: 'Arul',
     task: 'Review UI.',
-    logs: [],
     avatar: 'data:image/svg+xml;utf8,test',
     status: 'completed' as const,
     accentColor: '#0f766e'
