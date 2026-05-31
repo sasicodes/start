@@ -57,6 +57,10 @@
   @apply mt-0 text-xs leading-5 font-medium text-soft;
 }
 
+.thinking-markdown .markdown-compact [data-streamdown^="heading-"] {
+  @apply text-hover;
+}
+
 .markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
   @apply mt-3;
 }

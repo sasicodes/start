@@ -85,7 +85,7 @@ export const ThinkingSection = ({ thinking }: { thinking: string }) => {
   if (!thinking) return null;
 
   return (
-    <div class="text-xs leading-5 text-soft">
+    <div class="thinking-markdown text-xs leading-5 text-soft">
       <Markdown source={thinkingMarkdown(thinking)} density="compact" />
     </div>
   );

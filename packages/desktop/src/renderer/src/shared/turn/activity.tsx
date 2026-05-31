@@ -30,26 +30,26 @@ export const TurnActivity = ({ items, details, working, thinking, createdAt }: T
     <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
   );
 
-  if (!hasDetails) return <div class="mb-1.5 max-w-full text-sm text-soft">{label}</div>;
-
   return (
     <div class="mb-1.5 max-w-full text-sm text-soft">
       <button
         type="button"
-        aria-expanded={open}
-        onClick={() => setOverride(!open)}
+        {...(hasDetails ? { 'aria-expanded': open, onClick: () => setOverride(!open) } : { disabled: true })}
         class={tw(
-          'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-sm text-soft outline-0 transition-colors hover:text-hover focus-visible:text-hover',
-          open && 'text-hover'
+          'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-sm text-soft outline-0 transition-colors disabled:cursor-default',
+          hasDetails && 'hover:text-hover focus-visible:text-hover',
+          hasDetails && open && 'text-hover'
         )}
       >
         {label}
-        <ChevronRightIcon
-          class={tw('size-3 flex-none text-soft transition-transform duration-150', open && 'rotate-90')}
-        />
+        {hasDetails && (
+          <ChevronRightIcon
+            class={tw('size-3 flex-none text-soft transition-transform duration-150', open && 'rotate-90')}
+          />
+        )}
       </button>
       <AnimatePresence initial={false}>
-        {open && (
+        {hasDetails && open && (
           <motion.div
             key="activity"
             initial={{ opacity: 0, height: 0 }}
