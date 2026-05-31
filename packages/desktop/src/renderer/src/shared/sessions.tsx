@@ -1,8 +1,12 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
-import { attentionStatus, topAttentionStatus, type AttentionState } from '@renderer/shared/attention-status';
+import {
+  attentionLabel,
+  sessionAttentionStatus,
+  topAttentionStatus,
+  type AttentionState
+} from '@renderer/shared/attention-status';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
-import { Indicator } from '@renderer/shared/indicator';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
@@ -18,10 +22,8 @@ const pageOptions = (workspacePath: string, limit: number, offset = 0) => ({
   ...(workspacePath ? { workspacePath } : {})
 });
 
-const sessionAttention = (session: RecentSession, activeSessionId: string): AttentionState => {
-  if (session.id === activeSessionId) return '';
-  return attentionStatus(session.status, session.noticeKind);
-};
+const sessionAttention = (session: RecentSession, activeSessionId: string): AttentionState =>
+  sessionAttentionStatus(session.id, activeSessionId, session.status, session.noticeKind);
 
 const recentSessionsAttention = (sessions: RecentSession[], activeSessionId: string) =>
   topAttentionStatus(sessions.map((session) => sessionAttention(session, activeSessionId)));
@@ -41,6 +43,7 @@ const acknowledgeSessionById = (sessions: RecentSession[], sessionId: string) =>
 interface SessionRowProps {
   active: boolean;
   session: RecentSession;
+  attention: AttentionState;
   onOpen: (session: RecentSession) => void;
 }
 
@@ -57,17 +60,23 @@ interface RecentSessionsProps {
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-const SessionAttention = ({ session }: { session: RecentSession }) => {
-  const attention = attentionStatus(session.status, session.noticeKind);
+const SessionAttention = ({ attention }: { attention: AttentionState }) => {
   if (!attention) return null;
   return (
-    <span class="flex h-4 items-center justify-end">
-      <Indicator kind={attention} />
+    <span
+      class={tw(
+        'font-mono text-[10px] leading-4 font-semibold text-soft uppercase',
+        attention === 'failed' && 'text-danger',
+        attention === 'completed' && 'text-success',
+        attention === 'generating' && 'text-blue-500'
+      )}
+    >
+      {attentionLabel(attention)}
     </span>
   );
 };
 
-const SessionRow = ({ active, session, onOpen }: SessionRowProps) => (
+const SessionRow = ({ active, attention, session, onOpen }: SessionRowProps) => (
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
@@ -77,19 +86,23 @@ const SessionRow = ({ active, session, onOpen }: SessionRowProps) => (
   >
     <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
     <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
-    {!active && <SessionAttention session={session} />}
+    <SessionAttention attention={attention} />
   </AppMenu.Item>
 );
 
 const SessionRows = ({ sessions, activeSessionId, onOpenSession }: SessionRowsProps) =>
-  sessions.map((session) => (
-    <SessionRow
-      key={session.id}
-      session={session}
-      active={session.id === activeSessionId}
-      onOpen={(session) => void onOpenSession(session)}
-    />
-  ));
+  sessions.map((session) => {
+    const attention = sessionAttention(session, activeSessionId);
+    return (
+      <SessionRow
+        key={session.id}
+        active={session.id === activeSessionId}
+        session={session}
+        attention={attention}
+        onOpen={(session) => void onOpenSession(session)}
+      />
+    );
+  });
 
 export const RecentSessions = memo(
   ({ isGenerating, workspacePath, activeSessionId, onOpenSession }: RecentSessionsProps) => {
@@ -185,7 +198,7 @@ export const RecentSessions = memo(
 
     const attention = recentSessionsAttention(sessions, activeSessionId);
     const attentionCount = recentSessionsAttentionCount(sessions, activeSessionId);
-    const attentionLabel = attentionCount > 99 ? '99+' : String(attentionCount);
+    const attentionCountLabel = attentionCount > 99 ? '99+' : String(attentionCount);
 
     useEffect(() => {
       return () => {
@@ -234,10 +247,10 @@ export const RecentSessions = memo(
                     'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
                     attention === 'failed' && 'bg-danger',
                     attention === 'completed' && 'bg-success',
-                    attention === 'generating' && 'bg-blue-500'
+                    attention === 'generating' && 'animate-pulse bg-blue-500 motion-reduce:animate-none'
                   )}
                 >
-                  {attentionLabel}
+                  {attentionCountLabel}
                 </span>
               )}
             </AppMenu.Trigger>

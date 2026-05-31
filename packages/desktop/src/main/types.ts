@@ -147,6 +147,12 @@ export type RecentSession = {
   noticeKind?: SessionNoticeKind;
 };
 
+export interface StatusItemRecentSession {
+  id: string;
+  title: string;
+  workspaceName: string;
+}
+
 export type RecentSessionsOptions = {
   limit?: number;
   offset?: number;

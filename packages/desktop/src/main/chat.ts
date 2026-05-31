@@ -26,6 +26,7 @@ import { createStartCustomTools } from '@main/providers/tools/index';
 import {
   archiveSession,
   getSession,
+  listRecentSessions,
   unarchiveSession,
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
@@ -33,6 +34,7 @@ import {
   upsertSessionOnStart
 } from '@main/sessions';
 import { contextPercent } from '@main/chat/context';
+import { appendLiveAssistantTurn } from '@main/chat/live';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
@@ -86,6 +88,7 @@ import {
   type RecentSessionsOptions,
   type RecentSessionsPage,
   type SendResult,
+  type StatusItemRecentSession,
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
@@ -269,16 +272,16 @@ export class ChatService {
     }
   }
 
-  async archiveSession(sessionId: string): Promise<void> {
+  async archiveSession(sessionId: string): Promise<string> {
     const cwd = getSession(sessionId)?.cwd ?? this.workspaceCwd;
     archiveSession(sessionId);
-    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
+    return cwd;
   }
 
-  async unarchiveSession(sessionId: string): Promise<void> {
+  async unarchiveSession(sessionId: string): Promise<string> {
     const cwd = getSession(sessionId)?.cwd ?? this.workspaceCwd;
     unarchiveSession(sessionId);
-    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
+    return cwd;
   }
 
   async getModels(): Promise<{
@@ -520,6 +523,14 @@ export class ChatService {
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
     return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices);
+  }
+
+  getStatusItemRecentSessions(limit = 8): StatusItemRecentSession[] {
+    return listRecentSessions({ limit }).map((session) => ({
+      id: session.id,
+      title: session.title,
+      workspaceName: workspaceDisplayName(session.cwd)
+    }));
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
@@ -1340,7 +1351,7 @@ export class ChatService {
     if (!session.isStreaming) return turns;
     const liveTurn = this.runtimeStateForSession(session).liveAssistantTurn;
     if (!liveTurn) return turns;
-    return [...turns, liveAssistantHistoryTurn(liveTurn)];
+    return appendLiveAssistantTurn(turns, liveAssistantHistoryTurn(liveTurn));
   }
 
   private resetLiveAssistantTurn(session: AgentSession, runtimeState = this.runtimeStateForSession(session)): void {

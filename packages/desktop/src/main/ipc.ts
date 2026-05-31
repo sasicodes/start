@@ -47,8 +47,12 @@ export const registerChatIpc = ({
 
   ipcMain.handle('chat:tabs', () => chat.getTabs());
   ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
-  ipcMain.handle('chat:sessions:archive', (_event, sessionId: string) => chat.archiveSession(sessionId));
-  ipcMain.handle('chat:sessions:unarchive', (_event, sessionId: string) => chat.unarchiveSession(sessionId));
+  ipcMain.handle('chat:sessions:archive', async (_event, sessionId: string) => {
+    notifyRecentSessionsChanged(await chat.archiveSession(sessionId));
+  });
+  ipcMain.handle('chat:sessions:unarchive', async (_event, sessionId: string) => {
+    notifyRecentSessionsChanged(await chat.unarchiveSession(sessionId));
+  });
   ipcMain.handle('chat:models', () => chat.getModels());
   ipcMain.handle('chat:slash-commands', () => chat.getSlashCommands());
   ipcMain.handle('chat:send', async (event, prompt: string, attachments = []) => {
