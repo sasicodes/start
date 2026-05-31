@@ -18,6 +18,7 @@ interface WorkspaceDockProps {
   isGenerating: boolean;
   workspacePath: string;
   activeSessionId: string;
+  showNewSession: boolean;
   onChooseDirectory: () => void;
   onNewSession: () => void;
   onSelectWorkspace: (path: string) => void;
@@ -31,6 +32,7 @@ export const WorkspaceDock = memo(
     activeSessionId,
     onNewSession,
     onOpenSession,
+    showNewSession,
     onChooseDirectory,
     onSelectWorkspace
   }: WorkspaceDockProps) => {
@@ -64,16 +66,18 @@ export const WorkspaceDock = memo(
                 activeSessionId={activeSessionId}
                 onOpenSession={onOpenSession}
               />
-              <Tooltip label="New session">
-                <button
-                  type="button"
-                  aria-label="New session"
-                  onClick={onNewSession}
-                  class="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
-                >
-                  <EditIcon class="size-5" />
-                </button>
-              </Tooltip>
+              {showNewSession && (
+                <Tooltip label="New session">
+                  <button
+                    type="button"
+                    aria-label="New session"
+                    onClick={onNewSession}
+                    class="grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
+                  >
+                    <EditIcon class="size-5" />
+                  </button>
+                </Tooltip>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

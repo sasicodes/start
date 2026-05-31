@@ -3,6 +3,7 @@ import { attentionStatus, topAttentionStatus, type AttentionState } from '@rende
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Indicator } from '@renderer/shared/indicator';
+import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { memo } from 'preact/compat';
@@ -98,6 +99,7 @@ export const RecentSessions = memo(
     const sessionsRequestRef = useRef(0);
     const [open, setOpen] = useState(false);
     const wasGeneratingRef = useRef(isGenerating);
+    const [knownEmpty, setKnownEmpty] = useState(false);
     const [sessions, setSessions] = useState<RecentSession[]>([]);
     const [hasMoreSessions, setHasMoreSessions] = useState(false);
 
@@ -113,12 +115,14 @@ export const RecentSessions = memo(
           loadedCountRef.current = page.sessions.length;
           setSessions(page.sessions);
           setHasMoreSessions(page.hasMore);
+          setKnownEmpty(page.sessions.length === 0);
         } catch {
           if (!mountedRef.current || sessionsRequestRef.current !== requestId) return;
 
           loadedCountRef.current = 0;
           setSessions([]);
           setHasMoreSessions(false);
+          setKnownEmpty(false);
         }
       },
       [workspacePath]
@@ -213,26 +217,32 @@ export const RecentSessions = memo(
       return window.pi.chat.onStatusChanged(() => void loadSessions(Math.max(sessionPageSize, loadedCountRef.current)));
     }, [loadSessions]);
 
+    if (knownEmpty && sessions.length === 0) return null;
+
     return (
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
-        <AppMenu.Trigger
-          aria-label="Recent sessions"
-          className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
-        >
-          <HistoryIcon class="size-5" />
-          {attention && (
-            <span
-              class={tw(
-                'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
-                attention === 'failed' && 'bg-danger',
-                attention === 'completed' && 'bg-success',
-                attention === 'generating' && 'bg-blue-500'
-              )}
+        <Tooltip label="Recents" disabled={open}>
+          <div class="block size-11.5 rounded-full">
+            <AppMenu.Trigger
+              aria-label="Recent sessions"
+              className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
             >
-              {attentionLabel}
-            </span>
-          )}
-        </AppMenu.Trigger>
+              <HistoryIcon class="size-5" />
+              {attention && (
+                <span
+                  class={tw(
+                    'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
+                    attention === 'failed' && 'bg-danger',
+                    attention === 'completed' && 'bg-success',
+                    attention === 'generating' && 'bg-blue-500'
+                  )}
+                >
+                  {attentionLabel}
+                </span>
+              )}
+            </AppMenu.Trigger>
+          </div>
+        </Tooltip>
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
             <MenuPanel className="w-90">
