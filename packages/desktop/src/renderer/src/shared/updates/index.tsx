@@ -30,7 +30,7 @@ export const Update = memo(() => {
         <span class="relative inline-block max-w-full truncate leading-5 text-ink">
           <span
             aria-hidden="true"
-            class="pointer-events-none absolute inset-0 bg-[image:var(--shimmer-gradient)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] animate-[activity-text-shimmer_1.8s_linear_infinite] motion-reduce:hidden"
+            class="pointer-events-none absolute inset-0 bg-[image:var(--shimmer-gradient)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] animate-[activity-text-shimmer_2.4s_linear_infinite] motion-reduce:hidden"
           >
             Update
           </span>
