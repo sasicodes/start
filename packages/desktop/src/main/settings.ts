@@ -13,7 +13,7 @@ export const defaultAppSettings = {
   solidWindowBackground: false
 } satisfies AppSettings;
 
-const parseSettings = (value: unknown): AppSettings => {
+export const parseSettings = (value: unknown): AppSettings => {
   if (!value || typeof value !== 'object') return defaultAppSettings;
   const settings = value as Partial<AppSettings>;
   return {
