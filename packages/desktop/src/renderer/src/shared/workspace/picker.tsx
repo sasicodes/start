@@ -38,6 +38,10 @@ export const Workspace = memo(
 
     if (!workspace) return null;
 
+    const tooltipLabel = workspace.branchName
+      ? `${workspace.folderName} (${workspace.branchName})`
+      : workspace.folderName;
+
     return (
       <div
         ref={rootRef}
@@ -47,7 +51,7 @@ export const Workspace = memo(
         )}
       >
         <AppMenu.Root open={open} onOpenChange={updateOpen}>
-          <Tooltip label={workspace.folderName} disabled={open}>
+          <Tooltip label={tooltipLabel} disabled={open}>
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger
                 aria-label="Workspace folders"
