@@ -9,7 +9,7 @@
 @source "../../../node_modules/@streamdown/cjk/dist/*.js";
 
 @theme {
-  --color-canvas: transparent;
+  --color-canvas: oklch(95.8% 0.008 84);
   --color-panel: oklch(99.8% 0.002 264);
   --color-muted: oklch(96.8% 0.003 264);
   --color-line: oklch(0% 0 0 / 0.06);
@@ -73,7 +73,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-canvas: transparent;
+    --color-canvas: oklch(19.5% 0.006 255);
     --overlay-edge-indigo: oklch(68% 0.04 268 / 0.2);
     --overlay-edge-sakura: oklch(72% 0.04 23 / 0.12);
     --overlay-corner-indigo: oklch(67% 0.05 268 / 0.3);
