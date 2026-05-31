@@ -19,7 +19,7 @@ const isBracketToggle = (event: KeyboardEvent) => {
 export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [sidePanelMode, setSidePanelMode] = useState<SidePanelMode>('settings');
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('providers');
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('personalization');
 
   const closeSidePanel = useCallback(() => {
     setSidePanelOpen(false);
@@ -29,7 +29,7 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     setSidePanelOpen((open) => !open);
   }, []);
 
-  const openSettingsPanel = useCallback((tab: SettingsTab = 'providers') => {
+  const openSettingsPanel = useCallback((tab: SettingsTab = 'personalization') => {
     setSidePanelOpen(true);
     setSidePanelMode('settings');
     setSettingsTab(tab);

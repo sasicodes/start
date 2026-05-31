@@ -36,19 +36,19 @@ export const Settings = memo(
     return (
       <section class="min-h-full px-5 py-3 outline-0">
         <SettingsTabs value={tab} onChange={onTabChange} />
-        {tab === 'providers' ? (
-          <Providers
-            providers={providers}
-            onSaveApiKey={onSaveApiKey}
-            onLoginSubscription={onLoginSubscription}
-            onDisconnectProvider={onDisconnectProvider}
-          />
-        ) : tab === 'personalization' ? (
+        {tab === 'personalization' ? (
           <Personalization
             composerShortcut={composerShortcut}
             onComposerShortcutChange={onComposerShortcutChange}
             translucentBackground={!solidWindowBackground}
             onTranslucentBackgroundChange={updateTranslucency}
+          />
+        ) : tab === 'providers' ? (
+          <Providers
+            providers={providers}
+            onSaveApiKey={onSaveApiKey}
+            onLoginSubscription={onLoginSubscription}
+            onDisconnectProvider={onDisconnectProvider}
           />
         ) : (
           <Shortcuts composerShortcut={composerShortcut} />

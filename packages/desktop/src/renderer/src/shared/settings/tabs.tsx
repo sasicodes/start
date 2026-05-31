@@ -1,6 +1,6 @@
 import { tw } from '@renderer/utils/tw';
 
-export type SettingsTab = 'providers' | 'personalization' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
 
 interface SettingsTabsProps {
   value: SettingsTab;
@@ -8,8 +8,8 @@ interface SettingsTabsProps {
 }
 
 const settingsTabs = [
-  { value: 'providers', label: 'Providers' },
   { value: 'personalization', label: 'Personalization' },
+  { value: 'providers', label: 'Providers' },
   { value: 'shortcuts', label: 'Shortcuts' }
 ] as const;
 
