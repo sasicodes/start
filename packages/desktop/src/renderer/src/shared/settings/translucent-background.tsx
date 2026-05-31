@@ -1,12 +1,12 @@
 import type { AppSettingsResult } from '@preload/index';
 import { useState } from 'preact/hooks';
 
-interface TransparentBackgroundProps {
+interface TranslucentBackgroundProps {
   enabled: boolean;
   onChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
-export const TransparentBackground = ({ enabled, onChange }: TransparentBackgroundProps) => {
+export const TranslucentBackground = ({ enabled, onChange }: TranslucentBackgroundProps) => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -20,7 +20,7 @@ export const TransparentBackground = ({ enabled, onChange }: TransparentBackgrou
       const result = await onChange(!enabled);
       setError(result.error ?? '');
     } catch {
-      setError('Transparent background could not be saved.');
+      setError('Translucent background could not be saved.');
     } finally {
       setSaving(false);
     }
@@ -30,7 +30,7 @@ export const TransparentBackground = ({ enabled, onChange }: TransparentBackgrou
     <div class="mt-5 border-t border-line pt-5">
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
-          <h2 class="m-0 text-sm leading-5 font-medium text-ink">Transparent background</h2>
+          <h2 class="m-0 text-sm leading-5 font-medium text-ink">Translucent background</h2>
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Let the desktop show through the app window.</p>
         </div>
         <button
