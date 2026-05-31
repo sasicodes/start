@@ -2,7 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { cliWorkspaceFlag, parseCliAdditionalData, parseCliLaunchArgv, resolveCliWorkspacePath } from '@main/cli/args';
-import { cliUninstallScriptSource, cliWrapperSource } from '@main/cli/install';
+import { cliInstallScriptSource, cliWrapperSource } from '@main/cli/install';
 
 describe('cli args', () => {
   it('parses workspace launch arguments', () => {
@@ -44,10 +44,9 @@ describe('cli installer', () => {
     expect(source).toContain('exec open -n "$app_bundle" --args');
   });
 
-  it('builds a guarded uninstall script', () => {
-    const source = cliUninstallScriptSource();
-    expect(source).toContain('grep -q "$marker" "$bin_path"');
-    expect(source).toContain('A different start command exists');
-    expect(source).toContain('rm "$bin_path"');
+  it('cleans up installer temp files on failure', () => {
+    const source = cliInstallScriptSource('/Applications/Start.app');
+    expect(source).toContain('trap \'rm -f "$tmp_path"\' EXIT');
+    expect(source).toContain('mv "$tmp_path" "$bin_path"');
   });
 });

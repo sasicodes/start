@@ -5,6 +5,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { appName, appId, isMac, isProd } from '@main/application';
 import { cliWorkspaceFlag } from '@main/cli/args';
+import type { CliInstallResult, CliInstallStatus } from '@preload/index';
 import electron from 'electron';
 
 const { app } = electron;
@@ -12,25 +13,6 @@ const { app } = electron;
 const execFileAsync = promisify(execFile);
 const cliBinPath = '/usr/local/bin/start';
 const cliMarker = `start-cli:${appId}`;
-
-export type CliInstallStatus =
-  | { status: 'installed'; path: string }
-  | { status: 'conflict'; path: string; reason: string }
-  | { status: 'outdated'; path: string; reason: string }
-  | { status: 'not-installed'; path: string }
-  | { status: 'unavailable'; path: string; reason: string };
-
-export interface CliInstallResult {
-  ok: boolean;
-  error?: string;
-  status: CliInstallStatus;
-}
-
-export interface CliUninstallResult {
-  ok: boolean;
-  error?: string;
-  status: CliInstallStatus;
-}
 
 const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
@@ -61,21 +43,23 @@ fi
 exec open -n "$app_bundle" --args ${cliWorkspaceFlag} "$workspace"
 `;
 
-export const cliUninstallScriptSource = () => `#!/bin/sh
+export const cliInstallScriptSource = (appBundlePath: string) => `#!/bin/sh
 set -eu
 bin_path=${shellQuote(cliBinPath)}
+tmp_path="${cliBinPath}.$$"
 marker=${shellQuote(cliMarker)}
+trap 'rm -f "$tmp_path"' EXIT
 
-if [ ! -e "$bin_path" ]; then
-  exit 0
-fi
-
-if ! grep -q "$marker" "$bin_path"; then
-  echo "A different start command exists at $bin_path." >&2
+mkdir -p "$(dirname "$bin_path")"
+if [ -e "$bin_path" ] && ! grep -q "$marker" "$bin_path"; then
+  echo "A different start command already exists at $bin_path." >&2
   exit 17
 fi
 
-rm "$bin_path"
+cat > "$tmp_path" <<'START_CLI'
+${cliWrapperSource(appBundlePath)}START_CLI
+chmod 755 "$tmp_path"
+mv "$tmp_path" "$bin_path"
 `;
 
 const unavailableStatus = (): CliInstallStatus | null => {
@@ -139,23 +123,7 @@ export const installCliCommand = async (): Promise<CliInstallResult> => {
   }
 
   const scriptPath = path.join(tmpdir(), `start-cli-install-${process.pid}.sh`);
-  const script = `#!/bin/sh
-set -eu
-bin_path=${shellQuote(cliBinPath)}
-tmp_path="${cliBinPath}.$$"
-marker=${shellQuote(cliMarker)}
-
-mkdir -p "$(dirname "$bin_path")"
-if [ -e "$bin_path" ] && ! grep -q "$marker" "$bin_path"; then
-  echo "A different start command already exists at $bin_path." >&2
-  exit 17
-fi
-
-cat > "$tmp_path" <<'START_CLI'
-${cliWrapperSource(currentAppBundlePath())}START_CLI
-chmod 755 "$tmp_path"
-mv "$tmp_path" "$bin_path"
-`;
+  const script = cliInstallScriptSource(currentAppBundlePath());
 
   await writeFile(scriptPath, script, { mode: 0o700 });
 
@@ -167,33 +135,6 @@ mv "$tmp_path" "$bin_path"
     return { ok: true, status: await getCliInstallStatus() };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Command line installation failed.';
-    return { ok: false, status: await getCliInstallStatus(), error: message };
-  } finally {
-    await rm(scriptPath, { force: true }).catch(() => {});
-  }
-};
-
-export const uninstallCliCommand = async (): Promise<CliUninstallResult> => {
-  const status = await getCliInstallStatus();
-  if (status.status === 'unavailable' || status.status === 'conflict') {
-    return { ok: false, status, error: status.reason };
-  }
-
-  if (status.status === 'not-installed') return { ok: true, status };
-
-  const scriptPath = path.join(tmpdir(), `start-cli-uninstall-${process.pid}.sh`);
-  const script = cliUninstallScriptSource();
-
-  await writeFile(scriptPath, script, { mode: 0o700 });
-
-  try {
-    await execFileAsync('/usr/bin/osascript', [
-      '-e',
-      `do shell script ${appleScriptString(`/bin/sh ${shellQuote(scriptPath)}`)} with administrator privileges`
-    ]);
-    return { ok: true, status: await getCliInstallStatus() };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Command line uninstall failed.';
     return { ok: false, status: await getCliInstallStatus(), error: message };
   } finally {
     await rm(scriptPath, { force: true }).catch(() => {});

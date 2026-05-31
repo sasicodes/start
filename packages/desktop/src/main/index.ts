@@ -27,7 +27,7 @@ import {
   resolveCliWorkspacePath,
   type CliLaunchRequest
 } from '@main/cli/args';
-import { getCliInstallStatus, installCliCommand, uninstallCliCommand } from '@main/cli/install';
+import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
 import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } from '@main/git';
 import { installWindowHardening } from '@main/harden';
@@ -225,7 +225,6 @@ if (!singleInstanceLock) {
     ipcMain.handle('app:settings', () => appSettings);
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
-    ipcMain.handle('app:uninstall-cli', uninstallCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);
     ipcMain.handle('app:browser-forward', goForwardInBrowser);
     ipcMain.handle('app:browser-reload', reloadBrowser);
