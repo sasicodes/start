@@ -165,15 +165,16 @@ const createSessionRuntimeState = (): SessionRuntimeState => ({
 });
 
 export class ChatService {
-  private appState = readStartState();
-  private session: AgentSession | null = null;
+  private activeSessionId = '';
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
-  private activeSessionId = '';
+  private appState = readStartState();
+  private session: AgentSession | null = null;
+  private resourceRefreshPromise: Promise<boolean> | null = null;
   private workspaceCwd = this.appState.lastWorkspace ?? homedir();
-  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
+  private selectedModelKey: string | null = this.appState.selectedModelKey ?? null;
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
 
   private readonly db = openStartDb();
@@ -251,6 +252,21 @@ export class ChatService {
   async getSlashCommands(): Promise<SlashCommandItem[]> {
     const session = await this.getSession();
     return sessionSlashCommandItems(session);
+  }
+
+  async refreshActiveSessionResources(): Promise<boolean> {
+    if (this.resourceRefreshPromise) return false;
+    if (!this.session) return false;
+    if (this.sessionIsGenerating(this.session)) return false;
+
+    const refresh = this.session.reload().then(() => true);
+    this.resourceRefreshPromise = refresh;
+
+    try {
+      return await refresh;
+    } finally {
+      if (this.resourceRefreshPromise === refresh) this.resourceRefreshPromise = null;
+    }
   }
 
   async archiveSession(sessionId: string): Promise<void> {

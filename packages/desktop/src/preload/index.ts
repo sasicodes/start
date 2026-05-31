@@ -427,6 +427,7 @@ const api = {
     unarchiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:unarchive', sessionId),
     onRecentSessionsChanged: (listener: (event: RecentSessionsChanged) => void): IpcDisposer =>
       onIpc<[RecentSessionsChanged]>('chat:recent-sessions-changed', listener),
+    onResourcesRefreshed: (listener: () => void): IpcDisposer => onIpc<[]>('chat:resources-refreshed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),
     onWorkspaceOpened: (listener: () => void): IpcDisposer => onIpc<[]>('chat:workspace-opened', listener),
     workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),

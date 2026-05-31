@@ -40,6 +40,7 @@ export class FakeAgentSession {
   isStreaming = false;
   isBashRunning = false;
   disposed = false;
+  reloadCount = 0;
   thinkingLevel = 'medium';
 
   followUpQueue: string[] = [];
@@ -171,6 +172,10 @@ export class FakeAgentSession {
 
   async abort() {
     this.abortPromptWith(new Error('aborted'));
+  }
+
+  async reload() {
+    this.reloadCount += 1;
   }
 
   abortBash() {

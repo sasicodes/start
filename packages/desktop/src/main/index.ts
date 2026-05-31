@@ -28,7 +28,7 @@ import {
   type CliLaunchRequest
 } from '@main/cli/args';
 import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
-import { clearAppFocusTimer, getAppFocusState, scheduleAppFocusStateChanged } from '@main/focus';
+import { getAppFocusState, onAppFocusChanged, clearAppFocusTimer, scheduleAppFocusStateChanged } from '@main/focus';
 import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
@@ -66,9 +66,10 @@ installWindowHardening();
 const chat = new ChatService();
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
+let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
 let stopWorkspaceChanged: (() => void) | undefined;
-let quitAfterAnalyticsShutdown = false;
+let stopResourceRefresh: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -205,6 +206,16 @@ if (!singleInstanceLock) {
     stopWorkspaceChanged = onWorkspaceChanged((workspace) => {
       sendToRendererWindows('app:workspace-changed', workspace);
     });
+    stopResourceRefresh = onAppFocusChanged((focused) => {
+      if (!focused) return;
+
+      chat
+        .refreshActiveSessionResources()
+        .then((refreshed) => {
+          if (refreshed) sendToRendererWindows('chat:resources-refreshed');
+        })
+        .catch(() => {});
+    });
 
     ipcMain.handle('app:focus-state', getAppFocusState);
     ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
@@ -326,6 +337,8 @@ app.on('before-quit', (event) => {
   clearAppFocusTimer();
   stopWorkspaceChanged?.();
   stopWorkspaceChanged = undefined;
+  stopResourceRefresh?.();
+  stopResourceRefresh = null;
   stopAutoUpdateChecks();
   void destroyBrowser();
   chat.dispose();
