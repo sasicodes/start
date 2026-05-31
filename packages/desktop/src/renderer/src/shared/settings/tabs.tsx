@@ -1,4 +1,5 @@
 import { tw } from '@renderer/utils/tw';
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
 
@@ -13,42 +14,65 @@ const settingsTabs = [
   { value: 'shortcuts', label: 'Shortcuts' }
 ] as const;
 
-const tabWidth = 8.75;
+interface TabIndicator {
+  left: number;
+  width: number;
+}
 
 export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
-  const activeIndex = settingsTabs.findIndex((tab) => tab.value === value);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [indicator, setIndicator] = useState<TabIndicator>({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const updateIndicator = () => {
+      const index = settingsTabs.findIndex((tab) => tab.value === value);
+      const button = tabRefs.current[index] ?? null;
+      if (!button) return;
+
+      setIndicator({ left: button.offsetLeft, width: button.offsetWidth });
+    };
+
+    updateIndicator();
+    const observer = new ResizeObserver(updateIndicator);
+    for (const button of tabRefs.current) {
+      if (button) observer.observe(button);
+    }
+    window.addEventListener('resize', updateIndicator);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateIndicator);
+    };
+  }, [value]);
 
   return (
-    <div role="tablist" aria-label="Settings" class="rounded-full border border-line bg-composer p-1 shadow-nav">
-      <div class="relative flex items-center">
-        <div
-          class="pointer-events-none absolute top-0 bottom-0 left-0 rounded-full bg-control shadow-shell transition-transform duration-200 ease-out"
-          style={{
-            transform: `translateX(calc(${activeIndex} * ${tabWidth}rem))`,
-            width: `${tabWidth}rem`
-          }}
-        />
-        {settingsTabs.map((tab) => {
-          const selected = value === tab.value;
+    <div role="tablist" aria-label="Settings" class="relative flex min-w-0 items-center gap-5">
+      {settingsTabs.map((tab, index) => {
+        const selected = value === tab.value;
 
-          return (
-            <button
-              key={tab.value}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              style={{ width: `${tabWidth}rem` }}
-              onClick={() => onChange(tab.value)}
-              class={tw(
-                'relative z-10 flex h-8 items-center justify-center gap-1.5 rounded-full border-0 bg-transparent px-3 text-xs leading-none font-medium outline-0 transition-colors duration-150 ease-out',
-                selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
-              )}
-            >
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(tab.value)}
+            ref={(element) => {
+              tabRefs.current[index] = element;
+            }}
+            class={tw(
+              'h-8 flex-none border-0 bg-transparent p-0 text-sm leading-8 font-medium outline-0 transition-colors duration-150 ease-out',
+              selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
+            )}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+      <span
+        aria-hidden="true"
+        class="pointer-events-none absolute bottom-0 left-0 h-px bg-ink transition-all duration-200 ease-out"
+        style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
+      />
     </div>
   );
 };

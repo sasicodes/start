@@ -52,7 +52,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
   };
 
   return (
-    <div class="mt-4 border-t border-line pt-5">
+    <div>
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Composer shortcut</h2>

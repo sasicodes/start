@@ -68,7 +68,9 @@ describe('browser tools', () => {
       url: 'https://example.com/',
       open: true,
       title: 'Example',
+      activeTabId: 'tab-1',
       loading: false,
+      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
       canGoBack: true,
       canGoForward: false
     });
@@ -82,6 +84,7 @@ describe('browser tools', () => {
 
     expect(browserTools.map((tool) => tool.name)).toEqual([
       'browser_open',
+      'browser_select',
       'browser_status',
       'browser_back',
       'browser_forward',
@@ -112,7 +115,9 @@ describe('browser tools', () => {
         url: '',
         open: false,
         title: '',
+        activeTabId: '',
         loading: false,
+        tabs: [],
         canGoBack: false,
         canGoForward: false
       })
@@ -120,7 +125,9 @@ describe('browser tools', () => {
         url: 'http://localhost:5173/',
         open: true,
         title: '',
+        activeTabId: 'tab-2',
         loading: true,
+        tabs: [{ id: 'tab-2', url: 'http://localhost:5173/', title: '', loading: true }],
         canGoBack: false,
         canGoForward: false
       });
@@ -128,8 +135,47 @@ describe('browser tools', () => {
     const result = await toolByName('browser_open').execute('call-1', { url: 'localhost:5173' });
 
     expect(getBrowserStatusMock).toHaveBeenCalled();
-    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual(['http://localhost:5173/']);
+    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
+      { url: 'http://localhost:5173/', newTab: true }
+    ]);
     expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
+  });
+
+  it('opens URLs in a requested existing browser tab', async () => {
+    getBrowserStatusMock.mockReturnValue({
+      url: 'https://example.com/',
+      open: true,
+      title: 'Example',
+      activeTabId: 'tab-1',
+      loading: false,
+      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
+      canGoBack: true,
+      canGoForward: false
+    });
+
+    await toolByName('browser_open').execute('call-1', { url: 'https://example.com', tabId: 'tab-1' });
+
+    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
+      { url: 'https://example.com/', tabId: 'tab-1', newTab: false }
+    ]);
+  });
+
+  it('selects an existing browser tab', async () => {
+    getBrowserStatusMock.mockReturnValue({
+      url: 'https://example.com/',
+      open: true,
+      title: 'Example',
+      activeTabId: 'tab-1',
+      loading: false,
+      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
+      canGoBack: true,
+      canGoForward: false
+    });
+
+    const result = await toolByName('browser_select').execute('call-1', { tabId: 'tab-1' });
+
+    expect(broadcastsByChannel('app:browser-select-request')[0]?.args).toEqual([{ tabId: 'tab-1' }]);
+    expect(result.content[0]?.text).toBe('Selected browser tab tab-1.');
   });
 
   it('reports current browser status', async () => {
@@ -139,7 +185,9 @@ describe('browser tools', () => {
       url: 'https://example.com/',
       open: true,
       title: 'Example',
+      activeTabId: 'tab-1',
       loading: false,
+      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
       canGoBack: true,
       canGoForward: false
     });

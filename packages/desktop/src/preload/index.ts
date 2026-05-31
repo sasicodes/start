@@ -313,15 +313,38 @@ export interface BrowserStatus {
   url: string;
   open: boolean;
   title: string;
+  activeTabId: string;
   loading: boolean;
+  tabs: BrowserTabStatus[];
   canGoBack: boolean;
   canGoForward: boolean;
+}
+
+export interface BrowserTabStatus {
+  id: string;
+  url: string;
+  title: string;
+  loading: boolean;
+  faviconUrl?: string;
 }
 
 export interface BrowserActionResult {
   ok: boolean;
   error?: string;
   status?: BrowserStatus;
+}
+
+export interface BrowserOpenOptions {
+  tabId?: string;
+  newTab?: boolean;
+}
+
+export interface BrowserOpenRequest extends BrowserOpenOptions {
+  url: string;
+}
+
+export interface BrowserSelectRequest {
+  tabId: string;
 }
 
 export type UpdateState =
@@ -364,8 +387,14 @@ const api = {
     browserReload: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-reload'),
     browserStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-stop'),
     browserStatus: (): Promise<BrowserStatus> => ipcRenderer.invoke('app:browser-status'),
+    browserNewTab: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-new-tab'),
+    browserCloseTab: (tabId: string): Promise<BrowserActionResult> =>
+      ipcRenderer.invoke('app:browser-close-tab', tabId),
+    browserSelectTab: (tabId: string): Promise<BrowserActionResult> =>
+      ipcRenderer.invoke('app:browser-select-tab', tabId),
     browserScreenshot: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-screenshot'),
-    browserOpen: (url: string): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-open', url),
+    browserOpen: (url: string, options: BrowserOpenOptions = {}): Promise<BrowserActionResult> =>
+      ipcRenderer.invoke('app:browser-open', url, options),
     browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
       ipcRenderer.invoke('app:browser-bounds', bounds),
     browserInspectStart: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-start'),
@@ -388,8 +417,10 @@ const api = {
     onShowComposer: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-composer', listener),
     onDiscardComposer: (listener: () => void): IpcDisposer => onIpc<[]>('app:discard-composer', listener),
     onHideComposerRequest: (listener: () => void): IpcDisposer => onIpc<[]>('app:hide-composer-request', listener),
-    onBrowserOpenRequest: (listener: (url: string) => void): IpcDisposer =>
-      onIpc<[string]>('app:browser-open-request', listener),
+    onBrowserOpenRequest: (listener: (request: BrowserOpenRequest) => void): IpcDisposer =>
+      onIpc<[BrowserOpenRequest]>('app:browser-open-request', listener),
+    onBrowserSelectRequest: (listener: (request: BrowserSelectRequest) => void): IpcDisposer =>
+      onIpc<[BrowserSelectRequest]>('app:browser-select-request', listener),
     onBrowserStatus: (listener: (status: BrowserStatus) => void): IpcDisposer =>
       onIpc<[BrowserStatus]>('app:browser-status', listener),
     onBrowserInspectSent: (listener: (text: string) => void): IpcDisposer =>

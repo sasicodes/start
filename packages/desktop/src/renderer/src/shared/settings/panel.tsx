@@ -12,7 +12,7 @@ interface SettingsProps {
   solidWindowBackground: boolean;
   providers: ProviderAuthStatus[];
   onTabChange: (tab: SettingsTab) => void;
-  onSidePanelToggle: () => void;
+  onClose: () => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
@@ -27,7 +27,7 @@ export const Settings = memo(
     tab,
     composerShortcut,
     onTabChange,
-    onSidePanelToggle,
+    onClose,
     onLoginSubscription,
     onDisconnectProvider,
     solidWindowBackground,
@@ -37,28 +37,30 @@ export const Settings = memo(
     const updateTranslucency = (enabled: boolean) => onSolidWindowBackgroundChange(!enabled);
 
     return (
-      <section class="min-h-full px-5 py-3 outline-0">
-        <header class="flex items-center justify-between gap-3 pb-3">
+      <section class="min-h-full px-4 pt-4 pb-3 outline-0">
+        <header class="mb-3 flex items-center justify-between gap-3">
           <SettingsTabs value={tab} onChange={onTabChange} />
-          <PanelCloseButton onClick={onSidePanelToggle} />
+          <PanelCloseButton onClick={onClose} />
         </header>
-        {tab === 'personalization' ? (
-          <Personalization
-            composerShortcut={composerShortcut}
-            onComposerShortcutChange={onComposerShortcutChange}
-            translucentBackground={!solidWindowBackground}
-            onTranslucentBackgroundChange={updateTranslucency}
-          />
-        ) : tab === 'providers' ? (
-          <Providers
-            providers={providers}
-            onSaveApiKey={onSaveApiKey}
-            onLoginSubscription={onLoginSubscription}
-            onDisconnectProvider={onDisconnectProvider}
-          />
-        ) : (
-          <Shortcuts composerShortcut={composerShortcut} />
-        )}
+        <div class="pt-2">
+          {tab === 'personalization' ? (
+            <Personalization
+              composerShortcut={composerShortcut}
+              onComposerShortcutChange={onComposerShortcutChange}
+              translucentBackground={!solidWindowBackground}
+              onTranslucentBackgroundChange={updateTranslucency}
+            />
+          ) : tab === 'providers' ? (
+            <Providers
+              providers={providers}
+              onSaveApiKey={onSaveApiKey}
+              onLoginSubscription={onLoginSubscription}
+              onDisconnectProvider={onDisconnectProvider}
+            />
+          ) : (
+            <Shortcuts composerShortcut={composerShortcut} />
+          )}
+        </div>
       </section>
     );
   }

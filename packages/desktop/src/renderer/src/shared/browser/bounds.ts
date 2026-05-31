@@ -8,12 +8,12 @@ const sameBrowserSize = (left: BrowserBounds, right: BrowserBounds) =>
 export const browserBoundsEqual = (left: BrowserBounds | null, right: BrowserBounds | null) =>
   Boolean(left && right && sameBrowserPosition(left, right) && sameBrowserSize(left, right));
 
-export const readBrowserBounds = (element: HTMLElement): BrowserBounds => {
+export const readBrowserBounds = (element: HTMLElement, insetLeft = 0): BrowserBounds => {
   const rect = element.getBoundingClientRect();
   return {
-    x: Math.round(rect.left),
+    x: Math.round(rect.left + insetLeft),
     y: Math.round(rect.top),
-    width: Math.max(0, Math.round(rect.width)),
+    width: Math.max(0, Math.round(rect.width - insetLeft)),
     height: Math.max(0, Math.round(rect.height))
   };
 };

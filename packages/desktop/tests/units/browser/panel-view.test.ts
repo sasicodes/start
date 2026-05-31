@@ -5,12 +5,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const {
   captureBrowserScreenshot,
+  closeBrowserTab,
   clickInBrowser,
   destroyBrowser,
   openBrowserUrl,
   pressInBrowser,
   reloadBrowser,
   setBrowserBounds,
+  selectBrowserTab,
   typeInBrowser
 } = await import('@main/browser/index');
 
@@ -28,7 +30,7 @@ describe('browser panel view', () => {
     destroyBrowser();
   });
 
-  it('closes the native browser view when panel bounds are cleared', () => {
+  it('detaches the native browser view when panel bounds are cleared', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -39,7 +41,7 @@ describe('browser panel view', () => {
 
     setBrowserBounds(webContents, null);
     expect(window.contentView.children).toHaveLength(0);
-    expect(view?.webContents.closed).toBe(true);
+    expect(view?.webContents.closed).toBe(false);
   });
 
   it('does not broadcast status when clearing bounds without an attached view', () => {
@@ -52,7 +54,7 @@ describe('browser panel view', () => {
     expect(broadcastsByChannel('app:browser-status')).toEqual([]);
   });
 
-  it('creates a fresh browser view after the panel is reopened', () => {
+  it('reattaches the existing browser view after the panel is reopened', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -63,7 +65,102 @@ describe('browser panel view', () => {
     setBrowserBounds(webContents, { x: 12, y: 24, width: 320, height: 220 });
 
     expect(window.contentView.children).toHaveLength(1);
-    expect(window.contentView.children[0]).not.toBe(view);
+    expect(window.contentView.children[0]).toBe(view);
+  });
+
+  it('opens and switches between separate browser tabs', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com');
+    await openBrowserUrl(webContents, 'https://start.intelligence.one', { newTab: true });
+    const secondView = window.contentView.children[0];
+    if (!secondView) throw new Error('Expected browser view.');
+
+    expect(secondView).not.toBe(firstView);
+    expect(secondView.webContents.getURL()).toBe('https://start.intelligence.one/');
+    expect(selectBrowserTab(webContents, 'tab-1').status?.url).toBe('https://example.com/');
+    expect(window.contentView.children[0]).toBe(firstView);
+  });
+
+  it('reuses an existing browser tab for the same normalized URL', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com/path#section');
+    const result = await openBrowserUrl(webContents, 'https://example.com/path#section', { newTab: true });
+
+    expect(result.status?.activeTabId).toBe('tab-1');
+    expect(result.status?.tabs).toHaveLength(1);
+    expect(window.contentView.children[0]).toBe(firstView);
+  });
+
+  it('opens a new browser tab for a different URL hash', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com/path#one');
+    const result = await openBrowserUrl(webContents, 'https://example.com/path#two', { newTab: true });
+
+    expect(result.status?.activeTabId).toBe('tab-2');
+    expect(result.status?.tabs).toHaveLength(2);
+    expect(window.contentView.children[0]).not.toBe(firstView);
+  });
+
+  it('closes the active browser tab and selects the next tab', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com');
+    await openBrowserUrl(webContents, 'https://start.intelligence.one', { newTab: true });
+    selectBrowserTab(webContents, 'tab-1');
+    const result = closeBrowserTab(webContents, 'tab-1');
+
+    expect(firstView.webContents.closed).toBe(true);
+    expect(result.status?.activeTabId).toBe('tab-2');
+    expect(result.status?.url).toBe('https://start.intelligence.one/');
+    expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://start.intelligence.one/');
+  });
+
+  it('closes the final browser tab and leaves the panel empty', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://example.com');
+    const result = closeBrowserTab(webContents, 'tab-1');
+
+    expect(view.webContents.closed).toBe(true);
+    expect(window.contentView.children).toHaveLength(0);
+    expect(result.status).toEqual({
+      url: '',
+      open: false,
+      title: '',
+      activeTabId: '',
+      loading: false,
+      tabs: [],
+      canGoBack: false,
+      canGoForward: false
+    });
   });
 
   it('scales native browser bounds by the owner renderer zoom factor', () => {
@@ -118,7 +215,7 @@ describe('browser panel view', () => {
     expect(view.webContents.closed).toBe(true);
   });
 
-  it('refuses browser actions after the panel is closed', () => {
+  it('keeps browser actions available after the panel is detached', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -126,13 +223,14 @@ describe('browser panel view', () => {
     setBrowserBounds(webContents, null);
 
     expect(reloadBrowser()).toEqual({
-      ok: false,
-      error: 'Open the in-app browser panel first.',
+      ok: true,
       status: {
         url: '',
         open: false,
         title: '',
+        activeTabId: 'tab-1',
         loading: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
         canGoForward: false
       }
@@ -157,7 +255,9 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
+        activeTabId: 'tab-1',
         loading: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
         canGoForward: false
       }
@@ -232,7 +332,9 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
+        activeTabId: 'tab-1',
         loading: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
         canGoForward: false
       }
@@ -257,7 +359,9 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
+        activeTabId: 'tab-1',
         loading: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
         canGoForward: false
       }

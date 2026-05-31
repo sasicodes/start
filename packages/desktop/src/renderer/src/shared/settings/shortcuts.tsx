@@ -31,7 +31,7 @@ export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
       {entries.map((entry, index) => (
         <li
           key={entry.label}
-          class={tw('flex items-center justify-between gap-4 py-3', index > 0 && 'border-t border-line')}
+          class={tw('flex items-center justify-between gap-4', index > 0 ? 'border-t border-line py-3' : 'pb-3')}
         >
           <span class="text-sm text-ink">{entry.label}</span>
           <span class="flex items-center gap-2 text-xs text-soft">

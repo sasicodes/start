@@ -26,15 +26,30 @@ export interface BrowserStatus {
   url: string;
   open: boolean;
   title: string;
+  activeTabId: string;
   loading: boolean;
+  tabs: BrowserTabStatus[];
   canGoBack: boolean;
   canGoForward: boolean;
+}
+
+export interface BrowserTabStatus {
+  id: string;
+  url: string;
+  title: string;
+  loading: boolean;
+  faviconUrl?: string;
 }
 
 export interface BrowserActionResult {
   ok: boolean;
   error?: string;
   status?: BrowserStatus;
+}
+
+export interface BrowserOpenOptions {
+  tabId?: string;
+  newTab?: boolean;
 }
 
 export interface BrowserTypeOptions {
@@ -49,12 +64,21 @@ export interface BrowserSnapshotResult extends BrowserActionResult {
 
 type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace: boolean, mainFrame: boolean) => void;
 
-let browserView: ElectronWebContentsView | null = null;
+interface BrowserTab {
+  id: string;
+  faviconUrl: string;
+  view: ElectronWebContentsView;
+}
+
+let nextBrowserTabId = 1;
+let activeTabId = '';
+let attachedTabId = '';
 let ownerWindow: ElectronBrowserWindow | null = null;
 let ownerWindowClosedHandler: (() => void) | null = null;
 let ownerWindowGoneHandler: (() => void) | null = null;
 let ownerWindowNavigationHandler: OwnerWindowNavigationHandler | null = null;
 let lastBounds: BrowserBounds | null = null;
+const browserTabs = new Map<string, BrowserTab>();
 
 const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
@@ -77,7 +101,9 @@ const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
   title: '',
+  activeTabId: '',
   loading: false,
+  tabs: [],
   canGoBack: false,
   canGoForward: false
 };
@@ -89,16 +115,38 @@ const scaleBrowserBounds = (bounds: BrowserBounds, scale: number): BrowserBounds
   height: Math.max(0, Math.round(bounds.height * scale))
 });
 
+const tabStatus = (tab: BrowserTab): BrowserTabStatus => ({
+  id: tab.id,
+  url: tab.view.webContents.getURL(),
+  title: tab.view.webContents.getTitle(),
+  loading: tab.view.webContents.isLoading(),
+  ...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})
+});
+
+const activeTab = (): BrowserTab | null => browserTabs.get(activeTabId) ?? null;
+
+const tabWithUrl = (url: string): BrowserTab | null => {
+  for (const tab of browserTabs.values()) {
+    if (tab.view.webContents.getURL() === url) return tab;
+  }
+
+  return null;
+};
+
 const statusFromView = (): BrowserStatus => {
-  if (!browserView) return emptyStatus;
+  const tab = activeTab();
+  if (!tab) return emptyStatus;
+  const { view } = tab;
 
   return {
-    url: browserView.webContents.getURL(),
+    url: view.webContents.getURL(),
     open: Boolean(ownerWindow && !ownerWindow.isDestroyed()),
-    title: browserView.webContents.getTitle(),
-    loading: browserView.webContents.isLoading(),
-    canGoBack: browserView.webContents.navigationHistory.canGoBack(),
-    canGoForward: browserView.webContents.navigationHistory.canGoForward()
+    title: view.webContents.getTitle(),
+    activeTabId: tab.id,
+    loading: view.webContents.isLoading(),
+    tabs: Array.from(browserTabs.values(), tabStatus),
+    canGoBack: view.webContents.navigationHistory.canGoBack(),
+    canGoForward: view.webContents.navigationHistory.canGoForward()
   };
 };
 
@@ -129,7 +177,7 @@ const createBrowserView = () => {
   view.webContents.setWindowOpenHandler(({ url }) => {
     const normalized = normalizeBrowserUrl(url);
     if (normalized && ownerWindow && !ownerWindow.isDestroyed())
-      void openBrowserUrl(ownerWindow.webContents, normalized);
+      openBrowserUrl(ownerWindow.webContents, normalized, { newTab: true }).catch(() => {});
     else externalUrl(url);
     return { action: 'deny' };
   });
@@ -143,7 +191,38 @@ const createBrowserView = () => {
   return view;
 };
 
-const detachBrowserView = () => {
+const createBrowserTab = (): BrowserTab => {
+  const tab = {
+    id: `tab-${nextBrowserTabId}`,
+    faviconUrl: '',
+    view: createBrowserView()
+  };
+  tab.view.webContents.on('page-favicon-updated', (_event, favicons: string[]) => {
+    tab.faviconUrl = favicons[0] ?? '';
+    sendStatus();
+  });
+  nextBrowserTabId += 1;
+  browserTabs.set(tab.id, tab);
+  activeTabId = tab.id;
+  return tab;
+};
+
+const ensureActiveTab = (): BrowserTab => activeTab() ?? createBrowserTab();
+
+const nextActiveTabIdAfterClose = (tabId: string) => {
+  const tabIds = Array.from(browserTabs.keys());
+  const index = tabIds.indexOf(tabId);
+  if (index < 0) return '';
+  return tabIds[index + 1] ?? tabIds[index - 1] ?? '';
+};
+
+const detachAttachedTab = () => {
+  const tab = browserTabs.get(attachedTabId);
+  if (ownerWindow && tab && !ownerWindow.isDestroyed()) ownerWindow.contentView.removeChildView(tab.view);
+  attachedTabId = '';
+};
+
+const detachBrowserWindow = () => {
   if (ownerWindowClosedHandler && ownerWindow && !ownerWindow.isDestroyed()) {
     ownerWindow.off('closed', ownerWindowClosedHandler);
   }
@@ -154,7 +233,7 @@ const detachBrowserView = () => {
     ownerWindow.webContents.off('did-start-navigation', ownerWindowNavigationHandler);
   }
 
-  if (ownerWindow && browserView && !ownerWindow.isDestroyed()) ownerWindow.contentView.removeChildView(browserView);
+  detachAttachedTab();
 
   ownerWindow = null;
   ownerWindowClosedHandler = null;
@@ -162,41 +241,51 @@ const detachBrowserView = () => {
   ownerWindowNavigationHandler = null;
 };
 
-const closeBrowserView = () => {
-  if (!browserView && !ownerWindow) return;
-  detachBrowserView();
-  browserView?.webContents.stop();
-  browserView?.webContents.close();
-  browserView = null;
+const closeBrowserTabs = () => {
+  if (browserTabs.size === 0 && !ownerWindow) return;
+  detachBrowserWindow();
+  for (const tab of browserTabs.values()) {
+    tab.view.webContents.stop();
+    tab.view.webContents.close();
+  }
+  browserTabs.clear();
+  activeTabId = '';
+  nextBrowserTabId = 1;
   lastBounds = null;
   sendStatus();
   sendToRendererWindows('app:browser-inspect-state', false);
 };
 
-const attachBrowserView = (window: ElectronBrowserWindow) => {
-  if (ownerWindow === window && browserView) return browserView;
+const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
+  const tab = ensureActiveTab();
+  if (ownerWindow === window && attachedTabId === tab.id) return tab.view;
 
-  detachBrowserView();
+  if (ownerWindow !== window) {
+    detachBrowserWindow();
 
-  ownerWindow = window;
-  browserView = browserView ?? createBrowserView();
-  ownerWindowClosedHandler = () => {
-    if (ownerWindow === window) closeBrowserView();
-  };
-  ownerWindowGoneHandler = () => {
-    if (ownerWindow === window) closeBrowserView();
-  };
-  ownerWindowNavigationHandler = (_event, _url, _inPlace, mainFrame) => {
-    if (mainFrame && ownerWindow === window) closeBrowserView();
-  };
+    ownerWindow = window;
+    ownerWindowClosedHandler = () => {
+      if (ownerWindow === window) closeBrowserTabs();
+    };
+    ownerWindowGoneHandler = () => {
+      if (ownerWindow === window) closeBrowserTabs();
+    };
+    ownerWindowNavigationHandler = (_event, _url, _inPlace, mainFrame) => {
+      if (mainFrame && ownerWindow === window) closeBrowserTabs();
+    };
 
-  window.contentView.addChildView(browserView);
-  window.on('closed', ownerWindowClosedHandler);
-  window.webContents.on('render-process-gone', ownerWindowGoneHandler);
-  window.webContents.on('did-start-navigation', ownerWindowNavigationHandler);
-  if (lastBounds) browserView.setBounds(lastBounds);
+    window.on('closed', ownerWindowClosedHandler);
+    window.webContents.on('render-process-gone', ownerWindowGoneHandler);
+    window.webContents.on('did-start-navigation', ownerWindowNavigationHandler);
+  } else {
+    detachAttachedTab();
+  }
 
-  return browserView;
+  window.contentView.addChildView(tab.view);
+  attachedTabId = tab.id;
+  if (lastBounds) tab.view.setBounds(lastBounds);
+
+  return tab.view;
 };
 
 const windowFromSender = (sender: WebContents): ElectronBrowserWindow | null => {
@@ -209,29 +298,44 @@ export const getBrowserStatus = (): BrowserStatus => statusFromView();
 
 export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | null): BrowserActionResult => {
   if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-    closeBrowserView();
+    detachBrowserWindow();
     return { ok: true, status: statusFromView() };
   }
 
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  const view = attachBrowserView(window);
+  const view = attachActiveBrowserView(window);
   const scaledBounds = scaleBrowserBounds(bounds, sender.getZoomFactor());
   lastBounds = scaledBounds;
   view.setBounds(scaledBounds);
   return { ok: true, status: statusFromView() };
 };
 
-export const openBrowserUrl = async (sender: WebContents, value: string): Promise<BrowserActionResult> => {
+export const openBrowserUrl = async (
+  sender: WebContents,
+  value: string,
+  options: BrowserOpenOptions = {}
+): Promise<BrowserActionResult> => {
   const url = normalizeBrowserUrl(value);
   if (!url) return { ok: false, error: 'Enter a valid http or https URL.' };
 
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  const view = attachBrowserView(window);
+  if (options.tabId && browserTabs.has(options.tabId)) {
+    activeTabId = options.tabId;
+  } else if (options.newTab) {
+    activeTabId = tabWithUrl(url)?.id ?? createBrowserTab().id;
+  }
+
+  const view = attachActiveBrowserView(window);
   view.webContents.focus();
+  if (view.webContents.getURL() === url) {
+    sendStatus();
+    return { ok: true, status: statusFromView() };
+  }
+
   const loadError = await view.webContents
     .loadURL(url)
     .then(() => null)
@@ -243,45 +347,100 @@ export const openBrowserUrl = async (sender: WebContents, value: string): Promis
   return { ok: true, status: statusFromView() };
 };
 
+export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
+  const window = windowFromSender(sender);
+  if (!window) return { ok: false, error: 'Browser window is not available.' };
+
+  createBrowserTab();
+  attachActiveBrowserView(window);
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
+export const selectBrowserTab = (sender: WebContents, tabId: string): BrowserActionResult => {
+  const window = windowFromSender(sender);
+  if (!window) return { ok: false, error: 'Browser window is not available.' };
+  if (!browserTabs.has(tabId)) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
+
+  activeTabId = tabId;
+  attachActiveBrowserView(window);
+  activeTab()?.view.webContents.focus();
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
+export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActionResult => {
+  const tab = browserTabs.get(tabId);
+  if (!tab) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
+
+  const wasAttached = attachedTabId === tabId;
+  const wasActive = activeTabId === tabId;
+  const nextTabId = wasActive ? nextActiveTabIdAfterClose(tabId) : activeTabId;
+
+  if (wasAttached) detachAttachedTab();
+  browserTabs.delete(tabId);
+  tab.view.webContents.stop();
+  tab.view.webContents.close();
+  activeTabId = nextTabId;
+
+  if (activeTabId) {
+    const window = windowFromSender(sender);
+    if (window && !window.isDestroyed() && (wasAttached || ownerWindow === window)) {
+      attachActiveBrowserView(window);
+      activeTab()?.view.webContents.focus();
+    }
+  }
+
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
 export const goBackInBrowser = (): BrowserActionResult => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
-  if (!browserView.webContents.navigationHistory.canGoBack()) return { ok: true, status: statusFromView() };
-  browserView.webContents.navigationHistory.goBack();
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+  if (!tab.view.webContents.navigationHistory.canGoBack()) return { ok: true, status: statusFromView() };
+  tab.view.webContents.navigationHistory.goBack();
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
 
 export const goForwardInBrowser = (): BrowserActionResult => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
-  if (!browserView.webContents.navigationHistory.canGoForward()) return { ok: true, status: statusFromView() };
-  browserView.webContents.navigationHistory.goForward();
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+  if (!tab.view.webContents.navigationHistory.canGoForward()) return { ok: true, status: statusFromView() };
+  tab.view.webContents.navigationHistory.goForward();
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
 
 export const reloadBrowser = (): BrowserActionResult => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
-  browserView.webContents.reload();
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+  tab.view.webContents.reload();
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
 
 export const stopBrowser = (): BrowserActionResult => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
-  browserView.webContents.stop();
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+  tab.view.webContents.stop();
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
 
-export const startBrowserInspect = (): Promise<BrowserActionResult> => startInspect(browserView?.webContents ?? null);
+export const startBrowserInspect = (): Promise<BrowserActionResult> =>
+  startInspect(activeTab()?.view.webContents ?? null);
 
-export const stopBrowserInspect = (): Promise<BrowserActionResult> => stopInspect(browserView?.webContents ?? null);
+export const stopBrowserInspect = (): Promise<BrowserActionResult> =>
+  stopInspect(activeTab()?.view.webContents ?? null);
 
 export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
   try {
-    const image = await browserView.webContents.capturePage();
+    const image = await tab.view.webContents.capturePage();
     if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
 
     clipboard.writeImage(image);
@@ -292,18 +451,20 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
 };
 
 export const captureBrowserSnapshot = async (): Promise<BrowserSnapshotResult> => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
-  const snapshot = await readBrowserSnapshot(browserView.webContents);
+  const snapshot = await readBrowserSnapshot(tab.view.webContents);
   if (!snapshot) return { ok: false, error: 'Could not read the browser page.' };
 
   return { ok: true, snapshot, status: statusFromView() };
 };
 
 export const clickInBrowser = async (ref: string): Promise<BrowserActionResult> => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
-  const result = await clickBrowserElement(browserView.webContents, ref);
+  const result = await clickBrowserElement(tab.view.webContents, ref);
   if (!result.ok)
     return { ok: false, error: result.error ?? 'Could not click the browser element.', status: statusFromView() };
 
@@ -312,9 +473,10 @@ export const clickInBrowser = async (ref: string): Promise<BrowserActionResult> 
 };
 
 export const typeInBrowser = async ({ ref, text, clear }: BrowserTypeOptions): Promise<BrowserActionResult> => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
-  const result = await typeBrowserText(browserView.webContents, ref, text, clear);
+  const result = await typeBrowserText(tab.view.webContents, ref, text, clear);
   if (!result.ok)
     return { ok: false, error: result.error ?? 'Could not type into the browser element.', status: statusFromView() };
 
@@ -323,16 +485,17 @@ export const typeInBrowser = async ({ ref, text, clear }: BrowserTypeOptions): P
 };
 
 export const pressInBrowser = (key: string): BrowserActionResult => {
-  if (!browserView) return { ok: false, error: closedPanelError, status: statusFromView() };
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
   if (!allowedKeyCodes.has(key)) return { ok: false, error: 'Unsupported browser key.', status: statusFromView() };
 
-  browserView.webContents.sendInputEvent({ type: 'keyDown', keyCode: key });
-  browserView.webContents.sendInputEvent({ type: 'keyUp', keyCode: key });
+  tab.view.webContents.sendInputEvent({ type: 'keyDown', keyCode: key });
+  tab.view.webContents.sendInputEvent({ type: 'keyUp', keyCode: key });
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
 
 export const destroyBrowser = () => {
-  closeBrowserView();
+  closeBrowserTabs();
   ownerWindowClosedHandler = null;
 };

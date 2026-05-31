@@ -271,7 +271,7 @@ export const App = () => {
       onSettingsTabChange={setSettingsTab}
       onBrowserUrlOpened={browserPanel.clear}
       onBrowserInspectText={appendInspectToComposer}
-      onSidePanelToggle={closeSidePanel}
+      onClose={closeSidePanel}
       onLoginSubscription={loginSubscription}
       onDisconnectProvider={disconnectProvider}
       onComposerShortcutChange={updateComposerShortcut}

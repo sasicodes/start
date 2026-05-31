@@ -15,7 +15,7 @@ interface AppSidePanelProps {
   solidWindowBackground: boolean;
   onBrowserUrlOpened: () => void;
   onSettingsTabChange: (tab: SettingsTab) => void;
-  onSidePanelToggle: () => void;
+  onClose: () => void;
   providers: ProviderAuthStatus[];
   browserNavigation: BrowserNavigation;
   onBrowserInspectText: (text: string) => void;
@@ -50,21 +50,21 @@ export const AppSidePanel = memo(
     browserNavigation,
     onBrowserUrlOpened,
     onSettingsTabChange,
-    onSidePanelToggle,
+    onClose,
     onLoginSubscription,
     onBrowserInspectText,
     onDisconnectProvider,
     onComposerShortcutChange,
     onSolidWindowBackgroundChange
   }: AppSidePanelProps) => {
-    if (mode === 'git') return <GitChangesPanel path={workspacePath} onSidePanelToggle={onSidePanelToggle} />;
+    if (mode === 'git') return <GitChangesPanel path={workspacePath} onClose={onClose} />;
     if (mode === 'browser')
       return (
         <BrowserPanel
           navigation={browserNavigation}
           onUrlOpened={onBrowserUrlOpened}
           onInspectText={onBrowserInspectText}
-          onSidePanelToggle={onSidePanelToggle}
+          onClose={onClose}
         />
       );
 
@@ -78,7 +78,7 @@ export const AppSidePanel = memo(
           composerShortcut={composerShortcut}
           solidWindowBackground={solidWindowBackground}
           onLoginSubscription={onLoginSubscription}
-          onSidePanelToggle={onSidePanelToggle}
+          onClose={onClose}
           onDisconnectProvider={onDisconnectProvider}
           onComposerShortcutChange={onComposerShortcutChange}
           onSolidWindowBackgroundChange={onSolidWindowBackgroundChange}

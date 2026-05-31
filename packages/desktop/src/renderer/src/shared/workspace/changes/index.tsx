@@ -39,7 +39,7 @@ interface GitChangesProps {
 
 interface GitChangesPanelProps {
   path: string;
-  onSidePanelToggle: () => void;
+  onClose: () => void;
 }
 
 interface GitSummaryLike {
@@ -96,7 +96,7 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   );
 });
 
-export const GitChangesPanel = memo(({ path, onSidePanelToggle }: GitChangesPanelProps) => {
+export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState(false);
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
@@ -136,23 +136,19 @@ export const GitChangesPanel = memo(({ path, onSidePanelToggle }: GitChangesPane
     <div class="flex min-h-full flex-col gap-4 outline-0">
       {patch.kind === 'ready' && (
         <header class="sticky top-0 z-20 flex items-center justify-between gap-3 bg-canvas/80 px-4 pt-4 text-sm leading-6 font-medium backdrop-blur-md">
-          <button
-            type="button"
-            disabled={!canCycle}
-            onClick={() => setViewMode((current) => nextViewMode(current, patch.patch.sections))}
-            class={tw(
-              'inline-flex min-w-0 items-center gap-1.5 truncate border-0 bg-transparent p-0 text-left text-soft outline-0',
-              canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
-            )}
-          >
-            <span class="min-w-0 truncate">{gitViewLabel(viewMode, visibleSummary.filesChanged)}</span>
-            {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
-          </button>
-          <div class="flex items-center gap-3 font-medium">
-            <div class="flex items-center gap-2">
-              <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
-              <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
-            </div>
+          <div class="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              disabled={!canCycle}
+              onClick={() => setViewMode((current) => nextViewMode(current, patch.patch.sections))}
+              class={tw(
+                'inline-flex min-w-0 items-center gap-1.5 truncate border-0 bg-transparent p-0 text-left text-soft outline-0',
+                canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
+              )}
+            >
+              <span class="min-w-0 truncate">{gitViewLabel(viewMode, visibleSummary.filesChanged)}</span>
+              {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
+            </button>
             <button
               type="button"
               aria-pressed={!splitDiffView}
@@ -162,7 +158,13 @@ export const GitChangesPanel = memo(({ path, onSidePanelToggle }: GitChangesPane
             >
               <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
             </button>
-            <PanelCloseButton onClick={onSidePanelToggle} />
+          </div>
+          <div class="flex items-center gap-3 font-medium">
+            <div class="flex items-center gap-2">
+              <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
+              <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+            </div>
+            <PanelCloseButton onClick={onClose} />
           </div>
         </header>
       )}

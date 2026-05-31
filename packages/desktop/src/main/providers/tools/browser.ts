@@ -28,10 +28,30 @@ const browserOpenSchema = {
     url: {
       type: 'string',
       description: 'HTTP or HTTPS URL.'
+    },
+    newTab: {
+      type: 'boolean',
+      description: 'Open the URL in a separate browser tab when true.'
+    },
+    tabId: {
+      type: 'string',
+      description: 'Existing browser tab id from browser_status.'
     }
   },
   type: 'object',
   required: ['url'],
+  additionalProperties: false
+} as const;
+
+const browserSelectSchema = {
+  properties: {
+    tabId: {
+      type: 'string',
+      description: 'Browser tab id from browser_status.'
+    }
+  },
+  type: 'object',
+  required: ['tabId'],
   additionalProperties: false
 } as const;
 
@@ -100,14 +120,30 @@ const waitForBrowserOpen = async (expectedUrl: string) => {
   return getBrowserStatus();
 };
 
+const waitForBrowserSelection = async (tabId: string) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < openTimeoutMs) {
+    const status = getBrowserStatus();
+    if (status.open && status.activeTabId === tabId) return status;
+    await wait(openPollMs);
+  }
+
+  return getBrowserStatus();
+};
+
 export const createBrowserTools = () => [
   defineTool({
     label: 'browser',
-    async execute(_toolCallId, { url }) {
+    async execute(_toolCallId, { url, newTab, tabId }) {
       const normalizedUrl = normalizeBrowserUrl(url);
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
-      sendToMainWindow('app:browser-open-request', normalizedUrl);
+      const tabIdValue = typeof tabId === 'string' ? tabId.trim() : '';
+      sendToMainWindow('app:browser-open-request', {
+        url: normalizedUrl,
+        ...(tabIdValue ? { tabId: tabIdValue, newTab: newTab === true } : { newTab: newTab !== false })
+      });
       const status = await waitForBrowserOpen(normalizedUrl);
       if (!status.open || !status.url) throw new Error('Browser did not open.');
 
@@ -120,6 +156,21 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     label: 'browser',
+    async execute(_toolCallId, { tabId }) {
+      const tabIdValue = requiredString(tabId, 'tab id');
+      sendToMainWindow('app:browser-select-request', { tabId: tabIdValue });
+      const status = await waitForBrowserSelection(tabIdValue);
+      if (status.activeTabId !== tabIdValue) throw new Error('Browser tab did not open.');
+
+      return textResult(`Selected browser tab ${tabIdValue}.`);
+    },
+    name: 'browser_select',
+    parameters: browserSelectSchema,
+    description: 'Select an existing browser tab by id.',
+    promptSnippet: 'Use browser_status first, then select a listed tab id.'
+  }),
+  defineTool({
+    label: 'browser',
     async execute() {
       const status = getBrowserStatus();
       return textResult(
@@ -127,7 +178,9 @@ export const createBrowserTools = () => [
           url: status.url,
           open: status.open,
           title: status.title,
+          activeTabId: status.activeTabId,
           loading: status.loading,
+          tabs: status.tabs,
           canGoBack: status.canGoBack,
           canGoForward: status.canGoForward
         })
