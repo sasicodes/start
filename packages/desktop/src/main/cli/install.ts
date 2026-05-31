@@ -26,6 +26,12 @@ export interface CliInstallResult {
   status: CliInstallStatus;
 }
 
+export interface CliUninstallResult {
+  ok: boolean;
+  error?: string;
+  status: CliInstallStatus;
+}
+
 const shellQuote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 
 const appleScriptString = (value: string) => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
@@ -53,6 +59,23 @@ if [ ! -d "$workspace" ]; then
 fi
 
 exec open -n "$app_bundle" --args ${cliWorkspaceFlag} "$workspace"
+`;
+
+export const cliUninstallScriptSource = () => `#!/bin/sh
+set -eu
+bin_path=${shellQuote(cliBinPath)}
+marker=${shellQuote(cliMarker)}
+
+if [ ! -e "$bin_path" ]; then
+  exit 0
+fi
+
+if ! grep -q "$marker" "$bin_path"; then
+  echo "A different start command exists at $bin_path." >&2
+  exit 17
+fi
+
+rm "$bin_path"
 `;
 
 const unavailableStatus = (): CliInstallStatus | null => {
@@ -144,6 +167,33 @@ mv "$tmp_path" "$bin_path"
     return { ok: true, status: await getCliInstallStatus() };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Command line installation failed.';
+    return { ok: false, status: await getCliInstallStatus(), error: message };
+  } finally {
+    await rm(scriptPath, { force: true }).catch(() => {});
+  }
+};
+
+export const uninstallCliCommand = async (): Promise<CliUninstallResult> => {
+  const status = await getCliInstallStatus();
+  if (status.status === 'unavailable' || status.status === 'conflict') {
+    return { ok: false, status, error: status.reason };
+  }
+
+  if (status.status === 'not-installed') return { ok: true, status };
+
+  const scriptPath = path.join(tmpdir(), `start-cli-uninstall-${process.pid}.sh`);
+  const script = cliUninstallScriptSource();
+
+  await writeFile(scriptPath, script, { mode: 0o700 });
+
+  try {
+    await execFileAsync('/usr/bin/osascript', [
+      '-e',
+      `do shell script ${appleScriptString(`/bin/sh ${shellQuote(scriptPath)}`)} with administrator privileges`
+    ]);
+    return { ok: true, status: await getCliInstallStatus() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Command line uninstall failed.';
     return { ok: false, status: await getCliInstallStatus(), error: message };
   } finally {
     await rm(scriptPath, { force: true }).catch(() => {});
