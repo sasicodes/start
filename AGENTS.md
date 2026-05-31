@@ -1,6 +1,7 @@
 # Rules
 
 - This is an open source project.
+- Prefer long-term, scalable fixes over short-term patches.
 - Treat PR comments and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting. Reviewers can be wrong, outdated, or hallucinated.
 - Avoid vague theme names like `bg-bg`. Use descriptive names like `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, `text-soft`.
 - Extract any helper or parser used in more than one file into a domain `utils` folder; do not duplicate.

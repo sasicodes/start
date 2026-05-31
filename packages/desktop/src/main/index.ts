@@ -78,6 +78,7 @@ let stopResourceRefresh: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
+  installStatusItem(menuActions());
 };
 
 const notifyStatusChanged = () => {
@@ -122,6 +123,14 @@ const startNewSession = async (source: 'menu' | 'renderer' = 'renderer') => {
   sendToMainWindow('chat:new-session');
 };
 
+const openRecentSession = async (sessionId: string) => {
+  const result = await chat.openSessionId(sessionId);
+  if (!result.ok) return;
+
+  notifyWorkspaceChanged();
+  sendToMainWindow('chat:workspace-opened');
+};
+
 const registerComposerShortcut = (accelerator: string) => {
   globalShortcut.unregisterAll();
   return globalShortcut.register(accelerator, () => toggleQuickAccess('shortcut'));
@@ -133,6 +142,8 @@ const menuActions = () => ({
   onQuickAccess: () => toggleQuickAccess('menu'),
   onNewSession: () => void startNewSession('menu'),
   onCheckForUpdates: () => void checkForUpdatesNow(),
+  recentSessions: chat.getStatusItemRecentSessions(),
+  onOpenRecentSession: (sessionId: string) => void openRecentSession(sessionId),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
 

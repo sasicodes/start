@@ -65,6 +65,10 @@ interface ListOptions {
   archived?: boolean;
 }
 
+interface RecentOptions {
+  limit: number;
+}
+
 export const truncateTitle = (text: string): string => {
   const trimmed = text.replace(/\s+/g, ' ').trim();
   if (!trimmed) return 'Untitled session';
@@ -81,6 +85,7 @@ interface Statements {
   updateTurnEnd: StartStatement;
   updateThinking: StartStatement;
   listByCwdActive: StartStatement;
+  listRecentActive: StartStatement;
   listByCwdArchived: StartStatement;
   updateTitleIfEmpty: StartStatement;
 }
@@ -111,6 +116,7 @@ const statements = (): Statements => {
     listByCwdActive: db.prepare(
       'SELECT * FROM sessions WHERE cwd = ? AND archived = 0 ORDER BY updated_at DESC LIMIT ? OFFSET ?'
     ),
+    listRecentActive: db.prepare('SELECT * FROM sessions WHERE archived = 0 ORDER BY updated_at DESC LIMIT ?'),
     listByCwdArchived: db.prepare(
       'SELECT * FROM sessions WHERE cwd = ? AND archived = 1 ORDER BY updated_at DESC LIMIT ? OFFSET ?'
     ),
@@ -202,5 +208,10 @@ export const getSession = (id: string): SessionRecord | undefined => {
 export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRecord[] => {
   const stmt = options.archived ? statements().listByCwdArchived : statements().listByCwdActive;
   const rows = stmt.all(cwd, options.limit, options.offset).map(toSessionRow);
+  return rows.map(rowToRecord);
+};
+
+export const listRecentSessions = (options: RecentOptions): SessionRecord[] => {
+  const rows = statements().listRecentActive.all(options.limit).map(toSessionRow);
   return rows.map(rowToRecord);
 };

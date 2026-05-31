@@ -13,7 +13,7 @@ export const Indicator = ({ kind = 'completed' }: IndicatorProps) => (
       'block size-2 flex-none rounded-full',
       kind === 'failed' && 'bg-danger',
       kind === 'completed' && 'bg-success',
-      kind === 'generating' && 'bg-blue-500'
+      kind === 'generating' && 'animate-pulse bg-blue-500 motion-reduce:animate-none'
     )}
   />
 );

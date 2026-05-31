@@ -1,8 +1,10 @@
 import { isMac, isProd, appIconPath, appMenuName, trayIconPath } from '@main/application';
-import type { Tray as ElectronTray } from 'electron';
+import type { StatusItemRecentSession } from '@main/types';
+import type { MenuItemConstructorOptions, Tray as ElectronTray } from 'electron';
 import electron from 'electron';
 
-const { Menu, Tray, nativeImage } = electron;
+const { app, Menu, Tray, nativeImage } = electron;
+type MenuItemOptions = MenuItemConstructorOptions;
 
 type MenuActions = {
   composerShortcut: string;
@@ -11,6 +13,8 @@ type MenuActions = {
   onShowSettings: () => void;
   onShowShortcuts: () => void;
   onCheckForUpdates: () => void;
+  recentSessions: StatusItemRecentSession[];
+  onOpenRecentSession: (id: string) => void;
 };
 
 let tray: ElectronTray | null = null;
@@ -23,7 +27,47 @@ const createTrayIcon = () => {
   return resizedIcon;
 };
 
-export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings, composerShortcut }: MenuActions) => {
+const truncateMenuLabel = (label: string) => {
+  const maxLength = 36;
+  if (label.length <= maxLength) return label;
+  return `${label.slice(0, maxLength - 3).trimEnd()}...`;
+};
+
+const recentSessionItem = (
+  session: StatusItemRecentSession,
+  onOpenRecentSession: MenuActions['onOpenRecentSession']
+): MenuItemOptions => ({
+  sublabel: session.workspaceName,
+  label: truncateMenuLabel(session.title),
+  click: () => onOpenRecentSession(session.id)
+});
+
+const recentSessionItems = (
+  sessions: StatusItemRecentSession[],
+  onOpenRecentSession: MenuActions['onOpenRecentSession']
+): MenuItemOptions[] => {
+  if (sessions.length === 0) return [];
+
+  const moreSessions = sessions.slice(3);
+  const visibleSessions = sessions.slice(0, 3);
+  return [
+    { type: 'separator' },
+    { label: 'Recent', enabled: false },
+    ...visibleSessions.map((session) => recentSessionItem(session, onOpenRecentSession)),
+    ...(moreSessions.length > 0
+      ? [{ label: 'More', submenu: moreSessions.map((session) => recentSessionItem(session, onOpenRecentSession)) }]
+      : [])
+  ];
+};
+
+export const installStatusItem = ({
+  onNewSession,
+  onQuickAccess,
+  onShowSettings,
+  recentSessions,
+  composerShortcut,
+  onOpenRecentSession
+}: MenuActions) => {
   if (!tray) {
     tray = new Tray(createTrayIcon());
   }
@@ -41,13 +85,14 @@ export const installStatusItem = ({ onNewSession, onQuickAccess, onShowSettings,
         accelerator: composerShortcut,
         click: onQuickAccess
       },
+      ...recentSessionItems(recentSessions, onOpenRecentSession),
+      { type: 'separator' },
       {
         label: 'Settings',
         accelerator: 'CommandOrControl+,',
         click: onShowSettings
       },
-      { type: 'separator' },
-      { label: `Quit ${appMenuName}`, role: 'quit' }
+      { label: `Quit ${appMenuName}`, click: () => app.quit() }
     ])
   );
 };

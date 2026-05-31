@@ -124,6 +124,22 @@ describe('sessions module', () => {
     expect(archivedRows.map((row) => row.id)).toEqual(['b']);
   });
 
+  it('listRecentSessions returns active sessions across workspaces by updated_at desc', async () => {
+    const { archiveSession, listRecentSessions, upsertSessionOnStart, updateSessionOnTurnEnd } = await import(
+      '@main/sessions'
+    );
+    upsertSessionOnStart({ id: 'a', cwd: '/x', path: '/p1' });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    upsertSessionOnStart({ id: 'b', cwd: '/y', path: '/p2' });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    upsertSessionOnStart({ id: 'c', cwd: '/z', path: '/p3' });
+    archiveSession('c');
+
+    updateSessionOnTurnEnd('a', { inputTokens: 1, outputTokens: 1 });
+
+    expect(listRecentSessions({ limit: 10 }).map((row) => row.id)).toEqual(['a', 'b']);
+  });
+
   it('getSession returns undefined for an unknown id', async () => {
     const { getSession } = await import('@main/sessions');
     expect(getSession('nope')).toBeUndefined();
