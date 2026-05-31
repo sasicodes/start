@@ -2,7 +2,7 @@
   "name": "@start/desktop",
   "private": true,
   "productName": "Start",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "license": "MIT",
   "description": "your coding assistant",
   "type": "module",
