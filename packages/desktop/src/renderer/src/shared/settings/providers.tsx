@@ -120,7 +120,7 @@ export const Providers = ({
         const open = expandable && openProvider === provider.key;
 
         return (
-          <div class={tw(index > 0 ? 'border-t border-line py-4' : 'pb-4')} key={provider.key}>
+          <div class={tw(index > 0 ? 'pt-4 pb-4' : 'pb-4')} key={provider.key}>
             {expandable ? (
               <button
                 type="button"

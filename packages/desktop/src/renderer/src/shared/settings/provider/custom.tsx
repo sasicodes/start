@@ -121,7 +121,7 @@ export const CustomProvidersRow = ({ open, onToggle }: CustomProvidersRowProps) 
   const formProps = { draft, error, canSubmit, onSubmit: submit, onCancel: resetForm, onUpdate: updateDraft };
 
   return (
-    <div class="border-t border-line py-4">
+    <div class="py-4">
       <button
         type="button"
         aria-expanded={open}

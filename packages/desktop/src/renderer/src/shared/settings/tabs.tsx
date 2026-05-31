@@ -60,7 +60,7 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
               tabRefs.current[index] = element;
             }}
             class={tw(
-              'h-8 flex-none border-0 bg-transparent p-0 text-sm leading-8 font-medium outline-0 transition-colors duration-150 ease-out',
+              'h-6 flex-none border-0 bg-transparent p-0 text-sm leading-6 font-medium outline-0 transition-colors duration-150 ease-out',
               selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
             )}
           >

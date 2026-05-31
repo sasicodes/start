@@ -192,7 +192,11 @@ export const BrowserPanel = ({ navigation, onClose, onUrlOpened, onInspectText }
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
       <div class="flex h-10 min-w-0 shrink-0 items-center gap-0 border-b border-line px-2">
-        <div role="tablist" aria-label="Browser tabs" class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
+        <div
+          role="tablist"
+          aria-label="Browser tabs"
+          class="no-scroll-bar flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-hidden"
+        >
           {visibleTabs.map((tab) => {
             const selected = tab.id === status.activeTabId || !status.activeTabId;
             const label = tabLabel(tab);
@@ -208,15 +212,19 @@ export const BrowserPanel = ({ navigation, onClose, onUrlOpened, onInspectText }
                     if (tab.id !== 'empty') selectTab(tab.id);
                   }}
                   class={tw(
-                    'flex h-7 w-full min-w-0 items-center gap-2 rounded-md border border-transparent px-3.5 py-0 text-left text-xs leading-7 font-medium outline-0 transition-colors',
-                    selected
-                      ? 'bg-control/55 text-ink'
-                      : 'text-soft hover:bg-control/35 hover:text-ink focus-visible:bg-control/35 focus-visible:text-ink'
+                    'flex h-7 w-full min-w-0 items-center gap-1.5 rounded-lg border border-line bg-transparent px-3 py-0 text-left text-xs leading-7 font-medium outline-0 transition-colors',
+                    selected ? 'text-ink' : 'text-soft hover:text-ink focus-visible:text-ink'
                   )}
                 >
-                  {tab.faviconUrl && (
-                    <img src={tab.faviconUrl} alt="" class="size-3.5 flex-none rounded-[3px]" draggable={false} />
-                  )}
+                  <span class="relative grid size-4 flex-none place-items-center">
+                    <BrowserEmptyIcon
+                      class={tw(
+                        'size-3.5 text-soft/75 transition-opacity',
+                        tab.id !== 'empty' && 'group-hover:opacity-0 group-focus-within:opacity-0'
+                      )}
+                      strokeWidth={1.25}
+                    />
+                  </span>
                   <span class="min-w-0 truncate">{label}</span>
                 </button>
                 {tab.id !== 'empty' && (
@@ -229,7 +237,7 @@ export const BrowserPanel = ({ navigation, onClose, onUrlOpened, onInspectText }
                       event.stopPropagation();
                       closeTab(tab.id);
                     }}
-                    class="absolute top-1/2 right-1.5 grid size-5 -translate-y-1/2 place-items-center rounded-full border-0 bg-transparent p-0 text-soft opacity-0 outline-0 transition-[background-color,color,opacity] group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-ink hover:text-panel focus-visible:bg-ink focus-visible:text-panel [&_svg]:size-3.5"
+                    class="absolute top-1/2 left-2.5 grid size-5 -translate-y-1/2 place-items-center rounded-full border-0 bg-control/70 p-0 text-soft opacity-0 outline-0 transition-[background-color,color,opacity] group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-control hover:text-ink focus-visible:bg-control focus-visible:text-ink [&_svg]:size-4"
                   >
                     <XIcon strokeWidth={1.5} />
                   </button>

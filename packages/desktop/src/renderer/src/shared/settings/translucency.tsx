@@ -27,7 +27,7 @@ export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
   };
 
   return (
-    <div class="mt-5 border-t border-line pt-5">
+    <div class="mt-5">
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Translucent background</h2>

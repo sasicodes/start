@@ -38,11 +38,11 @@ export const Settings = memo(
 
     return (
       <section class="min-h-full px-4 pt-4 pb-3 outline-0">
-        <header class="mb-3 flex items-center justify-between gap-3">
+        <header class="mb-6 flex items-center justify-between gap-3 text-sm leading-6 font-medium">
           <SettingsTabs value={tab} onChange={onTabChange} />
           <PanelCloseButton onClick={onClose} />
         </header>
-        <div class="pt-2">
+        <div>
           {tab === 'personalization' ? (
             <Personalization
               composerShortcut={composerShortcut}

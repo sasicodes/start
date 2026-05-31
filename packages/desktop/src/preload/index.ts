@@ -325,7 +325,6 @@ export interface BrowserTabStatus {
   url: string;
   title: string;
   loading: boolean;
-  faviconUrl?: string;
 }
 
 export interface BrowserActionResult {

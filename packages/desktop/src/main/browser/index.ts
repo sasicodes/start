@@ -38,7 +38,6 @@ export interface BrowserTabStatus {
   url: string;
   title: string;
   loading: boolean;
-  faviconUrl?: string;
 }
 
 export interface BrowserActionResult {
@@ -66,7 +65,6 @@ type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace:
 
 interface BrowserTab {
   id: string;
-  faviconUrl: string;
   view: ElectronWebContentsView;
 }
 
@@ -119,8 +117,7 @@ const tabStatus = (tab: BrowserTab): BrowserTabStatus => ({
   id: tab.id,
   url: tab.view.webContents.getURL(),
   title: tab.view.webContents.getTitle(),
-  loading: tab.view.webContents.isLoading(),
-  ...(tab.faviconUrl ? { faviconUrl: tab.faviconUrl } : {})
+  loading: tab.view.webContents.isLoading()
 });
 
 const activeTab = (): BrowserTab | null => browserTabs.get(activeTabId) ?? null;
@@ -194,13 +191,8 @@ const createBrowserView = () => {
 const createBrowserTab = (): BrowserTab => {
   const tab = {
     id: `tab-${nextBrowserTabId}`,
-    faviconUrl: '',
     view: createBrowserView()
   };
-  tab.view.webContents.on('page-favicon-updated', (_event, favicons: string[]) => {
-    tab.faviconUrl = favicons[0] ?? '';
-    sendStatus();
-  });
   nextBrowserTabId += 1;
   browserTabs.set(tab.id, tab);
   activeTabId = tab.id;
