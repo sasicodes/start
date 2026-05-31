@@ -20,9 +20,8 @@ export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
     { label: 'Toggle side panel', chords: [']'] },
     { label: 'Submit prompt', chords: ['Enter'] },
     { label: 'New line in prompt', chords: ['Shift+Enter'] },
-    { label: 'Refill previous prompt', chords: ['ArrowUp'] },
+    { label: 'Previous prompt or finder item', chords: ['ArrowUp'] },
     { label: 'Finder next', chords: ['ArrowDown'] },
-    { label: 'Finder previous', chords: ['ArrowUp'] },
     { label: 'Close side panel or popover', chords: ['Escape'] }
   ];
 
