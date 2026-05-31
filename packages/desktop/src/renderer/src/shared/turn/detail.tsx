@@ -10,7 +10,7 @@ import {
 } from '@renderer/shared/turn/sequence';
 import { SubagentAvatars } from '@renderer/shared/turn/avatars';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
-import { ChevronRightIcon } from '@renderer/ui/icons';
+import { ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { TurnDetail } from '@renderer/utils/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -137,10 +137,10 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
         {avatars}
         {title}
         {metric && <DetailMetric value={metric} />}
-        <ChevronRightIcon
+        <ChevronDownIcon
           class={tw(
             'size-3 flex-none text-soft opacity-0 transition-[transform,opacity] duration-150 group-hover/detail:opacity-100 group-focus-visible/detail:opacity-100',
-            open && 'rotate-90 opacity-100'
+            open && 'rotate-180 opacity-100'
           )}
         />
       </button>
