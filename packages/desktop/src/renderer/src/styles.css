@@ -16,6 +16,7 @@
   --color-ink: oklch(20% 0.01 255);
   --color-soft: oklch(20% 0.01 255 / 0.62);
   --color-hover: oklch(20% 0.01 255 / 0.86);
+  --color-shimmer: oklch(20% 0.01 255);
   --color-brand: oklch(0% 0 0);
   --color-danger: oklch(47% 0.19 27);
   --color-success: oklch(52% 0.14 145);
@@ -25,8 +26,14 @@
   --color-control: oklch(94.8% 0.004 264);
   --color-sidebar: var(--color-composer);
   --color-tooltip: oklch(100% 0 0);
+  --shimmer-gradient: linear-gradient(
+    100deg,
+    var(--color-soft) 0 18%,
+    var(--color-shimmer) 46% 54%,
+    var(--color-soft) 82% 100%
+  );
   --container-chat-narrow: 44rem;
-  --container-bottom-controls: 64rem;
+  --container-bottom-controls: 70rem;
   --container-workspace-dock: 91rem;
   --font-sans: system-ui;
   --drop-shadow-drop-overlay-label: 0 12px 28px oklch(0% 0 0 / 0.18);
@@ -85,6 +92,7 @@
     --color-ink: oklch(100% 0 0);
     --color-soft: oklch(100% 0 0 / 0.58);
     --color-hover: oklch(100% 0 0 / 0.86);
+    --color-shimmer: oklch(100% 0 0);
     --color-brand: oklch(100% 0 0);
     --color-danger: oklch(78% 0.16 22);
     --color-success: oklch(72% 0.15 145);

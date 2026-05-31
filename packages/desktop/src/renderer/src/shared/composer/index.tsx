@@ -6,11 +6,11 @@ import { Queue } from '@renderer/shared/composer/queue';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
+import { useFinderItems } from '@renderer/shared/finder/use-items';
 import { activeFinderToken, activeSlashCommandToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder/use-placeholder';
-import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
-import { useFinderItems } from '@renderer/shared/finder/use-items';
 import { useSlashCommandItems } from '@renderer/shared/slash-commands';
+import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
@@ -256,12 +256,7 @@ export const Composer = memo(
           }}
           onSubmit={handleSubmit}
         >
-          <div
-            class={tw(
-              'flex min-h-11.5 items-center gap-2 py-1 pr-1.5 pl-1.25',
-              layered && 'flex-wrap items-end gap-y-1.5 px-2.5 pt-2'
-            )}
-          >
+          <div class={tw('flex min-h-11.5 items-center gap-2 p-1', layered && 'flex-wrap items-end gap-y-1.5 pt-2')}>
             <Model
               models={models}
               layered={layered}
