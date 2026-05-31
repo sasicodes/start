@@ -2,7 +2,8 @@ import type { CliInstallStatus } from '@preload/index';
 import { useEffect, useState } from 'preact/hooks';
 
 const statusText = (status: CliInstallStatus | null) => {
-  if (!status || status.status === 'installed' || status.status === 'not-installed') return '';
+  if (!status || status.status === 'installed' || status.status === 'not-installed' || status.status === 'unavailable')
+    return '';
   return status.reason;
 };
 
