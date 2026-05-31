@@ -23,6 +23,8 @@ interface MainSessionSurfaceProps {
   isGenerating: boolean;
   sidePanelLabel: string;
   activeSessionId: string;
+  showNewSession: boolean;
+  onNewSession: () => void;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
   onOpenSettings: () => void;
@@ -31,8 +33,6 @@ interface MainSessionSurfaceProps {
   onToggleGitPanel: () => void;
   settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
-  onNewSession: () => void;
-  showNewSession: boolean;
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   sidePanelMaxRatio?: number;
@@ -46,6 +46,8 @@ interface AppShellProps {
   isGenerating: boolean;
   sidePanelLabel: string;
   activeSessionId: string;
+  showNewSession: boolean;
+  onNewSession: () => void;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
   sessionViewActive: boolean;
@@ -55,8 +57,6 @@ interface AppShellProps {
   onToggleGitPanel: () => void;
   settingsPanelVisible: boolean;
   onChooseDirectory: () => void;
-  onNewSession: () => void;
-  showNewSession: boolean;
   onDiscardComposer: () => void;
   fileHandlers: FileDropHandlers;
   mainComposer: ComponentChildren;

@@ -19,8 +19,8 @@ interface WorkspaceDockProps {
   workspacePath: string;
   activeSessionId: string;
   showNewSession: boolean;
-  onChooseDirectory: () => void;
   onNewSession: () => void;
+  onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
