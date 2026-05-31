@@ -24,9 +24,9 @@ export const nextBrowserNavigation = (
   tabId = ''
 ): BrowserNavigation => ({
   id: navigation.id + 1,
-  newTab,
+  url,
   tabId,
-  url
+  newTab
 });
 
 export const nextBrowserTabSelection = (navigation: BrowserNavigation, tabId: string): BrowserNavigation => ({

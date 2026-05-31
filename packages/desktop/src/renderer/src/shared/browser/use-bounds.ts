@@ -33,7 +33,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
   }, [clearBounds, viewportRef]);
 
   const sendBounds = useCallback(() => {
-    void syncBounds();
+    syncBounds().catch(() => {});
   }, [syncBounds]);
 
   const scheduleBounds = useCallback(() => {

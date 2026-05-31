@@ -313,11 +313,11 @@ export interface BrowserStatus {
   url: string;
   open: boolean;
   title: string;
-  activeTabId: string;
   loading: boolean;
-  tabs: BrowserTabStatus[];
   canGoBack: boolean;
+  activeTabId: string;
   canGoForward: boolean;
+  tabs: BrowserTabStatus[];
 }
 
 export interface BrowserTabStatus {

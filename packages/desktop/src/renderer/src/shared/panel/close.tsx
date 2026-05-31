@@ -4,8 +4,8 @@ import { tw } from '@renderer/utils/tw';
 type PanelCloseButtonVariant = 'compact' | 'toolbar';
 
 interface PanelCloseButtonProps {
-  variant?: PanelCloseButtonVariant;
   onClick: () => void;
+  variant?: PanelCloseButtonVariant;
 }
 
 export const PanelCloseButton = ({ onClick, variant = 'compact' }: PanelCloseButtonProps) => (

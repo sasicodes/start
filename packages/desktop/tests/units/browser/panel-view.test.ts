@@ -155,11 +155,11 @@ describe('browser panel view', () => {
       url: '',
       open: false,
       title: '',
-      activeTabId: '',
       loading: false,
-      tabs: [],
       canGoBack: false,
-      canGoForward: false
+      activeTabId: '',
+      canGoForward: false,
+      tabs: []
     });
   });
 
@@ -228,11 +228,11 @@ describe('browser panel view', () => {
         url: '',
         open: false,
         title: '',
-        activeTabId: 'tab-1',
         loading: false,
-        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
-        canGoForward: false
+        activeTabId: 'tab-1',
+        canGoForward: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }]
       }
     });
   });
@@ -255,11 +255,11 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
-        activeTabId: 'tab-1',
         loading: false,
-        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
-        canGoForward: false
+        activeTabId: 'tab-1',
+        canGoForward: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }]
       }
     });
   });
@@ -332,11 +332,11 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
-        activeTabId: 'tab-1',
         loading: false,
-        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
-        canGoForward: false
+        activeTabId: 'tab-1',
+        canGoForward: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }]
       }
     });
   });
@@ -359,11 +359,11 @@ describe('browser panel view', () => {
         url: '',
         open: true,
         title: '',
-        activeTabId: 'tab-1',
         loading: false,
-        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }],
         canGoBack: false,
-        canGoForward: false
+        activeTabId: 'tab-1',
+        canGoForward: false,
+        tabs: [{ id: 'tab-1', url: '', title: '', loading: false }]
       }
     });
   });

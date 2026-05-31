@@ -7,12 +7,12 @@ import { SettingsTabs, type SettingsTab } from '@renderer/shared/settings/tabs';
 import { memo } from 'preact/compat';
 
 interface SettingsProps {
-  composerShortcut: string;
   tab: SettingsTab;
-  solidWindowBackground: boolean;
-  providers: ProviderAuthStatus[];
-  onTabChange: (tab: SettingsTab) => void;
   onClose: () => void;
+  composerShortcut: string;
+  providers: ProviderAuthStatus[];
+  solidWindowBackground: boolean;
+  onTabChange: (tab: SettingsTab) => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
@@ -22,15 +22,15 @@ interface SettingsProps {
 
 export const Settings = memo(
   ({
-    providers,
-    onSaveApiKey,
     tab,
-    composerShortcut,
-    onTabChange,
     onClose,
+    providers,
+    onTabChange,
+    onSaveApiKey,
+    composerShortcut,
+    solidWindowBackground,
     onLoginSubscription,
     onDisconnectProvider,
-    solidWindowBackground,
     onComposerShortcutChange,
     onSolidWindowBackgroundChange
   }: SettingsProps) => {
@@ -46,8 +46,8 @@ export const Settings = memo(
           {tab === 'personalization' ? (
             <Personalization
               composerShortcut={composerShortcut}
-              onComposerShortcutChange={onComposerShortcutChange}
               translucentBackground={!solidWindowBackground}
+              onComposerShortcutChange={onComposerShortcutChange}
               onTranslucentBackgroundChange={updateTranslucency}
             />
           ) : tab === 'providers' ? (

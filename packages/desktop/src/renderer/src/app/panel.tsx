@@ -9,16 +9,16 @@ import { memo } from 'preact/compat';
 
 interface AppSidePanelProps {
   mode: SidePanelMode;
-  workspacePath: string;
-  composerShortcut: string;
+  onClose: () => void;
   settingsTab: SettingsTab;
+  workspacePath: string;
+  providers: ProviderAuthStatus[];
+  composerShortcut: string;
+  browserNavigation: BrowserNavigation;
   solidWindowBackground: boolean;
   onBrowserUrlOpened: () => void;
-  onSettingsTabChange: (tab: SettingsTab) => void;
-  onClose: () => void;
-  providers: ProviderAuthStatus[];
-  browserNavigation: BrowserNavigation;
   onBrowserInspectText: (text: string) => void;
+  onSettingsTabChange: (tab: SettingsTab) => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
@@ -33,7 +33,7 @@ export const sidePanelLabel = (mode: SidePanelMode) => {
   return 'Side panel';
 };
 
-export const sidePanelMaxRatio = (mode: SidePanelMode): number | undefined => {
+export const sidePanelMaxRatio = (mode: SidePanelMode) => {
   if (mode === 'settings') return 0.4;
   return;
 };
@@ -41,18 +41,18 @@ export const sidePanelMaxRatio = (mode: SidePanelMode): number | undefined => {
 export const AppSidePanel = memo(
   ({
     mode,
-    providers,
-    workspacePath,
-    onSaveApiKey,
-    settingsTab,
-    composerShortcut,
-    solidWindowBackground,
-    browserNavigation,
-    onBrowserUrlOpened,
-    onSettingsTabChange,
     onClose,
+    providers,
+    settingsTab,
+    onSaveApiKey,
+    workspacePath,
+    browserNavigation,
+    composerShortcut,
+    onBrowserUrlOpened,
+    solidWindowBackground,
     onLoginSubscription,
     onBrowserInspectText,
+    onSettingsTabChange,
     onDisconnectProvider,
     onComposerShortcutChange,
     onSolidWindowBackgroundChange
@@ -61,24 +61,24 @@ export const AppSidePanel = memo(
     if (mode === 'browser')
       return (
         <BrowserPanel
+          onClose={onClose}
           navigation={browserNavigation}
           onUrlOpened={onBrowserUrlOpened}
           onInspectText={onBrowserInspectText}
-          onClose={onClose}
         />
       );
 
     if (mode === 'settings') {
       return (
         <Settings
-          providers={providers}
           tab={settingsTab}
-          onTabChange={onSettingsTabChange}
-          onSaveApiKey={onSaveApiKey}
+          onClose={onClose}
+          providers={providers}
           composerShortcut={composerShortcut}
+          onSaveApiKey={onSaveApiKey}
+          onTabChange={onSettingsTabChange}
           solidWindowBackground={solidWindowBackground}
           onLoginSubscription={onLoginSubscription}
-          onClose={onClose}
           onDisconnectProvider={onDisconnectProvider}
           onComposerShortcutChange={onComposerShortcutChange}
           onSolidWindowBackgroundChange={onSolidWindowBackgroundChange}

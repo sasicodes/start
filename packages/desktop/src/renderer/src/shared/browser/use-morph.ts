@@ -14,14 +14,17 @@ export const useMorph = (target: number, transition: Transition) => {
 
     const run = async () => {
       runningRef.current = true;
-      while (mountedRef.current && value.get() !== targetRef.current) {
-        controlsRef.current = animate(value, targetRef.current, transition);
-        await controlsRef.current;
+      try {
+        while (mountedRef.current && value.get() !== targetRef.current) {
+          controlsRef.current = animate(value, targetRef.current, transition);
+          await controlsRef.current;
+        }
+      } finally {
+        runningRef.current = false;
       }
-      runningRef.current = false;
     };
 
-    void run();
+    run().catch(() => {});
   }, [value, target, transition]);
 
   useEffect(

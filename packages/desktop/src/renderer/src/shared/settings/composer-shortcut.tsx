@@ -44,8 +44,8 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
     const shortcut = [...modifiers, key].join('+');
     const result = await onChange(shortcut).catch(() => ({
       ok: false,
-      error: 'That shortcut could not be saved.',
-      settings: null
+      settings: null,
+      error: 'That shortcut could not be saved.'
     }));
     setError(result.error ?? '');
     setRecording(false);

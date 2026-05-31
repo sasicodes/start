@@ -26,11 +26,11 @@ export interface BrowserStatus {
   url: string;
   open: boolean;
   title: string;
-  activeTabId: string;
   loading: boolean;
-  tabs: BrowserTabStatus[];
   canGoBack: boolean;
+  activeTabId: string;
   canGoForward: boolean;
+  tabs: BrowserTabStatus[];
 }
 
 export interface BrowserTabStatus {
@@ -71,11 +71,11 @@ interface BrowserTab {
 let nextBrowserTabId = 1;
 let activeTabId = '';
 let attachedTabId = '';
+let lastBounds: BrowserBounds | null = null;
 let ownerWindow: ElectronBrowserWindow | null = null;
 let ownerWindowClosedHandler: (() => void) | null = null;
 let ownerWindowGoneHandler: (() => void) | null = null;
 let ownerWindowNavigationHandler: OwnerWindowNavigationHandler | null = null;
-let lastBounds: BrowserBounds | null = null;
 const browserTabs = new Map<string, BrowserTab>();
 
 const browserPartition = 'start-browser';
@@ -90,8 +90,8 @@ const allowedKeyCodes = new Set([
   'PageUp',
   'ArrowUp',
   'PageDown',
-  'ArrowDown',
   'ArrowLeft',
+  'ArrowDown',
   'Backspace',
   'ArrowRight'
 ]);
@@ -99,11 +99,11 @@ const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
   title: '',
-  activeTabId: '',
   loading: false,
-  tabs: [],
   canGoBack: false,
-  canGoForward: false
+  activeTabId: '',
+  canGoForward: false,
+  tabs: []
 };
 
 const scaleBrowserBounds = (bounds: BrowserBounds, scale: number): BrowserBounds => ({
@@ -139,11 +139,11 @@ const statusFromView = (): BrowserStatus => {
     url: view.webContents.getURL(),
     open: Boolean(ownerWindow && !ownerWindow.isDestroyed()),
     title: view.webContents.getTitle(),
-    activeTabId: tab.id,
     loading: view.webContents.isLoading(),
-    tabs: Array.from(browserTabs.values(), tabStatus),
     canGoBack: view.webContents.navigationHistory.canGoBack(),
-    canGoForward: view.webContents.navigationHistory.canGoForward()
+    activeTabId: tab.id,
+    canGoForward: view.webContents.navigationHistory.canGoForward(),
+    tabs: Array.from(browserTabs.values(), tabStatus)
   };
 };
 
@@ -162,10 +162,10 @@ const createBrowserView = () => {
     webPreferences: {
       sandbox: true,
       devTools: isDev,
-      webSecurity: true,
       spellcheck: false,
-      nodeIntegration: false,
+      webSecurity: true,
       contextIsolation: true,
+      nodeIntegration: false,
       partition: browserPartition,
       backgroundThrottling: true
     }

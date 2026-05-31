@@ -2,22 +2,22 @@ export interface ProviderFormDraft {
   name: string;
   apiKey: string;
   baseUrl: string;
-  thinking: string;
   modelIds: string;
+  thinking: string;
 }
 
 export const emptyProviderFormDraft: ProviderFormDraft = {
   name: '',
   apiKey: '',
   baseUrl: '',
-  thinking: '',
-  modelIds: ''
+  modelIds: '',
+  thinking: ''
 };
 
 interface PillInputProps {
   value: string;
-  placeholder: string;
   type: 'text' | 'password';
+  placeholder: string;
   onInput: (value: string) => void;
 }
 
@@ -40,7 +40,7 @@ interface ProviderFormProps {
   onUpdate: <K extends keyof ProviderFormDraft>(key: K, value: ProviderFormDraft[K]) => void;
 }
 
-export const ProviderForm = ({ draft, error, onCancel, onSubmit, onUpdate, canSubmit }: ProviderFormProps) => (
+export const ProviderForm = ({ draft, error, onSubmit, onCancel, onUpdate, canSubmit }: ProviderFormProps) => (
   <div class="grid gap-2">
     <PillInput
       type="text"

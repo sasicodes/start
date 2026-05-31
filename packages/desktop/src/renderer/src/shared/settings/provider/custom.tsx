@@ -1,7 +1,7 @@
 import type { CustomProviderConfig } from '@preload/index';
 import { ProviderForm, type ProviderFormDraft, emptyProviderFormDraft } from '@renderer/shared/settings/provider/form';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
-import { ChevronDownIcon, CustomProviderIcon, EditIcon, TrashIcon } from '@renderer/ui/icons';
+import { EditIcon, TrashIcon, ChevronDownIcon, CustomProviderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'preact/hooks';

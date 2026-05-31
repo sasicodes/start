@@ -40,8 +40,8 @@ interface ProvidersProps {
 
 interface ProviderHeadingProps {
   name: string;
-  connected: boolean;
   authLabel: string;
+  connected: boolean;
   authDetail: string;
 }
 
@@ -60,7 +60,7 @@ const ProviderAvatar = ({ provider }: { provider: ProviderKey }) => (
   </div>
 );
 
-const ProviderHeading = ({ name, connected, authLabel, authDetail }: ProviderHeadingProps) => (
+const ProviderHeading = ({ name, authLabel, connected, authDetail }: ProviderHeadingProps) => (
   <div class="min-w-0 flex-1">
     <h3 class="m-0 text-sm leading-5 font-medium text-ink">{name}</h3>
     <p class="m-0 text-xs leading-4 text-soft">
@@ -76,7 +76,7 @@ const ProviderHeading = ({ name, connected, authLabel, authDetail }: ProviderHea
   </div>
 );
 
-const connectionDetail = (label: string | undefined): string => (label ?? '').replace(/^Connected\s*/u, '').trim();
+const connectionDetail = (label?: string): string => (label ?? '').replace(/^Connected\s*/u, '').trim();
 
 export const Providers = ({
   onSaveApiKey,
@@ -131,8 +131,8 @@ export const Providers = ({
                 <ProviderAvatar provider={provider.key} />
                 <ProviderHeading
                   name={provider.name}
-                  connected={connected}
                   authLabel={authLabel}
+                  connected={connected}
                   authDetail={authDetail}
                 />
                 <ChevronDownIcon
@@ -144,13 +144,13 @@ export const Providers = ({
                 <ProviderAvatar provider={provider.key} />
                 <ProviderHeading
                   name={provider.name}
-                  connected={connected}
                   authLabel={authLabel}
+                  connected={connected}
                   authDetail={authDetail}
                 />
                 <button
                   type="button"
-                  onClick={() => void onDisconnectProvider(provider.key)}
+                  onClick={() => onDisconnectProvider(provider.key).catch(() => {})}
                   class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
                 >
                   Disconnect
@@ -178,8 +178,8 @@ export const Providers = ({
                       />
                       <button
                         type="button"
-                        onClick={() => void saveApiKey(provider.key)}
                         disabled={!hasDraftKey}
+                        onClick={() => saveApiKey(provider.key).catch(() => {})}
                         class="absolute top-1 right-1 h-8 rounded-full border-0 bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
                       >
                         Save
@@ -190,7 +190,7 @@ export const Providers = ({
                         <span>or</span>
                         <button
                           type="button"
-                          onClick={() => void loginSubscription(provider.key)}
+                          onClick={() => loginSubscription(provider.key).catch(() => {})}
                           class="border-0 bg-transparent p-0 text-xs leading-5 font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
                         >
                           Connect subscription

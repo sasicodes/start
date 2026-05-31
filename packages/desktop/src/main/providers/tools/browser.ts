@@ -17,57 +17,59 @@ const openPollMs = 100;
 const openTimeoutMs = 5000;
 
 const emptySchema = {
-  required: [],
   type: 'object',
+  required: [],
   properties: {},
   additionalProperties: false
 } as const;
 
 const browserOpenSchema = {
+  type: 'object',
+  required: ['url'],
   properties: {
     url: {
       type: 'string',
       description: 'HTTP or HTTPS URL.'
     },
-    newTab: {
-      type: 'boolean',
-      description: 'Open the URL in a separate browser tab when true.'
-    },
     tabId: {
       type: 'string',
       description: 'Existing browser tab id from browser_status.'
+    },
+    newTab: {
+      type: 'boolean',
+      description: 'Open the URL in a separate browser tab when true.'
     }
   },
-  type: 'object',
-  required: ['url'],
   additionalProperties: false
 } as const;
 
 const browserSelectSchema = {
+  type: 'object',
+  required: ['tabId'],
   properties: {
     tabId: {
       type: 'string',
       description: 'Browser tab id from browser_status.'
     }
   },
-  type: 'object',
-  required: ['tabId'],
   additionalProperties: false
 } as const;
 
 const browserClickSchema = {
+  type: 'object',
+  required: ['ref'],
   properties: {
     ref: {
       type: 'string',
       description: 'Element ref from browser_snapshot, such as e1.'
     }
   },
-  type: 'object',
-  required: ['ref'],
   additionalProperties: false
 } as const;
 
 const browserTypeSchema = {
+  type: 'object',
+  required: ['ref', 'text'],
   properties: {
     ref: {
       type: 'string',
@@ -82,20 +84,18 @@ const browserTypeSchema = {
       description: 'Replace existing text when true.'
     }
   },
-  type: 'object',
-  required: ['ref', 'text'],
   additionalProperties: false
 } as const;
 
 const browserPressSchema = {
+  type: 'object',
+  required: ['key'],
   properties: {
     key: {
       type: 'string',
       description: 'One supported key, such as Enter, Tab, Escape, or ArrowDown.'
     }
   },
-  type: 'object',
-  required: ['key'],
   additionalProperties: false
 } as const;
 
@@ -178,11 +178,11 @@ export const createBrowserTools = () => [
           url: status.url,
           open: status.open,
           title: status.title,
-          activeTabId: status.activeTabId,
           loading: status.loading,
-          tabs: status.tabs,
           canGoBack: status.canGoBack,
-          canGoForward: status.canGoForward
+          activeTabId: status.activeTabId,
+          canGoForward: status.canGoForward,
+          tabs: status.tabs
         })
       );
     },

@@ -82,16 +82,16 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
 
   return {
-    sidePanelVisible,
-    gitPanelVisible,
-    browserPanelVisible,
-    closeSidePanel,
-    openSettingsPanel,
-    openBrowserPanel,
-    openShortcutsPanel,
-    sidePanelMode,
     settingsTab,
+    sidePanelMode,
     setSettingsTab,
+    closeSidePanel,
+    gitPanelVisible,
+    sidePanelVisible,
+    openBrowserPanel,
+    openSettingsPanel,
+    browserPanelVisible,
+    openShortcutsPanel,
     settingsPanelVisible,
     toggleSettingsPanel,
     toggleGitChangesPanel

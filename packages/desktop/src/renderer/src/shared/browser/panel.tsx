@@ -33,11 +33,11 @@ const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
   title: '',
-  activeTabId: '',
   loading: false,
-  tabs: [],
   canGoBack: false,
-  canGoForward: false
+  activeTabId: '',
+  canGoForward: false,
+  tabs: []
 };
 
 const tabLabel = (tab: BrowserTabStatus) => {
@@ -51,7 +51,7 @@ const tabLabel = (tab: BrowserTabStatus) => {
   }
 };
 
-export const BrowserPanel = ({ navigation, onClose, onUrlOpened, onInspectText }: BrowserPanelProps) => {
+export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
@@ -183,11 +183,11 @@ export const BrowserPanel = ({ navigation, onClose, onUrlOpened, onInspectText }
     []
   );
 
+  const inspectLabel = inspecting ? 'Stop annotating' : 'Annotate';
+  const emptyMessage = error || 'Enter a URL to browse';
   const refreshLabel = status.loading ? 'Stop loading' : 'Refresh';
   const screenshotLabel = copied ? 'Copied' : 'Screenshot';
-  const inspectLabel = inspecting ? 'Stop annotating' : 'Annotate';
   const visibleTabs = status.tabs.length > 0 ? status.tabs : [{ id: 'empty', url: '', title: '', loading: false }];
-  const emptyMessage = error || 'Enter a URL to browse';
 
   return (
     <div class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-canvas/95 text-ink backdrop-blur-xl dark:bg-canvas/90">
