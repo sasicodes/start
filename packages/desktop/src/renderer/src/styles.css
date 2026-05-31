@@ -113,7 +113,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root[data-solid-window-background="true"] {
-    --color-canvas: oklch(19.5% 0.006 255);
+    --color-canvas: oklch(22% 0.01 255);
   }
 }
 
