@@ -33,15 +33,7 @@
 }
 
 .markdown-compact p:has(> strong:only-child):not(:first-child) {
-  @apply mt-4;
-}
-
-.markdown-compact p:has(+ p > strong:only-child) {
-  @apply pb-3;
-}
-
-.markdown-compact p:has(+ [data-streamdown^="heading-"]) {
-  @apply pb-4;
+  @apply mt-3;
 }
 
 .markdown-default [data-streamdown^="heading-"],
@@ -66,7 +58,7 @@
 }
 
 .markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
-  @apply mt-2;
+  @apply mt-3;
 }
 
 .markdown-default [data-streamdown="link"],

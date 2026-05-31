@@ -62,7 +62,7 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
       <AnimatePresence initial={false}>
         {open && (
           <motion.div key="subagent-summary" {...accordionContentMotion} class="overflow-hidden">
-            <div class="pt-2 text-xs leading-5 text-soft [overflow-wrap:anywhere]">
+            <div class="pt-1.5 text-xs leading-5 text-soft [overflow-wrap:anywhere]">
               <Markdown source={summary} density="compact" />
             </div>
           </motion.div>

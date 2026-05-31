@@ -144,7 +144,7 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
       <AnimatePresence initial={false}>
         {open && (
           <motion.div key="detail-content" {...accordionContentMotion} class="overflow-hidden">
-            <div class="pt-2">
+            <div class="pt-1.5">
               <DetailContent detail={detail} meta={meta} {...(renderSubagents ? { renderSubagents } : {})} />
             </div>
           </motion.div>

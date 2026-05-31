@@ -40,12 +40,12 @@ const resultText = (agents: SubagentActivity[]) =>
     .join('\n\n');
 
 const finalPrompt = (task: string) =>
-  `You are a sub-agent working on one focused part of the parent agent's request.
+  `You are a sub-agent handling one focused task for the parent agent.
 
 Task:
 ${task}
 
-Work independently. Keep your final answer concise and useful to the parent agent. Include concrete file paths, findings, and blockers when relevant.`;
+Work independently. Return only what the task asks for: concrete findings, file paths, and blockers. Be precise and brief — no preamble, no restating the task, nothing outside its scope.`;
 
 const abortSession = async (session: AgentSession) => {
   session.abortBash();
