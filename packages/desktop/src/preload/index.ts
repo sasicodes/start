@@ -140,7 +140,6 @@ export interface SubagentActivity {
   id: string;
   name: string;
   task: string;
-  logs: string[];
   avatar: string;
   summary?: string;
   accentColor: string;

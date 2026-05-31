@@ -10,14 +10,11 @@ import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import type { SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
 import type { EffortLevel } from '@main/types';
 
-const maxSubagentTasks = 8;
-
 const spawnToolParameters = {
   properties: {
     tasks: {
       type: 'array',
       minItems: 1,
-      maxItems: maxSubagentTasks,
       description: 'Focused tasks to run in parallel sub-agents.',
       items: {
         type: 'object',
@@ -49,10 +46,7 @@ interface CreateSubagentToolsOptions {
 }
 
 const validTasks = (tasks: SubagentTaskInput[]) =>
-  tasks
-    .map((task) => ({ prompt: task.prompt.trim() }))
-    .filter((task) => task.prompt)
-    .slice(0, maxSubagentTasks);
+  tasks.map((task) => ({ prompt: task.prompt.trim() })).filter((task) => task.prompt);
 
 const toolResult = (text: string, details: SubagentRunSnapshot) => ({
   content: [{ text, type: 'text' as const }],

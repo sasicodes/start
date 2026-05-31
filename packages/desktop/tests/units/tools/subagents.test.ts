@@ -47,8 +47,7 @@ describe('sub-agent tool details', () => {
               task: 'Review renderer activity UI.',
               avatar: 'data:image/svg+xml;utf8,test',
               status: 'running',
-              accentColor: '#0f766e',
-              logs: ['Started']
+              accentColor: '#0f766e'
             }
           ]
         }

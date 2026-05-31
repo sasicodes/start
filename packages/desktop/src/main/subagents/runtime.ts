@@ -16,9 +16,6 @@ import type { SubagentRunResult, SubagentTaskInput, SubagentRunSnapshot } from '
 import { countLabel } from '@main/details';
 import type { EffortLevel, SubagentActivity } from '@main/types';
 
-const maxConcurrentAgents = 4;
-const subagentTimeoutMs = 10 * 60 * 1000;
-
 interface RunSubagentsOptions {
   cwd: string;
   signal?: AbortSignal;
@@ -87,23 +84,6 @@ const runWithAbort = async (session: AgentSession, signal: AbortSignal | null, t
   }
 };
 
-const runWithTimeout = async (session: AgentSession, signal: AbortSignal | null, task: string) => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    await Promise.race([
-      runWithAbort(session, signal, task),
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(() => {
-          rejectAfterAbort(session, new Error('Sub-agent timed out.'), reject);
-        }, subagentTimeoutMs);
-      })
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-};
-
 export const runSubagents = async ({
   cwd,
   model,
@@ -130,15 +110,9 @@ export const runSubagents = async ({
   });
 
   const update = () => onUpdate({ agents: agents.map((agent) => ({ ...agent })) });
-  let nextIndex = 0;
   update();
 
-  const runNext = async (): Promise<void> => {
-    const index = nextIndex;
-    nextIndex += 1;
-    const agent = agents[index];
-    if (!agent) return;
-
+  const runAgent = async (agent: SubagentActivity): Promise<void> => {
     let session: AgentSession | null = null;
     try {
       agent.status = 'running';
@@ -167,7 +141,7 @@ export const runSubagents = async ({
       });
 
       try {
-        await runWithTimeout(session, signal ?? null, agent.task);
+        await runWithAbort(session, signal ?? null, agent.task);
       } finally {
         unsubscribe();
       }
@@ -182,15 +156,11 @@ export const runSubagents = async ({
       agent.summary = error instanceof Error ? error.message : 'Sub-agent failed.';
       update();
     } finally {
-      try {
-        session?.dispose();
-      } finally {
-        await runNext();
-      }
+      session?.dispose();
     }
   };
 
-  await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, agents.length) }, () => runNext()));
+  await Promise.all(agents.map((agent) => runAgent(agent)));
 
   return {
     text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`,
