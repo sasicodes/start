@@ -1,4 +1,3 @@
-import { CustomProviderIcon, SettingsIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 
 export type SettingsTab = 'providers' | 'personalization';
@@ -9,8 +8,8 @@ interface SettingsTabsProps {
 }
 
 const settingsTabs = [
-  { value: 'providers', label: 'Providers', icon: CustomProviderIcon },
-  { value: 'personalization', label: 'Personalization', icon: SettingsIcon }
+  { value: 'providers', label: 'Providers' },
+  { value: 'personalization', label: 'Personalization' }
 ] as const;
 
 const tabWidth = 8.75;
@@ -19,7 +18,7 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
   const activeIndex = settingsTabs.findIndex((tab) => tab.value === value);
 
   return (
-    <div class="sticky top-0 z-10 flex justify-center bg-panel/95 pt-1 pb-3 backdrop-blur-xl">
+    <div class="flex justify-center pb-3">
       <div role="tablist" aria-label="Settings" class="rounded-full border border-line bg-composer p-1 shadow-nav">
         <div class="relative flex items-center">
           <div
@@ -30,7 +29,6 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
             }}
           />
           {settingsTabs.map((tab) => {
-            const Icon = tab.icon;
             const selected = value === tab.value;
 
             return (
@@ -46,7 +44,6 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
                   selected ? 'text-ink' : 'text-soft hover:text-hover focus-visible:text-hover'
                 )}
               >
-                <Icon class="size-3.5 flex-none" />
                 <span>{tab.label}</span>
               </button>
             );
