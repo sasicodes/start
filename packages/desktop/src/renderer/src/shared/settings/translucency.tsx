@@ -1,12 +1,12 @@
 import type { AppSettingsResult } from '@preload/index';
 import { useState } from 'preact/hooks';
 
-interface TranslucentBackgroundProps {
+interface TranslucencyProps {
   enabled: boolean;
   onChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
-export const TranslucentBackground = ({ enabled, onChange }: TranslucentBackgroundProps) => {
+export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 

@@ -2,7 +2,7 @@ import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import { CliInstall } from '@renderer/shared/settings/cli';
 import { ComposerShortcut } from '@renderer/shared/settings/composer-shortcut';
 import { CustomProvidersRow } from '@renderer/shared/settings/provider/custom';
-import { TranslucentBackground } from '@renderer/shared/settings/translucent-background';
+import { Translucency } from '@renderer/shared/settings/translucency';
 import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
@@ -119,6 +119,8 @@ export const Settings = memo(
       setApiKeys((current) => ({ ...current, [provider]: value }));
     };
 
+    const updateTranslucency = (enabled: boolean) => onSolidWindowBackgroundChange(!enabled);
+
     return (
       <section class="min-h-full px-5 py-4 outline-0">
         {providers.map((provider, index) => {
@@ -221,10 +223,7 @@ export const Settings = memo(
         <CustomProvidersRow open={openProvider === 'custom'} onToggle={() => toggleProvider('custom')} />
 
         <ComposerShortcut composerShortcut={composerShortcut} onChange={onComposerShortcutChange} />
-        <TranslucentBackground
-          enabled={!solidWindowBackground}
-          onChange={(enabled) => onSolidWindowBackgroundChange(!enabled)}
-        />
+        <Translucency enabled={!solidWindowBackground} onChange={updateTranslucency} />
         <CliInstall />
       </section>
     );
