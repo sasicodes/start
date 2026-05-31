@@ -3,7 +3,7 @@ import type { SidePanelMode } from '@renderer/app/types';
 import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
 import { Settings } from '@renderer/shared/settings/panel';
-import { Shortcuts } from '@renderer/shared/shortcuts/panel';
+import type { SettingsTab } from '@renderer/shared/settings/tabs';
 import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { memo } from 'preact/compat';
 
@@ -11,8 +11,10 @@ interface AppSidePanelProps {
   mode: SidePanelMode;
   workspacePath: string;
   composerShortcut: string;
+  settingsTab: SettingsTab;
   solidWindowBackground: boolean;
   onBrowserUrlOpened: () => void;
+  onSettingsTabChange: (tab: SettingsTab) => void;
   providers: ProviderAuthStatus[];
   browserNavigation: BrowserNavigation;
   onBrowserInspectText: (text: string) => void;
@@ -27,12 +29,11 @@ export const sidePanelLabel = (mode: SidePanelMode) => {
   if (mode === 'git') return 'Git changes';
   if (mode === 'settings') return 'Settings';
   if (mode === 'browser') return 'Browser';
-  if (mode === 'shortcuts') return 'Keyboard shortcuts';
   return 'Side panel';
 };
 
 export const sidePanelMaxRatio = (mode: SidePanelMode): number | undefined => {
-  if (mode === 'settings' || mode === 'shortcuts') return 0.4;
+  if (mode === 'settings') return 0.4;
   return;
 };
 
@@ -42,10 +43,12 @@ export const AppSidePanel = memo(
     providers,
     workspacePath,
     onSaveApiKey,
+    settingsTab,
     composerShortcut,
     solidWindowBackground,
     browserNavigation,
     onBrowserUrlOpened,
+    onSettingsTabChange,
     onLoginSubscription,
     onBrowserInspectText,
     onDisconnectProvider,
@@ -66,6 +69,8 @@ export const AppSidePanel = memo(
       return (
         <Settings
           providers={providers}
+          tab={settingsTab}
+          onTabChange={onSettingsTabChange}
           onSaveApiKey={onSaveApiKey}
           composerShortcut={composerShortcut}
           solidWindowBackground={solidWindowBackground}
@@ -76,8 +81,6 @@ export const AppSidePanel = memo(
         />
       );
     }
-
-    if (mode === 'shortcuts') return <Shortcuts composerShortcut={composerShortcut} />;
 
     return null;
   }

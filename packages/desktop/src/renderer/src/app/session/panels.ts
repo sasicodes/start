@@ -1,4 +1,5 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
+import type { SettingsTab } from '@renderer/shared/settings/tabs';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 
 interface SessionPanelsOptions {
@@ -18,6 +19,7 @@ const isBracketToggle = (event: KeyboardEvent) => {
 export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [sidePanelMode, setSidePanelMode] = useState<SidePanelMode>('settings');
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('providers');
 
   const closeSidePanel = useCallback(() => {
     setSidePanelOpen(false);
@@ -27,15 +29,15 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     setSidePanelOpen((open) => !open);
   }, []);
 
-  const openSettingsPanel = useCallback(() => {
+  const openSettingsPanel = useCallback((tab: SettingsTab = 'providers') => {
     setSidePanelOpen(true);
     setSidePanelMode('settings');
+    setSettingsTab(tab);
   }, []);
 
   const openShortcutsPanel = useCallback(() => {
-    setSidePanelOpen(true);
-    setSidePanelMode('shortcuts');
-  }, []);
+    openSettingsPanel('shortcuts');
+  }, [openSettingsPanel]);
 
   const openBrowserPanel = useCallback(() => {
     setSidePanelOpen(true);
@@ -78,7 +80,6 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const gitPanelVisible = sidePanelVisible && sidePanelMode === 'git';
   const browserPanelVisible = sidePanelVisible && sidePanelMode === 'browser';
   const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
-  const shortcutsPanelVisible = sidePanelVisible && sidePanelMode === 'shortcuts';
 
   return {
     sidePanelVisible,
@@ -89,8 +90,9 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     openBrowserPanel,
     openShortcutsPanel,
     sidePanelMode,
+    settingsTab,
+    setSettingsTab,
     settingsPanelVisible,
-    shortcutsPanelVisible,
     toggleSettingsPanel,
     toggleGitChangesPanel
   };

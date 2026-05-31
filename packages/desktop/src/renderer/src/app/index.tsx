@@ -40,6 +40,8 @@ export const App = () => {
     openSettingsPanel,
     openBrowserPanel,
     openShortcutsPanel,
+    settingsTab,
+    setSettingsTab,
     settingsPanelVisible,
     toggleSettingsPanel,
     toggleGitChangesPanel
@@ -264,7 +266,9 @@ export const App = () => {
       workspacePath={workspacePath}
       onSaveApiKey={saveApiKey}
       composerShortcut={composerShortcut}
+      settingsTab={settingsTab}
       solidWindowBackground={solidWindowBackground}
+      onSettingsTabChange={setSettingsTab}
       onBrowserUrlOpened={browserPanel.clear}
       onBrowserInspectText={appendInspectToComposer}
       onLoginSubscription={loginSubscription}
