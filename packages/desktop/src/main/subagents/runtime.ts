@@ -149,7 +149,7 @@ export const runSubagents = async ({
       if (endError) throw new Error(endError);
 
       agent.status = 'completed';
-      agent.summary = session.getLastAssistantText().trim() || 'No summary returned.';
+      agent.summary = (session.getLastAssistantText() || 'No summary returned.').trim();
       update();
     } catch (error) {
       agent.status = signal?.aborted ? 'cancelled' : 'failed';
