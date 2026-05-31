@@ -64,6 +64,7 @@ export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsI
       pixelRatioMedia.addEventListener('change', handlePixelRatioChange);
     };
     const handlePixelRatioChange = () => {
+      lastBoundsRef.current = null;
       scheduleBounds();
       bindPixelRatioListener();
     };
