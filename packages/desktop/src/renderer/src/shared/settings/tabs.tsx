@@ -70,7 +70,7 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
       })}
       <span
         aria-hidden="true"
-        class="pointer-events-none absolute bottom-0 left-0 h-px bg-ink transition-all duration-200 ease-out"
+        class="pointer-events-none absolute bottom-0 left-0 h-[0.5px] bg-ink transition-all duration-200 ease-out"
         style={{ transform: `translateX(${indicator.left}px)`, width: `${indicator.width}px` }}
       />
     </div>
