@@ -60,6 +60,7 @@ import electron from 'electron';
 const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+app.commandLine.appendSwitch('enable-features', 'CanvasDrawElement');
 if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
 
