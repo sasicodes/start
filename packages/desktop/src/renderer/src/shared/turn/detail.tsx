@@ -138,7 +138,10 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
         {title}
         {metric && <DetailMetric value={metric} />}
         <ChevronRightIcon
-          class={tw('size-3 flex-none text-soft transition-transform duration-150', open && 'rotate-90')}
+          class={tw(
+            'size-3 flex-none text-soft opacity-0 transition-[transform,opacity] duration-150 group-hover/detail:opacity-100 group-focus-visible/detail:opacity-100',
+            open && 'rotate-90 opacity-100'
+          )}
         />
       </button>
       <AnimatePresence initial={false}>

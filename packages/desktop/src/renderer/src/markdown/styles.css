@@ -54,7 +54,7 @@
 }
 
 .markdown-compact [data-streamdown^="heading-"] {
-  @apply mt-0 text-xs leading-5;
+  @apply mt-0 text-xs leading-5 font-medium text-soft;
 }
 
 .markdown-compact > [data-streamdown^="heading-"]:not(:first-child) {
