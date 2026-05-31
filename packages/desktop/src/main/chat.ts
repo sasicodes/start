@@ -1488,14 +1488,25 @@ export class ChatService {
     const allocator = this.subagentNameAllocator(sessionId);
 
     return {
-      authStorage: this.authStorage,
-      modelRegistry: this.modelRegistry,
-      settingsManager: this.settingsManager,
       cwd: () => cwd,
-      model: () => this.pickModel() ?? null,
-      thinkingLevel: () => this.selectedThinkingLevel,
+      authStorage: this.authStorage,
       nameAllocator: () => allocator,
-      customTools: () => createStartCustomTools()
+      modelRegistry: this.modelRegistry,
+      model: () => this.pickModel() ?? null,
+      settingsManager: this.settingsManager,
+      thinkingLevel: () => this.selectedThinkingLevel,
+      customTools: () =>
+        createStartCustomTools({
+          cwd: () => cwd,
+          includeSubagents: false,
+          authStorage: this.authStorage,
+          nameAllocator: () => allocator,
+          modelRegistry: this.modelRegistry,
+          model: () => this.pickModel() ?? null,
+          settingsManager: this.settingsManager,
+          customTools: () => createStartCustomTools(),
+          thinkingLevel: () => this.selectedThinkingLevel
+        })
     };
   }
 

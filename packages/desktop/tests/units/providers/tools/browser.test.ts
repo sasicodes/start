@@ -105,8 +105,8 @@ describe('browser tools', () => {
     }
 
     expect(toolByName('browser_open').description).toContain('browser panel');
-    expect(toolByName('browser_open').promptSnippet).toContain('inspect, read, summarize, or view');
-    expect(toolByName('browser_snapshot').promptSnippet).toContain('open page');
+    expect(toolByName('browser_open').promptSnippet).toContain('test a local app');
+    expect(toolByName('browser_snapshot').promptSnippet).toContain('current browser page');
   });
 
   it('opens normalized URLs in the app browser', async () => {

@@ -151,8 +151,8 @@ export const createBrowserTools = () => [
     },
     name: 'browser_open',
     parameters: browserOpenSchema,
-    description: 'Open an HTTP or HTTPS URL in the browser panel.',
-    promptSnippet: 'Use for pages the user asks to inspect, read, summarize, or view.'
+    description: 'Open an HTTP or HTTPS URL in the browser panel for explicit viewing or interaction.',
+    promptSnippet: 'Use when the user asks to open/view a page, test a local app, or inspect visual state.'
   }),
   defineTool({
     label: 'browser',
@@ -289,6 +289,6 @@ export const createBrowserTools = () => [
     parameters: emptySchema,
     name: 'browser_snapshot',
     description: 'Read page text, links, headings, and element refs.',
-    promptSnippet: 'Use to summarize an open page or find refs for browser_click/browser_type.'
+    promptSnippet: 'Use for the current browser page or to find refs for browser_click/browser_type.'
   })
 ];

@@ -175,6 +175,7 @@ export const toolBody = (toolName: string, args: Record<string, unknown>, result
 };
 
 const toolDetail = (toolName: string, args: Record<string, unknown>) => {
+  if (toolName === 'web_search') return stringValue(args.query);
   if (toolName === 'browser_open') return stringValue(args.url);
   if (toolName.startsWith('browser_')) return '';
   if (toolName === 'subagent_spawn') return '';
@@ -203,6 +204,8 @@ const diffStats = (details: unknown) => {
 
 const toolMetric = (toolName: string, args: Record<string, unknown>, result?: unknown) => {
   if (toolName === 'subagent_spawn') return '';
+  if (toolName === 'web_search' && isRecord(result) && isRecord(result.details))
+    return countLabel(numberValue(result.details.resultCount), 'result');
   if (toolName === 'edit') {
     const stats = isRecord(result) ? diffStats(result.details) : '';
     const changes = Array.isArray(args.edits) ? countLabel(args.edits.length, 'change') : '';
@@ -225,6 +228,7 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
 
   if (error) {
+    if (toolName === 'web_search') return 'Web search failed';
     if (toolName === 'bash') return 'Command failed';
     if (toolName === 'edit') return 'File modification failed';
     if (toolName === 'find') return 'File lookup failed';
@@ -236,6 +240,7 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   }
 
   if (toolName === 'bash') return 'Ran command';
+  if (toolName === 'web_search') return 'Searched Web';
   if (toolName === 'edit') return 'Modified file';
   if (toolName === 'find') return 'Found files';
   if (toolName === 'grep') return 'Searched files';
@@ -254,6 +259,7 @@ const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
   if (toolName === 'edit') return `Could not modify file ${path}`;
   if (toolName === 'find') return `Could not find files${pattern ? ` matching ${pattern}` : ''}`;
   if (toolName === 'grep') return `Could not search files${pattern ? ` for ${pattern}` : ''}`;
+  if (toolName === 'web_search') return `Could not search Web${command ? ` for ${command}` : ''}`;
   if (toolName === 'ls') return `Could not explore folder ${path}`;
   if (toolName === 'read') return `Could not explore file ${path}`;
   if (toolName === 'write') return `Could not write file ${path}`;
@@ -287,6 +293,8 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
     return `${state === 'active' ? 'Finding' : 'Found'} files${pattern ? ` matching ${pattern}` : ''}`;
   if (toolName === 'grep')
     return `${state === 'active' ? 'Searching' : 'Searched'} files${pattern ? ` for ${pattern}` : ''}`;
+  if (toolName === 'web_search')
+    return `${state === 'active' ? 'Searching' : 'Searched'} Web${command ? ` for ${command}` : ''}`;
   if (toolName === 'ls') return `${state === 'active' ? 'Exploring' : 'Explored'} folder ${path}`;
   if (toolName === 'read') return `${state === 'active' ? 'Exploring' : 'Explored'} file ${path}`;
   if (toolName === 'write') return `${state === 'active' ? 'Writing' : 'Wrote'} file ${path}`;

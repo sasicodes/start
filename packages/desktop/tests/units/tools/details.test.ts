@@ -77,6 +77,34 @@ describe('tool details', () => {
     });
   });
 
+  it('renders web search labels and query detail', () => {
+    expect(toolResultTitle('web_search', false)).toBe('Searched Web');
+    expect(toolResultTitle('web_search', true)).toBe('Web search failed');
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        state: 'active',
+        toolName: 'web_search',
+        args: { query: 'package release notes' }
+      })
+    ).toMatchObject({
+      detail: 'package release notes',
+      title: 'Searching Web for package release notes'
+    });
+    expect(
+      toolEventDetail({
+        key: 'tool:2',
+        state: 'done',
+        toolName: 'web_search',
+        args: { query: 'package release notes' },
+        result: { details: { resultCount: 2 }, content: [{ type: 'text', text: 'Done' }] }
+      })
+    ).toMatchObject({
+      metric: '2 results',
+      title: 'Searched Web for package release notes'
+    });
+  });
+
   it('renders find no-results as a normal tool detail', () => {
     expect(
       toolEventDetail({
