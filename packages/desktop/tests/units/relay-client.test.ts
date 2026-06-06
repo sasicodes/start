@@ -84,4 +84,19 @@ describe('DesktopRelay', () => {
     relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', relayToken: '' });
     expect(factory).not.toHaveBeenCalled();
   });
+
+  it('does not connect when the relay url is not a valid ws url', () => {
+    const socket = fakeSocket();
+    const factory = vi.fn(socket.factory);
+    const relay = new DesktopRelay(vi.fn(), factory);
+
+    relay.sync({
+      enabled: true,
+      relayUrl: 'Connect this desktop to your hosted relay',
+      desktopId: 'desktop-1',
+      relayToken: ''
+    });
+    relay.sync({ enabled: true, relayUrl: 'https://relay.example.com', desktopId: 'desktop-1', relayToken: '' });
+    expect(factory).not.toHaveBeenCalled();
+  });
 });

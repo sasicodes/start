@@ -19,6 +19,15 @@ const reconnectDelayMs = 3000;
 const minRefreshDelayMs = 5000;
 const codeRefreshBufferMs = 30000;
 
+const isRelayUrl = (value: string) => {
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'ws:' || protocol === 'wss:';
+  } catch {
+    return false;
+  }
+};
+
 const wsSocketFactory: RelaySocketFactory = (url, handlers) => {
   const socket = new WebSocket(url);
   socket.on('open', handlers.onOpen);
@@ -51,7 +60,7 @@ export class DesktopRelay {
   }
 
   sync(settings: MobileRelaySettings) {
-    if (!settings.enabled || !settings.relayUrl || !settings.desktopId) {
+    if (!settings.enabled || !settings.desktopId || !isRelayUrl(settings.relayUrl)) {
       this.stop();
       return;
     }
