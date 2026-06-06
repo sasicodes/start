@@ -21,22 +21,22 @@ const toolEvent = (key: string, title: string, state: ChatEvent['state'] = 'done
 });
 
 const thinkingText = (item: TurnActivityItem | undefined) => {
-  if (!item || item.type !== 'thinking') throw new Error('expected thinking item');
+  if (item?.type !== 'thinking') throw new Error('expected thinking item');
   return item.text;
 };
 
 const detailKey = (item: TurnActivityItem | undefined) => {
-  if (!item || item.type !== 'detail') throw new Error('expected detail item');
+  if (item?.type !== 'detail') throw new Error('expected detail item');
   return item.detail.key;
 };
 
 const detailState = (item: TurnActivityItem | undefined) => {
-  if (!item || item.type !== 'detail') throw new Error('expected detail item');
+  if (item?.type !== 'detail') throw new Error('expected detail item');
   return item.detail.state;
 };
 
 const detailItem = (item: TurnActivityItem | undefined) => {
-  if (!item || item.type !== 'detail') throw new Error('expected detail item');
+  if (item?.type !== 'detail') throw new Error('expected detail item');
   return item.detail;
 };
 
