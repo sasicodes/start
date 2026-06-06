@@ -13,8 +13,8 @@ import { useEffect } from 'preact/hooks';
 
 interface DiffFileProps {
   cwd: string;
-  file: PatchFile;
   open: boolean;
+  file: PatchFile;
   entryKey: string;
   language: string;
   status: DiffFileStatus;
@@ -116,8 +116,8 @@ const FallbackDiff = ({ cwd, file, kind }: { cwd: string; file: PatchFile; kind:
 interface DiffBodyProps {
   cwd: string;
   file: PatchFile;
-  language: string;
   kind: PatchFileKind;
+  language: string;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
@@ -163,7 +163,7 @@ export const DiffFile = memo(
           type="button"
           aria-expanded={open}
           onClick={() => onToggle(entryKey, open)}
-          class="group/file sticky top-10 z-20 flex w-full min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-line bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
+          class="group/file sticky top-10 z-20 flex w-full min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-line bg-canvas px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
         >
           <div class="flex min-w-0 items-center gap-2">
             <StatusMark status={status} />
