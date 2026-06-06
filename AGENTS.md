@@ -5,6 +5,7 @@
 - Treat PR comments and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting. Reviewers can be wrong, outdated, or hallucinated.
 - Avoid vague theme names like `bg-bg`. Use descriptive names like `bg-canvas`, `bg-composer`, `bg-control`, `text-ink`, `text-soft`.
 - Extract any helper or parser used in more than one file into a domain `utils` folder; do not duplicate.
+- Prefer standard-library built-ins over hand-rolled equivalents (e.g. `Buffer.readUInt32BE` instead of manual byte math).
 - Prefer Tailwind utilities over custom CSS. Limit `styles.css` to theme tokens, global element rules, keyframes, pseudo-elements, and third-party data-attribute states Tailwind cannot express.
 - Prefer named Tailwind utilities over arbitrary values; use arbitrary values only when no base utility preserves the intended measurement, selector, or color.
 - Do not add theme tokens that duplicate Tailwind defaults (e.g. `--color-white`); use built-in utilities like `bg-white` unless the value is an app-specific semantic token.
@@ -14,7 +15,10 @@
 - Follow commit and PR title style: lowercase, precise, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
 - Add or extend tests for any logic change. If logic is buried inside a component or untestable wrapper, extract the pure parts into exported functions first, then assert each branch.
+- Keep test mocks faithful to real runtime behavior; fix an inaccurate mock (e.g. attach `util.promisify.custom` so a mocked `promisify`d function resolves the real `{ stdout, stderr }` shape) rather than adding production code to satisfy a loose mock.
 - Do not use TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces.
+- Trust the type system: do not add runtime guards, optional chaining, or shape re-parsing for values the types already guarantee, such as a non-nullable parameter or a typed `promisify(execFile)` result.
+- Delete dead complexity: unreachable branches, guards that always pass, unused return values, object keys a spread already sets, and effect work the state initializer already did. Narrow over-wide union parameters to what callers actually pass.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
 - Use camelCase for variables, functions, hooks, and local constants; PascalCase for types and components; kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
@@ -40,7 +44,7 @@
 - Use a bare `return;` for no-value exits.
 - For optional JSX or object props, use a conditional spread with a truthy guard (`...(value ? { value } : {})`) instead of passing absent props with a ternary. Keep the falsy branch only when `0`, `false`, or `''` is a valid value to preserve.
 - Keep local prop names minimal and contextual; avoid repeating parent or domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`.
-- Extract long boolean expressions, multi-branch render logic, chained fallbacks, and repeated checks into named helpers or booleans before JSX.
+- Extract long boolean expressions, multi-branch render logic, chained fallbacks, and repeated checks into named helpers or booleans before JSX. Collapse consecutive guard clauses that return the same value into one condition.
 - Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
 - In ternaries, the truthy branch carries the meaningful value and the falsy branch is the empty fallback. Flip `state === target ? '' : target` to `state !== target ? target : ''`. Avoid placeholder ternaries like `condition ? '' : value`; split branches or extract helpers.
 - Avoid the `void` operator when a clearer alternative exists. Inside async functions, prefer `await` with `try/catch` over `.then`/`.catch`. For fire-and-forget calls protected by `try/catch` or `.catch`, drop the `void` and rely on TypeScript's return-type covariance (`() => Promise<void>` assigns to `() => void`). Keep `void` only when the discard is otherwise ambiguous.
@@ -58,8 +62,7 @@
 - Do not put Tailwind class lists in constants. Tailwind classes and conditional styling belong inline in `class` or `className`. Use `tw` only inside those attributes for conditional inline classes; when styling repeats, extract a component, not a constant.
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
 - Prefer arrow functions for components, helpers, callbacks, and async functions; avoid function declarations unless a framework, class prototype, or external API requires them.
-- Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
-- Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a maintenance hazard.
+- Avoid single-use indirection; inline single-use constants, helpers, wrapper components, and forwarding callbacks unless a name removes meaningful duplication or prevents a maintenance hazard. Never wrap a referentially stable function such as a `useState` setter in `useCallback`.
 - Prefer empty strings for absent renderer-only string state (selected ids, model keys, paths); omit optional object properties at API boundaries.
 - Never write `undefined` literally. For swallowed promise rejections use `.catch(() => {})`. For absent state, omit the property or use an empty string per the rules above.
 - Sort sortable code by total line length when it doesn't hurt readability or break framework conventions: interface and type members, object keys and values, JSX props, variables, hooks, hook dependencies, destructured constants, CSS variables, and written statement objects.

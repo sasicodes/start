@@ -5,7 +5,7 @@ export const normalizeWorkspacePath = (workspacePath: string) => workspacePath.r
 export const resolveInside = (cwd: string, relativePath: string) => {
   const base = path.resolve(cwd);
   const absolute = path.resolve(base, relativePath);
-  return absolute === base || absolute.startsWith(base + path.sep) ? absolute : undefined;
+  return absolute === base || absolute.startsWith(base + path.sep) ? absolute : '';
 };
 
 export const workspaceDisplayName = (workspacePath: string) => {
