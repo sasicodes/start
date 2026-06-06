@@ -24,8 +24,26 @@ const pairingRequestSchema = v.object({
   publicKey: v.optional(v.string())
 });
 
-const serverMessageSchema = v.union([relayReadySchema, relayErrorSchema, pairingCreatedSchema, pairingRequestSchema]);
+const relayCommandSchema = v.object({
+  value: v.string(),
+  action: v.string()
+});
 
+const mobileCommandSchema = v.object({
+  type: v.literal('mobile.command'),
+  mobileId: v.string(),
+  payload: relayCommandSchema
+});
+
+const serverMessageSchema = v.union([
+  relayReadySchema,
+  relayErrorSchema,
+  pairingCreatedSchema,
+  pairingRequestSchema,
+  mobileCommandSchema
+]);
+
+export type RelayCommand = v.InferOutput<typeof relayCommandSchema>;
 export type RelayServerMessage = v.InferOutput<typeof serverMessageSchema>;
 
 export const parseRelayServerMessage = (raw: string): RelayServerMessage | undefined => {
@@ -50,6 +68,12 @@ export const helloDesktopMessage = (desktopId: string, token: string) => ({
 export const pairingCreateMessage = () => ({ type: 'pairing.create' as const });
 
 export const pairingApproveMessage = (mobileId: string) => ({ type: 'pairing.approve' as const, mobileId });
+
+export const desktopEventMessage = (mobileId: string, payload: RelayCommand) => ({
+  type: 'desktop.event' as const,
+  mobileId,
+  payload
+});
 
 export const relayReply = (message: RelayServerMessage) => {
   if (message.type === 'relay.ready') return pairingCreateMessage();

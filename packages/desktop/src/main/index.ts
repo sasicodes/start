@@ -47,6 +47,7 @@ import {
   writeAppSettings
 } from '@main/settings';
 import { DesktopRelay } from '@main/relay/client';
+import type { RelayCommand } from '@main/relay/protocol';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   getMainWindow,
@@ -82,7 +83,14 @@ let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
 
-const desktopRelay = new DesktopRelay((code) => sendToRendererWindows('app:mobile-relay-code', code));
+const runMobileCommand = (command: RelayCommand) => {
+  if (command.action === 'prompt' && command.value) submitComposerToMainWindow(command.value);
+};
+
+const desktopRelay = new DesktopRelay({
+  onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
+  onCommand: runMobileCommand
+});
 let stopWorkspaceChanged: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {

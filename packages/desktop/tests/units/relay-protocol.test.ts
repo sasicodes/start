@@ -1,4 +1,5 @@
 import {
+  desktopEventMessage,
   helloDesktopMessage,
   pairingApproveMessage,
   pairingCreateMessage,
@@ -18,10 +19,31 @@ describe('parseRelayServerMessage', () => {
     );
   });
 
+  it('parses a mobile command with a well-formed payload', () => {
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt', value: 'hi' } })
+      )
+    ).toEqual({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt', value: 'hi' } });
+  });
+
   it('rejects malformed or unknown payloads', () => {
     expect(parseRelayServerMessage('not json')).toBeUndefined();
     expect(parseRelayServerMessage(JSON.stringify({ type: 'unknown' }))).toBeUndefined();
     expect(parseRelayServerMessage(JSON.stringify({ type: 'pairing.created', code: 5 }))).toBeUndefined();
+    expect(
+      parseRelayServerMessage(JSON.stringify({ type: 'mobile.command', mobileId: 'm1', payload: { action: 'prompt' } }))
+    ).toBeUndefined();
+  });
+});
+
+describe('desktopEventMessage', () => {
+  it('builds a desktop event addressed to a mobile', () => {
+    expect(desktopEventMessage('mobile-1', { action: 'ack', value: 'prompt' })).toEqual({
+      type: 'desktop.event',
+      mobileId: 'mobile-1',
+      payload: { action: 'ack', value: 'prompt' }
+    });
   });
 });
 

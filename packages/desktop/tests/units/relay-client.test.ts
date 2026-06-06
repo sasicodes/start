@@ -39,7 +39,7 @@ describe('DesktopRelay', () => {
   it('drives the full pairing handshake and surfaces the code', () => {
     const onCode = vi.fn();
     const socket = fakeSocket();
-    const relay = new DesktopRelay(onCode, socket.factory);
+    const relay = new DesktopRelay({ onCode, onCommand: vi.fn() }, socket.factory);
 
     relay.sync(enabledSettings);
     socket.open();
@@ -61,10 +61,41 @@ describe('DesktopRelay', () => {
     expect(socket.sent).toContainEqual({ type: 'pairing.approve', mobileId: 'mobile-1' });
   });
 
+  it('runs an incoming mobile command and acks it back', () => {
+    const onCommand = vi.fn();
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(
+      JSON.stringify({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt', value: 'ship it' } })
+    );
+
+    expect(onCommand).toHaveBeenCalledWith({ action: 'prompt', value: 'ship it' });
+    expect(socket.sent).toContainEqual({
+      type: 'desktop.event',
+      mobileId: 'mobile-1',
+      payload: { action: 'ack', value: 'prompt' }
+    });
+  });
+
+  it('ignores a malformed mobile command payload', () => {
+    const onCommand = vi.fn();
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt' } }));
+
+    expect(onCommand).not.toHaveBeenCalled();
+  });
+
   it('stops cleanly, closing the socket and clearing the code', () => {
     const onCode = vi.fn();
     const socket = fakeSocket();
-    const relay = new DesktopRelay(onCode, socket.factory);
+    const relay = new DesktopRelay({ onCode, onCommand: vi.fn() }, socket.factory);
 
     relay.sync(enabledSettings);
     socket.open();
@@ -79,7 +110,7 @@ describe('DesktopRelay', () => {
   it('does not connect when relay is disabled', () => {
     const socket = fakeSocket();
     const factory = vi.fn(socket.factory);
-    const relay = new DesktopRelay(vi.fn(), factory);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, factory);
 
     relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', relayToken: '' });
     expect(factory).not.toHaveBeenCalled();
@@ -88,7 +119,7 @@ describe('DesktopRelay', () => {
   it('does not connect when the relay url is not a valid ws url', () => {
     const socket = fakeSocket();
     const factory = vi.fn(socket.factory);
-    const relay = new DesktopRelay(vi.fn(), factory);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, factory);
 
     relay.sync({
       enabled: true,

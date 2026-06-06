@@ -1,10 +1,22 @@
 import { WebSocket } from 'ws';
 import type { MobileRelaySettings } from '@main/storage';
-import { helloDesktopMessage, pairingCreateMessage, parseRelayServerMessage, relayReply } from '@main/relay/protocol';
+import {
+  desktopEventMessage,
+  helloDesktopMessage,
+  pairingCreateMessage,
+  parseRelayServerMessage,
+  relayReply,
+  type RelayCommand
+} from '@main/relay/protocol';
 
 export interface RelaySocket {
   close: () => void;
   send: (data: string) => void;
+}
+
+export interface DesktopRelayCallbacks {
+  onCode: (code: string) => void;
+  onCommand: (command: RelayCommand) => void;
 }
 
 export interface RelaySocketHandlers {
@@ -51,7 +63,7 @@ export class DesktopRelay {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly onCode: (code: string) => void,
+    private readonly callbacks: DesktopRelayCallbacks,
     private readonly createSocket: RelaySocketFactory = wsSocketFactory
   ) {}
 
@@ -103,6 +115,10 @@ export class DesktopRelay {
       this.setCode(message.code);
       this.scheduleRefresh(message.expiresAt);
     }
+    if (message.type === 'mobile.command') {
+      this.callbacks.onCommand(message.payload);
+      this.send(desktopEventMessage(message.mobileId, { value: message.payload.action, action: 'ack' }));
+    }
 
     const reply = relayReply(message);
     if (reply) this.send(reply);
@@ -111,7 +127,7 @@ export class DesktopRelay {
   private setCode(code: string) {
     if (this.code === code) return;
     this.code = code;
-    this.onCode(code);
+    this.callbacks.onCode(code);
   }
 
   private send(message: object) {
