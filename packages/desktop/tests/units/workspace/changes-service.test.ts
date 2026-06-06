@@ -11,6 +11,10 @@ const fsMocks = vi.hoisted(() => ({
   watch: vi.fn()
 }));
 
+const childProcessMocks = vi.hoisted(() => ({
+  execFileSync: vi.fn()
+}));
+
 class FakeWatcher extends EventEmitter {
   closed = false;
   listener: () => void;
@@ -30,6 +34,8 @@ class FakeWatcher extends EventEmitter {
 }
 
 vi.mock('@main/git', () => gitMocks);
+
+vi.mock('node:child_process', () => childProcessMocks);
 
 vi.mock('node:fs', async () => {
   const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
@@ -74,6 +80,7 @@ describe('GitChangesService', () => {
       fsMocks.watchers.push(watcher);
       return watcher;
     });
+    childProcessMocks.execFileSync.mockReturnValue('src/index.ts\0packages/app/view.tsx\0');
     gitMocks.getGitPatch.mockResolvedValue(patch);
     gitMocks.getGitChangeSummary.mockResolvedValue(initialSummary);
   });
@@ -126,6 +133,21 @@ describe('GitChangesService', () => {
     expect(notifications).toEqual([{ summary: changedSummary, workspacePath: '/repo' }]);
   });
 
+  it('watches git-visible workspace directories and the git directory', async () => {
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+
+    await service.getSummary();
+
+    expect(fsMocks.watch.mock.calls.map(([targetPath]) => targetPath)).toEqual([
+      '/repo',
+      '/repo/src',
+      '/repo/packages',
+      '/repo/packages/app',
+      '/repo/.git'
+    ]);
+  });
+
   it('caches patch reads and publishes the current summary after changes', async () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
@@ -163,6 +185,22 @@ describe('GitChangesService', () => {
     await vi.advanceTimersByTimeAsync(180);
 
     expect(notifications).toEqual([{ patchUnavailable: true, summary: initialSummary, workspacePath: '/repo' }]);
+  });
+
+  it('publishes unavailable state instead of leaving stale summary after refresh failures', async () => {
+    const notifications: unknown[] = [];
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({
+      currentWorkspace: () => '/repo',
+      notify: (payload) => notifications.push(payload)
+    });
+
+    expect(await service.getSummary()).toEqual(initialSummary);
+    gitMocks.getGitChangeSummary.mockRejectedValue(new Error('git failed'));
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+
+    expect(notifications).toEqual([{ workspacePath: '/repo' }]);
   });
 
   it('closes workspace watchers on dispose', async () => {

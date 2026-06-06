@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch } from '@main/git';
@@ -11,7 +12,7 @@ export interface GitChangesPayload {
 
 interface GitChangesEntry {
   workspacePath: string;
-  watchers: FSWatcher[];
+  watchers: Map<string, FSWatcher>;
   refreshTimer?: ReturnType<typeof setTimeout>;
   patch?: GitPatch;
   patchLoaded: boolean;
@@ -26,8 +27,15 @@ interface GitChangesServiceOptions {
   notify: (payload: GitChangesPayload) => void;
 }
 
+interface GitWatchTarget {
+  path: string;
+  recursive: boolean;
+}
+
 const gitChangesDebounceMs = 180;
 const gitDirectoryName = '.git';
+const maxWorkspaceWatchDirectories = 512;
+const gitWatchDirectoryArgs = ['ls-files', '-co', '--exclude-standard', '-z'];
 type MaybeGitPatch = Awaited<ReturnType<typeof getGitPatch>>;
 type MaybeGitChangeSummary = Awaited<ReturnType<typeof getGitChangeSummary>>;
 
@@ -56,6 +64,42 @@ const samePatch = (first: GitPatch | null, second: GitPatch | null) => {
     );
   });
 };
+
+const gitWatchDirectories = (workspacePath: string) => {
+  const directories = new Set([workspacePath]);
+
+  try {
+    const output = execFileSync('git', gitWatchDirectoryArgs, {
+      cwd: workspacePath,
+      encoding: 'utf8',
+      maxBuffer: 4 * 1024 * 1024,
+      timeout: 1200
+    });
+
+    for (const filePath of output.split('\0')) {
+      let directory = path.dirname(filePath);
+      while (directory && directory !== '.') {
+        directories.add(path.join(workspacePath, directory));
+        directory = path.dirname(directory);
+      }
+    }
+  } catch {
+    return [workspacePath];
+  }
+
+  return [...directories].sort((first, second) => first.length - second.length).slice(0, maxWorkspaceWatchDirectories);
+};
+
+const gitWatchTargets = (workspacePath: string): GitWatchTarget[] => [
+  ...gitWatchDirectories(workspacePath).map((directory) => ({
+    path: directory,
+    recursive: false
+  })),
+  {
+    path: path.join(workspacePath, gitDirectoryName),
+    recursive: true
+  }
+];
 
 export class GitChangesService {
   private readonly entries = new Map<string, GitChangesEntry>();
@@ -93,7 +137,7 @@ export class GitChangesService {
     const entry: GitChangesEntry = {
       patchLoaded: false,
       summaryLoaded: false,
-      watchers: [],
+      watchers: new Map(),
       workspacePath: key
     };
     this.entries.set(key, entry);
@@ -139,7 +183,7 @@ export class GitChangesService {
     if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
     entry.refreshTimer = setTimeout(() => {
       delete entry.refreshTimer;
-      this.refresh(entry).catch(() => {});
+      this.refresh(entry).catch(() => this.handleRefreshFailure(entry));
     }, gitChangesDebounceMs);
   }
 
@@ -154,6 +198,7 @@ export class GitChangesService {
 
     this.storeSummary(entry, summary);
     if (refreshPatch) this.storePatch(entry, patch);
+    this.watchWorkspace(entry);
 
     if (sameSummary(previousSummary, nextSummary) && samePatch(previousPatch, nextPatch)) return;
 
@@ -167,31 +212,57 @@ export class GitChangesService {
   }
 
   private watchWorkspace(entry: GitChangesEntry): void {
-    this.addWatcher(entry, entry.workspacePath, true);
-    this.addWatcher(entry, path.join(entry.workspacePath, gitDirectoryName), false);
-  }
+    const targets = gitWatchTargets(entry.workspacePath);
+    const targetPaths = new Set(targets.map((target) => target.path));
 
-  private addWatcher(entry: GitChangesEntry, targetPath: string, recursive: boolean): void {
-    try {
-      const watcher = watch(targetPath, { recursive }, () => this.scheduleRefresh(entry));
-      watcher.on('error', () => this.closeWatcher(entry, watcher));
-      entry.watchers.push(watcher);
-    } catch {
-      if (recursive) this.addWatcher(entry, targetPath, false);
+    for (const targetPath of entry.watchers.keys()) {
+      if (!targetPaths.has(targetPath)) this.closeWatcher(entry, targetPath);
+    }
+
+    for (const target of targets) {
+      this.addWatcher(entry, target);
     }
   }
 
-  private closeWatcher(entry: GitChangesEntry, watcher: FSWatcher): void {
+  private addWatcher(entry: GitChangesEntry, target: GitWatchTarget): void {
+    if (entry.watchers.has(target.path)) return;
+
+    try {
+      const watcher = watch(target.path, { recursive: target.recursive }, () => this.scheduleRefresh(entry));
+      watcher.on('error', () => this.closeWatcher(entry, target.path));
+      entry.watchers.set(target.path, watcher);
+    } catch {
+      if (target.recursive) this.addWatcher(entry, { ...target, recursive: false });
+    }
+  }
+
+  private closeWatcher(entry: GitChangesEntry, targetPath: string): void {
+    const watcher = entry.watchers.get(targetPath);
+    if (!watcher) return;
+
     watcher.close();
-    entry.watchers = entry.watchers.filter((item) => item !== watcher);
+    entry.watchers.delete(targetPath);
   }
 
   private closeWatchers(entry: GitChangesEntry): void {
-    for (const watcher of entry.watchers) watcher.close();
-    entry.watchers = [];
+    for (const watcher of entry.watchers.values()) watcher.close();
+    entry.watchers.clear();
   }
 
-  private storePatch(entry: GitChangesEntry, patch: MaybeGitPatch): void {
+  private handleRefreshFailure(entry: GitChangesEntry): void {
+    const hadPatch = Boolean(entry.patch);
+    const hadSummary = Boolean(entry.summary);
+    this.storeSummary(entry);
+    if (entry.patchLoaded) this.storePatch(entry);
+    if (!hadPatch && !hadSummary) return;
+
+    this.notify({
+      workspacePath: entry.workspacePath,
+      ...(entry.patchLoaded ? { patchUnavailable: true } : {})
+    });
+  }
+
+  private storePatch(entry: GitChangesEntry, patch?: MaybeGitPatch): void {
     entry.patchLoaded = true;
     if (patch) {
       entry.patch = patch;
@@ -201,7 +272,7 @@ export class GitChangesService {
     delete entry.patch;
   }
 
-  private storeSummary(entry: GitChangesEntry, summary: MaybeGitChangeSummary): void {
+  private storeSummary(entry: GitChangesEntry, summary?: MaybeGitChangeSummary): void {
     entry.summaryLoaded = true;
     if (summary) {
       entry.summary = summary;
