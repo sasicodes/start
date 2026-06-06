@@ -6,8 +6,8 @@ export const maskToken = (token: string) => {
 
 export const relayBanner = (url: string, token: string) => {
   const rows: [string, string][] = [
-    ['WebSocket', url],
-    ['Token', maskToken(token)]
+    ['Relay URL', url],
+    ['Relay token', maskToken(token)]
   ];
   const keyWidth = Math.max(...rows.map(([key]) => key.length));
   const valueWidth = Math.max(...rows.map(([, value]) => value.length));

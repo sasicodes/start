@@ -16,9 +16,9 @@ describe('maskToken', () => {
 });
 
 describe('relayBanner', () => {
-  it('renders the websocket address and masked token', () => {
+  it('renders the relay url and masked token', () => {
     const banner = relayBanner('ws://localhost:8787/connect', 'secrettoken');
-    expect(banner).toContain('WebSocket');
+    expect(banner).toContain('Relay URL');
     expect(banner).toContain('ws://localhost:8787/connect');
     expect(banner).toContain('secr*******');
     expect(banner).toContain('┌');
@@ -26,6 +26,6 @@ describe('relayBanner', () => {
 
   it('shows a hyphen for the token row when no token is configured', () => {
     const banner = relayBanner('ws://localhost:8787/connect', '');
-    expect(banner).toMatch(/Token\s+│ -/u);
+    expect(banner).toMatch(/Relay token\s+│ -/u);
   });
 });
