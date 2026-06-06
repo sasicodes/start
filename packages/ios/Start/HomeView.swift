@@ -193,11 +193,6 @@ private struct ConnectionStatusLabel: View {
                 ProgressView()
                     .controlSize(.mini)
                     .tint(StartTheme.Colors.softInk.opacity(0.62))
-            } else {
-                Circle()
-                    .fill(status == .connected ? StartTheme.Colors.success : Color(.systemRed))
-                    .frame(width: 6, height: 6)
-                    .opacity(0.72)
             }
 
             Text(label)
