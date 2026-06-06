@@ -1,3 +1,4 @@
+import { activityLabelParts } from '@renderer/shared/turn/label';
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { detailMetric } from '@renderer/shared/turn/sequence';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
@@ -75,6 +76,13 @@ describe('turn activity sequence', () => {
     expect(thinkingMarkdown('**Reviewing files**\nI need context.\n**Summarizing**\nDone.')).toBe(
       '### Reviewing files\nI need context.\n### Summarizing\nDone.'
     );
+  });
+
+  it('separates the activity duration for tabular rendering', () => {
+    expect(activityLabelParts({ createdAt: 1000, details: [], now: 46_000, working: true })).toEqual({
+      duration: '45s',
+      verb: 'Working'
+    });
   });
 
   it('interleaves thinking and detail items in arrival order', () => {

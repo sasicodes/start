@@ -3,6 +3,7 @@ import { baseDir } from '@main/application';
 import { openStartDb, runStartTransaction, type StartStatement } from '@main/db';
 import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
+import * as v from 'valibot';
 
 export type StartState = {
   lastWorkspace?: string;
@@ -10,57 +11,81 @@ export type StartState = {
   selectedModelKey?: string;
   solidWindowBackground: boolean;
   selectedThinkingLevel: EffortLevel;
-  sessionNotices?: Record<string, SessionNotice>;
+  workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
+  sessionNotices?: Record<string, SessionNotice>;
 };
 
 const defaultStartState = {
-  composerShortcut: 'Control+Space',
   solidWindowBackground: false,
-  selectedThinkingLevel: 'high'
+  selectedThinkingLevel: 'high',
+  composerShortcut: 'Control+Space'
 } satisfies StartState;
 
 export const startDir = () => baseDir;
 export const startCacheDir = () => join(startDir(), 'cache');
 export const startLogPath = () => join(startDir(), 'logs', 'app.log');
 
-const cleanString = (value: unknown) => {
-  if (typeof value === 'string' && value.trim()) return value.trim();
+const trimmedStringSchema = v.pipe(v.string(), v.trim(), v.minLength(1));
+const finiteNumberSchema = v.pipe(v.number(), v.finite());
+const thinkingLevelSchema = v.picklist(['low', 'medium', 'high', 'xhigh'] satisfies EffortLevel[]);
+const sessionNoticeSchema = v.object({
+  kind: v.picklist(['completed', 'failed'] satisfies SessionNotice['kind'][]),
+  seenAt: v.optional(finiteNumberSchema),
+  createdAt: v.optional(finiteNumberSchema),
+  sessionId: v.optional(trimmedStringSchema),
+  workspacePath: trimmedStringSchema
+});
+const stringRecordEntrySchema = v.tuple([trimmedStringSchema, trimmedStringSchema]);
+const workspaceHistoryEntrySchema = v.tuple([trimmedStringSchema, finiteNumberSchema]);
+
+const parseTrimmedString = (value: unknown) => {
+  const result = v.safeParse(trimmedStringSchema, value);
+  if (result.success) return result.output;
   return;
 };
 
-const cleanStringRecord = (value: unknown) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+const recordEntries = (value: unknown) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+  return Object.entries(value);
+};
 
-  const entries = Object.entries(value).flatMap(([key, entry]) => {
-    const cleanKey = cleanString(key);
-    const cleanEntry = cleanString(entry);
-    return cleanKey && cleanEntry ? ([[cleanKey, cleanEntry]] as const) : [];
+const parseStringRecord = (value: unknown) => {
+  const entries = recordEntries(value).flatMap((entry) => {
+    const result = v.safeParse(stringRecordEntrySchema, entry);
+    return result.success ? [result.output] : [];
   });
 
   if (entries.length > 0) return Object.fromEntries(entries);
   return;
 };
 
-const cleanSessionNotices = (value: unknown) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+const parseWorkspaceHistory = (value: unknown) => {
+  const entries = recordEntries(value).flatMap((entry) => {
+    const result = v.safeParse(workspaceHistoryEntrySchema, entry);
+    return result.success ? [result.output] : [];
+  });
 
+  if (entries.length > 0) return Object.fromEntries(entries);
+  return;
+};
+
+const parseSessionNotices = (value: unknown) => {
   const notices: Record<string, SessionNotice> = {};
-  for (const [key, entry] of Object.entries(value)) {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
-    const notice = entry as Partial<SessionNotice>;
-    const sessionId = cleanString(notice.sessionId) ?? cleanString(key);
-    const workspacePath = cleanString(notice.workspacePath);
-    const seenAt = typeof notice.seenAt === 'number' ? notice.seenAt : null;
-    const createdAt = typeof notice.createdAt === 'number' ? notice.createdAt : Date.now();
-    if (!sessionId || !workspacePath) continue;
-    if (notice.kind !== 'completed' && notice.kind !== 'failed') continue;
+
+  for (const [key, entry] of recordEntries(value)) {
+    const result = v.safeParse(sessionNoticeSchema, entry);
+    if (!result.success) continue;
+
+    const sessionId = result.output.sessionId ?? parseTrimmedString(key);
+    if (!sessionId) continue;
+
     notices[sessionId] = {
       sessionId,
-      kind: notice.kind,
-      createdAt,
-      workspacePath,
-      ...(seenAt ? { seenAt } : {})
+      kind: result.output.kind,
+      workspacePath: result.output.workspacePath,
+      createdAt: result.output.createdAt ?? Date.now(),
+      ...(result.output.seenAt ? { seenAt: result.output.seenAt } : {})
     };
   }
 
@@ -68,25 +93,27 @@ const cleanSessionNotices = (value: unknown) => {
   return;
 };
 
-const cleanThinkingLevel = (value: unknown): EffortLevel => {
-  if (value === 'low' || value === 'medium' || value === 'high' || value === 'xhigh') return value;
-  return defaultStartState.selectedThinkingLevel;
+const parseThinkingLevel = (value: unknown): EffortLevel => {
+  const result = v.safeParse(thinkingLevelSchema, value);
+  return result.success ? result.output : defaultStartState.selectedThinkingLevel;
 };
 
 export const parseStartState = (value: unknown): StartState => {
   if (!value || typeof value !== 'object') return defaultStartState;
   const state = value as Partial<StartState>;
-  const lastWorkspace = cleanString(state.lastWorkspace);
-  const selectedModelKey = cleanString(state.selectedModelKey);
-  const sessionNotices = cleanSessionNotices(state.sessionNotices);
-  const workspaceBookmarks = cleanStringRecord(state.workspaceBookmarks);
+  const lastWorkspace = parseTrimmedString(state.lastWorkspace);
+  const selectedModelKey = parseTrimmedString(state.selectedModelKey);
+  const sessionNotices = parseSessionNotices(state.sessionNotices);
+  const workspaceHistory = parseWorkspaceHistory(state.workspaceHistory);
+  const workspaceBookmarks = parseStringRecord(state.workspaceBookmarks);
   return {
-    composerShortcut: cleanString(state.composerShortcut) ?? defaultStartState.composerShortcut,
+    composerShortcut: parseTrimmedString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     solidWindowBackground: state.solidWindowBackground === true,
-    selectedThinkingLevel: cleanThinkingLevel(state.selectedThinkingLevel),
+    selectedThinkingLevel: parseThinkingLevel(state.selectedThinkingLevel),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
     ...(sessionNotices ? { sessionNotices } : {}),
+    ...(workspaceHistory ? { workspaceHistory } : {}),
     ...(workspaceBookmarks ? { workspaceBookmarks } : {})
   };
 };
@@ -95,10 +122,11 @@ const stateKey = {
   lastWorkspace: 'last_workspace',
   composerShortcut: 'composer_shortcut',
   selectedModelKey: 'selected_model_key',
+  workspaceHistory: 'workspace_history',
+  workspaceBookmarks: 'workspace_bookmarks',
   sessionNotices: 'session_notices',
   selectedThinkingLevel: 'selected_thinking_level',
-  solidWindowBackground: 'solid_window_background',
-  workspaceBookmarks: 'workspace_bookmarks'
+  solidWindowBackground: 'solid_window_background'
 } as const satisfies Record<keyof StartState, string>;
 
 type StateRow = { key: string; value_json: string };
@@ -157,10 +185,11 @@ const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   lastWorkspace: raw[stateKey.lastWorkspace],
   composerShortcut: raw[stateKey.composerShortcut],
   selectedModelKey: raw[stateKey.selectedModelKey],
+  workspaceHistory: raw[stateKey.workspaceHistory],
+  workspaceBookmarks: raw[stateKey.workspaceBookmarks],
   sessionNotices: raw[stateKey.sessionNotices],
   selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
-  solidWindowBackground: raw[stateKey.solidWindowBackground],
-  workspaceBookmarks: raw[stateKey.workspaceBookmarks]
+  solidWindowBackground: raw[stateKey.solidWindowBackground]
 });
 
 export const readStartState = (): StartState => {
@@ -179,8 +208,9 @@ export const writeStartState = (state: StartState): StartState => {
     writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
-    writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);
+    writeOrDeleteRow(stateKey.workspaceHistory, nextState.workspaceHistory);
     writeOrDeleteRow(stateKey.workspaceBookmarks, nextState.workspaceBookmarks);
+    writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);
   });
   return nextState;
 };

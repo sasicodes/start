@@ -68,6 +68,7 @@ import { workspaceDisplayName } from '@main/utils/workspace';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
+import { workspaceHistoryWith } from '@main/workspace/history';
 import {
   type AgentTab,
   type AgentTabStatus,
@@ -204,6 +205,7 @@ export class ChatService {
   constructor() {
     registerAllCustomProviders(this.modelRegistry, this.customProviders);
     this.modelRegistry.refresh();
+    this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
   }
 
   listCustomProviders(): CustomProviderConfig[] {
@@ -359,7 +361,7 @@ export class ChatService {
       this.workspaceCwd = workspacePath;
       this.runtimeStateForSession(session).isGenerating = false;
       this.setActiveSession(sessionManager);
-      this.persistState({ lastWorkspace: this.workspaceCwd });
+      this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
       this.shouldCreateSession = false;
       return {
@@ -439,7 +441,7 @@ export class ChatService {
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
     this.setActiveSession(sessionManager);
-    this.persistState({ lastWorkspace: this.workspaceCwd });
+    this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
 
     const sessionId = sessionManager.getSessionId();
@@ -517,7 +519,7 @@ export class ChatService {
     this.setActiveSession(session.sessionManager);
     this.runtimeStateForSession(session).isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     this.shouldCreateSession = false;
-    this.persistState({ lastWorkspace: this.workspaceCwd });
+    this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
 
     return {
@@ -547,11 +549,24 @@ export class ChatService {
     const attentionStatuses = this.workspaceAttentionStatuses();
     folders.set(this.workspaceCwd, {
       sessionCount: 0,
-      modified: Date.now(),
       path: this.workspaceCwd,
+      modified: Date.now(),
       name: workspaceDisplayName(this.workspaceCwd),
       ...this.workspaceAttention(this.workspaceCwd, attentionStatuses)
     });
+
+    const workspaceHistory = this.appState.workspaceHistory ?? {};
+    for (const [workspacePath, lastOpenedAt] of Object.entries(workspaceHistory)) {
+      if (folders.has(workspacePath)) continue;
+
+      folders.set(workspacePath, {
+        sessionCount: 0,
+        path: workspacePath,
+        modified: lastOpenedAt,
+        name: workspaceDisplayName(workspacePath),
+        ...this.workspaceAttention(workspacePath, attentionStatuses)
+      });
+    }
 
     for (const session of sessions) {
       if (!session.cwd || session.messageCount === 0) continue;
@@ -578,8 +593,8 @@ export class ChatService {
 
       folders.set(workspacePath, {
         sessionCount: 0,
-        modified: Date.now(),
         path: workspacePath,
+        modified: Date.now(),
         name: workspaceDisplayName(workspacePath),
         ...this.workspaceAttention(workspacePath, attentionStatuses)
       });
@@ -625,7 +640,7 @@ export class ChatService {
         );
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
-      this.persistState({ lastWorkspace: this.workspaceCwd });
+      this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
 
       return { ok: true, status: await this.getStatus() };
@@ -1585,6 +1600,18 @@ export class ChatService {
       ...(this.selectedModelKey ? { selectedModelKey: this.selectedModelKey } : {})
     });
     return model;
+  }
+
+  private workspaceHistoryFor(workspacePath: string): Record<string, number> {
+    const workspaceHistory = this.appState.workspaceHistory ?? {};
+    return workspaceHistoryWith(workspaceHistory, workspacePath);
+  }
+
+  private persistWorkspace(workspacePath: string): void {
+    this.persistState({
+      lastWorkspace: workspacePath,
+      workspaceHistory: this.workspaceHistoryFor(workspacePath)
+    });
   }
 
   private persistState(patch: Partial<StartState>): void {
