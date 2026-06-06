@@ -134,7 +134,7 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
   const splitDiffView = diffViewMode === 'split';
 
   return (
-    <div class="flex min-h-full flex-col gap-4 outline-0">
+    <div class="flex min-h-full flex-col outline-0">
       {patch.kind === 'ready' && (
         <header class="sticky top-0 z-30 flex items-center justify-between gap-3 bg-panel px-4 pt-4 text-sm leading-6 font-medium">
           <div class="flex min-w-0 items-center gap-3">

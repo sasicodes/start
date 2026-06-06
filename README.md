@@ -14,10 +14,12 @@
 Use pnpm.
 
 - install: `pnpm install`
-- desktop: `pnpm dev` or `pnpm desktop`
-- mobile: `pnpm mobile`
-- web: `pnpm web`
-- relay: `pnpm relay`
+
+- [desktop](https://github.com/sasicodes/start/tree/main/packages/desktop): `pnpm dev` or `pnpm desktop`
+- [ios](https://github.com/sasicodes/start/tree/main/packages/ios): open in Xcode
+- [relay](https://github.com/sasicodes/start/tree/main/packages/relay): `pnpm relay`
+- [web](https://github.com/sasicodes/start/tree/main/packages/web): `pnpm web`
+
 - check: `pnpm check`
 - build: `pnpm build`
 - package desktop: `pnpm package`

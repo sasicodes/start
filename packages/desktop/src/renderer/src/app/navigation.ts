@@ -3,7 +3,7 @@ import { routeUrl, sameRoute, currentRoute, type AppRoute } from '@renderer/util
 import type { RefObject } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 
-const initialSurface = (): AppSurface =>
+export const initialSurface = (): AppSurface =>
   new URLSearchParams(window.location.search).get('surface') === 'composer' ? 'composer' : 'main';
 
 export const routeForSession = (sessionId: string): AppRoute =>
@@ -44,6 +44,10 @@ export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement>) =>
     const frame = requestAnimationFrame(() => textareaRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [route.name, surface, textareaRef]);
+
+  useEffect(() => {
+    document.documentElement.dataset.surface = surface;
+  }, [surface]);
 
   useEffect(() => {
     const syncRoute = () => setRoute(currentRoute());
