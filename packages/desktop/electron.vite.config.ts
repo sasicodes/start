@@ -21,7 +21,7 @@ export default defineConfig({
       externalizeDeps: false,
       reportCompressedSize: false,
       rollupOptions: {
-        external: ['electron', /^node:/, '@silvia-odwyer/photon-node'],
+        external: ['electron', /^node:/, '@silvia-odwyer/photon-node', 'bufferutil', 'utf-8-validate'],
         output: {
           format: 'cjs',
           codeSplitting: false,

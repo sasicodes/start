@@ -1,5 +1,6 @@
-import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
+import type { AppSettingsResult, MobileRelaySettings, ProviderAuthStatus } from '@preload/index';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
+import { Mobile } from '@renderer/shared/settings/mobile';
 import { Personalization } from '@renderer/shared/settings/personalization';
 import { Providers } from '@renderer/shared/settings/providers';
 import { Shortcuts } from '@renderer/shared/settings/shortcuts';
@@ -10,6 +11,7 @@ import { memo } from 'preact/compat';
 interface SettingsProps {
   tab: SettingsTab;
   onClose: () => void;
+  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   providers: ProviderAuthStatus[];
   solidWindowBackground: boolean;
@@ -17,6 +19,7 @@ interface SettingsProps {
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
+  onMobileRelayChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
   onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
@@ -26,11 +29,13 @@ export const Settings = memo(
     tab,
     onClose,
     providers,
+    mobileRelay,
     onTabChange,
     onSaveApiKey,
     composerShortcut,
     solidWindowBackground,
     onLoginSubscription,
+    onMobileRelayChange,
     onDisconnectProvider,
     onComposerShortcutChange,
     onSolidWindowBackgroundChange
@@ -58,6 +63,8 @@ export const Settings = memo(
               onLoginSubscription={onLoginSubscription}
               onDisconnectProvider={onDisconnectProvider}
             />
+          ) : tab === 'mobile' ? (
+            <Mobile settings={mobileRelay} onChange={onMobileRelayChange} />
           ) : (
             <Shortcuts composerShortcut={composerShortcut} />
           )}

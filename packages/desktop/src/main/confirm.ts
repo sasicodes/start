@@ -1,4 +1,4 @@
-import type { BrowserWindow as ElectronBrowserWindow, MessageBoxOptions } from 'electron';
+import type { MessageBoxOptions } from 'electron';
 import electron from 'electron';
 
 const { dialog } = electron;
@@ -7,30 +7,27 @@ let closeConfirmation: Promise<boolean> | null = null;
 
 const confirmationOptions: MessageBoxOptions = {
   cancelId: 0,
-  defaultId: 0,
-  type: 'question',
-  buttons: ['Cancel', 'OK'],
-  message: 'Are you sure you want to close this window?'
+  defaultId: 1,
+  type: 'warning',
+  message: 'Quit Start?',
+  buttons: ['Cancel', 'Quit'],
+  detail: 'Active local threads on this machine will be interrupted'
 };
 
-const showCloseConfirmation = async (window: ElectronBrowserWindow | null) => {
-  const result =
-    window && !window.isDestroyed()
-      ? await dialog.showMessageBox(window, confirmationOptions)
-      : await dialog.showMessageBox(confirmationOptions);
-
+const showCloseConfirmation = async () => {
+  const result = await dialog.showMessageBox(confirmationOptions);
   return result.response === 1;
 };
 
-const runCloseConfirmation = async (window: ElectronBrowserWindow | null) => {
+const runCloseConfirmation = async () => {
   try {
-    return await showCloseConfirmation(window);
+    return await showCloseConfirmation();
   } finally {
     closeConfirmation = null;
   }
 };
 
-export const confirmClose = (window: ElectronBrowserWindow | null) => {
-  if (!closeConfirmation) closeConfirmation = runCloseConfirmation(window);
+export const confirmClose = () => {
+  if (!closeConfirmation) closeConfirmation = runCloseConfirmation();
   return closeConfirmation;
 };

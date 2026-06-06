@@ -1,35 +1,78 @@
-import { readStartState, updateStartState } from '@main/storage';
+import { loadDesktopId } from '@main/device';
+import { readStartState, updateStartState, type MobileRelaySettings } from '@main/storage';
 import electron from 'electron';
+import * as v from 'valibot';
 
 const { globalShortcut } = electron;
 
-export type AppSettings = {
+export interface AppSettings {
   composerShortcut: string;
   solidWindowBackground: boolean;
-};
+  mobileRelay: MobileRelaySettings;
+}
+
+export const defaultMobileRelaySettings = {
+  enabled: false,
+  desktopId: '',
+  relayUrl: '',
+  relayToken: ''
+} satisfies MobileRelaySettings;
 
 export const defaultAppSettings = {
+  solidWindowBackground: false,
   composerShortcut: 'Control+Space',
-  solidWindowBackground: false
+  mobileRelay: defaultMobileRelaySettings
 } satisfies AppSettings;
 
-export const parseSettings = (value: unknown): AppSettings => {
-  if (!value || typeof value !== 'object') return defaultAppSettings;
-  const settings = value as Partial<AppSettings>;
+const booleanSchema = v.fallback(v.boolean(), false);
+const trimmedStringSchema = v.fallback(v.pipe(v.string(), v.trim()), '');
+
+const mobileRelaySettingsSchema = v.fallback(
+  v.object({
+    enabled: booleanSchema,
+    relayUrl: trimmedStringSchema,
+    desktopId: trimmedStringSchema,
+    relayToken: trimmedStringSchema
+  }),
+  defaultMobileRelaySettings
+);
+
+const appSettingsSchema = v.fallback(
+  v.object({
+    mobileRelay: mobileRelaySettingsSchema,
+    solidWindowBackground: booleanSchema,
+    composerShortcut: v.fallback(v.pipe(v.string(), v.trim(), v.minLength(1)), defaultAppSettings.composerShortcut)
+  }),
+  defaultAppSettings
+);
+
+const settingsWithDesktopId = (settings: AppSettings): AppSettings => {
+  if (settings.mobileRelay.desktopId) return settings;
+
   return {
-    composerShortcut:
-      typeof settings.composerShortcut === 'string' && settings.composerShortcut.trim()
-        ? settings.composerShortcut
-        : defaultAppSettings.composerShortcut,
-    solidWindowBackground: settings.solidWindowBackground === true
+    ...settings,
+    mobileRelay: {
+      ...settings.mobileRelay,
+      desktopId: loadDesktopId()
+    }
   };
 };
 
-export const readAppSettings = async (): Promise<AppSettings> => parseSettings(readStartState());
+export const parseSettings = (value: unknown): AppSettings => v.parse(appSettingsSchema, value);
+
+export const readAppSettings = async (): Promise<AppSettings> => {
+  const base = parseSettings(readStartState());
+  const settings = settingsWithDesktopId(base);
+  if (settings.mobileRelay.desktopId !== base.mobileRelay.desktopId) {
+    updateStartState({ mobileRelay: settings.mobileRelay });
+  }
+  return settings;
+};
 
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
-  const nextSettings = parseSettings(settings);
+  const nextSettings = settingsWithDesktopId(parseSettings(settings));
   updateStartState({
+    mobileRelay: nextSettings.mobileRelay,
     composerShortcut: nextSettings.composerShortcut,
     solidWindowBackground: nextSettings.solidWindowBackground
   });

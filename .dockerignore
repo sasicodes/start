@@ -1,0 +1,11 @@
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!patches
+!patches/**
+!packages
+!packages/relay
+!packages/relay/**
+**/node_modules
+**/dist

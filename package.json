@@ -14,7 +14,6 @@
     "build:desktop": "pnpm --filter @start/desktop build",
     "build:web": "pnpm --filter @start/web build",
     "check": "pnpm run check:pins && pnpm run lint && pnpm run format && pnpm run typecheck",
-    "check:deps": "pnpm --filter @start/mobile check:deps",
     "check:fix": "pnpm run check:pins && biome check . --write && pnpm run typecheck",
     "check:pins": "node scripts/check-dependency-pins.js",
     "desktop": "pnpm --filter @start/desktop dev",
@@ -24,10 +23,10 @@
     "format:fix": "biome format . --write",
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome lint . --error-on-warnings",
-    "mobile": "pnpm --filter @start/mobile dev",
     "package": "pnpm --filter @start/desktop package",
+    "relay": "pnpm --filter @start/relay build && pnpm --filter @start/relay start",
     "test": "pnpm --filter @start/desktop test",
-    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck && pnpm --filter @start/web typecheck",
+    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/relay typecheck && pnpm --filter @start/web typecheck",
     "web": "pnpm --filter @start/web dev"
   },
   "devDependencies": {

@@ -1,16 +1,26 @@
+import type { MobileRelaySettings } from '@preload/index';
 import { useCallback, useEffect, useState } from 'preact/hooks';
+
+const emptyMobileRelaySettings = {
+  enabled: false,
+  desktopId: '',
+  relayUrl: '',
+  relayToken: ''
+} satisfies MobileRelaySettings;
 
 export const useRendererRuntime = () => {
   const [composerShortcut, setComposerShortcut] = useState('Control+Space');
+  const [mobileRelay, setMobileRelay] = useState<MobileRelaySettings>(emptyMobileRelaySettings);
   const [solidWindowBackground, setSolidWindowBackground] = useState(false);
 
   useEffect(() => {
     let active = true;
 
-    void window.pi.app
+    window.pi.app
       .settings()
       .then((settings) => {
         if (active) {
+          setMobileRelay(settings.mobileRelay);
           setComposerShortcut(settings.composerShortcut);
           setSolidWindowBackground(settings.solidWindowBackground);
         }
@@ -32,6 +42,12 @@ export const useRendererRuntime = () => {
     return result;
   }, []);
 
+  const updateMobileRelay = useCallback(async (settings: MobileRelaySettings) => {
+    const result = await window.pi.app.setMobileRelaySettings(settings);
+    if (result.settings) setMobileRelay(result.settings.mobileRelay);
+    return result;
+  }, []);
+
   const updateSolidWindowBackground = useCallback(async (enabled: boolean) => {
     const result = await window.pi.app.setSolidWindowBackground(enabled);
     if (result.settings) setSolidWindowBackground(result.settings.solidWindowBackground);
@@ -39,8 +55,10 @@ export const useRendererRuntime = () => {
   }, []);
 
   return {
+    mobileRelay,
     composerShortcut,
     solidWindowBackground,
+    updateMobileRelay,
     updateComposerShortcut,
     updateSolidWindowBackground
   };

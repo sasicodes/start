@@ -128,7 +128,7 @@ export const createMainWindow = (): ElectronBrowserWindow => {
     event.preventDefault();
 
     try {
-      const confirmed = await confirmClose(window);
+      const confirmed = await confirmClose();
       if (!confirmed || window.isDestroyed()) return;
 
       mainWindowCloseConfirmed = true;

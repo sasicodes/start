@@ -2,9 +2,17 @@ import electron from 'electron';
 
 const { contextBridge, ipcRenderer, webUtils } = electron;
 
+export interface MobileRelaySettings {
+  enabled: boolean;
+  relayUrl: string;
+  desktopId: string;
+  relayToken: string;
+}
+
 export interface AppSettings {
   composerShortcut: string;
   solidWindowBackground: boolean;
+  mobileRelay: MobileRelaySettings;
 }
 
 export interface AppSettingsResult {
@@ -40,7 +48,7 @@ export interface ChatStatus {
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
-export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
 
 export interface ModelOption {
   id: string;
@@ -381,6 +389,9 @@ const api = {
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
+    mobileRelayCode: (): Promise<string> => ipcRenderer.invoke('app:mobile-relay-code'),
+    onMobileRelayCode: (listener: (code: string) => void): IpcDisposer =>
+      onIpc<[string]>('app:mobile-relay-code', listener),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
@@ -408,6 +419,8 @@ const api = {
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
+    setMobileRelaySettings: (settings: MobileRelaySettings): Promise<AppSettingsResult> =>
+      ipcRenderer.invoke('app:set-mobile-relay-settings', settings),
     setSolidWindowBackground: (enabled: boolean): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-solid-window-background', enabled),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),

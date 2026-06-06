@@ -4,7 +4,8 @@
 .
 ├── packages/
 │   ├── desktop/
-│   ├── mobile/
+│   ├── ios/
+│   ├── relay/
 │   └── web/
 ├── patches/
 └── scripts/
@@ -16,6 +17,7 @@ Use pnpm.
 - desktop: `pnpm dev` or `pnpm desktop`
 - mobile: `pnpm mobile`
 - web: `pnpm web`
+- relay: `pnpm relay`
 - check: `pnpm check`
 - build: `pnpm build`
 - package desktop: `pnpm package`

@@ -87,6 +87,15 @@ describe('patchFileKind', () => {
     expect(patchFileKind(file)).toBe('text');
   });
 
+  it('parses untracked summary patches without hunks', () => {
+    const file = firstFile(
+      ['diff --git "a/new.ts" "b/new.ts"', 'new file mode 100644', '--- /dev/null', '+++ b/new.ts'].join('\n')
+    );
+    expect(file.displayPath).toBe('new.ts');
+    expect(file.status).toBe('added');
+    expect(file.newMode).toBe('100644');
+  });
+
   it('marks added images as image regardless of git binary marker absence', () => {
     const file = firstFile(
       [

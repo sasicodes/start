@@ -46,6 +46,8 @@ import {
   validateAccelerator,
   writeAppSettings
 } from '@main/settings';
+import { DesktopRelay } from '@main/relay/client';
+import type { RelayCommand } from '@main/relay/protocol';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   getMainWindow,
@@ -80,6 +82,15 @@ let appQuitConfirmationOpen = false;
 let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
+
+const runMobileCommand = (command: RelayCommand) => {
+  if (command.action === 'prompt' && command.value) submitComposerToMainWindow(command.value);
+};
+
+const desktopRelay = new DesktopRelay({
+  onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
+  onCommand: runMobileCommand
+});
 let stopWorkspaceChanged: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
@@ -96,7 +107,7 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
-type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
 
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;
@@ -160,7 +171,7 @@ const confirmAppQuit = async () => {
 
   appQuitConfirmationOpen = true;
   try {
-    const confirmed = await confirmClose(getMainWindow());
+    const confirmed = await confirmClose();
     if (!confirmed) return;
 
     appQuitConfirmed = true;
@@ -238,6 +249,7 @@ if (!singleInstanceLock) {
     }
 
     appSettings = await readAppSettings();
+    desktopRelay.sync(appSettings.mobileRelay);
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -275,6 +287,7 @@ if (!singleInstanceLock) {
       getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
     );
     ipcMain.handle('app:settings', () => appSettings);
+    ipcMain.handle('app:mobile-relay-code', () => desktopRelay.currentCode);
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);
@@ -347,6 +360,15 @@ if (!singleInstanceLock) {
       return registered
         ? { ok: true, settings: nextSettings }
         : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
+    });
+    ipcMain.handle('app:set-mobile-relay-settings', async (_event, mobileRelay: AppSettings['mobileRelay']) => {
+      const nextSettings = await writeAppSettings({
+        ...(appSettings ?? defaultAppSettings),
+        mobileRelay
+      });
+      appSettings = nextSettings;
+      desktopRelay.sync(nextSettings.mobileRelay);
+      return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
       const previousSettings = appSettings;
@@ -424,6 +446,7 @@ app.on('before-quit', (event) => {
   stopResourceRefresh = null;
   stopAutoUpdateChecks();
   destroyBrowserSilently();
+  desktopRelay.stop();
   chat.dispose();
   deactivateWorkspaceAccess();
 });

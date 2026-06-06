@@ -5,8 +5,16 @@ import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
 import * as v from 'valibot';
 
+export interface MobileRelaySettings {
+  enabled: boolean;
+  relayUrl: string;
+  desktopId: string;
+  relayToken: string;
+}
+
 export type StartState = {
   lastWorkspace?: string;
+  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   selectedModelKey?: string;
   solidWindowBackground: boolean;
@@ -16,7 +24,15 @@ export type StartState = {
   sessionNotices?: Record<string, SessionNotice>;
 };
 
+const defaultMobileRelay = {
+  enabled: false,
+  desktopId: '',
+  relayUrl: '',
+  relayToken: ''
+} satisfies MobileRelaySettings;
+
 const defaultStartState = {
+  mobileRelay: defaultMobileRelay,
   solidWindowBackground: false,
   selectedThinkingLevel: 'high',
   composerShortcut: 'Control+Space'
@@ -26,9 +42,16 @@ export const startDir = () => baseDir;
 export const startCacheDir = () => join(startDir(), 'cache');
 export const startLogPath = () => join(startDir(), 'logs', 'app.log');
 
-const trimmedStringSchema = v.pipe(v.string(), v.trim(), v.minLength(1));
+const trimmedOptionalStringSchema = v.pipe(v.string(), v.trim());
+const trimmedStringSchema = v.pipe(trimmedOptionalStringSchema, v.minLength(1));
 const finiteNumberSchema = v.pipe(v.number(), v.finite());
 const thinkingLevelSchema = v.picklist(['low', 'medium', 'high', 'xhigh'] satisfies EffortLevel[]);
+const mobileRelaySchema = v.object({
+  enabled: v.boolean(),
+  desktopId: v.optional(trimmedOptionalStringSchema),
+  relayToken: v.optional(trimmedOptionalStringSchema),
+  relayUrl: v.optional(trimmedOptionalStringSchema)
+});
 const sessionNoticeSchema = v.object({
   kind: v.picklist(['completed', 'failed'] satisfies SessionNotice['kind'][]),
   seenAt: v.optional(finiteNumberSchema),
@@ -93,6 +116,18 @@ const parseSessionNotices = (value: unknown) => {
   return;
 };
 
+const parseMobileRelay = (value: unknown): MobileRelaySettings => {
+  const result = v.safeParse(mobileRelaySchema, value);
+  if (!result.success) return defaultMobileRelay;
+
+  return {
+    enabled: result.output.enabled,
+    desktopId: result.output.desktopId ?? '',
+    relayUrl: result.output.relayUrl ?? '',
+    relayToken: result.output.relayToken ?? ''
+  };
+};
+
 const parseThinkingLevel = (value: unknown): EffortLevel => {
   const result = v.safeParse(thinkingLevelSchema, value);
   return result.success ? result.output : defaultStartState.selectedThinkingLevel;
@@ -107,6 +142,7 @@ export const parseStartState = (value: unknown): StartState => {
   const workspaceHistory = parseWorkspaceHistory(state.workspaceHistory);
   const workspaceBookmarks = parseStringRecord(state.workspaceBookmarks);
   return {
+    mobileRelay: parseMobileRelay(state.mobileRelay),
     composerShortcut: parseTrimmedString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     solidWindowBackground: state.solidWindowBackground === true,
     selectedThinkingLevel: parseThinkingLevel(state.selectedThinkingLevel),
@@ -120,6 +156,7 @@ export const parseStartState = (value: unknown): StartState => {
 
 const stateKey = {
   lastWorkspace: 'last_workspace',
+  mobileRelay: 'mobile_relay',
   composerShortcut: 'composer_shortcut',
   selectedModelKey: 'selected_model_key',
   workspaceHistory: 'workspace_history',
@@ -183,6 +220,7 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
 
 const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   lastWorkspace: raw[stateKey.lastWorkspace],
+  mobileRelay: raw[stateKey.mobileRelay],
   composerShortcut: raw[stateKey.composerShortcut],
   selectedModelKey: raw[stateKey.selectedModelKey],
   workspaceHistory: raw[stateKey.workspaceHistory],
@@ -203,6 +241,7 @@ export const readStartState = (): StartState => {
 export const writeStartState = (state: StartState): StartState => {
   const nextState = parseStartState(state);
   runStartTransaction(() => {
+    writeRow(stateKey.mobileRelay, nextState.mobileRelay);
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
     writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
