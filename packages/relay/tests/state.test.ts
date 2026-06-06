@@ -24,6 +24,14 @@ describe('RelayState', () => {
     expect(state.consumePairing(pairing.code)).toBeNull();
   });
 
+  it('generates unique six-digit numeric pairing codes', () => {
+    const state = new RelayState();
+    const codes = Array.from({ length: 100 }, () => state.createPairing('desktop-1', 1000).code);
+
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) expect(code).toMatch(/^[1-9]\d{5}$/u);
+  });
+
   it('drops expired pairing codes on access', () => {
     const state = new RelayState();
     const pairing = state.createPairing('desktop-1', -1);
