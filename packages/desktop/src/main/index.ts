@@ -35,7 +35,7 @@ import {
 import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
 import { confirmClose } from '@main/confirm';
 import { clearAppFocusTimer, getAppFocusState, onAppFocusChanged, scheduleAppFocusStateChanged } from '@main/focus';
-import { type GitFileRef, getGitChangeSummary, getGitFileBlob, getGitPatch } from '@main/git';
+import { type GitFileRef, getGitFileBlob } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
@@ -63,6 +63,7 @@ import {
   withComposerBlurSuppressed
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
+import { GitChangesService } from '@main/workspace/changes';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
 import electron from 'electron';
 
@@ -75,6 +76,10 @@ if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
 
 const chat = new ChatService();
+const gitChanges = new GitChangesService({
+  currentWorkspace: () => chat.getWorkspaceCwd(),
+  notify: (payload) => sendToRendererWindows('app:git-changes-changed', payload)
+});
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
 let appQuitConfirmed = false;
@@ -274,12 +279,8 @@ if (!singleInstanceLock) {
     ipcMain.handle('app:list-root-items', async (_event, relativePath: string, scope: RootItemsScope = 'workspace') =>
       listRootItems(relativePath, scope, chat.getWorkspaceCwd())
     );
-    ipcMain.handle('app:git-changes', (_event, workspacePath?: string) =>
-      getGitChangeSummary(workspacePath ?? chat.getWorkspaceCwd())
-    );
-    ipcMain.handle('app:git-patch', (_event, workspacePath?: string) =>
-      getGitPatch(workspacePath ?? chat.getWorkspaceCwd())
-    );
+    ipcMain.handle('app:git-changes', (_event, workspacePath?: string) => gitChanges.getSummary(workspacePath));
+    ipcMain.handle('app:git-patch', (_event, workspacePath?: string) => gitChanges.getPatch(workspacePath));
     ipcMain.handle('app:git-file-blob', (_event, workspacePath: string, filePath: string, ref: GitFileRef) =>
       getGitFileBlob(workspacePath ?? chat.getWorkspaceCwd(), filePath, ref)
     );
@@ -447,6 +448,7 @@ app.on('before-quit', (event) => {
   stopAutoUpdateChecks();
   destroyBrowserSilently();
   desktopRelay.stop();
+  gitChanges.dispose();
   chat.dispose();
   deactivateWorkspaceAccess();
 });

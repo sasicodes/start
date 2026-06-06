@@ -218,6 +218,12 @@ export interface GitPatch {
   sections: GitPatchSection[];
 }
 
+export interface GitChangesPayload {
+  workspacePath: string;
+  patch?: GitPatch;
+  summary?: GitChangeSummary;
+}
+
 export type GitFileRef = 'head' | 'working';
 
 export interface GitFileBlob {
@@ -371,6 +377,8 @@ const api = {
     gitPatch: (path?: string): Promise<GitPatch | undefined> => ipcRenderer.invoke('app:git-patch', path),
     gitFileBlob: (workspacePath: string, filePath: string, ref: GitFileRef): Promise<GitFileBlob | undefined> =>
       ipcRenderer.invoke('app:git-file-blob', workspacePath, filePath, ref),
+    onGitChangesChanged: (listener: (payload: GitChangesPayload) => void): IpcDisposer =>
+      onIpc<[GitChangesPayload]>('app:git-changes-changed', listener),
     workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
