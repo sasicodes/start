@@ -17,6 +17,9 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
       <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
         {messages.map((message) => {
           const steering = message.kind === 'steer';
+          const attachmentLabel = message.attachmentCount
+            ? `${message.attachmentCount} ${message.attachmentCount === 1 ? 'image' : 'images'} attached`
+            : '';
 
           return (
             <li
@@ -25,6 +28,7 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
             >
               <div class="min-w-0 flex-1 px-1">
                 <div class="truncate text-sm leading-5 font-medium text-ink">{message.text}</div>
+                {attachmentLabel ? <div class="truncate text-xs leading-4 text-soft">{attachmentLabel}</div> : null}
               </div>
               <div class="flex flex-none items-center gap-1">
                 <button

@@ -84,8 +84,9 @@ export type QueuedMessageKind = 'steer' | 'followUp';
 
 export type QueuedMessage = {
   id: string;
-  text: string;
   kind: QueuedMessageKind;
+  text: string;
+  attachmentCount?: number;
 };
 
 export type QueuedTurnStart = {

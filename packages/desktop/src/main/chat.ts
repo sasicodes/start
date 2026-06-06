@@ -151,6 +151,13 @@ type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
 
+const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => ({
+  id: message.id,
+  kind: message.kind,
+  text: message.text,
+  ...(message.images && message.images.length > 0 ? { attachmentCount: message.images.length } : {})
+});
+
 type SessionRuntimeState = {
   abortSequence: number;
   isGenerating: boolean;
@@ -1126,11 +1133,7 @@ export class ChatService {
   }
 
   private visibleQueuedMessages(runtimeState = this.activeRuntimeState()): QueuedMessage[] {
-    return (runtimeState?.queuedMessages ?? []).map((message) => ({
-      id: message.id,
-      kind: message.kind,
-      text: message.text
-    }));
+    return (runtimeState?.queuedMessages ?? []).map(visibleQueuedMessage);
   }
 
   private emitQueueUpdate(webContents: WebContents): void {
@@ -1142,8 +1145,8 @@ export class ChatService {
     webContents.send('chat:queue-update', messages);
   }
 
-  private consumeQueuedText(messages: string[], text: string): boolean {
-    const index = messages.indexOf(text);
+  private consumeQueuedMessageText(messages: string[], message: QueuedMessage): boolean {
+    const index = messages.findIndex((text) => this.queuedMessageMatches(message, text));
     if (index === -1) return false;
 
     messages.splice(index, 1);
@@ -1157,26 +1160,26 @@ export class ChatService {
     const steeringMessages = [...steering];
     const followUpMessages = [...followUp];
     const nextMessages: PendingQueuedMessage[] = [];
-    const deliveredMessages: QueuedMessage[] = [];
+    const deliveredMessages: PendingQueuedMessage[] = [];
 
     for (const message of runtimeState.queuedMessages) {
-      if (message.kind === 'steer' && this.consumeQueuedText(steeringMessages, message.text)) {
+      if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
-      } else if (message.kind === 'followUp' && this.consumeQueuedText(followUpMessages, message.text)) {
+      } else if (message.kind === 'followUp' && this.consumeQueuedMessageText(followUpMessages, message)) {
         nextMessages.push(message);
-      } else if (this.consumeQueuedText(steeringMessages, message.text)) {
+      } else if (this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push({ ...message, kind: 'steer' });
-      } else if (this.consumeQueuedText(followUpMessages, message.text)) {
+      } else if (this.consumeQueuedMessageText(followUpMessages, message)) {
         nextMessages.push({ ...message, kind: 'followUp' });
       } else {
-        deliveredMessages.push({ id: message.id, kind: message.kind, text: message.text });
+        deliveredMessages.push(message);
       }
     }
 
     for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
     for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
 
-    runtimeState.queueDeliveryCandidates.push(...deliveredMessages);
+    runtimeState.queueDeliveryCandidates.push(...deliveredMessages.map(visibleQueuedMessage));
     runtimeState.queuedMessages = nextMessages;
     this.emitQueueUpdate(webContents);
   }
@@ -1201,6 +1204,7 @@ export class ChatService {
         ...(images.length > 0 ? { images } : {})
       };
       runtimeState.queuedMessages.push(message);
+      this.emitQueueUpdate(webContents);
       if (images.length > 0) {
         await session.followUp(text, images);
       } else {

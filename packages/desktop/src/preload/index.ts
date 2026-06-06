@@ -125,8 +125,9 @@ export type QueuedMessageKind = 'followUp' | 'steer';
 
 export interface QueuedMessage {
   id: string;
-  text: string;
   kind: QueuedMessageKind;
+  text: string;
+  attachmentCount?: number;
 }
 
 export interface QueuedTurnStart {
