@@ -35,9 +35,12 @@ type GitSectionStats = {
   deletions: number;
 };
 
+type UntrackedPatchMode = 'full' | 'none' | 'summary';
+
 type UntrackedFileData = {
   insertions: number;
   patch: string;
+  summaryPatch: string;
 };
 
 const maxPatchFiles = 2000;
@@ -126,6 +129,11 @@ const untrackedTextPatch = (filePath: string, content: Buffer, mode: number) => 
   ].join('\n');
 };
 
+const untrackedHeaderPatch = (filePath: string, mode: number) =>
+  [patchLine(filePath), `new file mode ${fileMode(mode)}`, '--- /dev/null', `+++ ${patchPath('b', filePath)}`].join(
+    '\n'
+  );
+
 const untrackedBinaryPatch = (filePath: string, mode: number) =>
   [
     patchLine(filePath),
@@ -137,43 +145,52 @@ const untrackedBinaryPatch = (filePath: string, mode: number) =>
 const getUntrackedFileData = async (
   cwd: string,
   filePath: string,
-  includePatch: boolean
+  patchMode: UntrackedPatchMode
 ): Promise<UntrackedFileData> => {
   const absolutePath = path.resolve(cwd, filePath);
   const details = await stat(absolutePath).catch(() => {});
-  if (!details?.isFile()) return { insertions: 0, patch: '' };
+  if (!details?.isFile()) return { insertions: 0, patch: '', summaryPatch: '' };
 
-  if (details.size > maxUntrackedFileBytes) return { insertions: 0, patch: '' };
+  const summaryPatch = patchMode === 'none' ? '' : untrackedHeaderPatch(filePath, details.mode);
+  if (details.size > maxUntrackedFileBytes) return { insertions: 0, patch: summaryPatch, summaryPatch };
 
   const content = await readFile(absolutePath).catch(() => {});
-  if (!content) return { insertions: 0, patch: '' };
+  if (!content) return { insertions: 0, patch: summaryPatch, summaryPatch };
 
   const insertions = countTextLines(content);
-  if (!includePatch) return { insertions, patch: '' };
+  if (patchMode !== 'full' || insertions > maxPatchLines) return { insertions, patch: summaryPatch, summaryPatch };
 
   return {
     insertions,
+    summaryPatch,
     patch: content.includes(0)
       ? untrackedBinaryPatch(filePath, details.mode)
       : untrackedTextPatch(filePath, content, details.mode)
   };
 };
 
-const getUntrackedData = async (cwd: string, filePaths: string[], includePatch: boolean) => {
+const getUntrackedData = async (cwd: string, filePaths: string[], patchMode: UntrackedPatchMode) => {
   const items = await Promise.all(
-    filePaths.slice(0, maxUntrackedFiles).map((filePath) => getUntrackedFileData(cwd, filePath, includePatch))
+    filePaths.slice(0, maxUntrackedFiles).map((filePath) => getUntrackedFileData(cwd, filePath, patchMode))
   );
+
+  const insertions = items.reduce((total, item) => total + item.insertions, 0);
+  const patchItems =
+    patchMode === 'full' && insertions <= maxPatchLines
+      ? items
+      : items.map((item) => ({
+          ...item,
+          patch: item.summaryPatch
+        }));
 
   return {
     files: new Set(filePaths),
     deletions: 0,
-    insertions: items.reduce((total, item) => total + item.insertions, 0),
-    patch: includePatch
-      ? items
-          .map((item) => item.patch)
-          .filter(Boolean)
-          .join('\n')
-      : ''
+    insertions,
+    patch: patchItems
+      .map((item) => item.patch)
+      .filter(Boolean)
+      .join('\n')
   };
 };
 
@@ -275,7 +292,7 @@ export const getGitChangeSummary = async (cwd: string): Promise<GitChangeSummary
     if (insideWorkTree !== 'true') return;
 
     const { staged, unstaged, untrackedFiles } = await getWorkingTreeStats(cwd);
-    const untracked = await getUntrackedData(cwd, untrackedFiles, false);
+    const untracked = await getUntrackedData(cwd, untrackedFiles, 'none');
     const files = new Set([...staged.files, ...unstaged.files, ...untracked.files]);
 
     return {
@@ -297,7 +314,7 @@ export const getGitPatch = async (cwd: string): Promise<GitPatch | undefined> =>
     const stagedLimited = !canLoadPatch(staged);
     const unstagedLimited = !canLoadPatch(unstaged);
     const includeUntrackedPatch = untrackedFiles.length <= maxUntrackedFiles && untrackedFiles.length <= maxPatchFiles;
-    const untracked = await getUntrackedData(cwd, untrackedFiles, includeUntrackedPatch);
+    const untracked = await getUntrackedData(cwd, untrackedFiles, includeUntrackedPatch ? 'full' : 'summary');
     const untrackedLimited = !includeUntrackedPatch || !canLoadPatch(untracked);
     const [stagedPatch, unstagedPatch] = await Promise.all([
       stagedLimited ? '' : gitDiffStaged(cwd, ['--binary', '-M']),
@@ -307,7 +324,7 @@ export const getGitPatch = async (cwd: string): Promise<GitPatch | undefined> =>
     const sections = [
       patchSection('staged', stagedPatch, staged, stagedLimited),
       patchSection('unstaged', unstagedPatch, unstaged, unstagedLimited),
-      patchSection('untracked', untrackedLimited ? '' : untracked.patch, untracked, untrackedLimited)
+      patchSection('untracked', untracked.patch, untracked, untrackedLimited)
     ].filter(isPatchSection);
 
     return { sections };

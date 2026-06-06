@@ -27,7 +27,7 @@
     "mobile": "pnpm --filter @start/mobile dev",
     "package": "pnpm --filter @start/desktop package",
     "test": "pnpm --filter @start/desktop test",
-    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck && pnpm --filter @start/web typecheck",
+    "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/mobile typecheck && pnpm --filter @start/relay typecheck && pnpm --filter @start/web typecheck",
     "web": "pnpm --filter @start/web dev"
   },
   "devDependencies": {
