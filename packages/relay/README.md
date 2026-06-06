@@ -4,9 +4,7 @@ The relay stores nothing — no prompts, files, history, or credentials. Connect
 
 ### Host on the cloud
 
-A prebuilt image is published on every change at `ghcr.io/sasicodes/start/relay:latest` (public, no auth to pull).
-
-On [Railway](https://railway.app): New Project → Deploy from a Docker Image → `ghcr.io/sasicodes/start/relay:latest`, then set `START_RELAY_TOKEN` to a secret. Copy the service URL (`wss://…`) and the token into the desktop app.
+Deploy the prebuilt [Docker image](https://github.com/sasicodes/start/pkgs/container/start%2Frelay) on any host that runs a single container, then set `START_RELAY_TOKEN` to a secret. Copy the service URL (`wss://…`) and the token into the desktop app.
 
 ### Host locally behind a proxy
 
