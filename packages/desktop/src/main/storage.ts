@@ -6,10 +6,10 @@ import type { EffortLevel, SessionNotice } from '@main/types';
 import * as v from 'valibot';
 
 export interface MobileRelaySettings {
-  desktopId: string;
   enabled: boolean;
-  relayToken: string;
   relayUrl: string;
+  desktopId: string;
+  relayToken: string;
 }
 
 export type StartState = {

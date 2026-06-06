@@ -10,8 +10,8 @@ interface MobileProps {
 
 interface MobileInputProps {
   value: string;
-  type: 'text' | 'password';
   placeholder: string;
+  type: 'text' | 'password';
   onInput: (value: string) => void;
 }
 

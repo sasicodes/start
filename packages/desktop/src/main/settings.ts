@@ -1,13 +1,14 @@
 import { loadDesktopId } from '@main/device';
 import { readStartState, updateStartState, type MobileRelaySettings } from '@main/storage';
 import electron from 'electron';
+import * as v from 'valibot';
 
 const { globalShortcut } = electron;
 
 export interface AppSettings {
-  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   solidWindowBackground: boolean;
+  mobileRelay: MobileRelaySettings;
 }
 
 export const defaultMobileRelaySettings = {
@@ -23,19 +24,27 @@ export const defaultAppSettings = {
   solidWindowBackground: false
 } satisfies AppSettings;
 
-const parseString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const booleanSchema = v.fallback(v.boolean(), false);
+const trimmedStringSchema = v.fallback(v.pipe(v.string(), v.trim()), '');
 
-const parseMobileRelaySettings = (value: unknown): MobileRelaySettings => {
-  if (!value || typeof value !== 'object') return defaultMobileRelaySettings;
-  const settings = value as Partial<MobileRelaySettings>;
+const mobileRelaySettingsSchema = v.fallback(
+  v.object({
+    enabled: booleanSchema,
+    relayUrl: trimmedStringSchema,
+    desktopId: trimmedStringSchema,
+    relayToken: trimmedStringSchema
+  }),
+  defaultMobileRelaySettings
+);
 
-  return {
-    enabled: settings.enabled === true,
-    desktopId: parseString(settings.desktopId),
-    relayUrl: parseString(settings.relayUrl),
-    relayToken: parseString(settings.relayToken)
-  };
-};
+const appSettingsSchema = v.fallback(
+  v.object({
+    mobileRelay: mobileRelaySettingsSchema,
+    solidWindowBackground: booleanSchema,
+    composerShortcut: v.fallback(v.pipe(v.string(), v.trim(), v.minLength(1)), defaultAppSettings.composerShortcut)
+  }),
+  defaultAppSettings
+);
 
 const settingsWithDesktopId = (settings: AppSettings): AppSettings => {
   if (settings.mobileRelay.desktopId) return settings;
@@ -49,15 +58,7 @@ const settingsWithDesktopId = (settings: AppSettings): AppSettings => {
   };
 };
 
-export const parseSettings = (value: unknown): AppSettings => {
-  if (!value || typeof value !== 'object') return defaultAppSettings;
-  const settings = value as Partial<AppSettings>;
-  return {
-    mobileRelay: parseMobileRelaySettings(settings.mobileRelay),
-    composerShortcut: parseString(settings.composerShortcut) || defaultAppSettings.composerShortcut,
-    solidWindowBackground: settings.solidWindowBackground === true
-  };
-};
+export const parseSettings = (value: unknown): AppSettings => v.parse(appSettingsSchema, value);
 
 export const readAppSettings = async (): Promise<AppSettings> => {
   const base = parseSettings(readStartState());

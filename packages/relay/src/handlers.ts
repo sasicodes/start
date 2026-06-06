@@ -2,14 +2,14 @@ import * as v from 'valibot';
 import type { RawData, WebSocket } from 'ws';
 import { pairingRequestMessage, relayError } from './messages';
 import {
-  type HelloMobile,
-  type HelloDesktop,
   parseJsonMessage,
-  type MobileMessage,
+  type HelloMobile,
   helloMobileSchema,
-  type DesktopMessage,
-  mobileMessageSchema,
+  type HelloDesktop,
   helloDesktopSchema,
+  type MobileMessage,
+  mobileMessageSchema,
+  type DesktopMessage,
   desktopMessageSchema
 } from './protocol';
 import { closeWithError, sendJson } from './socket';

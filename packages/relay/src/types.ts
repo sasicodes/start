@@ -7,8 +7,8 @@ export interface RelayConfig {
 }
 
 export interface RelayError {
-  type: 'relay.error';
   message: string;
+  type: 'relay.error';
 }
 
 export interface RelaySnapshot {
