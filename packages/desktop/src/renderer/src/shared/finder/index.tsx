@@ -70,7 +70,7 @@ const FinderRow = ({ item, onSelect, activeItemKey }: FinderRowProps) => {
         onSelect(item);
       }}
       class={tw(
-        'flex w-full min-w-0 rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control',
+        'flex w-full min-w-0 rounded-xl border-0 px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none hover:bg-control focus-visible:bg-control',
         isCommand ? 'flex-col items-start gap-0.5' : 'items-center gap-2',
         selected ? 'bg-control' : 'bg-transparent'
       )}

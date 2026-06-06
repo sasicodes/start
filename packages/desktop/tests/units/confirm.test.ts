@@ -1,0 +1,30 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { confirmClose } from '@main/confirm';
+import { dialog, resetDialog, setDialogResponse } from '../fakes/electron.js';
+
+describe('confirmClose', () => {
+  beforeEach(() => {
+    resetDialog();
+  });
+
+  it('returns false when the dialog is canceled', async () => {
+    setDialogResponse(0);
+
+    await expect(confirmClose(null)).resolves.toBe(false);
+  });
+
+  it('returns true when the dialog is accepted', async () => {
+    setDialogResponse(1);
+
+    await expect(confirmClose(null)).resolves.toBe(true);
+  });
+
+  it('uses the close window message', async () => {
+    await confirmClose(null);
+
+    expect(dialog.calls[0]?.[0]).toMatchObject({
+      type: 'question',
+      message: 'Are you sure you want to close this window?'
+    });
+  });
+});

@@ -37,6 +37,26 @@ export const clipboard = {
   readImage: () => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })
 };
 
+let dialogResponse = 0;
+const messageBoxCalls: unknown[][] = [];
+
+export const resetDialog = () => {
+  dialogResponse = 0;
+  messageBoxCalls.length = 0;
+};
+
+export const setDialogResponse = (response: number) => {
+  dialogResponse = response;
+};
+
+export const dialog = {
+  calls: messageBoxCalls,
+  showMessageBox: async (...args: unknown[]) => {
+    messageBoxCalls.push(args);
+    return { response: dialogResponse };
+  }
+};
+
 export const nativeImage = {
   createFromBuffer: (_buffer: Buffer) => null
 };
@@ -213,6 +233,7 @@ export const resetFakeBrowserWindows = () => {
 const fakeElectronModule = {
   app,
   shell,
+  dialog,
   clipboard,
   nativeImage,
   BrowserWindow: {

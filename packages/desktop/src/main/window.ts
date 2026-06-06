@@ -1,6 +1,8 @@
 import { join } from 'node:path';
 import { appIconPath, appName, isDev, isMac } from '@main/application';
+import { confirmClose } from '@main/confirm';
 import { environment } from '@main/environment';
+import { isCloseWindowInput } from '@main/utils/keyboard';
 import type { BrowserWindow as ElectronBrowserWindow, BrowserWindowConstructorOptions } from 'electron';
 import electron from 'electron';
 
@@ -12,6 +14,7 @@ let mainWindow: ElectronBrowserWindow | null = null;
 let composerWindow: ElectronBrowserWindow | null = null;
 let composerVisible = false;
 let composerOpenedFromStart = false;
+let mainWindowCloseConfirmed = false;
 let composerBlurSuppressionDepth = 0;
 
 const openExternalUrl = (url: string) => {
@@ -33,6 +36,12 @@ const loadRenderer = (window: ElectronBrowserWindow, surface: 'composer' | 'main
 };
 
 const activeDisplayWorkArea = () => screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+
+export const allowMainWindowClose = () => {
+  mainWindowCloseConfirmed = true;
+};
+
+export const getMainWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 
 const fitComposerWindowToActiveDisplay = (window: ElectronBrowserWindow) => {
   const nextBounds = activeDisplayWorkArea();
@@ -83,6 +92,7 @@ export const createMainWindow = (): ElectronBrowserWindow => {
 
   const window = new BrowserWindow(options);
   mainWindow = window;
+  mainWindowCloseConfirmed = false;
 
   window.setBackgroundColor('#00000000');
   if (isMac) {
@@ -94,6 +104,13 @@ export const createMainWindow = (): ElectronBrowserWindow => {
     window.show();
   });
 
+  window.webContents.on('before-input-event', (event, input) => {
+    if (!isCloseWindowInput(input)) return;
+
+    event.preventDefault();
+    window.close();
+  });
+
   window.webContents.on('will-navigate', (event, url) => {
     if (url === window.webContents.getURL()) return;
     event.preventDefault();
@@ -103,6 +120,20 @@ export const createMainWindow = (): ElectronBrowserWindow => {
   window.webContents.setWindowOpenHandler(({ url }) => {
     openExternalUrl(url);
     return { action: 'deny' };
+  });
+
+  window.on('close', async (event) => {
+    if (mainWindowCloseConfirmed) return;
+
+    event.preventDefault();
+
+    try {
+      const confirmed = await confirmClose(window);
+      if (!confirmed || window.isDestroyed()) return;
+
+      mainWindowCloseConfirmed = true;
+      window.close();
+    } catch {}
   });
 
   window.on('closed', () => {

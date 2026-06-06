@@ -25,6 +25,7 @@ import {
   type BrowserOpenOptions
 } from '@main/browser/index';
 import { ChatService } from '@main/chat';
+import { confirmClose } from '@main/confirm';
 import {
   parseCliAdditionalData,
   parseCliLaunchArgv,
@@ -47,13 +48,15 @@ import {
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
-  createMainWindow,
-  hideComposerWindow,
-  sendToMainWindow,
-  sendToRendererWindows,
+  getMainWindow,
   showMainWindow,
-  submitComposerToMainWindow,
+  createMainWindow,
+  sendToMainWindow,
+  hideComposerWindow,
+  allowMainWindowClose,
   toggleComposerWindow,
+  sendToRendererWindows,
+  submitComposerToMainWindow,
   withComposerBlurSuppressed
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
@@ -72,10 +75,12 @@ installWindowHardening();
 const chat = new ChatService();
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
+let appQuitConfirmed = false;
+let appQuitConfirmationOpen = false;
 let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
-let stopWorkspaceChanged: (() => void) | undefined;
 let stopResourceRefresh: (() => void) | null = null;
+let stopWorkspaceChanged: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -143,12 +148,29 @@ const menuActions = () => ({
   onShowSettings: showSettings,
   onShowShortcuts: showShortcuts,
   onQuickAccess: () => toggleQuickAccess('menu'),
-  onNewSession: () => void startNewSession('menu'),
-  onCheckForUpdates: () => void checkForUpdatesNow(),
+  onNewSession: () => startNewSession('menu'),
+  onCheckForUpdates: () => checkForUpdatesNow(),
   recentSessions: chat.getStatusItemRecentSessions(),
-  onOpenRecentSession: (sessionId: string) => void openRecentSession(sessionId),
+  onOpenRecentSession: (sessionId: string) => openRecentSession(sessionId),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
+
+const confirmAppQuit = async () => {
+  if (appQuitConfirmationOpen) return;
+
+  appQuitConfirmationOpen = true;
+  try {
+    const confirmed = await confirmClose(getMainWindow());
+    if (!confirmed) return;
+
+    appQuitConfirmed = true;
+    allowMainWindowClose();
+    app.quit();
+  } catch {
+  } finally {
+    appQuitConfirmationOpen = false;
+  }
+};
 
 const showCliError = (message: string) => {
   dialog.showErrorBox('Start command failed', message);
@@ -359,25 +381,49 @@ if (!singleInstanceLock) {
   });
 }
 
+const shutdownAnalyticsAndQuit = async () => {
+  try {
+    await shutdownAnalytics();
+  } catch {}
+
+  app.quit();
+};
+
+const shutdownAnalyticsSilently = async () => {
+  try {
+    await shutdownAnalytics();
+  } catch {}
+};
+
+const destroyBrowserSilently = async () => {
+  try {
+    await destroyBrowser();
+  } catch {}
+};
+
 app.on('before-quit', (event) => {
-  if (!quitAfterAnalyticsShutdown) {
-    quitAfterAnalyticsShutdown = true;
+  if (!appQuitConfirmed && getMainWindow()) {
     event.preventDefault();
-    void shutdownAnalytics()
-      .catch(() => {})
-      .finally(() => app.quit());
+    confirmAppQuit();
     return;
   }
 
-  void shutdownAnalytics();
+  if (!quitAfterAnalyticsShutdown) {
+    quitAfterAnalyticsShutdown = true;
+    event.preventDefault();
+    shutdownAnalyticsAndQuit();
+    return;
+  }
+
+  shutdownAnalyticsSilently();
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
   stopWorkspaceChanged?.();
-  stopWorkspaceChanged = undefined;
+  stopWorkspaceChanged = null;
   stopResourceRefresh?.();
   stopResourceRefresh = null;
   stopAutoUpdateChecks();
-  void destroyBrowser();
+  destroyBrowserSilently();
   chat.dispose();
   deactivateWorkspaceAccess();
 });
