@@ -107,6 +107,10 @@ final class AppState {
         return true
     }
 
+    func retryConnection() {
+        relay.retry()
+    }
+
     func refreshChats() async {
         chatsLoaded = false
         try? await Task.sleep(for: .milliseconds(420))

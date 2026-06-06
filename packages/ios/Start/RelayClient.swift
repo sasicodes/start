@@ -6,6 +6,10 @@ enum RelayConnectionStatus: String {
     case connecting = "Connecting"
     case offline = "Offline"
     case reconnecting = "Reconnecting"
+
+    var isAttempting: Bool {
+        self == .connecting || self == .reconnecting
+    }
 }
 
 @Observable
@@ -13,6 +17,7 @@ enum RelayConnectionStatus: String {
 final class RelayClient {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var lastRequest: RelayConnectionRequest?
     private var pendingPairingCode = ""
     private var receiveTask: Task<Void, Never>?
     private var socketTask: URLSessionWebSocketTask?
@@ -27,13 +32,33 @@ final class RelayClient {
         status.rawValue
     }
 
+    var canRetry: Bool {
+        lastRequest != nil
+    }
+
     func connect(url: URL, mobileId: String, token: String = "", pairingCode: String = "") {
+        let request = RelayConnectionRequest(
+            url: url,
+            token: token,
+            mobileId: mobileId,
+            pairingCode: pairingCode
+        )
+        lastRequest = request
+        connect(with: request)
+    }
+
+    func retry() {
+        guard let lastRequest else { return }
+        connect(with: lastRequest)
+    }
+
+    private func connect(with request: RelayConnectionRequest) {
         let shouldReconnect = socketTask != nil || connected
         disconnect()
         status = shouldReconnect ? .reconnecting : .connecting
-        pendingPairingCode = pairingCode
+        pendingPairingCode = request.pairingCode
 
-        let socketTask = URLSession.shared.webSocketTask(with: url)
+        let socketTask = URLSession.shared.webSocketTask(with: request.url)
         self.socketTask = socketTask
         lastError = ""
         socketTask.resume()
@@ -42,7 +67,7 @@ final class RelayClient {
             await self?.receiveMessages(from: socketTask)
         }
 
-        send(HelloMobile(mobileId: mobileId, token: token.isEmpty ? nil : token))
+        send(HelloMobile(mobileId: request.mobileId, token: request.token.isEmpty ? nil : request.token))
     }
 
     func disconnect() {
@@ -96,15 +121,20 @@ final class RelayClient {
         switch message {
         case .ready:
             connected = true
-            status = .connected
             if !pendingPairingCode.isEmpty {
+                status = .connecting
                 joinPairing(code: pendingPairingCode)
                 pendingPairingCode = ""
+            } else {
+                status = .connected
             }
         case .error(let text):
+            connected = false
             lastError = text
+            status = .offline
         case .pairingApproved(let desktopId):
             pairedDesktopId = desktopId
+            status = .connected
         case .desktopEvent(_, let payload):
             lastEvent = payload
         }
@@ -125,6 +155,13 @@ final class RelayClient {
             }
         }
     }
+}
+
+private struct RelayConnectionRequest {
+    let url: URL
+    let token: String
+    let mobileId: String
+    let pairingCode: String
 }
 
 struct HelloMobile: Encodable {
