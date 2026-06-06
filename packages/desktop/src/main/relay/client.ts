@@ -40,7 +40,7 @@ export const isRelayUrl = (value: string) => {
   }
 };
 
-const wsSocketFactory: RelaySocketFactory = (url, handlers) => {
+export const wsSocketFactory: RelaySocketFactory = (url, handlers) => {
   const socket = new WebSocket(url);
   socket.on('open', handlers.onOpen);
   socket.on('close', handlers.onClose);
