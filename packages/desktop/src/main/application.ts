@@ -4,7 +4,7 @@ import electron from 'electron';
 
 const { app } = electron;
 
-export const appId = 'one.intelligence.start';
+export const appId = app.isPackaged ? 'one.intelligence.start' : 'one.intelligence.start.dev';
 export const appName = 'start';
 export const isMac = process.platform === 'darwin';
 export const isProd = app.isPackaged;
