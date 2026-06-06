@@ -5,22 +5,54 @@ interface QrOptions {
   ecc: EccLevel;
 }
 
+interface Grid {
+  size: number;
+  modules: Uint8Array;
+  reserved: Uint8Array;
+}
+
 const eccOrdinal: Record<EccLevel, number> = { low: 0, medium: 1, quartile: 2, high: 3 };
 const eccFormatBits: Record<EccLevel, number> = { low: 1, medium: 0, quartile: 3, high: 2 };
 
 const eccCodewordsPerBlock = [
-  [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
-  [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
-  [-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
-  [-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+  [
+    -1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30,
+    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30
+  ],
+  [
+    -1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28,
+    28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28
+  ],
+  [
+    -1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30,
+    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30
+  ],
+  [
+    -1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30,
+    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30
+  ]
 ];
 
 const eccBlocks = [
-  [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
-  [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
-  [-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
-  [-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81]
+  [
+    -1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19,
+    19, 20, 21, 22, 24, 25
+  ],
+  [
+    -1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31,
+    33, 35, 37, 38, 40, 43, 45, 47, 49
+  ],
+  [
+    -1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43,
+    45, 48, 51, 53, 56, 59, 62, 65, 68
+  ],
+  [
+    -1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48,
+    51, 54, 57, 60, 63, 66, 70, 74, 77, 81
+  ]
 ];
+
+const lookup = (table: number[][], ordinal: number, version: number) => table[ordinal]?.[version] ?? 0;
 
 const reedSolomonMultiply = (x: number, y: number) => {
   let z = 0;
@@ -37,8 +69,8 @@ const reedSolomonDivisor = (degree: number) => {
   let root = 1;
   for (let i = 0; i < degree; i += 1) {
     for (let j = 0; j < degree; j += 1) {
-      result[j] = reedSolomonMultiply(result[j], root);
-      if (j + 1 < degree) result[j] ^= result[j + 1];
+      result[j] = reedSolomonMultiply(result[j] ?? 0, root);
+      if (j + 1 < degree) result[j] = (result[j] ?? 0) ^ (result[j + 1] ?? 0);
     }
     root = reedSolomonMultiply(root, 2);
   }
@@ -48,10 +80,11 @@ const reedSolomonDivisor = (degree: number) => {
 const reedSolomonRemainder = (data: Uint8Array, divisor: Uint8Array) => {
   const result = new Uint8Array(divisor.length);
   for (const byte of data) {
-    const factor = byte ^ result[0];
+    const factor = byte ^ (result[0] ?? 0);
     result.copyWithin(0, 1);
     result[result.length - 1] = 0;
-    for (let i = 0; i < result.length; i += 1) result[i] ^= reedSolomonMultiply(divisor[i], factor);
+    for (let i = 0; i < result.length; i += 1)
+      result[i] = (result[i] ?? 0) ^ reedSolomonMultiply(divisor[i] ?? 0, factor);
   }
   return result;
 };
@@ -69,7 +102,8 @@ const rawDataModules = (version: number) => {
 const dataCodewords = (version: number, ecc: EccLevel) => {
   const ordinal = eccOrdinal[ecc];
   return (
-    Math.floor(rawDataModules(version) / 8) - eccCodewordsPerBlock[ordinal][version] * eccBlocks[ordinal][version]
+    Math.floor(rawDataModules(version) / 8) -
+    lookup(eccCodewordsPerBlock, ordinal, version) * lookup(eccBlocks, ordinal, version)
   );
 };
 
@@ -77,8 +111,7 @@ const charCountBits = (version: number) => (version <= 9 ? 8 : 16);
 
 const selectVersion = (length: number, ecc: EccLevel) => {
   for (let version = 1; version <= 40; version += 1) {
-    const capacity = dataCodewords(version, ecc) * 8;
-    if (4 + charCountBits(version) + 8 * length <= capacity) return version;
+    if (4 + charCountBits(version) + 8 * length <= dataCodewords(version, ecc) * 8) return version;
   }
   throw new Error('qr payload too large');
 };
@@ -99,14 +132,17 @@ const buildCodewords = (bytes: Uint8Array, version: number, ecc: EccLevel) => {
   for (let pad = 0xec; bits.length < capacity; pad ^= 0xec ^ 0x11) appendBits(bits, pad, 8);
 
   const codewords = new Uint8Array(bits.length / 8);
-  for (let i = 0; i < bits.length; i += 1) codewords[i >>> 3] |= bits[i] << (7 - (i & 7));
+  for (let i = 0; i < bits.length; i += 1) {
+    const index = i >>> 3;
+    codewords[index] = (codewords[index] ?? 0) | ((bits[i] ?? 0) << (7 - (i & 7)));
+  }
   return codewords;
 };
 
 const interleaveBlocks = (codewords: Uint8Array, version: number, ecc: EccLevel) => {
   const ordinal = eccOrdinal[ecc];
-  const blockCount = eccBlocks[ordinal][version];
-  const eccLength = eccCodewordsPerBlock[ordinal][version];
+  const blockCount = lookup(eccBlocks, ordinal, version);
+  const eccLength = lookup(eccCodewordsPerBlock, ordinal, version);
   const total = Math.floor(rawDataModules(version) / 8);
   const shortBlockLength = Math.floor(total / blockCount);
   const shortBlockCount = blockCount - (total % blockCount);
@@ -124,12 +160,13 @@ const interleaveBlocks = (codewords: Uint8Array, version: number, ecc: EccLevel)
     blocks.push(block);
   }
 
+  const blockLength = blocks[0]?.length ?? 0;
   const result = new Uint8Array(total);
   let index = 0;
-  for (let i = 0; i < blocks[0].length; i += 1) {
+  for (let i = 0; i < blockLength; i += 1) {
     for (let j = 0; j < blocks.length; j += 1) {
       if (i !== shortBlockLength - eccLength || j >= shortBlockCount) {
-        result[index] = blocks[j][i];
+        result[index] = blocks[j]?.[i] ?? 0;
         index += 1;
       }
     }
@@ -146,22 +183,23 @@ const alignmentPositions = (version: number) => {
   return positions;
 };
 
-interface Grid {
-  size: number;
-  modules: boolean[][];
-  reserved: boolean[][];
-}
-
 const createGrid = (version: number): Grid => {
   const size = version * 4 + 17;
-  const modules = Array.from({ length: size }, () => new Array<boolean>(size).fill(false));
-  const reserved = Array.from({ length: size }, () => new Array<boolean>(size).fill(false));
-  return { size, modules, reserved };
+  return { size, modules: new Uint8Array(size * size), reserved: new Uint8Array(size * size) };
 };
 
+const cellIndex = (grid: Grid, x: number, y: number) => y * grid.size + x;
+const isDark = (grid: Grid, x: number, y: number) => grid.modules[cellIndex(grid, x, y)] === 1;
+const isReserved = (grid: Grid, x: number, y: number) => grid.reserved[cellIndex(grid, x, y)] === 1;
+const setModule = (grid: Grid, x: number, y: number, dark: boolean) => {
+  grid.modules[cellIndex(grid, x, y)] = dark ? 1 : 0;
+};
+const reserve = (grid: Grid, x: number, y: number) => {
+  grid.reserved[cellIndex(grid, x, y)] = 1;
+};
 const setFunction = (grid: Grid, x: number, y: number, dark: boolean) => {
-  grid.modules[y][x] = dark;
-  grid.reserved[y][x] = true;
+  setModule(grid, x, y, dark);
+  reserve(grid, x, y);
 };
 
 const drawFinder = (grid: Grid, centerX: number, centerY: number) => {
@@ -185,12 +223,12 @@ const drawAlignment = (grid: Grid, centerX: number, centerY: number) => {
 
 const reserveFormatAreas = (grid: Grid) => {
   for (let i = 0; i < 9; i += 1) {
-    grid.reserved[8][i] = true;
-    grid.reserved[i][8] = true;
+    reserve(grid, i, 8);
+    reserve(grid, 8, i);
   }
   for (let i = 0; i < 8; i += 1) {
-    grid.reserved[8][grid.size - 1 - i] = true;
-    grid.reserved[grid.size - 1 - i][8] = true;
+    reserve(grid, grid.size - 1 - i, 8);
+    reserve(grid, 8, grid.size - 1 - i);
   }
 };
 
@@ -205,12 +243,11 @@ const drawFunctionPatterns = (grid: Grid, version: number) => {
   drawFinder(grid, 3, grid.size - 4);
 
   const positions = alignmentPositions(version);
+  const min = positions[0] ?? 0;
+  const max = positions[positions.length - 1] ?? 0;
   for (const ay of positions) {
     for (const ax of positions) {
-      const onFinder =
-        (ax === 6 && ay === 6) ||
-        (ax === 6 && ay === positions[positions.length - 1]) ||
-        (ax === positions[positions.length - 1] && ay === 6);
+      const onFinder = (ax === min && ay === min) || (ax === min && ay === max) || (ax === max && ay === min);
       if (!onFinder) drawAlignment(grid, ax, ay);
     }
   }
@@ -221,8 +258,8 @@ const drawFunctionPatterns = (grid: Grid, version: number) => {
   if (version >= 7) {
     for (let row = 0; row < 6; row += 1) {
       for (let col = 0; col < 3; col += 1) {
-        grid.reserved[row][grid.size - 11 + col] = true;
-        grid.reserved[grid.size - 11 + col][row] = true;
+        reserve(grid, grid.size - 11 + col, row);
+        reserve(grid, row, grid.size - 11 + col);
       }
     }
   }
@@ -237,9 +274,9 @@ const placeData = (grid: Grid, codewords: Uint8Array) => {
         const x = right - j;
         const upward = ((right + 1) & 2) === 0;
         const y = upward ? grid.size - 1 - vert : vert;
-        if (grid.reserved[y][x]) continue;
-        const value = bit < codewords.length * 8 && ((codewords[bit >>> 3] >>> (7 - (bit & 7))) & 1) !== 0;
-        grid.modules[y][x] = value;
+        if (isReserved(grid, x, y)) continue;
+        const dark = bit < codewords.length * 8 && (((codewords[bit >>> 3] ?? 0) >>> (7 - (bit & 7))) & 1) !== 0;
+        setModule(grid, x, y, dark);
         bit += 1;
       }
     }
@@ -270,7 +307,7 @@ const maskCondition = (mask: number, x: number, y: number) => {
 const applyMask = (grid: Grid, mask: number) => {
   for (let y = 0; y < grid.size; y += 1) {
     for (let x = 0; x < grid.size; x += 1) {
-      if (!grid.reserved[y][x] && maskCondition(mask, x, y)) grid.modules[y][x] = !grid.modules[y][x];
+      if (!isReserved(grid, x, y) && maskCondition(mask, x, y)) setModule(grid, x, y, !isDark(grid, x, y));
     }
   }
 };
@@ -280,15 +317,16 @@ const drawFormatBits = (grid: Grid, ecc: EccLevel, mask: number) => {
   let rem = data;
   for (let i = 0; i < 10; i += 1) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
   const bits = ((data << 10) | rem) ^ 0x5412;
+  const bit = (i: number) => ((bits >>> i) & 1) !== 0;
 
-  for (let i = 0; i <= 5; i += 1) grid.modules[i][8] = ((bits >>> i) & 1) !== 0;
-  grid.modules[7][8] = ((bits >>> 6) & 1) !== 0;
-  grid.modules[8][8] = ((bits >>> 7) & 1) !== 0;
-  grid.modules[8][7] = ((bits >>> 8) & 1) !== 0;
-  for (let i = 9; i < 15; i += 1) grid.modules[8][14 - i] = ((bits >>> i) & 1) !== 0;
+  for (let i = 0; i <= 5; i += 1) setModule(grid, 8, i, bit(i));
+  setModule(grid, 8, 7, bit(6));
+  setModule(grid, 8, 8, bit(7));
+  setModule(grid, 7, 8, bit(8));
+  for (let i = 9; i < 15; i += 1) setModule(grid, 14 - i, 8, bit(i));
 
-  for (let i = 0; i < 8; i += 1) grid.modules[8][grid.size - 1 - i] = ((bits >>> i) & 1) !== 0;
-  for (let i = 8; i < 15; i += 1) grid.modules[grid.size - 15 + i][8] = ((bits >>> i) & 1) !== 0;
+  for (let i = 0; i < 8; i += 1) setModule(grid, grid.size - 1 - i, 8, bit(i));
+  for (let i = 8; i < 15; i += 1) setModule(grid, 8, grid.size - 15 + i, bit(i));
 };
 
 const drawVersionBits = (grid: Grid, version: number) => {
@@ -300,81 +338,83 @@ const drawVersionBits = (grid: Grid, version: number) => {
     const value = ((bits >>> i) & 1) !== 0;
     const a = grid.size - 11 + (i % 3);
     const b = Math.floor(i / 3);
-    grid.modules[b][a] = value;
-    grid.modules[a][b] = value;
+    setModule(grid, a, b, value);
+    setModule(grid, b, a, value);
   }
 };
 
+const finderPattern = [true, false, true, true, true, false, true];
+
 const penaltyScore = (grid: Grid) => {
-  const { size, modules } = grid;
+  const { size } = grid;
   let score = 0;
 
-  for (let y = 0; y < size; y += 1) {
-    let runColor = modules[y][0];
+  const runScore = (read: (i: number) => boolean) => {
+    let runColor = read(0);
     let runLen = 1;
-    for (let x = 1; x < size; x += 1) {
-      if (modules[y][x] === runColor) {
+    for (let i = 1; i < size; i += 1) {
+      const cell = read(i);
+      if (cell === runColor) {
         runLen += 1;
         if (runLen === 5) score += 3;
         else if (runLen > 5) score += 1;
       } else {
-        runColor = modules[y][x];
+        runColor = cell;
         runLen = 1;
       }
     }
+  };
+
+  const finderLike = (read: (i: number) => boolean, index: number) => {
+    for (let k = 0; k < 7; k += 1) if (read(index + k) !== (finderPattern[k] === true)) return false;
+    let before = index >= 4;
+    for (let k = index - 4; k < index; k += 1) if (read(k)) before = false;
+    let after = index + 11 <= size;
+    for (let k = index + 7; k < index + 11; k += 1) if (read(k)) after = false;
+    return before || after;
+  };
+
+  for (let y = 0; y < size; y += 1) {
+    const read = (i: number) => i >= 0 && i < size && isDark(grid, i, y);
+    runScore(read);
+    for (let x = 0; x + 7 <= size; x += 1) if (finderLike(read, x)) score += 40;
   }
   for (let x = 0; x < size; x += 1) {
-    let runColor = modules[0][x];
-    let runLen = 1;
-    for (let y = 1; y < size; y += 1) {
-      if (modules[y][x] === runColor) {
-        runLen += 1;
-        if (runLen === 5) score += 3;
-        else if (runLen > 5) score += 1;
-      } else {
-        runColor = modules[y][x];
-        runLen = 1;
-      }
-    }
+    const read = (i: number) => i >= 0 && i < size && isDark(grid, x, i);
+    runScore(read);
+    for (let y = 0; y + 7 <= size; y += 1) if (finderLike(read, y)) score += 40;
   }
 
   for (let y = 0; y < size - 1; y += 1) {
     for (let x = 0; x < size - 1; x += 1) {
-      const c = modules[y][x];
-      if (c === modules[y][x + 1] && c === modules[y + 1][x] && c === modules[y + 1][x + 1]) score += 3;
-    }
-  }
-
-  const pattern = [true, false, true, true, true, false, true];
-  const hasFinderRun = (cells: boolean[], index: number) => {
-    if (pattern.some((value, k) => cells[index + k] !== value)) return false;
-    const before = cells.slice(Math.max(0, index - 4), index).every((value) => !value) && index >= 4;
-    const after =
-      cells.slice(index + 7, index + 11).every((value) => !value) && index + 11 <= cells.length;
-    return before || after;
-  };
-  for (let y = 0; y < size; y += 1) {
-    const row = modules[y];
-    const col = modules.map((r) => r[y]);
-    for (let x = 0; x + 7 <= size; x += 1) {
-      if (hasFinderRun(row, x)) score += 40;
-      if (hasFinderRun(col, x)) score += 40;
+      const cell = isDark(grid, x, y);
+      if (cell === isDark(grid, x + 1, y) && cell === isDark(grid, x, y + 1) && cell === isDark(grid, x + 1, y + 1))
+        score += 3;
     }
   }
 
   let dark = 0;
-  for (let y = 0; y < size; y += 1) for (let x = 0; x < size; x += 1) if (modules[y][x]) dark += 1;
-  const total = size * size;
-  const ratio = (dark * 100) / total;
+  for (let i = 0; i < grid.modules.length; i += 1) if (grid.modules[i] === 1) dark += 1;
+  const ratio = (dark * 100) / (size * size);
   score += Math.floor(Math.abs(ratio - 50) / 5) * 10;
   return score;
 };
 
 const cloneGrid = (grid: Grid): Grid => ({
   size: grid.size,
-  modules: grid.modules.map((row) => [...row]),
-  reserved: grid.reserved.map((row) => [...row])
+  modules: grid.modules.slice(),
+  reserved: grid.reserved.slice()
 });
+
+const toMatrix = (grid: Grid): boolean[][] => {
+  const rows: boolean[][] = [];
+  for (let y = 0; y < grid.size; y += 1) {
+    const row: boolean[] = [];
+    for (let x = 0; x < grid.size; x += 1) row.push(isDark(grid, x, y));
+    rows.push(row);
+  }
+  return rows;
+};
 
 export const qrMatrix = (text: string, ecc: EccLevel = 'medium') => {
   const bytes = new TextEncoder().encode(text);
@@ -386,7 +426,6 @@ export const qrMatrix = (text: string, ecc: EccLevel = 'medium') => {
   placeData(base, codewords);
 
   let bestGrid = base;
-  let bestMask = 0;
   let bestScore = Number.POSITIVE_INFINITY;
   for (let mask = 0; mask < 8; mask += 1) {
     const candidate = cloneGrid(base);
@@ -396,21 +435,30 @@ export const qrMatrix = (text: string, ecc: EccLevel = 'medium') => {
     const score = penaltyScore(candidate);
     if (score < bestScore) {
       bestScore = score;
-      bestMask = mask;
       bestGrid = candidate;
     }
   }
-  void bestMask;
-  return bestGrid.modules;
+  return toMatrix(bestGrid);
+};
+
+const inFinder = (size: number, x: number, y: number) => {
+  const within = (originX: number, originY: number) =>
+    x >= originX && x < originX + 7 && y >= originY && y < originY + 7;
+  return within(0, 0) || within(size - 7, 0) || within(0, size - 7);
 };
 
 export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
   const modules = qrMatrix(text, ecc);
-  const dimension = modules.length + margin * 2;
+  const size = modules.length;
+  const dimension = size + margin * 2;
   let cells = '';
-  for (let y = 0; y < modules.length; y += 1) {
-    for (let x = 0; x < modules.length; x += 1) {
-      if (modules[y][x]) cells += `<rect x="${x + margin}" y="${y + margin}" width="1" height="1" rx="0.35" />`;
+  for (let y = 0; y < size; y += 1) {
+    const row = modules[y];
+    if (!row) continue;
+    for (let x = 0; x < size; x += 1) {
+      if (!row[x]) continue;
+      const radius = inFinder(size, x, y) ? 0 : 0.4;
+      cells += `<rect x="${x + margin}" y="${y + margin}" width="1" height="1" rx="${radius}" />`;
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" fill="currentColor">${cells}</svg>`;

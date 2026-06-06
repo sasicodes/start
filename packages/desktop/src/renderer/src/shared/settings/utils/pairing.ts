@@ -1,5 +1,5 @@
 import type { MobileRelaySettings } from '@preload/index';
-import qrcode from 'qrcode-generator';
+import { qrSvg } from '@renderer/shared/settings/utils/qr';
 
 export const mobilePairingPayload = (settings: MobileRelaySettings) =>
   JSON.stringify({
@@ -10,9 +10,5 @@ export const mobilePairingPayload = (settings: MobileRelaySettings) =>
     ...(settings.relayToken ? { relayToken: settings.relayToken } : {})
   });
 
-export const mobilePairingQrSvg = (settings: MobileRelaySettings) => {
-  const qr = qrcode(0, 'M');
-  qr.addData(mobilePairingPayload(settings), 'Byte');
-  qr.make();
-  return qr.createSvgTag({ cellSize: 5, margin: 4, scalable: true });
-};
+export const mobilePairingQrSvg = (settings: MobileRelaySettings) =>
+  qrSvg(mobilePairingPayload(settings), { ecc: 'medium', margin: 4 });

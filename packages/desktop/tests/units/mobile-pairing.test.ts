@@ -43,6 +43,6 @@ describe('mobile pairing', () => {
     });
 
     expect(svg).toContain('<svg');
-    expect(svg).toContain('<path');
+    expect(svg).toContain('<rect');
   });
 });
