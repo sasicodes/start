@@ -67,8 +67,6 @@ final class RelayClient {
         do {
             while !Task.isCancelled {
                 let message = try await socketTask.receive()
-                connected = true
-                status = .connected
                 if let decoded = decode(message) {
                     handle(decoded)
                 }
@@ -97,6 +95,7 @@ final class RelayClient {
     private func handle(_ message: ServerMessage) {
         switch message {
         case .ready:
+            connected = true
             status = .connected
             if !pendingPairingCode.isEmpty {
                 joinPairing(code: pendingPairingCode)
