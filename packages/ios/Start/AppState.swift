@@ -63,6 +63,13 @@ final class AppState {
         activeWorkspace = connection.workspace
     }
 
+    func refreshSessions() async {
+        sessionsLoaded = false
+        try? await Task.sleep(for: .milliseconds(420))
+        guard !Task.isCancelled else { return }
+        sessionsLoaded = true
+    }
+
     func session(for id: UUID) -> ChatSession? {
         sessions.first { $0.id == id }
     }

@@ -56,8 +56,17 @@ struct HomeTopMenu: View {
                     Label {
                         Text(connection.name)
                     } icon: {
-                        Image(systemName: activeConnectionID == connection.id ? "checkmark" : "laptopcomputer")
-                            .foregroundStyle(connection.state.symbolColor)
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(systemName: "laptopcomputer")
+                                .foregroundStyle(connection.state.symbolColor)
+
+                            if activeConnectionID == connection.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundStyle(connection.state.symbolColor)
+                                    .background(StartTheme.Colors.background, in: Circle())
+                            }
+                        }
                     }
                 }
             }

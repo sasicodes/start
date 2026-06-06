@@ -8,6 +8,9 @@ release
 .vite
 *.log
 *.tsbuildinfo
+*.xcuserstate
+*.xcbkptlist
+**/xcuserdata/
 .env
 .env.*
 !.env.example

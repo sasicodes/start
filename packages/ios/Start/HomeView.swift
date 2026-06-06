@@ -18,15 +18,26 @@ struct HomeView: View {
             .padding(.bottom, StartTheme.Metrics.homeListBottomPadding)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .overlay(alignment: .bottomTrailing) {
-            NewChatButton(transitionNamespace: transitionNamespace) {
-                withAnimation(.smooth(duration: 0.18)) {
-                    appState.openComposer()
+        .overlay {
+            VStack {
+                Spacer()
+
+                HStack {
+                    Spacer()
+
+                    NewChatButton(transitionNamespace: transitionNamespace) {
+                        withAnimation(.smooth(duration: 0.18)) {
+                            appState.openComposer()
+                        }
+                    }
+                    .padding(.trailing, StartTheme.Metrics.floatingButtonHorizontalPadding)
+                    .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
                 }
             }
-            .padding(.trailing, StartTheme.Metrics.floatingButtonHorizontalPadding)
-            .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
             .ignoresSafeArea(.container, edges: .bottom)
+        }
+        .refreshable {
+            await appState.refreshSessions()
         }
         .animation(.easeOut(duration: 0.16), value: appState.sessionsLoaded)
         .sheet(isPresented: $scannerOpen) {
@@ -83,24 +94,57 @@ private struct ConnectionScannerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("New connection")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(StartTheme.Colors.ink)
+
+                Text("Scan the QR code on your desktop to pair this iPhone.")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundStyle(StartTheme.Colors.softInk)
+            }
+            .padding(.horizontal, 4)
+
             QRCodeScannerView { _ in
                 dismiss()
             }
-            .ignoresSafeArea(edges: .bottom)
-            .navigationTitle("Scan QR Code")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
+            .overlay {
+                ScannerReticle()
             }
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .presentationDetents([.large])
+        .padding(18)
+        .presentationDetents([.fraction(0.78)])
+        .presentationCornerRadius(34)
         .presentationDragIndicator(.visible)
         .presentationBackground(StartTheme.Colors.background)
+    }
+}
+
+private struct ScannerReticle: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(.white.opacity(0.82), lineWidth: 2)
+                .frame(width: 220, height: 220)
+                .shadow(color: .black.opacity(0.24), radius: 18)
+
+            VStack {
+                Spacer()
+
+                Text("Center the code")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 18)
+            }
+        }
+        .padding(18)
+        .allowsHitTesting(false)
     }
 }
 
