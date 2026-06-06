@@ -16,10 +16,10 @@ final class RelayClient {
     private var receiveTask: Task<Void, Never>?
     private var socketTask: URLSessionWebSocketTask?
 
-    var connected = false
     var lastError = ""
-    var lastEvent: RelayPayload?
+    var connected = false
     var pairedDesktopId = ""
+    var lastEvent: RelayPayload?
     var status = RelayConnectionStatus.offline
 
     var statusLabel: String {
@@ -112,11 +112,9 @@ final class RelayClient {
                 let data = try encoder.encode(message)
                 let text = String(decoding: data, as: UTF8.self)
                 try await socketTask.send(.string(text))
-                connected = true
-                status = .connected
             } catch {
                 connected = false
-                status = .reconnecting
+                status = .offline
                 lastError = error.localizedDescription
             }
         }
@@ -199,4 +197,24 @@ struct MobileCommand: Encodable {
 struct RelayPayload: Codable {
     let action: String
     let value: String
+}
+
+struct PairingPayload: Decodable {
+    let type: String
+    let version: Int
+    let relayUrl: String
+    let desktopId: String
+    let relayToken: String?
+}
+
+enum DeviceIdentity {
+    private static let mobileIdKey = "start:mobile-id"
+
+    static var mobileId: String {
+        let defaults = UserDefaults.standard
+        if let existing = defaults.string(forKey: mobileIdKey) { return existing }
+        let generated = UUID().uuidString
+        defaults.set(generated, forKey: mobileIdKey)
+        return generated
+    }
 }

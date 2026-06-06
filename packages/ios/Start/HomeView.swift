@@ -214,9 +214,11 @@ private extension AnyTransition {
 
 private struct ConnectionScannerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        QRCodeScannerView { _ in
+        QRCodeScannerView { payload in
+            appState.pair(with: payload)
             dismiss()
         }
         .overlay {
