@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+enum RelayConnectionStatus: String {
+    case connected = "Connected"
+    case connecting = "Connecting"
+    case offline = "Offline"
+    case reconnecting = "Reconnecting"
+}
+
 @Observable
 @MainActor
 final class RelayClient {
@@ -10,9 +17,16 @@ final class RelayClient {
 
     var connected = false
     var lastError = ""
+    var status = RelayConnectionStatus.offline
+
+    var statusLabel: String {
+        status.rawValue
+    }
 
     func connect(url: URL, mobileId: String, token: String = "") {
+        let shouldReconnect = socketTask != nil || connected
         disconnect()
+        status = shouldReconnect ? .reconnecting : .connecting
 
         let socketTask = URLSession.shared.webSocketTask(with: url)
         self.socketTask = socketTask
@@ -32,6 +46,7 @@ final class RelayClient {
         socketTask?.cancel(with: .goingAway, reason: nil)
         socketTask = nil
         connected = false
+        status = .offline
     }
 
     func joinPairing(code: String, name: String = "iPhone") {
@@ -47,11 +62,14 @@ final class RelayClient {
             while !Task.isCancelled {
                 _ = try await socketTask.receive()
                 connected = true
+                status = .connected
             }
         } catch is CancellationError {
             connected = false
+            status = .offline
         } catch {
             connected = false
+            status = .reconnecting
             lastError = error.localizedDescription
         }
     }
@@ -65,8 +83,10 @@ final class RelayClient {
                 let text = String(decoding: data, as: UTF8.self)
                 try await socketTask.send(.string(text))
                 connected = true
+                status = .connected
             } catch {
                 connected = false
+                status = .reconnecting
                 lastError = error.localizedDescription
             }
         }

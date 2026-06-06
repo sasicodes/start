@@ -19,9 +19,9 @@ struct RootView: View {
                             switch route {
                             case .home:
                                 HomeView(transitionNamespace: transitionNamespace)
-                            case .composer:
-                                ComposerView()
-                                    .navigationTransition(.zoom(sourceID: "composer", in: transitionNamespace))
+                            case .newSession:
+                                NewSessionView()
+                                    .navigationTransition(.zoom(sourceID: "new-session", in: transitionNamespace))
                             case let .session(id):
                                 if let session = appState.session(for: id) {
                                     SessionDetailView(session: session)

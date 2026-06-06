@@ -2,13 +2,17 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppState.self) private var appState
+    @FocusState private var searchFocused: Bool
     @State private var scannerOpen = false
     @State private var expandedWorkspaces = Set(Workspace.allCases)
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        @Bindable var appState = appState
+        let searchActive = searchFocused || !appState.searchText.isEmpty
+
+        return ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 16) {
                 titleRow
 
@@ -22,17 +26,22 @@ struct HomeView: View {
             VStack {
                 Spacer()
 
-                HStack {
-                    Spacer()
+                HStack(spacing: searchActive ? 6 : 10) {
+                    HomeSearchBar(text: $appState.searchText, focused: $searchFocused)
 
-                    NewChatButton(transitionNamespace: transitionNamespace) {
-                        withAnimation(.smooth(duration: 0.18)) {
-                            appState.openComposer()
+                    if !searchActive {
+                        SessionButton(transitionNamespace: transitionNamespace) {
+                            withAnimation(.smooth(duration: 0.18)) {
+                                appState.openNewSession()
+                            }
                         }
+                        .transition(.scale(scale: 0.76).combined(with: .opacity))
                     }
-                    .padding(.trailing, StartTheme.Metrics.floatingButtonHorizontalPadding)
-                    .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
                 }
+                .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: searchActive)
+                .padding(.leading, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+                .padding(.trailing, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+                .padding(.bottom, searchActive ? 16 : StartTheme.Metrics.floatingButtonBottomPadding)
             }
             .ignoresSafeArea(.container, edges: .bottom)
         }
@@ -49,11 +58,22 @@ struct HomeView: View {
         }
     }
 
+    private var visibleSessions: [Session] {
+        let query = appState.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return appState.sessions }
+
+        return appState.sessions.filter { session in
+            session.title.localizedCaseInsensitiveContains(query)
+                || session.projectName.localizedCaseInsensitiveContains(query)
+                || session.branchName.localizedCaseInsensitiveContains(query)
+        }
+    }
+
     private var contentList: some View {
         Group {
             if appState.sessionsLoaded {
                 WorkspaceSessionList(
-                    sections: workspaceSessionSections(from: appState.sessions, sort: sort),
+                    sections: workspaceSessionSections(from: visibleSessions, sort: sort),
                     expandedWorkspaces: $expandedWorkspaces,
                     transitionNamespace: transitionNamespace
                 )
@@ -68,10 +88,18 @@ struct HomeView: View {
 
     private var titleRow: some View {
         HStack(alignment: .center) {
-            Text("Start")
-                .font(StartTheme.Text.title)
-                .foregroundStyle(StartTheme.Colors.ink)
-                .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Start")
+                    .font(StartTheme.Text.title)
+                    .foregroundStyle(StartTheme.Colors.ink)
+
+                Text(appState.connectionStatusLabel)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(StartTheme.Colors.softInk.opacity(0.48))
+                    .contentTransition(.opacity)
+                    .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
+            }
+            .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
 
             Spacer()
 
@@ -87,6 +115,100 @@ struct HomeView: View {
             )
         }
         .frame(height: StartTheme.Metrics.floatingButtonSize)
+    }
+}
+
+private struct HomeSearchBar: View {
+    @Binding var text: String
+    @FocusState.Binding var focused: Bool
+
+    private var active: Bool {
+        focused || !text.isEmpty
+    }
+
+    var body: some View {
+        HStack(spacing: active ? 6 : 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(StartTheme.Colors.ink.opacity(0.82))
+
+                TextField(
+                    "",
+                    text: $text,
+                    prompt: Text("Search")
+                        .foregroundStyle(StartTheme.Colors.ink.opacity(0.62))
+                )
+                .focused($focused)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(StartTheme.Colors.ink)
+                    .tint(StartTheme.Colors.ink)
+                    .submitLabel(.search)
+                    .textInputAutocapitalization(.never)
+                    .disableAutocorrection(true)
+                    .accessibilityLabel("Search sessions")
+                    .onSubmit {
+                        focused = false
+                    }
+            }
+            .frame(maxWidth: .infinity, minHeight: StartTheme.Metrics.floatingButtonHitSize)
+            .padding(.leading, 16)
+            .padding(.trailing, 14)
+            .contentShape(Capsule())
+            .glassSearchCapsule(active: active)
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    focused = true
+                }
+            )
+
+            if active {
+                Button {
+                    withAnimation(.bouncy(duration: 0.32, extraBounce: 0.22)) {
+                        text = ""
+                        focused = false
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(StartTheme.Colors.ink.opacity(0.84))
+                        .frame(width: StartTheme.Metrics.floatingButtonHitSize, height: StartTheme.Metrics.floatingButtonHitSize)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+                .glassSearchCapsule(active: true)
+                .accessibilityLabel("Close search")
+                .transition(.searchBubbleSplit)
+                .zIndex(1)
+            }
+        }
+        .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: active)
+    }
+}
+
+private struct SearchBubbleSplitModifier: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(active ? 1 : 0.82, anchor: .leading)
+            .offset(x: active ? 0 : -18)
+            .opacity(active ? 1 : 0)
+    }
+}
+
+private extension AnyTransition {
+    static var searchBubbleSplit: AnyTransition {
+        .asymmetric(
+            insertion: .modifier(
+                active: SearchBubbleSplitModifier(active: false),
+                identity: SearchBubbleSplitModifier(active: true)
+            ),
+            removal: .modifier(
+                active: SearchBubbleSplitModifier(active: false),
+                identity: SearchBubbleSplitModifier(active: true)
+            )
+        )
     }
 }
 

@@ -8,47 +8,64 @@ final class AppState {
     var activeWorkspace = Workspace.start
     var connections = Connection.samples
     var draft = ""
-    var composerFocused = false
+    var searchText = ""
+    var promptFocused = false
     var sessionsLoaded = false
     var path: [AppRoute] = []
     var relay = RelayClient()
 
-    let sessions = ChatSession.samples
+    let sessions = Session.samples
+
+    var activeBranchName: String {
+        activeWorkspace.branchName
+    }
+
+    var activeConnection: Connection? {
+        connections.first { $0.id == activeConnectionID }
+    }
 
     var activeProjectName: String {
-        sessions.first { $0.workspace == activeWorkspace }?.projectName ?? "start"
+        activeWorkspace.rawValue
+    }
+
+    var activeWorkspaceLabel: String {
+        "\(activeProjectName) / \(activeBranchName)"
+    }
+
+    var connectionStatusLabel: String {
+        relay.statusLabel
     }
 
     var route: AppRoute {
         path.last ?? .home
     }
 
-    func openComposer() {
+    func openNewSession() {
         draft = ""
-        composerFocused = false
-        path = [.composer]
+        promptFocused = false
+        path = [.newSession]
     }
 
-    func closeComposer() {
-        composerFocused = false
+    func closeNewSession() {
+        promptFocused = false
         path = []
         draft = ""
     }
 
-    func openSession(_ session: ChatSession) {
+    func openSession(_ session: Session) {
         draft = ""
-        composerFocused = false
+        promptFocused = false
         path = [.session(session.id)]
     }
 
     func closeSession() {
-        composerFocused = false
+        promptFocused = false
         path = []
         draft = ""
     }
 
     func closeTop() {
-        composerFocused = false
+        promptFocused = false
         if path.isEmpty {
             return
         }
@@ -70,7 +87,7 @@ final class AppState {
         sessionsLoaded = true
     }
 
-    func session(for id: UUID) -> ChatSession? {
+    func session(for id: UUID) -> Session? {
         sessions.first { $0.id == id }
     }
 }

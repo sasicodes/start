@@ -25,17 +25,41 @@ struct GlassIconButton: View {
     }
 }
 
+struct SessionHeaderIconButton: View {
+    let systemName: String
+    let accessibilityLabel: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .frame(width: 38, height: 38)
+        }
+        .frame(width: 44, height: 44)
+        .contentShape(Circle())
+        .accessibilityLabel(accessibilityLabel)
+        .buttonStyle(.plain)
+        .glassCircle()
+    }
+}
+
 extension View {
     func glassCircle() -> some View {
         glassEffect(.regular.interactive(), in: .circle)
     }
 
     func glassProminentCircle(enabled: Bool = true) -> some View {
-        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(enabled ? 0.72 : 0.18)).interactive(), in: .circle)
+        glassEffect(.regular.tint(enabled ? Color.black : StartTheme.Colors.ink.opacity(0.14)).interactive(), in: .circle)
     }
 
     func glassCapsule(selected: Bool = false) -> some View {
-        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(selected ? 0.32 : 0.08)).interactive(), in: .capsule)
+        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(selected ? 0.16 : 0.02)).interactive(), in: .capsule)
+    }
+
+    func glassSearchCapsule(active: Bool = false) -> some View {
+        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(active ? 0.03 : 0.015)).interactive(), in: .capsule)
     }
 
     func glassRoundedRectangle(cornerRadius: CGFloat) -> some View {

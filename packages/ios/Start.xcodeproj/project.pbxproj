@@ -8,9 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		08B52B39ADB733EC3361D2AE /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0046F62276700C5B4323FB34 /* RootView.swift */; };
-		0FC7C905655279FEB3BAC79F /* NewChatButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BDFB5A58DE54B599AAE1ED /* NewChatButton.swift */; };
+		0FC7C905655279FEB3BAC79F /* SessionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4BDFB5A58DE54B599AAE1ED /* SessionButton.swift */; };
 		1558FBC49D238B0F1873C346 /* RelayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33F063459BC340CD341D5DE4 /* RelayClient.swift */; };
 		16C12FBF5BC9CAA98988FC97 /* HomeTopMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5AFA824600606AEDAB94BB6 /* HomeTopMenu.swift */; };
+		1A9B8C7D6E5F43210ABCDEF0 /* SessionHeaderMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8C7D6E5F43210ABCDEF01A /* SessionHeaderMetadata.swift */; };
+		1B9C8D7E6F543210ABCDEF01 /* SessionPromptBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C9D8E7F6543210ABCDEF012 /* SessionPromptBar.swift */; };
 		1E78EB1EB30E3C89429AB4BD /* WorkspaceSessionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B44102D58FB62241D6F564 /* WorkspaceSessionList.swift */; };
 		3FBB9D66E4F306E7F77ED905 /* Glass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B655A1FCA4212EC83855D8DD /* Glass.swift */; };
 		422735E5C4E687BD31B4E092 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4381B4DC75D82DCC7A5712ED /* AppState.swift */; };
@@ -21,14 +23,16 @@
 		B7ACE47D004440DEC1374572 /* EdgeFadeOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9808BC1586172A6BA74C08E6 /* EdgeFadeOverlay.swift */; };
 		C2261BF82D1F319FC19486FD /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12BAEEDADCAE38B90D4A1295 /* HomeView.swift */; };
 		F0D4A3481300B3ADFCBAA0E4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE941C3CFF02B599DF9C2CA0 /* Models.swift */; };
-		F47DE4357125F4C3383E3ACF /* ComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24163C8A414976D3F846CDDB /* ComposerView.swift */; };
+		F47DE4357125F4C3383E3ACF /* NewSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24163C8A414976D3F846CDDB /* NewSessionView.swift */; };
 		F5DA4708F5999DAFA86CC1E1 /* StartTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8ADA15303B4BA9C1851E7B /* StartTheme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0046F62276700C5B4323FB34 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		12BAEEDADCAE38B90D4A1295 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		24163C8A414976D3F846CDDB /* ComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerView.swift; sourceTree = "<group>"; };
+		24163C8A414976D3F846CDDB /* NewSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSessionView.swift; sourceTree = "<group>"; };
+		2B8C7D6E5F43210ABCDEF01A /* SessionHeaderMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionHeaderMetadata.swift; sourceTree = "<group>"; };
+		2C9D8E7F6543210ABCDEF012 /* SessionPromptBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionPromptBar.swift; sourceTree = "<group>"; };
 		33F063459BC340CD341D5DE4 /* RelayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayClient.swift; sourceTree = "<group>"; };
 		39AC0D40B42F8727E9FD26EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4381B4DC75D82DCC7A5712ED /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
@@ -40,9 +44,9 @@
 		B655A1FCA4212EC83855D8DD /* Glass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glass.swift; sourceTree = "<group>"; };
 		CD8ADA15303B4BA9C1851E7B /* StartTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartTheme.swift; sourceTree = "<group>"; };
 		DE941C3CFF02B599DF9C2CA0 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		E4BDFB5A58DE54B599AAE1ED /* NewChatButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewChatButton.swift; sourceTree = "<group>"; };
+		E4BDFB5A58DE54B599AAE1ED /* SessionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionButton.swift; sourceTree = "<group>"; };
 		E6B44102D58FB62241D6F564 /* WorkspaceSessionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionList.swift; sourceTree = "<group>"; };
-		F7163DD11BA94AC31A6660EF /* Start.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Start.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F7163DD11BA94AC31A6660EF /* Start.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Start.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -67,13 +71,15 @@
 			children = (
 				4381B4DC75D82DCC7A5712ED /* AppState.swift */,
 				39AC0D40B42F8727E9FD26EF /* Assets.xcassets */,
-				24163C8A414976D3F846CDDB /* ComposerView.swift */,
+				2B8C7D6E5F43210ABCDEF01A /* SessionHeaderMetadata.swift */,
+				2C9D8E7F6543210ABCDEF012 /* SessionPromptBar.swift */,
+				24163C8A414976D3F846CDDB /* NewSessionView.swift */,
 				9808BC1586172A6BA74C08E6 /* EdgeFadeOverlay.swift */,
 				B655A1FCA4212EC83855D8DD /* Glass.swift */,
 				A5AFA824600606AEDAB94BB6 /* HomeTopMenu.swift */,
 				12BAEEDADCAE38B90D4A1295 /* HomeView.swift */,
 				DE941C3CFF02B599DF9C2CA0 /* Models.swift */,
-				E4BDFB5A58DE54B599AAE1ED /* NewChatButton.swift */,
+				E4BDFB5A58DE54B599AAE1ED /* SessionButton.swift */,
 				8782EABD9B6D2D6B5796E90A /* QRCodeScannerView.swift */,
 				33F063459BC340CD341D5DE4 /* RelayClient.swift */,
 				0046F62276700C5B4323FB34 /* RootView.swift */,
@@ -156,13 +162,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				422735E5C4E687BD31B4E092 /* AppState.swift in Sources */,
-				F47DE4357125F4C3383E3ACF /* ComposerView.swift in Sources */,
+				1A9B8C7D6E5F43210ABCDEF0 /* SessionHeaderMetadata.swift in Sources */,
+				1B9C8D7E6F543210ABCDEF01 /* SessionPromptBar.swift in Sources */,
+				F47DE4357125F4C3383E3ACF /* NewSessionView.swift in Sources */,
 				B7ACE47D004440DEC1374572 /* EdgeFadeOverlay.swift in Sources */,
 				3FBB9D66E4F306E7F77ED905 /* Glass.swift in Sources */,
 				16C12FBF5BC9CAA98988FC97 /* HomeTopMenu.swift in Sources */,
 				C2261BF82D1F319FC19486FD /* HomeView.swift in Sources */,
 				F0D4A3481300B3ADFCBAA0E4 /* Models.swift in Sources */,
-				0FC7C905655279FEB3BAC79F /* NewChatButton.swift in Sources */,
+				0FC7C905655279FEB3BAC79F /* SessionButton.swift in Sources */,
 				9C13CCFF0590CA22F8CE498A /* QRCodeScannerView.swift in Sources */,
 				1558FBC49D238B0F1873C346 /* RelayClient.swift in Sources */,
 				08B52B39ADB733EC3361D2AE /* RootView.swift in Sources */,
@@ -182,6 +190,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PTLDWP6BV2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Start;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
@@ -264,6 +273,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PTLDWP6BV2;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Start;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";

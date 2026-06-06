@@ -88,7 +88,7 @@ private struct WorkspaceSessionAccordion: View {
 private struct SessionRow: View {
     @Environment(AppState.self) private var appState
 
-    let session: ChatSession
+    let session: Session
     let transitionNamespace: Namespace.ID
 
     var body: some View {
@@ -111,7 +111,7 @@ private struct SessionRow: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(session.title)
-        .accessibilityHint("Opens chat")
+        .accessibilityHint("Opens session")
     }
 }
 
