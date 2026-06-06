@@ -10,21 +10,21 @@ describe('confirmClose', () => {
   it('returns false when the dialog is canceled', async () => {
     setDialogResponse(0);
 
-    await expect(confirmClose(null)).resolves.toBe(false);
+    await expect(confirmClose()).resolves.toBe(false);
   });
 
   it('returns true when the dialog is accepted', async () => {
     setDialogResponse(1);
 
-    await expect(confirmClose(null)).resolves.toBe(true);
+    await expect(confirmClose()).resolves.toBe(true);
   });
 
-  it('uses the close window message', async () => {
-    await confirmClose(null);
+  it('uses the quit confirmation message', async () => {
+    await confirmClose();
 
     expect(dialog.calls[0]?.[0]).toMatchObject({
-      type: 'question',
-      message: 'Are you sure you want to close this window?'
+      type: 'warning',
+      message: 'Quit Start?'
     });
   });
 });

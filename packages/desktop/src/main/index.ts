@@ -160,7 +160,7 @@ const confirmAppQuit = async () => {
 
   appQuitConfirmationOpen = true;
   try {
-    const confirmed = await confirmClose(getMainWindow());
+    const confirmed = await confirmClose();
     if (!confirmed) return;
 
     appQuitConfirmed = true;
