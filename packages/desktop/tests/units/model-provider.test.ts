@@ -50,17 +50,8 @@ describe('modelProviderId', () => {
     ).toBe('openai');
   });
 
-  it('classifies unrecognized providers as custom', () => {
-    expect(modelProviderId(model({ id: 'llama3.1:8b', name: 'Llama', provider: 'ollama' }))).toBe('custom');
-    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('custom');
-  });
-
-  it('respects isCustom over any heuristic match', () => {
-    expect(modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'pydantic', isCustom: true }))).toBe(
-      'custom'
-    );
-    expect(
-      modelProviderId(model({ id: 'claude-3-haiku', name: 'Claude Haiku', provider: 'my-proxy', isCustom: true }))
-    ).toBe('custom');
+  it('falls back to Anthropic for unrecognized providers', () => {
+    expect(modelProviderId(model({ id: 'llama3.1:8b', name: 'Llama', provider: 'ollama' }))).toBe('anthropic');
+    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('anthropic');
   });
 });

@@ -1,5 +1,4 @@
 import type { ProviderAuthStatus } from '@preload/index';
-import { CustomProvidersRow } from '@renderer/shared/settings/provider/custom';
 import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
@@ -7,7 +6,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
 type ProviderKey = 'anthropic' | 'google' | 'openai';
-type AccordionKey = '' | 'custom' | ProviderKey;
+type AccordionKey = '' | ProviderKey;
 
 const providers: {
   key: ProviderKey;
@@ -204,8 +203,6 @@ export const Providers = ({
           </div>
         );
       })}
-
-      <CustomProvidersRow open={openProvider === 'custom'} onToggle={() => toggleProvider('custom')} />
     </>
   );
 };

@@ -101,7 +101,7 @@ describe('helpers', () => {
     expect(agentEndError(event)).toBe('boom');
   });
 
-  it('keeps native allowlist models alongside registered custom-provider models', () => {
+  it('keeps only the native allowlist models', () => {
     const models = [
       { id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' },
       { id: 'gpt-5.4', name: 'GPT 5.4', provider: 'openai' },
@@ -109,8 +109,8 @@ describe('helpers', () => {
       { id: 'llama3.1:8b', name: 'Llama 3.1 8B', provider: 'ollama-home' },
       { id: 'gpt-4', name: 'GPT 4', provider: 'pydantic-proxy' }
     ];
-    const visible = getVisibleModels(models, new Set(['ollama-home', 'pydantic-proxy']));
-    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-8', 'llama3.1:8b', 'gpt-4']);
+    const visible = getVisibleModels(models);
+    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-8']);
   });
 
   it('drops non-registered provider models even when their ids look familiar', () => {
@@ -118,12 +118,12 @@ describe('helpers', () => {
       { id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' },
       { id: 'gpt-5', name: 'GPT 5', provider: 'openrouter' }
     ];
-    const visible = getVisibleModels(models, new Set());
+    const visible = getVisibleModels(models);
     expect(visible.map((model) => model.id)).toEqual(['gpt-5.5']);
   });
 
   it('returns the original list as a fallback when nothing matches', () => {
     const models = [{ id: 'mystery-1', name: 'Mystery', provider: 'unknown' }];
-    expect(getVisibleModels(models, new Set())).toEqual(models);
+    expect(getVisibleModels(models)).toEqual(models);
   });
 });

@@ -14,13 +14,6 @@ import {
 import { appVersion } from '@main/application';
 import { closeStartDb, openStartDb } from '@main/db';
 import { resolveAuthBackend } from '@main/providers/auth';
-import {
-  type CustomProviderConfig,
-  createCustomProviderStore,
-  registerAllCustomProviders,
-  registerCustomProvider,
-  unregisterCustomProvider
-} from '@main/providers/custom';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
 import {
@@ -192,7 +185,6 @@ export class ChatService {
   private readonly db = openStartDb();
   private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
-  private readonly customProviders = createCustomProviderStore(this.db);
   private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
@@ -203,28 +195,8 @@ export class ChatService {
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
 
   constructor() {
-    registerAllCustomProviders(this.modelRegistry, this.customProviders);
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
-  }
-
-  listCustomProviders(): CustomProviderConfig[] {
-    return this.customProviders.list();
-  }
-
-  saveCustomProvider(config: CustomProviderConfig): CustomProviderConfig[] {
-    const saved = this.customProviders.save(config);
-    unregisterCustomProvider(this.modelRegistry, saved.name);
-    registerCustomProvider(this.modelRegistry, saved);
-    this.modelRegistry.refresh();
-    return this.customProviders.list();
-  }
-
-  removeCustomProvider(name: string): CustomProviderConfig[] {
-    unregisterCustomProvider(this.modelRegistry, name);
-    this.customProviders.remove(name);
-    this.modelRegistry.refresh();
-    return this.customProviders.list();
   }
 
   async getStatus(): Promise<ChatStatus> {
@@ -301,7 +273,6 @@ export class ChatService {
   }> {
     this.refreshAuth();
     const available = this.getPickerModels();
-    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
     const models = available.map((model) => ({
       key: modelKey(model),
       id: model.id,
@@ -310,8 +281,7 @@ export class ChatService {
       reasoning: model.reasoning,
       effortLevels: getSupportedEffortLevels(model),
       input: model.input,
-      contextWindow: model.contextWindow,
-      ...(customProviderNames.has(model.provider) ? { isCustom: true } : {})
+      contextWindow: model.contextWindow
     }));
     const selected = this.pickModel();
 
@@ -655,11 +625,10 @@ export class ChatService {
 
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {
     this.refreshAuth();
-    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
-    const nativeOnly = this.modelRegistry.getAvailable().filter((model) => !customProviderNames.has(model.provider));
-    const openAiModels = nativeOnly.filter((model) => isProviderModel(model, 'openai'));
-    const googleModels = nativeOnly.filter((model) => isProviderModel(model, 'google'));
-    const anthropicModels = nativeOnly.filter((model) => isProviderModel(model, 'anthropic'));
+    const available = this.modelRegistry.getAvailable();
+    const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
+    const googleModels = available.filter((model) => isProviderModel(model, 'google'));
+    const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
 
     return [
       this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
@@ -1619,8 +1588,7 @@ export class ChatService {
   }
 
   private getPickerModels() {
-    const customProviderNames = new Set(this.customProviders.list().map((provider) => provider.name));
-    return getVisibleModels(this.modelRegistry.getAvailable(), customProviderNames);
+    return getVisibleModels(this.modelRegistry.getAvailable());
   }
 
   private isThinkingLevel(level: string): level is EffortLevel {

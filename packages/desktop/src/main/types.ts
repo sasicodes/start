@@ -21,7 +21,6 @@ export type ModelOption = {
   key: string;
   name: string;
   provider: string;
-  isCustom?: boolean;
   reasoning: boolean;
   contextWindow: number;
   input: ('text' | 'image')[];

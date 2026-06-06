@@ -55,7 +55,6 @@ export interface ModelOption {
   key: string;
   name: string;
   provider: string;
-  isCustom?: boolean;
   reasoning: boolean;
   contextWindow: number;
   effortLevels: EffortLevel[];
@@ -77,19 +76,6 @@ export interface ProviderLoginResult {
   ok: boolean;
   error?: string;
   providers: ProviderAuthStatus[];
-}
-
-export interface CustomProviderModel {
-  id: string;
-  name?: string;
-}
-
-export interface CustomProviderConfig {
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  models: CustomProviderModel[];
-  thinkingLabels?: string[];
 }
 
 export interface SubscriptionAuthUpdate {
@@ -497,11 +483,6 @@ const api = {
       ipcRenderer.invoke('chat:set-api-key', provider, apiKey),
     disconnectProvider: (provider: string): Promise<ProviderAuthStatus[]> =>
       ipcRenderer.invoke('chat:disconnect-provider', provider),
-    listCustomProviders: (): Promise<CustomProviderConfig[]> => ipcRenderer.invoke('chat:custom-providers:list'),
-    saveCustomProvider: (config: CustomProviderConfig): Promise<CustomProviderConfig[]> =>
-      ipcRenderer.invoke('chat:custom-providers:save', config),
-    removeCustomProvider: (name: string): Promise<CustomProviderConfig[]> =>
-      ipcRenderer.invoke('chat:custom-providers:remove', name),
     loginSubscription: (provider: string): Promise<ProviderLoginResult> =>
       ipcRenderer.invoke('chat:login-subscription', provider),
     cancelSubscriptionLogin: (): Promise<void> => ipcRenderer.invoke('chat:cancel-subscription-login'),
