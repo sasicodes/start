@@ -1,6 +1,8 @@
-import { commandInput } from '@renderer/shared/input';
+import { composerShowsStop, composerStopping, composerSubmitDisabled } from '@renderer/shared/composer/submit';
 import { ArrowUpIcon, CodeIcon, StopIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
+import { tw } from '@renderer/utils/tw';
+import { useState } from 'preact/hooks';
 
 interface GenerateProps {
   draft: string;
@@ -11,29 +13,45 @@ interface GenerateProps {
 }
 
 export const Generate = ({ draft, onStop, commandMode, isGenerating, disabledReason }: GenerateProps) => {
-  const hasDraft = draft.trim().length > 0;
+  const [stopRequested, setStopRequested] = useState(false);
+  const stopping = composerStopping({ stopping: stopRequested, isGenerating });
 
-  if (isGenerating && !hasDraft) {
+  if (stopRequested !== stopping) setStopRequested(stopping);
+
+  if (composerShowsStop(draft, isGenerating)) {
+    const stop = () => {
+      if (stopping) return;
+      setStopRequested(true);
+      onStop();
+    };
+
     return (
       <button
         type="button"
-        onClick={onStop}
+        onClick={stop}
         aria-label="Stop"
-        class="relative grid size-9.5 place-items-center rounded-full border-0 bg-brand text-brand-ink shadow-nav select-none hover:opacity-90 disabled:pointer-events-none disabled:opacity-25 [&_svg]:size-4"
+        aria-busy={stopping}
+        class={tw(
+          'relative grid size-9.5 place-items-center rounded-full border-0 bg-brand text-brand-ink shadow-nav select-none transition-[opacity,transform] duration-100 active:scale-90 [&_svg]:size-4',
+          stopping ? 'opacity-60' : 'hover:opacity-90'
+        )}
       >
         <StopIcon />
       </button>
     );
   }
 
-  const submitDisabled = Boolean(disabledReason) || (commandMode ? !commandInput(draft) || isGenerating : !hasDraft);
-
   const button = (
     <button
       type="submit"
       aria-label={isGenerating ? 'Queue follow-up' : commandMode ? 'Run command' : 'Send'}
-      disabled={submitDisabled}
-      class="relative grid size-9.5 place-items-center rounded-full border-0 bg-brand text-brand-ink shadow-nav select-none hover:opacity-90 disabled:pointer-events-none disabled:opacity-25 [&_svg]:size-4"
+      disabled={composerSubmitDisabled({
+        draft,
+        commandMode,
+        isGenerating,
+        ...(disabledReason ? { disabledReason } : {})
+      })}
+      class="relative grid size-9.5 place-items-center rounded-full border-0 bg-brand text-brand-ink shadow-nav select-none transition-[opacity,transform] duration-100 active:scale-90 hover:opacity-90 disabled:pointer-events-none disabled:opacity-25 [&_svg]:size-4"
     >
       {commandMode ? <CodeIcon strokeWidth={2} /> : <ArrowUpIcon strokeWidth={2} />}
     </button>
