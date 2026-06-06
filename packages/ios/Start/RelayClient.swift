@@ -76,7 +76,7 @@ final class RelayClient {
             status = .offline
         } catch {
             connected = false
-            status = .reconnecting
+            status = .offline
             lastError = error.localizedDescription
         }
     }
