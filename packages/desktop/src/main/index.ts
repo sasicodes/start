@@ -446,6 +446,7 @@ app.on('before-quit', (event) => {
   stopResourceRefresh = null;
   stopAutoUpdateChecks();
   destroyBrowserSilently();
+  desktopRelay.stop();
   chat.dispose();
   deactivateWorkspaceAccess();
 });
