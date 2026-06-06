@@ -12,11 +12,14 @@ enum RelayConnectionStatus: String {
 @MainActor
 final class RelayClient {
     private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
     private var receiveTask: Task<Void, Never>?
     private var socketTask: URLSessionWebSocketTask?
 
     var connected = false
     var lastError = ""
+    var lastEvent: RelayPayload?
+    var pairedDesktopId = ""
     var status = RelayConnectionStatus.offline
 
     var statusLabel: String {
@@ -60,9 +63,12 @@ final class RelayClient {
     private func receiveMessages(from socketTask: URLSessionWebSocketTask) async {
         do {
             while !Task.isCancelled {
-                _ = try await socketTask.receive()
+                let message = try await socketTask.receive()
                 connected = true
                 status = .connected
+                if let decoded = decode(message) {
+                    handle(decoded)
+                }
             }
         } catch is CancellationError {
             connected = false
@@ -71,6 +77,30 @@ final class RelayClient {
             connected = false
             status = .reconnecting
             lastError = error.localizedDescription
+        }
+    }
+
+    private func decode(_ message: URLSessionWebSocketTask.Message) -> ServerMessage? {
+        switch message {
+        case .string(let text):
+            return try? decoder.decode(ServerMessage.self, from: Data(text.utf8))
+        case .data(let data):
+            return try? decoder.decode(ServerMessage.self, from: data)
+        @unknown default:
+            return nil
+        }
+    }
+
+    private func handle(_ message: ServerMessage) {
+        switch message {
+        case .ready:
+            status = .connected
+        case .error(let text):
+            lastError = text
+        case .pairingApproved(let desktopId):
+            pairedDesktopId = desktopId
+        case .desktopEvent(_, let payload):
+            lastEvent = payload
         }
     }
 
@@ -98,6 +128,46 @@ struct HelloMobile: Encodable {
     let mobileId: String
     let protocolVersion = 1
     let token: String?
+}
+
+enum ServerMessage: Decodable {
+    case ready(role: String)
+    case error(message: String)
+    case pairingApproved(desktopId: String)
+    case desktopEvent(desktopId: String, payload: RelayPayload)
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case role
+        case message
+        case desktopId
+        case payload
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+
+        switch type {
+        case "relay.ready":
+            self = .ready(role: try container.decodeIfPresent(String.self, forKey: .role) ?? "")
+        case "relay.error":
+            self = .error(message: try container.decode(String.self, forKey: .message))
+        case "pairing.approved":
+            self = .pairingApproved(desktopId: try container.decode(String.self, forKey: .desktopId))
+        case "desktop.event":
+            self = .desktopEvent(
+                desktopId: try container.decode(String.self, forKey: .desktopId),
+                payload: try container.decode(RelayPayload.self, forKey: .payload)
+            )
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type,
+                in: container,
+                debugDescription: "Unknown relay message type: \(type)"
+            )
+        }
+    }
 }
 
 enum MobileMessage: Encodable {
