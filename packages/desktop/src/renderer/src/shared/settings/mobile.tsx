@@ -147,7 +147,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
 
   return (
     <div class="grid gap-4">
-      <div class="flex items-start justify-between gap-4">
+      <div class="flex items-center justify-between gap-4">
         <div class="grid gap-1">
           <h3 class="m-0 text-sm leading-5 font-medium text-ink">Remote access</h3>
           <p class="m-0 text-xs leading-5 text-soft">
