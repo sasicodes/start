@@ -5,16 +5,18 @@ import { describe, expect, it } from 'vitest';
 
 const socket = () => {
   const sent: unknown[] = [];
+  const listeners = new Map<string, (data: Buffer) => void>();
   let closed = false;
 
   return {
     sent,
     closed: () => closed,
+    emit: (event: string, data: Buffer) => listeners.get(event)?.(data),
     socket: {
       close: () => {
         closed = true;
       },
-      on: () => {},
+      on: (event: string, listener: (data: Buffer) => void) => listeners.set(event, listener),
       readyState: WebSocket.OPEN,
       send: (message: string) => sent.push(JSON.parse(message) as unknown)
     } as unknown as WebSocket
@@ -62,5 +64,21 @@ describe('handleHello', () => {
     expect(client.closed()).toBe(false);
     expect(client.sent).toEqual([{ type: 'relay.ready', role: 'desktop' }]);
     expect(state.snapshot()).toEqual({ desktops: 1, mobiles: 0, pairings: 0 });
+  });
+
+  it('preserves the pairing code when the desktop is offline', () => {
+    const client = socket();
+    const state = new RelayState();
+    const pairing = state.createPairing('desktop-1', 300000);
+
+    handleHello(
+      { config: { port: 8787, token: 'secret', pairingTtlMs: 300000 }, state },
+      client.socket,
+      Buffer.from(JSON.stringify({ type: 'hello.mobile', protocolVersion: 1, mobileId: 'mobile-1', token: 'secret' }))
+    );
+    client.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.join', code: pairing.code })));
+
+    expect(client.sent).toContainEqual({ type: 'relay.error', message: 'Desktop is offline.' });
+    expect(state.peekPairing(pairing.code)?.desktopId).toBe('desktop-1');
   });
 });

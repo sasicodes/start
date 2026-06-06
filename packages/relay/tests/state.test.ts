@@ -31,6 +31,15 @@ describe('RelayState', () => {
     expect(state.consumePairing(pairing.code)).toBeNull();
   });
 
+  it('peeks a pairing code without consuming it', () => {
+    const state = new RelayState();
+    const pairing = state.createPairing('desktop-1', 1000);
+
+    expect(state.peekPairing(pairing.code)?.desktopId).toBe('desktop-1');
+    expect(state.peekPairing(pairing.code)?.desktopId).toBe('desktop-1');
+    expect(state.consumePairing(pairing.code)?.desktopId).toBe('desktop-1');
+  });
+
   it('deduplicates routes from one desktop to one mobile', () => {
     const state = new RelayState();
     state.addDesktop({ socket: socket(), desktopId: 'desktop-1' });

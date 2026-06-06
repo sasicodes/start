@@ -129,7 +129,7 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
     if (!message) return;
 
     if (message.type === 'pairing.join') {
-      const pairing = context.state.consumePairing(message.code);
+      const pairing = context.state.peekPairing(message.code);
       if (!pairing) {
         sendJson(socket, relayError('Pairing code is invalid or expired.'));
         return;
@@ -141,6 +141,7 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
         return;
       }
 
+      context.state.consumePairing(message.code);
       sendJson(
         desktop,
         pairingRequestMessage({

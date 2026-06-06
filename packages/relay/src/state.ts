@@ -34,6 +34,11 @@ export class RelayState {
     return pairing;
   }
 
+  peekPairing(code: string): PairingSession | null {
+    this.deleteExpiredPairings();
+    return this.pairings.get(code) ?? null;
+  }
+
   createPairing(desktopId: string, ttlMs: number) {
     this.deleteExpiredPairings();
     this.trimPairings();
