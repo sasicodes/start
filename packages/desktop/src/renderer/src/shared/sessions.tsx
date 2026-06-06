@@ -65,10 +65,10 @@ const SessionAttention = ({ attention }: { attention: AttentionState }) => {
   return (
     <span
       class={tw(
-        'font-mono text-[10px] leading-4 font-semibold text-soft uppercase',
+        'font-mono text-[10px] leading-4 font-semibold uppercase',
         attention === 'failed' && 'text-danger',
         attention === 'completed' && 'text-success',
-        attention === 'generating' && 'text-blue-500'
+        attention === 'generating' && 'text-progress'
       )}
     >
       {attentionLabel(attention)}
@@ -247,7 +247,7 @@ export const RecentSessions = memo(
                     'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
                     attention === 'failed' && 'bg-danger',
                     attention === 'completed' && 'bg-success',
-                    attention === 'generating' && 'bg-blue-500'
+                    attention === 'generating' && 'bg-progress'
                   )}
                 >
                   {attentionCountLabel}
