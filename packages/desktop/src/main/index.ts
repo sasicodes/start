@@ -40,6 +40,7 @@ import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { DesktopRelay } from '@main/relay/client';
+import { probeRelay } from '@main/relay/probe';
 import type { RelayCommand } from '@main/relay/protocol';
 import { listRootItems, type RootItemsScope } from '@main/root/items';
 import {
@@ -289,6 +290,9 @@ if (!singleInstanceLock) {
     );
     ipcMain.handle('app:settings', () => appSettings);
     ipcMain.handle('app:mobile-relay-code', () => desktopRelay.currentCode);
+    ipcMain.handle('app:probe-mobile-relay', (_event, settings: { relayUrl: string; relayToken: string }) =>
+      probeRelay(settings.relayUrl, settings.relayToken)
+    );
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);

@@ -9,6 +9,10 @@ export interface MobileRelaySettings {
   relayToken: string;
 }
 
+export interface MobileRelayProbe {
+  ok: boolean;
+}
+
 export interface AppSettings {
   composerShortcut: string;
   solidWindowBackground: boolean;
@@ -387,6 +391,8 @@ const api = {
     mobileRelayCode: (): Promise<string> => ipcRenderer.invoke('app:mobile-relay-code'),
     onMobileRelayCode: (listener: (code: string) => void): IpcDisposer =>
       onIpc<[string]>('app:mobile-relay-code', listener),
+    probeMobileRelay: (settings: Pick<MobileRelaySettings, 'relayToken' | 'relayUrl'>): Promise<MobileRelayProbe> =>
+      ipcRenderer.invoke('app:probe-mobile-relay', settings),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),

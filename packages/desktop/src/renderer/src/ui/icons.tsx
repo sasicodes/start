@@ -20,6 +20,23 @@ export const XIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth
   </svg>
 );
 
+export const SpinnerIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M21.25 12C21.25 17.1086 17.1086 21.25 12 21.25C6.89137 21.25 2.75 17.1086 2.75 12C2.75 6.89137 6.89137 2.75 12 2.75C17.1086 2.75 21.25 6.89137 21.25 12Z"
+      stroke="currentColor"
+      stroke-opacity="0.3"
+      stroke-width={strokeWidth}
+    />
+    <path
+      d="M21.25 12C21.25 17.1086 17.1086 21.25 12 21.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+    />
+  </svg>
+);
+
 export const PlusIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path

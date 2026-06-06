@@ -31,7 +31,7 @@ const reconnectDelayMs = 3000;
 const minRefreshDelayMs = 5000;
 const codeRefreshBufferMs = 30000;
 
-const isRelayUrl = (value: string) => {
+export const isRelayUrl = (value: string) => {
   try {
     const { protocol } = new URL(value);
     return protocol === 'ws:' || protocol === 'wss:';
