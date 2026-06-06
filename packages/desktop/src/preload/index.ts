@@ -220,6 +220,7 @@ export interface GitPatch {
 
 export interface GitChangesPayload {
   workspacePath: string;
+  patchUnavailable?: true;
   patch?: GitPatch;
   summary?: GitChangeSummary;
 }

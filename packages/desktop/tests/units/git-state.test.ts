@@ -1,7 +1,12 @@
-import { resolvedGitPatchState, resolvedGitSummaryState } from '@renderer/shared/workspace/changes/utils/resolve';
+import {
+  patchStateAfterPayload,
+  resolvedGitPatchState,
+  resolvedGitSummaryState
+} from '@renderer/shared/workspace/changes/utils/resolve';
 import { describe, expect, it } from 'vitest';
 
 const emptySummary = { deletions: 0, filesChanged: 0, insertions: 0 };
+const emptyPatch = { sections: [] };
 
 describe('resolvedGitSummaryState', () => {
   it('returns unavailable without a workspace path', () => {
@@ -44,5 +49,32 @@ describe('resolvedGitPatchState', () => {
   it('returns the cached state for the active workspace path and enabled state', () => {
     const state = { kind: 'unavailable' as const };
     expect(resolvedGitPatchState({ enabled: true, state, workspacePath: '/repo' }, '/repo', true)).toBe(state);
+  });
+});
+
+describe('patchStateAfterPayload', () => {
+  it('ignores summary-only payloads while a patch request is loading', () => {
+    const current = { enabled: true, state: { kind: 'loading' as const }, workspacePath: '/repo' };
+
+    expect(
+      patchStateAfterPayload(current, '/repo', true, {
+        summary: emptySummary,
+        workspacePath: '/repo'
+      })
+    ).toBe(current);
+  });
+
+  it('marks patch state unavailable when the payload explicitly says it is unavailable', () => {
+    expect(
+      patchStateAfterPayload(
+        { enabled: true, state: { kind: 'ready', patch: emptyPatch }, workspacePath: '/repo' },
+        '/repo',
+        true,
+        {
+          patchUnavailable: true,
+          workspacePath: '/repo'
+        }
+      ).state
+    ).toEqual({ kind: 'unavailable' });
   });
 });

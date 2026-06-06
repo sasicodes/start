@@ -95,6 +95,19 @@ describe('GitChangesService', () => {
     expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(1);
   });
 
+  it('caches unavailable summary reads for a workspace', async () => {
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+    gitMocks.getGitChangeSummary.mockImplementationOnce(async () => {
+      return;
+    });
+
+    expect(await service.getSummary()).toBeFalsy();
+    expect(await service.getSummary()).toBeFalsy();
+
+    expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(1);
+  });
+
   it('debounces watcher refreshes and notifies changed summaries', async () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
@@ -134,6 +147,22 @@ describe('GitChangesService', () => {
         summary: changedSummary
       }
     ]);
+  });
+
+  it('publishes explicit unavailable state after a cached patch disappears', async () => {
+    const notifications: unknown[] = [];
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({
+      currentWorkspace: () => '/repo',
+      notify: (payload) => notifications.push(payload)
+    });
+
+    expect(await service.getPatch()).toEqual(patch);
+    gitMocks.getGitPatch.mockResolvedValue(null);
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+
+    expect(notifications).toEqual([{ patchUnavailable: true, summary: initialSummary, workspacePath: '/repo' }]);
   });
 
   it('closes workspace watchers on dispose', async () => {

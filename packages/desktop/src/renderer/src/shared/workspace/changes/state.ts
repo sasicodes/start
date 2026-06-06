@@ -1,17 +1,13 @@
-import type {
-  GitChangesPayload,
-  GitChangeSummary,
-  GitPatch,
-  GitPatchSection,
-  GitPatchSectionKind
-} from '@preload/index';
+import type { GitChangesPayload, GitChangeSummary, GitPatchSection, GitPatchSectionKind } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 import {
   type LoadedGitPatchState,
   type LoadedGitSummaryState,
+  patchStateAfterPayload,
   resolvedGitPatchState,
-  resolvedGitSummaryState
+  resolvedGitSummaryState,
+  sameGitPatchState
 } from '@renderer/shared/workspace/changes/utils/resolve';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -52,39 +48,11 @@ const sameGitSummaryState = (first: GitSummaryState, second: GitSummaryState) =>
   return sameGitChangeSummary(first.summary, second.summary);
 };
 
-const sameGitPatchSection = (first: GitPatchSection, second: GitPatchSection) => {
-  return (
-    first.kind === second.kind &&
-    first.patch === second.patch &&
-    first.filesChanged === second.filesChanged &&
-    first.insertions === second.insertions &&
-    first.deletions === second.deletions &&
-    first.limited === second.limited
-  );
-};
-
-const sameGitPatch = (first: GitPatch, second: GitPatch) => {
-  if (first.sections.length !== second.sections.length) return false;
-  return first.sections.every((section, index) => {
-    const nextSection = second.sections[index];
-    return nextSection ? sameGitPatchSection(section, nextSection) : false;
-  });
-};
-
-const sameGitPatchState = (first: GitPatchState, second: GitPatchState) => {
-  if (first.kind !== second.kind) return false;
-  if (first.kind !== 'ready' || second.kind !== 'ready') return true;
-  return sameGitPatch(first.patch, second.patch);
-};
-
 const sectionByKind = (sections: GitPatchSection[], kind: GitPatchSectionKind) =>
   sections.find((section) => section.kind === kind);
 
 const summaryStateFromPayload = (payload: GitChangesPayload): GitSummaryState =>
   payload.summary ? { kind: 'ready', summary: payload.summary } : { kind: 'unavailable' };
-
-const patchStateFromPayload = (payload: GitChangesPayload): GitPatchState =>
-  payload.patch ? { kind: 'ready', patch: payload.patch } : { kind: 'unavailable' };
 
 export const gitChangesLabel = (filesChanged: number) => `${gitFilesLabel(filesChanged)} changed`;
 
@@ -225,15 +193,7 @@ export const useGitPatch = (workspacePath: string, enabled: boolean): GitPatchSt
 
     refreshGitPatch();
     const stopGitChanges = window.pi.app.onGitChangesChanged((payload) => {
-      if (payload.workspacePath !== workspacePath) return;
-      const nextState = patchStateFromPayload(payload);
-      setPatch((current) =>
-        current.enabled === enabled &&
-        current.workspacePath === workspacePath &&
-        sameGitPatchState(current.state, nextState)
-          ? current
-          : { enabled, state: nextState, workspacePath }
-      );
+      setPatch((current) => patchStateAfterPayload(current, workspacePath, enabled, payload));
     });
     return () => {
       active = false;

@@ -4,6 +4,7 @@ import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch 
 
 export interface GitChangesPayload {
   workspacePath: string;
+  patchUnavailable?: true;
   patch?: GitPatch;
   summary?: GitChangeSummary;
 }
@@ -13,8 +14,10 @@ interface GitChangesEntry {
   watchers: FSWatcher[];
   refreshTimer?: ReturnType<typeof setTimeout>;
   patch?: GitPatch;
+  patchLoaded: boolean;
   patchRequest?: Promise<MaybeGitPatch>;
   summary?: GitChangeSummary;
+  summaryLoaded: boolean;
   summaryRequest?: Promise<MaybeGitChangeSummary>;
 }
 
@@ -88,6 +91,8 @@ export class GitChangesService {
     if (current) return current;
 
     const entry: GitChangesEntry = {
+      patchLoaded: false,
+      summaryLoaded: false,
       watchers: [],
       workspacePath: key
     };
@@ -97,13 +102,18 @@ export class GitChangesService {
   }
 
   private async loadSummary(entry: GitChangesEntry): Promise<MaybeGitChangeSummary> {
-    if (entry.summary) return entry.summary;
+    if (entry.summaryLoaded) return entry.summary;
     if (entry.summaryRequest) return entry.summaryRequest;
 
     let request: Promise<MaybeGitChangeSummary>;
     request = getGitChangeSummary(entry.workspacePath)
       .then((summary) => {
-        if (summary) entry.summary = summary;
+        entry.summaryLoaded = true;
+        if (summary) {
+          entry.summary = summary;
+        } else {
+          delete entry.summary;
+        }
         return summary;
       })
       .finally(() => {
@@ -114,13 +124,18 @@ export class GitChangesService {
   }
 
   private async loadPatch(entry: GitChangesEntry): Promise<MaybeGitPatch> {
-    if (entry.patch) return entry.patch;
+    if (entry.patchLoaded) return entry.patch;
     if (entry.patchRequest) return entry.patchRequest;
 
     let request: Promise<MaybeGitPatch>;
     request = getGitPatch(entry.workspacePath)
       .then((patch) => {
-        if (patch) entry.patch = patch;
+        entry.patchLoaded = true;
+        if (patch) {
+          entry.patch = patch;
+        } else {
+          delete entry.patch;
+        }
         return patch;
       })
       .finally(() => {
@@ -139,30 +154,36 @@ export class GitChangesService {
   }
 
   private async refresh(entry: GitChangesEntry): Promise<void> {
+    const refreshPatch = entry.patchLoaded;
     const [summary, patch] = await Promise.all([
       getGitChangeSummary(entry.workspacePath),
-      entry.patch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch)
+      refreshPatch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch)
     ]);
     const previousSummary = entry.summary ?? null;
     const previousPatch = entry.patch ?? null;
     const nextSummary = summary ?? null;
     const nextPatch = patch ?? null;
 
+    entry.summaryLoaded = true;
     if (summary) {
       entry.summary = summary;
     } else {
       delete entry.summary;
     }
-    if (patch) {
-      entry.patch = patch;
-    } else {
-      delete entry.patch;
+    if (refreshPatch) {
+      entry.patchLoaded = true;
+      if (patch) {
+        entry.patch = patch;
+      } else {
+        delete entry.patch;
+      }
     }
 
     if (sameSummary(previousSummary, nextSummary) && samePatch(previousPatch, nextPatch)) return;
 
     this.notify({
       workspacePath: entry.workspacePath,
+      ...(entry.patchLoaded && !entry.patch ? { patchUnavailable: true } : {}),
       ...(entry.patch ? { patch: entry.patch } : {}),
       ...(entry.summary ? { summary: entry.summary } : {})
     });
