@@ -8,6 +8,7 @@ import {
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
 import type { SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
+import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import type { EffortLevel } from '@main/types';
 
 const spawnToolParameters = {
@@ -70,6 +71,7 @@ export const createSubagentTools = ({
     executionMode: 'sequential',
     description: 'Run focused sub-agents in parallel.',
     promptSnippet: 'Use for independent research, review, or mapping work.',
+    prepareArguments: (args) => ({ tasks: normalizeSubagentTasks(args) }),
     async execute(_toolCallId, { tasks }, signal, onUpdate) {
       const selectedModel = model();
       if (!selectedModel) throw new Error('No configured model is available for sub-agents.');

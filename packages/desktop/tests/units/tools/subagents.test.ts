@@ -1,4 +1,5 @@
 import { toolEventDetail } from '@main/tools/details';
+import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
 import { describe, expect, it } from 'vitest';
 
@@ -59,6 +60,33 @@ describe('sub-agent tool details', () => {
     expect(detail.metric).toBeUndefined();
     expect(detail.subagents?.[0]?.name).toBe('Arul');
     expect(detail.subagents?.[0]?.task).toBe('Review renderer activity UI.');
+  });
+
+  it('normalizes Claude single-task sub-agent arguments', () => {
+    expect(normalizeSubagentTasks({ prompt: 'Review renderer activity UI.' })).toEqual([
+      { prompt: 'Review renderer activity UI.' }
+    ]);
+    expect(normalizeSubagentTasks({ task: 'Review tests.' })).toEqual([{ prompt: 'Review tests.' }]);
+    expect(normalizeSubagentTasks('{"prompt":"Review JSON input."}')).toEqual([{ prompt: 'Review JSON input.' }]);
+    expect(normalizeSubagentTasks(['Review UI.', 'Review tests.'])).toEqual([
+      { prompt: 'Review UI.' },
+      { prompt: 'Review tests.' }
+    ]);
+    expect(normalizeSubagentTasks({ tasks: { prompt: 'Review main process.' } })).toEqual([
+      { prompt: 'Review main process.' }
+    ]);
+    expect(normalizeSubagentTasks({ tasks: '[{"prompt":"Review serialized tasks."}]' })).toEqual([
+      { prompt: 'Review serialized tasks.' }
+    ]);
+
+    const detail = toolEventDetail({
+      state: 'active',
+      toolName: 'subagent_spawn',
+      key: 'tool:subagents',
+      args: { prompt: 'Review renderer activity UI.' }
+    });
+
+    expect(detail.title).toBe('Spawning 1 agent');
   });
 
   it('expands completed summaries', () => {
