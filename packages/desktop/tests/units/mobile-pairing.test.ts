@@ -34,6 +34,17 @@ describe('mobile pairing', () => {
     ).toBeUndefined();
   });
 
+  it('includes a live pairing code and omits it when absent', () => {
+    const settings = {
+      enabled: true,
+      desktopId: 'desktop-1',
+      relayUrl: 'wss://relay.example.com/connect',
+      relayToken: ''
+    };
+    expect(JSON.parse(mobilePairingPayload(settings, '482913')).code).toBe('482913');
+    expect(JSON.parse(mobilePairingPayload(settings)).code).toBeUndefined();
+  });
+
   it('renders an actual qr svg', () => {
     const svg = mobilePairingQrSvg({
       enabled: true,

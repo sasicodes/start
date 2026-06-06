@@ -389,6 +389,9 @@ const api = {
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
+    mobileRelayCode: (): Promise<string> => ipcRenderer.invoke('app:mobile-relay-code'),
+    onMobileRelayCode: (listener: (code: string) => void): IpcDisposer =>
+      onIpc<[string]>('app:mobile-relay-code', listener),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),

@@ -61,6 +61,9 @@ importers:
       '@types/node':
         specifier: 25.9.1
         version: 25.9.1
+      '@types/ws':
+        specifier: 8.18.1
+        version: 8.18.1
       electron:
         specifier: 42.2.0
         version: 42.2.0
@@ -103,6 +106,9 @@ importers:
       vitest:
         specifier: 4.1.6
         version: 4.1.6(@types/node@25.9.1)(vite@8.0.13(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.47.1)(yaml@2.9.0))
+      ws:
+        specifier: 8.21.0
+        version: 8.21.0
 
   packages/relay:
     dependencies:

@@ -46,6 +46,7 @@ import {
   validateAccelerator,
   writeAppSettings
 } from '@main/settings';
+import { DesktopRelay } from '@main/relay/client';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
   getMainWindow,
@@ -80,6 +81,8 @@ let appQuitConfirmationOpen = false;
 let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
+
+const desktopRelay = new DesktopRelay((code) => sendToRendererWindows('app:mobile-relay-code', code));
 let stopWorkspaceChanged: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
@@ -238,6 +241,7 @@ if (!singleInstanceLock) {
     }
 
     appSettings = await readAppSettings();
+    desktopRelay.sync(appSettings.mobileRelay);
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -275,6 +279,7 @@ if (!singleInstanceLock) {
       getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
     );
     ipcMain.handle('app:settings', () => appSettings);
+    ipcMain.handle('app:mobile-relay-code', () => desktopRelay.currentCode);
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);
@@ -354,6 +359,7 @@ if (!singleInstanceLock) {
         mobileRelay
       });
       appSettings = nextSettings;
+      desktopRelay.sync(nextSettings.mobileRelay);
       return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {

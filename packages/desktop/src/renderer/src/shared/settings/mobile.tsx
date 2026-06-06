@@ -1,7 +1,7 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
 import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
 import { QrIcon, TrashIcon } from '@renderer/ui/icons';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 
 interface MobileProps {
   settings: MobileRelaySettings;
@@ -24,6 +24,39 @@ const normalizedRelayUrl = (value: string) =>
     .replace(/^http:/u, 'ws:')
     .replace(/^https:/u, 'wss:');
 
+const useMobileRelayCode = (enabled: boolean) => {
+  const [code, setCode] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    if (!enabled) {
+      setCode('');
+      return () => {
+        active = false;
+      };
+    }
+
+    window.pi.app
+      .mobileRelayCode()
+      .then((value) => {
+        if (active) setCode(value);
+      })
+      .catch(() => {});
+
+    const stopMobileRelayCode = window.pi.app.onMobileRelayCode((value) => {
+      if (active) setCode(value);
+    });
+
+    return () => {
+      active = false;
+      stopMobileRelayCode();
+    };
+  }, [enabled]);
+
+  return code;
+};
+
 const MobileInput = ({ type, value, onInput, placeholder }: MobileInputProps) => (
   <input
     type={type}
@@ -34,7 +67,13 @@ const MobileInput = ({ type, value, onInput, placeholder }: MobileInputProps) =>
   />
 );
 
-const PairingQrDialog = ({ onClose, settings }: { onClose: () => void; settings: MobileRelaySettings }) => (
+interface PairingQrDialogProps {
+  code: string;
+  onClose: () => void;
+  settings: MobileRelaySettings;
+}
+
+const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => (
   <div class="fixed inset-0 z-50 grid place-items-center p-4" role="presentation">
     <button
       type="button"
@@ -45,7 +84,7 @@ const PairingQrDialog = ({ onClose, settings }: { onClose: () => void; settings:
     <section role="dialog" aria-modal="true" aria-label="Pairing QR" class="relative grid justify-items-center gap-3">
       <div
         class="grid size-44 place-items-center rounded-2xl bg-white p-3 text-zinc-950 shadow-shell [&_svg]:block [&_svg]:size-full"
-        dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings) }}
+        dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings, code) }}
       />
       <p class="m-0 rounded-full bg-composer px-3 py-1.5 text-center text-xs leading-4 font-medium text-soft shadow-shell">
         Scan to pair
@@ -87,6 +126,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
 
   const canSave = Boolean(draft.desktopId && draft.relayUrl.trim());
   const qrAvailable = Boolean(settings.enabled && settings.relayUrl.trim());
+  const relayCode = useMobileRelayCode(qrAvailable);
 
   return (
     <div class="grid gap-4">
@@ -148,7 +188,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           </div>
         </>
       )}
-      {qrOpen && <PairingQrDialog settings={settings} onClose={() => setQrOpen(false)} />}
+      {qrOpen && <PairingQrDialog code={relayCode} settings={settings} onClose={() => setQrOpen(false)} />}
     </div>
   );
 };

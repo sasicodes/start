@@ -81,4 +81,43 @@ describe('handleHello', () => {
     expect(client.sent).toContainEqual({ type: 'relay.error', message: 'Desktop is offline.' });
     expect(state.peekPairing(pairing.code)?.desktopId).toBe('desktop-1');
   });
+
+  it('completes a full desktop-mobile pairing handshake', () => {
+    const state = new RelayState();
+    const context = { config: { port: 8787, token: 'secret', pairingTtlMs: 300000 }, state };
+    const desktop = socket();
+    const mobile = socket();
+    const hello = (type: string, id: string) =>
+      Buffer.from(
+        JSON.stringify({
+          type,
+          protocolVersion: 1,
+          [type === 'hello.desktop' ? 'desktopId' : 'mobileId']: id,
+          token: 'secret'
+        })
+      );
+
+    handleHello(context, desktop.socket, hello('hello.desktop', 'desktop-1'));
+    desktop.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.create' })));
+    const created = desktop.sent.find((m) => (m as { type?: string }).type === 'pairing.created') as
+      | { code: string }
+      | undefined;
+    expect(created?.code).toHaveLength(6);
+
+    handleHello(context, mobile.socket, hello('hello.mobile', 'mobile-1'));
+    mobile.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.join', code: created?.code })));
+    expect(desktop.sent).toContainEqual(expect.objectContaining({ type: 'pairing.request', mobileId: 'mobile-1' }));
+
+    desktop.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.approve', mobileId: 'mobile-1' })));
+    expect(mobile.sent).toContainEqual({ type: 'pairing.approved', desktopId: 'desktop-1' });
+    expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(true);
+
+    mobile.emit(
+      'message',
+      Buffer.from(
+        JSON.stringify({ type: 'mobile.command', desktopId: 'desktop-1', payload: { action: 'ping', value: '1' } })
+      )
+    );
+    expect(desktop.sent).toContainEqual(expect.objectContaining({ type: 'mobile.command', mobileId: 'mobile-1' }));
+  });
 });
