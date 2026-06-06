@@ -60,8 +60,11 @@ export const parseSettings = (value: unknown): AppSettings => {
 };
 
 export const readAppSettings = async (): Promise<AppSettings> => {
-  const settings = settingsWithDesktopId(parseSettings(readStartState()));
-  updateStartState({ mobileRelay: settings.mobileRelay });
+  const base = parseSettings(readStartState());
+  const settings = settingsWithDesktopId(base);
+  if (settings.mobileRelay.desktopId !== base.mobileRelay.desktopId) {
+    updateStartState({ mobileRelay: settings.mobileRelay });
+  }
   return settings;
 };
 
