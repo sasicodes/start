@@ -15,7 +15,7 @@ export const newSessionPlaceholders = [
 const followUpPlaceholders = (contextPercent: number) => {
   if (contextPercent < contextThreshold) return [defaultFollowUpPlaceholder];
   const band = Math.floor(contextPercent / 10) * 10;
-  return [defaultFollowUpPlaceholder, `Context window at ${band}%`];
+  return [defaultFollowUpPlaceholder, `Used ${band}% of the context window`];
 };
 
 const pickFromList = (list: readonly string[], fallback: string, index: number) => {

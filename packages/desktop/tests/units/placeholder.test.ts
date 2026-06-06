@@ -10,13 +10,13 @@ describe('promptPlaceholder', () => {
     expect(followUp(59.9, 9)).toBe('Ask for follow-up changes');
   });
 
-  it('toggles between the follow-up label and the band label once at or above 60%', () => {
+  it('toggles between the follow-up label and the context usage label once at or above 60%', () => {
     expect(followUp(60, 0)).toBe('Ask for follow-up changes');
-    expect(followUp(60, 1)).toBe('Context window at 60%');
+    expect(followUp(60, 1)).toBe('Used 60% of the context window');
     expect(followUp(60, 2)).toBe('Ask for follow-up changes');
-    expect(followUp(75, 1)).toBe('Context window at 70%');
-    expect(followUp(99, 1)).toBe('Context window at 90%');
-    expect(followUp(100, 1)).toBe('Context window at 100%');
+    expect(followUp(75, 1)).toBe('Used 70% of the context window');
+    expect(followUp(99, 1)).toBe('Used 90% of the context window');
+    expect(followUp(100, 1)).toBe('Used 100% of the context window');
   });
 
   it('ignores context percent for new sessions and cycles the entry list', () => {
