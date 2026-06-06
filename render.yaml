@@ -1,10 +1,10 @@
 services:
   - type: web
     name: start-relay
-    runtime: docker
+    runtime: image
     plan: starter
-    dockerfilePath: ./packages/relay/Dockerfile
-    dockerContext: .
+    image:
+      url: ghcr.io/sasicodes/start/relay:latest
     numInstances: 1
     healthCheckPath: /health
     envVars:

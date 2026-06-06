@@ -24,6 +24,7 @@
     "hooks:install": "git config core.hooksPath .githooks",
     "lint": "biome lint . --error-on-warnings",
     "package": "pnpm --filter @start/desktop package",
+    "relay": "pnpm --filter @start/relay build && pnpm --filter @start/relay start",
     "test": "pnpm --filter @start/desktop test",
     "typecheck": "pnpm --filter @start/desktop typecheck && pnpm --filter @start/relay typecheck && pnpm --filter @start/web typecheck",
     "web": "pnpm --filter @start/web dev"
