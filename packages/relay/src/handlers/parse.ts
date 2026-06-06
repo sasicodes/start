@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import type { RawData, WebSocket } from 'ws';
+import { logIncoming } from '../log';
 import { relayError } from '../messages';
 import {
   type DesktopMessage,
@@ -23,6 +24,8 @@ export const parseDesktopMessage = (socket: WebSocket, data: RawData): DesktopMe
     return null;
   }
 
+  logIncoming(parsed.value);
+
   const result = v.safeParse(desktopMessageSchema, parsed.value);
   if (!result.success) {
     sendJson(socket, relayError('Desktop message shape is invalid.'));
@@ -38,6 +41,8 @@ export const parseMobileMessage = (socket: WebSocket, data: RawData): MobileMess
     sendJson(socket, relayError(parsed.error));
     return null;
   }
+
+  logIncoming(parsed.value);
 
   const result = v.safeParse(mobileMessageSchema, parsed.value);
   if (!result.success) {
