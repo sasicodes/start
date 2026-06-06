@@ -87,7 +87,12 @@ final class AppState {
               let url = URL(string: pairing.relayUrl)
         else { return }
 
-        relay.connect(url: url, mobileId: DeviceIdentity.mobileId, token: pairing.relayToken ?? "")
+        relay.connect(
+            url: url,
+            mobileId: DeviceIdentity.mobileId,
+            token: pairing.relayToken ?? "",
+            pairingCode: pairing.code ?? ""
+        )
     }
 
     func refreshSessions() async {

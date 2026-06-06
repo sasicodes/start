@@ -13,6 +13,7 @@ enum RelayConnectionStatus: String {
 final class RelayClient {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private var pendingPairingCode = ""
     private var receiveTask: Task<Void, Never>?
     private var socketTask: URLSessionWebSocketTask?
 
@@ -26,10 +27,11 @@ final class RelayClient {
         status.rawValue
     }
 
-    func connect(url: URL, mobileId: String, token: String = "") {
+    func connect(url: URL, mobileId: String, token: String = "", pairingCode: String = "") {
         let shouldReconnect = socketTask != nil || connected
         disconnect()
         status = shouldReconnect ? .reconnecting : .connecting
+        pendingPairingCode = pairingCode
 
         let socketTask = URLSession.shared.webSocketTask(with: url)
         self.socketTask = socketTask
@@ -50,6 +52,7 @@ final class RelayClient {
         socketTask = nil
         connected = false
         status = .offline
+        pendingPairingCode = ""
     }
 
     func joinPairing(code: String, name: String = "iPhone") {
@@ -95,6 +98,10 @@ final class RelayClient {
         switch message {
         case .ready:
             status = .connected
+            if !pendingPairingCode.isEmpty {
+                joinPairing(code: pendingPairingCode)
+                pendingPairingCode = ""
+            }
         case .error(let text):
             lastError = text
         case .pairingApproved(let desktopId):
@@ -202,6 +209,7 @@ struct RelayPayload: Codable {
 struct PairingPayload: Decodable {
     let type: String
     let version: Int
+    let code: String?
     let relayUrl: String
     let desktopId: String
     let relayToken: String?
