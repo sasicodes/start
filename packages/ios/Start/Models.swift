@@ -159,17 +159,21 @@ func workspaceSessionSections(
     sort: WorkspaceSort = .recent,
     limit: Int = 5
 ) -> [WorkspaceSessionSection] {
-    let sections: [WorkspaceSessionSection] = Workspace.allCases.compactMap { workspace in
-        let workspaceSessions = sessions.filter { $0.workspace == workspace }.prefix(limit)
-        guard !workspaceSessions.isEmpty else { return nil }
-        return WorkspaceSessionSection(workspace: workspace, sessions: Array(workspaceSessions))
-    }
+    let sessionsByWorkspace = Dictionary(grouping: sessions, by: \.workspace)
+    let workspaces: [Workspace]
 
     switch sort {
     case .recent:
-        return sections
+        workspaces = Workspace.allCases
     case .alphabetical:
-        return sections.sorted { $0.workspace.rawValue.localizedStandardCompare($1.workspace.rawValue) == .orderedAscending }
+        workspaces = Workspace.allCases.sorted { $0.rawValue.localizedStandardCompare($1.rawValue) == .orderedAscending }
+    }
+
+    return workspaces.compactMap { workspace in
+        guard let sessions = sessionsByWorkspace[workspace] else { return nil }
+        let workspaceSessions = sessions.prefix(limit)
+        guard !workspaceSessions.isEmpty else { return nil }
+        return WorkspaceSessionSection(workspace: workspace, sessions: Array(workspaceSessions))
     }
 }
 
@@ -179,23 +183,23 @@ enum SessionMessageRole: String {
 }
 
 struct SessionMessage: Identifiable {
-    let id: UUID
+    let id: String
     let role: SessionMessageRole
     let text: String
 
     static func samples(for session: Session) -> [SessionMessage] {
         [
-            SessionMessage(id: UUID(), role: .user, text: "Open \(session.title.lowercased()) and summarize what is still unresolved."),
-            SessionMessage(id: UUID(), role: .agent, text: "I checked the latest thread state. The main remaining work is spacing, tap comfort, and making the mobile flow feel more native."),
-            SessionMessage(id: UUID(), role: .user, text: "Keep the interface direct and avoid adding extra chrome."),
-            SessionMessage(id: UUID(), role: .agent, text: "Understood. I kept the list text-forward, preserved the floating compose action, and avoided card styling for the history."),
-            SessionMessage(id: UUID(), role: .user, text: "Make sure the prompt still feels easy to reach."),
-            SessionMessage(id: UUID(), role: .agent, text: "The bottom action now uses a compact Liquid Glass capsule with matched edge padding. It should feel reachable without crowding the screen corner."),
-            SessionMessage(id: UUID(), role: .user, text: "What about the connection menu?"),
-            SessionMessage(id: UUID(), role: .agent, text: "Connections live under the top more menu. Online devices use a soft green laptop, offline devices use a soft red laptop, and the selected device gets a small check badge."),
-            SessionMessage(id: UUID(), role: .user, text: "Can the history scroll cleanly with more content?"),
-            SessionMessage(id: UUID(), role: .agent, text: "Yes. The message stack has compact spacing, the top and bottom fades stay passive, and the prompt remains pinned below the conversation."),
-            SessionMessage(id: UUID(), role: .agent, text: "Next step is to run it on a physical phone and tune only the last few points of safe-area spacing if the hardware corner radius changes the feel.")
+            SessionMessage(id: "\(session.id)-0", role: .user, text: "Open \(session.title.lowercased()) and summarize what is still unresolved."),
+            SessionMessage(id: "\(session.id)-1", role: .agent, text: "I checked the latest thread state. The main remaining work is spacing, tap comfort, and making the mobile flow feel more native."),
+            SessionMessage(id: "\(session.id)-2", role: .user, text: "Keep the interface direct and avoid adding extra chrome."),
+            SessionMessage(id: "\(session.id)-3", role: .agent, text: "Understood. I kept the list text-forward, preserved the floating compose action, and avoided card styling for the history."),
+            SessionMessage(id: "\(session.id)-4", role: .user, text: "Make sure the prompt still feels easy to reach."),
+            SessionMessage(id: "\(session.id)-5", role: .agent, text: "The bottom action now uses a compact Liquid Glass capsule with matched edge padding. It should feel reachable without crowding the screen corner."),
+            SessionMessage(id: "\(session.id)-6", role: .user, text: "What about the connection menu?"),
+            SessionMessage(id: "\(session.id)-7", role: .agent, text: "Connections live under the top more menu. Online devices use a soft green laptop, offline devices use a soft red laptop, and the selected device gets a small check badge."),
+            SessionMessage(id: "\(session.id)-8", role: .user, text: "Can the history scroll cleanly with more content?"),
+            SessionMessage(id: "\(session.id)-9", role: .agent, text: "Yes. The message stack has compact spacing, the top and bottom fades stay passive, and the prompt remains pinned below the conversation."),
+            SessionMessage(id: "\(session.id)-10", role: .agent, text: "Next step is to run it on a physical phone and tune only the last few points of safe-area spacing if the hardware corner radius changes the feel.")
         ]
     }
 }

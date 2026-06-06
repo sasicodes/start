@@ -6,9 +6,11 @@ struct SessionDetailView: View {
     @State private var focusTask: Task<Void, Never>?
 
     let session: Session
+    private let messages: [SessionMessage]
 
-    private var messages: [SessionMessage] {
-        SessionMessage.samples(for: session)
+    init(session: Session) {
+        self.session = session
+        messages = SessionMessage.samples(for: session)
     }
 
     var body: some View {
@@ -16,7 +18,7 @@ struct SessionDetailView: View {
 
         ZStack(alignment: .top) {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 12) {
+                LazyVStack(spacing: 12) {
                     ForEach(messages) { message in
                         MessageRow(message: message)
                     }
@@ -28,7 +30,7 @@ struct SessionDetailView: View {
                 .padding(.trailing, 10)
             }
 
-            EdgeFadeOverlay(topHeight: 104, bottomHeight: 160)
+            EdgeFadeOverlay(topHeight: 96, topSolidHeight: 82, bottomHeight: 160)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -38,7 +40,7 @@ struct SessionDetailView: View {
 
                 Spacer(minLength: 0)
 
-                SessionPromptBar(
+                SessionPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
                     accessibilityHint: "Type a follow-up for this session",

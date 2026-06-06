@@ -16,7 +16,7 @@ struct WorkspaceSessionList: View {
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        VStack(alignment: .leading, spacing: WorkspaceSessionListMetrics.sectionSpacing) {
+        LazyVStack(alignment: .leading, spacing: WorkspaceSessionListMetrics.sectionSpacing) {
             ForEach(sections) { section in
                 WorkspaceSessionAccordion(
                     section: section,
@@ -72,7 +72,7 @@ private struct WorkspaceSessionAccordion: View {
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
 
             if expanded {
-                VStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
+                LazyVStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
                     ForEach(section.sessions) { session in
                         SessionRow(session: session, transitionNamespace: transitionNamespace)
                     }
@@ -121,7 +121,7 @@ struct SkeletonList: View {
     ]
 
     var body: some View {
-        VStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
+        LazyVStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
             ForEach(Array(Self.titleWidthRatios.enumerated()), id: \.offset) { _, ratio in
                 HStack {
                     SkeletonTextLine(width: 240 * ratio)

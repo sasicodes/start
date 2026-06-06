@@ -23,7 +23,7 @@ struct NewSessionView: View {
 
                 Spacer(minLength: 0)
 
-                SessionPromptBar(
+                SessionPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
                     accessibilityHint: "Type what you want to work on",

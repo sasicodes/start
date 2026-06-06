@@ -13,7 +13,7 @@ struct HomeView: View {
         let searchActive = searchFocused || !appState.searchText.isEmpty
 
         return ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 16) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 titleRow
 
                 contentList
@@ -216,30 +216,19 @@ private struct ConnectionScannerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("New connection")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink)
-
-                Text("Scan the QR code on your desktop to pair this iPhone.")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.softInk)
-            }
-            .padding(.horizontal, 4)
-
-            QRCodeScannerView { _ in
-                dismiss()
-            }
-            .overlay {
-                ScannerReticle()
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        QRCodeScannerView { _ in
+            dismiss()
         }
-        .padding(18)
+        .overlay {
+            ScannerReticle()
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 14)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
         .presentationDetents([.fraction(0.78)])
-        .presentationCornerRadius(34)
+        .presentationCornerRadius(42)
         .presentationDragIndicator(.visible)
         .presentationBackground(StartTheme.Colors.background)
     }
@@ -256,13 +245,17 @@ private struct ScannerReticle: View {
             VStack {
                 Spacer()
 
-                Text("Center the code")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .padding(.bottom, 18)
+                PhaseAnimator([0.58, 1.0]) { opacity in
+                    Text("Scan the QR code on your desktop")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(opacity))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                } animation: { _ in
+                    .easeInOut(duration: 0.9)
+                }
+                .padding(.bottom, 18)
             }
         }
         .padding(18)

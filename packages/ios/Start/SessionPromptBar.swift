@@ -1,6 +1,36 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+struct SessionPromptFooter: View {
+    @Environment(AppState.self) private var appState
+    @Binding var text: String
+    @FocusState.Binding var focused: Bool
+
+    let accessibilityHint: String
+    let accessibilityLabel: String
+    let placeholder: String
+
+    var body: some View {
+        SessionPromptBar(
+            text: $text,
+            focused: $focused,
+            accessibilityHint: accessibilityHint,
+            accessibilityLabel: accessibilityLabel,
+            placeholder: placeholder
+        )
+        .overlay(alignment: .bottom) {
+            Text(appState.connectionStatusLabel)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(StartTheme.Colors.softInk.opacity(0.48))
+                .contentTransition(.opacity)
+                .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .offset(y: 27)
+                .accessibilityLabel("Connection status: \(appState.connectionStatusLabel)")
+        }
+    }
+}
+
 struct SessionPromptBar: View {
     @Binding var text: String
     @FocusState.Binding var focused: Bool

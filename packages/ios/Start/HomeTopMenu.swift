@@ -35,7 +35,7 @@ struct HomeTopMenu: View {
                 }
             }
         } label: {
-            Label("Sort workspaces", systemImage: sort.icon)
+            Label("Sort", systemImage: sort.icon)
         }
     }
 
