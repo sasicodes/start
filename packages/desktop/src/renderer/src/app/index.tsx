@@ -343,8 +343,6 @@ export const App = () => {
       gitPanelVisible={gitPanelVisible}
       isGenerating={isGenerating}
       activeSessionId={activeSessionId}
-      onNewSession={startNewSession}
-      showNewSession={hasTurns}
       onOpenSettings={toggleSettings}
       sessionRoutePending={sessionRoutePending}
       settingsPanelVisible={settingsPanelVisible}
