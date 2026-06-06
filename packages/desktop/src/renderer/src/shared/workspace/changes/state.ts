@@ -1,19 +1,15 @@
 import type { GitChangeSummary, GitPatch, GitPatchSection, GitPatchSectionKind } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
+import {
+  resolvedGitPatchState,
+  resolvedGitSummaryState,
+  type LoadedGitPatchState,
+  type LoadedGitSummaryState
+} from '@renderer/shared/workspace/changes/utils/resolve';
+import type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 import { useEffect, useState } from 'preact/hooks';
 
-export type GitSummaryState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; summary: GitChangeSummary }
-  | { kind: 'unavailable' };
-
-export type GitPatchState =
-  | { kind: 'idle' }
-  | { kind: 'loading' }
-  | { kind: 'ready'; patch: GitPatch }
-  | { kind: 'unavailable' };
-
-export type GitPatchViewMode = 'all' | GitPatchSectionKind;
+export type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 
 const gitRefreshIntervalMs = 3500;
 const gitSectionOrder: GitPatchSectionKind[] = ['unstaged', 'untracked'];
@@ -108,19 +104,17 @@ export const summaryForViewMode = (summary: GitChangeSummary, sections: GitPatch
   return sectionByKind(sections, mode) ?? emptyGitSummary;
 };
 
-export const useGitChanges = (workspacePath: string) => {
-  const [git, setGit] = useState<GitSummaryState>({ kind: 'loading' });
+export const useGitChanges = (workspacePath: string): GitSummaryState => {
+  const [git, setGit] = useState<LoadedGitSummaryState>({
+    state: workspacePath ? { kind: 'loading' } : { kind: 'unavailable' },
+    workspacePath
+  });
   const appFocused = useAppFocusState(Boolean(workspacePath));
 
   useEffect(() => {
     let active = true;
 
-    if (!workspacePath) {
-      setGit({ kind: 'unavailable' });
-      return () => {
-        active = false;
-      };
-    }
+    if (!workspacePath) return;
 
     if (!appFocused) {
       return () => {
@@ -128,16 +122,27 @@ export const useGitChanges = (workspacePath: string) => {
       };
     }
 
-    setGit((current) => (current.kind === 'ready' ? current : { kind: 'loading' }));
     const refreshGitChanges = () => {
       void window.pi.app
         .gitChanges(workspacePath)
         .then((summary) => {
           const nextGit: GitSummaryState = summary ? { kind: 'ready', summary } : { kind: 'unavailable' };
-          if (active) setGit((current) => (sameGitSummaryState(current, nextGit) ? current : nextGit));
+          if (active) {
+            setGit((current) =>
+              current.workspacePath === workspacePath && sameGitSummaryState(current.state, nextGit)
+                ? current
+                : { state: nextGit, workspacePath }
+            );
+          }
         })
         .catch(() => {
-          if (active) setGit((current) => (current.kind === 'unavailable' ? current : { kind: 'unavailable' }));
+          if (active) {
+            setGit((current) =>
+              current.workspacePath === workspacePath && current.state.kind === 'unavailable'
+                ? current
+                : { state: { kind: 'unavailable' }, workspacePath }
+            );
+          }
         });
     };
 
@@ -149,22 +154,21 @@ export const useGitChanges = (workspacePath: string) => {
     };
   }, [appFocused, workspacePath]);
 
-  return git;
+  return resolvedGitSummaryState(git, workspacePath);
 };
 
-export const useGitPatch = (workspacePath: string, enabled: boolean) => {
-  const [patch, setPatch] = useState<GitPatchState>({ kind: 'idle' });
+export const useGitPatch = (workspacePath: string, enabled: boolean): GitPatchState => {
+  const [patch, setPatch] = useState<LoadedGitPatchState>({
+    enabled,
+    state: workspacePath && enabled ? { kind: 'loading' } : { kind: 'idle' },
+    workspacePath
+  });
   const appFocused = useAppFocusState(Boolean(workspacePath && enabled));
 
   useEffect(() => {
     let active = true;
 
-    if (!workspacePath || !enabled) {
-      setPatch({ kind: 'idle' });
-      return () => {
-        active = false;
-      };
-    }
+    if (!workspacePath || !enabled) return;
 
     if (!appFocused) {
       return () => {
@@ -172,16 +176,31 @@ export const useGitPatch = (workspacePath: string, enabled: boolean) => {
       };
     }
 
-    setPatch((current) => (current.kind === 'ready' ? current : { kind: 'loading' }));
     const refreshGitPatch = () => {
       void window.pi.app
         .gitPatch(workspacePath)
         .then((nextPatch) => {
           const nextState: GitPatchState = nextPatch ? { kind: 'ready', patch: nextPatch } : { kind: 'unavailable' };
-          if (active) setPatch((current) => (sameGitPatchState(current, nextState) ? current : nextState));
+          if (active) {
+            setPatch((current) =>
+              current.enabled === enabled &&
+              current.workspacePath === workspacePath &&
+              sameGitPatchState(current.state, nextState)
+                ? current
+                : { enabled, state: nextState, workspacePath }
+            );
+          }
         })
         .catch(() => {
-          if (active) setPatch((current) => (current.kind === 'unavailable' ? current : { kind: 'unavailable' }));
+          if (active) {
+            setPatch((current) =>
+              current.enabled === enabled &&
+              current.workspacePath === workspacePath &&
+              current.state.kind === 'unavailable'
+                ? current
+                : { enabled, state: { kind: 'unavailable' }, workspacePath }
+            );
+          }
         });
     };
 
@@ -193,5 +212,5 @@ export const useGitPatch = (workspacePath: string, enabled: boolean) => {
     };
   }, [appFocused, enabled, workspacePath]);
 
-  return patch;
+  return resolvedGitPatchState(patch, workspacePath, enabled);
 };

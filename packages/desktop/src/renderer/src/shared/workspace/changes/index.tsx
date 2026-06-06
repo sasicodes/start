@@ -48,6 +48,11 @@ interface GitSummaryLike {
   filesChanged: number;
 }
 
+interface DiffReadyState {
+  path: string;
+  ready: boolean;
+}
+
 const EmptyDiff = ({ message }: { message: string }) => (
   <div class="grid flex-1 place-items-center px-4 text-sm leading-6 text-soft">{message}</div>
 );
@@ -97,14 +102,14 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
 });
 
 export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) => {
-  const [diffReady, setDiffReady] = useState(false);
+  const [diffReady, setDiffReady] = useState<DiffReadyState>({ path, ready: false });
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
-  const patch = useGitPatch(path, Boolean(path && diffReady));
+  const ready = diffReady.path === path && diffReady.ready;
+  const patch = useGitPatch(path, Boolean(path && ready));
 
   useEffect(() => {
-    setDiffReady(false);
-    const timer = window.setTimeout(() => setDiffReady(true), 190);
+    const timer = window.setTimeout(() => setDiffReady({ path, ready: true }), 190);
     return () => window.clearTimeout(timer);
   }, [path]);
 
@@ -113,23 +118,22 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
     void loadGitDiffViewer();
   }, [patch]);
 
-  useEffect(() => {
-    if (patch.kind !== 'ready') {
-      setViewMode('all');
-      return;
-    }
+  if (diffReady.path !== path && diffReady.ready) setDiffReady({ path, ready: false });
 
-    if (!availableViewModes(patch.patch.sections).includes(viewMode)) setViewMode('all');
-  }, [patch, viewMode]);
+  const availableModes = patch.kind === 'ready' ? availableViewModes(patch.patch.sections) : ['all'];
+  const effectiveViewMode = availableModes.includes(viewMode) ? viewMode : 'all';
+  if (viewMode !== effectiveViewMode) setViewMode(effectiveViewMode);
 
   const visibleSections = useMemo(
-    () => (patch.kind === 'ready' ? sectionsForViewMode(patch.patch.sections, viewMode) : []),
-    [patch, viewMode]
+    () => (patch.kind === 'ready' ? sectionsForViewMode(patch.patch.sections, effectiveViewMode) : []),
+    [effectiveViewMode, patch]
   );
   const patchSummary = patch.kind === 'ready' ? summaryFromSections(patch.patch.sections) : emptyGitSummary;
   const visibleSummary =
-    patch.kind === 'ready' ? summaryForViewMode(patchSummary, patch.patch.sections, viewMode) : emptyGitSummary;
-  const canCycle = patch.kind === 'ready' && availableViewModes(patch.patch.sections).length > 1;
+    patch.kind === 'ready'
+      ? summaryForViewMode(patchSummary, patch.patch.sections, effectiveViewMode)
+      : emptyGitSummary;
+  const canCycle = patch.kind === 'ready' && availableModes.length > 1;
   const splitDiffView = diffViewMode === 'split';
 
   return (
@@ -146,7 +150,7 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
                 canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
               )}
             >
-              <span class="min-w-0 truncate">{gitViewLabel(viewMode, visibleSummary.filesChanged)}</span>
+              <span class="min-w-0 truncate">{gitViewLabel(effectiveViewMode, visibleSummary.filesChanged)}</span>
               {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
             </button>
             <button

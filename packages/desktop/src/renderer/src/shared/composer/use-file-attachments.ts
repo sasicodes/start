@@ -95,15 +95,13 @@ export const useFileAttachments = ({ enabled, setDraft, textareaRef, setAttachme
     setDropActive(false);
   }, []);
 
+  if (!enabled && dropActive) resetDrop();
+
   useEffect(() => {
     return () => {
       enabledRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!enabled) resetDrop();
-  }, [enabled, resetDrop]);
 
   const preparePaths = useCallback(
     async (paths: string[]) => {
@@ -154,10 +152,11 @@ export const useFileAttachments = ({ enabled, setDraft, textareaRef, setAttachme
     (event: DragEvent) => {
       if (!enabled || !hasFiles(event)) return;
       event.preventDefault();
+      if (!dropActive) dragDepthRef.current = 0;
       dragDepthRef.current += 1;
       setDropActive(true);
     },
-    [enabled]
+    [dropActive, enabled]
   );
 
   const onDragLeave = useCallback(

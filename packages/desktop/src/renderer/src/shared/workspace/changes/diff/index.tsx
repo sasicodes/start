@@ -14,6 +14,11 @@ interface ParseResponse {
   results: PatchFile[][];
 }
 
+interface LoadedDiffEntriesState {
+  sections: GitPatchSection[];
+  state: DiffEntriesState;
+}
+
 const entryKey = (entry: DiffEntry) => entry.key;
 const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
 
@@ -36,18 +41,17 @@ const postParseJob = (
   return () => worker.removeEventListener('message', onMessage);
 };
 
-const useDiffEntries = (sections: GitPatchSection[]) => {
-  const [entryState, setEntryState] = useState<DiffEntriesState>({ kind: 'parsing' });
+const useDiffEntries = (sections: GitPatchSection[]): DiffEntriesState => {
+  const [entryState, setEntryState] = useState<LoadedDiffEntriesState>({ sections, state: { kind: 'parsing' } });
   const workerRef = useRef<Worker | null>(null);
   const jobIdRef = useRef(0);
 
   useEffect(() => {
     if (!workerRef.current) workerRef.current = createParserWorker();
     jobIdRef.current += 1;
-    setEntryState((current) => (current.kind === 'parsing' ? current : { kind: 'parsing' }));
 
     return postParseJob(workerRef.current, jobIdRef.current, sections, (entries) =>
-      setEntryState({ entries, kind: 'ready' })
+      setEntryState({ sections, state: { entries, kind: 'ready' } })
     );
   }, [sections]);
 
@@ -59,7 +63,7 @@ const useDiffEntries = (sections: GitPatchSection[]) => {
     []
   );
 
-  return entryState;
+  return entryState.sections === sections ? entryState.state : { kind: 'parsing' };
 };
 
 export const GitDiffViewer = ({
