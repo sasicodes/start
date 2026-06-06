@@ -119,6 +119,37 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).not.toBe(firstView);
   });
 
+  it('caps browser tabs by closing the least recently used inactive tab', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    await openBrowserUrl(webContents, 'https://example.com/1');
+    await openBrowserUrl(webContents, 'https://example.com/2', { newTab: true });
+    const secondView = window.contentView.children[0];
+    if (!secondView) throw new Error('Expected browser view.');
+
+    for (const id of [3, 4, 5, 6, 7, 8]) {
+      await openBrowserUrl(webContents, `https://example.com/${id}`, { newTab: true });
+    }
+
+    selectBrowserTab(webContents, 'tab-1');
+    const result = await openBrowserUrl(webContents, 'https://example.com/9', { newTab: true });
+
+    expect(secondView.webContents.closed).toBe(true);
+    expect(result.status?.activeTabId).toBe('tab-9');
+    expect(result.status?.tabs.map((tab) => tab.id)).toEqual([
+      'tab-1',
+      'tab-3',
+      'tab-4',
+      'tab-5',
+      'tab-6',
+      'tab-7',
+      'tab-8',
+      'tab-9'
+    ]);
+  });
+
   it('closes the active browser tab and selects the next tab', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

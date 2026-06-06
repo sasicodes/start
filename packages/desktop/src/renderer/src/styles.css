@@ -136,6 +136,17 @@ body {
   @apply overflow-hidden bg-transparent;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    scroll-behavior: auto;
+    transition-duration: 1ms;
+  }
+}
+
 .no-scroll-bar::-webkit-scrollbar {
   display: none;
 }

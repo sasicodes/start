@@ -2,7 +2,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { cliWorkspaceFlag, parseCliAdditionalData, parseCliLaunchArgv, resolveCliWorkspacePath } from '@main/cli/args';
-import { cliInstallScriptSource, cliWrapperSource } from '@main/cli/install';
+import { cliInstallScriptSource, cliInstallShellCommand, cliWrapperSource } from '@main/cli/install';
 
 describe('cli args', () => {
   it('parses workspace launch arguments', () => {
@@ -48,5 +48,12 @@ describe('cli installer', () => {
     const source = cliInstallScriptSource('/Applications/Start.app');
     expect(source).toContain('trap \'rm -f "$tmp_path"\' EXIT');
     expect(source).toContain('mv "$tmp_path" "$bin_path"');
+  });
+
+  it('builds the privileged install command without a mutable script path', () => {
+    const source = cliInstallShellCommand('/Applications/Start.app');
+    expect(source).toContain('/bin/sh -c');
+    expect(source).toContain('bin_path=');
+    expect(source).not.toContain('start-cli-install-');
   });
 });

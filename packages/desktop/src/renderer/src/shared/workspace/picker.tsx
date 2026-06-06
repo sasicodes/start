@@ -12,13 +12,13 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 
 export const Workspace = memo(
   ({
-    collapsed,
     workspacePath,
+    collapsed = false,
     onSelectWorkspace,
     onChooseDirectory
   }: {
-    collapsed: boolean;
     workspacePath: string;
+    collapsed?: boolean;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
   }) => {

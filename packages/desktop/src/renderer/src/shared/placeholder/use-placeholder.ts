@@ -18,10 +18,7 @@ export const usePromptPlaceholder = ({ draft, hasTurns, isCommandMode }: PromptP
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   useEffect(() => {
-    if (!rotating) {
-      setPlaceholderIndex(0);
-      return;
-    }
+    if (!rotating) return;
 
     const timer = window.setInterval(() => {
       setPlaceholderIndex((current) => current + 1);
@@ -30,7 +27,8 @@ export const usePromptPlaceholder = ({ draft, hasTurns, isCommandMode }: PromptP
     return () => window.clearInterval(timer);
   }, [rotating]);
 
-  const placeholder = promptPlaceholder(hasTurns, isCommandMode, contextPercent, placeholderIndex);
+  const effectivePlaceholderIndex = rotating ? placeholderIndex : 0;
+  const placeholder = promptPlaceholder(hasTurns, isCommandMode, contextPercent, effectivePlaceholderIndex);
 
   return {
     label: placeholder,

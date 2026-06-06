@@ -33,6 +33,46 @@ describe('queue and abort', () => {
     expect(finalQueueUpdate).toEqual([]);
   });
 
+  it('keeps image attachments on queued follow-ups and steering changes', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    expect(session).toBeDefined();
+    await session?.awaitPromptCall();
+
+    const dropped = await chat.prepareDroppedFiles(['/tmp/queued-image.png']);
+    const attachment = dropped.attachments[0];
+    if (!attachment) throw new Error('Expected image attachment.');
+
+    const queuedResult = await chat.send('queued with image', webContents, [attachment]);
+    expect(queuedResult.ok).toBe(true);
+    expect(queuedResult.queued).toBe(true);
+    expect(session?.followUpImages[0]).toEqual([{ type: 'image', data: 'base64-0', mimeType: 'image/png' }]);
+
+    const queued = eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0] as {
+      id: string;
+      kind: string;
+      text: string;
+      attachmentCount?: number;
+    }[];
+    expect(queued).toEqual([
+      expect.objectContaining({ kind: 'followUp', text: 'queued with image', attachmentCount: 1 })
+    ]);
+
+    const steered = await chat.steerQueuedMessage(queued[0]?.id ?? '', webContents);
+    expect(steered).toEqual([
+      expect.objectContaining({ kind: 'steer', text: 'queued with image', attachmentCount: 1 })
+    ]);
+    expect(session?.steerImages[0]).toEqual([{ type: 'image', data: 'base64-0', mimeType: 'image/png' }]);
+
+    await chat.abort(webContents);
+    session?.finishPrompt();
+    await firstSend;
+  });
+
   it('rejects a queued send when no stream is in flight', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

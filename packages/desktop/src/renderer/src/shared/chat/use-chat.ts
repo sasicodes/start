@@ -38,7 +38,12 @@ const sameQueuedMessages = (first: QueuedMessage[], second: QueuedMessage[]) =>
   first.every((message, index) => {
     const nextMessage = second[index];
     if (!nextMessage) return false;
-    return nextMessage.id === message.id && nextMessage.kind === message.kind && nextMessage.text === message.text;
+    return (
+      nextMessage.id === message.id &&
+      nextMessage.kind === message.kind &&
+      nextMessage.text === message.text &&
+      nextMessage.attachmentCount === message.attachmentCount
+    );
   });
 
 const nextQueuedMessages = (current: QueuedMessage[], messages: QueuedMessage[]) => {

@@ -39,4 +39,31 @@ describe('historyTurns', () => {
     expect(turns[0]?.role).toBe('event');
     expect(turns[0]?.details?.[0]?.title).toContain('Thinking level');
   });
+
+  it('keeps thinking after assistant text with the following assistant response', () => {
+    const turns = historyTurns([
+      messageEntry('a1', 'assistant', [{ type: 'text', text: 'first result' }]),
+      messageEntry('a2', 'assistant', [{ type: 'thinking', thinking: 'next thought' }]),
+      messageEntry('a3', 'assistant', [{ type: 'text', text: 'second result' }])
+    ]);
+
+    expect(turns).toHaveLength(2);
+    expect(turns[0]?.text).toBe('first result');
+    expect(turns[0]?.thinking).toBeFalsy();
+    expect(turns[1]?.text).toBe('second result');
+    expect(turns[1]?.thinking).toBe('next thought');
+  });
+
+  it('keeps trailing work after the assistant response that preceded it', () => {
+    const turns = historyTurns([
+      messageEntry('a1', 'assistant', [{ type: 'text', text: 'done for now' }]),
+      messageEntry('a2', 'assistant', [{ type: 'thinking', thinking: 'checking more' }])
+    ]);
+
+    expect(turns).toHaveLength(2);
+    expect(turns[0]?.text).toBe('done for now');
+    expect(turns[0]?.thinking).toBeFalsy();
+    expect(turns[1]?.role).toBe('event');
+    expect(turns[1]?.thinking).toBe('checking more');
+  });
 });

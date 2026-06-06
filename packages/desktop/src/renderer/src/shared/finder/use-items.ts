@@ -1,7 +1,13 @@
 import type { RootItem } from '@preload/index';
-import { browserFinderItems, withBrowserFinderItems, type FinderItems } from '@renderer/shared/finder/browser';
+import { browserFinderItems, withBrowserFinderItems } from '@renderer/shared/finder/browser';
 import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useState } from 'preact/hooks';
+
+interface LoadedFinderItems {
+  key: string;
+  token: FinderToken;
+  items: RootItem[];
+}
 
 const finderItemsCache = new Map<string, RootItem[]>();
 const finderItemsCacheMaxEntries = 80;
@@ -24,7 +30,7 @@ const setFinderItemsCache = (key: string, items: RootItem[]) => {
 const finderCacheKey = (token: Pick<FinderToken, 'scope' | 'value'>) => `${token.scope}:${token.value}`;
 
 export const useFinderItems = (token: FinderToken | undefined) => {
-  const [items, setItems] = useState<FinderItems[]>([]);
+  const [loadedItems, setLoadedItems] = useState<LoadedFinderItems | null>(null);
 
   useEffect(() => {
     window.pi.app
@@ -41,23 +47,18 @@ export const useFinderItems = (token: FinderToken | undefined) => {
   useEffect(() => {
     let disposed = false;
 
-    if (!token) {
-      setItems([]);
-      return;
-    }
+    if (!token) return;
 
     const cacheKey = finderCacheKey(token);
-    const cachedItems = finderItemsCache.get(cacheKey);
-    if (cachedItems) setItems(withBrowserFinderItems(token, cachedItems));
 
     window.pi.app
       .listRootItems(token.value, token.scope)
       .then((rootItems) => {
         setFinderItemsCache(cacheKey, rootItems);
-        if (!disposed) setItems(withBrowserFinderItems(token, rootItems));
+        if (!disposed) setLoadedItems({ items: rootItems, key: cacheKey, token });
       })
       .catch(() => {
-        if (!disposed && !cachedItems) setItems(browserFinderItems(token));
+        if (!disposed) setLoadedItems((current) => (current?.key === cacheKey ? current : null));
       });
 
     return () => {
@@ -65,5 +66,11 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     };
   }, [token?.scope, token?.value]);
 
-  return items;
+  if (!token) return [];
+
+  const cacheKey = finderCacheKey(token);
+  if (loadedItems?.key === cacheKey) return withBrowserFinderItems(loadedItems.token, loadedItems.items);
+
+  const cachedItems = finderItemsCache.get(cacheKey);
+  return cachedItems ? withBrowserFinderItems(token, cachedItems) : browserFinderItems(token);
 };
