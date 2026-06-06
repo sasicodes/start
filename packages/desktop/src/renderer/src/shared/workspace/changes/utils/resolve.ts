@@ -23,7 +23,8 @@ export const resolvedGitPatchState = (
   enabled: boolean
 ): GitPatchState => {
   if (!workspacePath || !enabled) return { kind: 'idle' };
-  return patch.enabled === enabled && patch.workspacePath === workspacePath ? patch.state : { kind: 'loading' };
+  const matchesLoadedPatch = patch.enabled === enabled && patch.workspacePath === workspacePath;
+  return matchesLoadedPatch ? patch.state : { kind: 'loading' };
 };
 
 const sameGitChangeSummary = (first: GitChangeSummary, second: GitChangeSummary) => {
@@ -79,6 +80,45 @@ const patchStateFromPayload = (payload: GitChangesPayload): GitPatchState | null
 export const summaryStateFromPayload = (payload: GitChangesPayload): GitSummaryState =>
   payload.summary ? { kind: 'ready', summary: payload.summary } : { kind: 'unavailable' };
 
+const sameLoadedGitSummaryState = (
+  current: LoadedGitSummaryState,
+  workspacePath: string,
+  nextState: GitSummaryState
+) => {
+  const sameWorkspace = current.workspacePath === workspacePath;
+  const sameState = sameGitSummaryState(current.state, nextState);
+  return sameState && sameWorkspace;
+};
+
+const nextLoadedGitSummaryState = (
+  current: LoadedGitSummaryState,
+  workspacePath: string,
+  nextState: GitSummaryState
+): LoadedGitSummaryState =>
+  sameLoadedGitSummaryState(current, workspacePath, nextState) ? current : { state: nextState, workspacePath };
+
+const sameLoadedGitPatchState = (
+  current: LoadedGitPatchState,
+  workspacePath: string,
+  enabled: boolean,
+  nextState: GitPatchState
+) => {
+  const sameEnabled = current.enabled === enabled;
+  const sameState = sameGitPatchState(current.state, nextState);
+  const sameWorkspace = current.workspacePath === workspacePath;
+  return sameEnabled && sameState && sameWorkspace;
+};
+
+const nextLoadedGitPatchState = (
+  current: LoadedGitPatchState,
+  workspacePath: string,
+  enabled: boolean,
+  nextState: GitPatchState
+): LoadedGitPatchState =>
+  sameLoadedGitPatchState(current, workspacePath, enabled, nextState)
+    ? current
+    : { enabled, state: nextState, workspacePath };
+
 export const summaryStateAfterPayload = (
   current: LoadedGitSummaryState,
   workspacePath: string,
@@ -86,21 +126,14 @@ export const summaryStateAfterPayload = (
 ): LoadedGitSummaryState => {
   if (payload.workspacePath !== workspacePath) return current;
 
-  const nextState = summaryStateFromPayload(payload);
-  const sameWorkspace = current.workspacePath === workspacePath;
-  const sameState = sameGitSummaryState(current.state, nextState);
-  return sameWorkspace && sameState ? current : { state: nextState, workspacePath };
+  return nextLoadedGitSummaryState(current, workspacePath, summaryStateFromPayload(payload));
 };
 
 export const summaryStateAfterResult = (
   current: LoadedGitSummaryState,
   workspacePath: string,
   nextState: GitSummaryState
-): LoadedGitSummaryState => {
-  const sameWorkspace = current.workspacePath === workspacePath;
-  const sameState = sameGitSummaryState(current.state, nextState);
-  return sameWorkspace && sameState ? current : { state: nextState, workspacePath };
-};
+): LoadedGitSummaryState => nextLoadedGitSummaryState(current, workspacePath, nextState);
 
 export const patchStateAfterPayload = (
   current: LoadedGitPatchState,
@@ -113,10 +146,7 @@ export const patchStateAfterPayload = (
   const nextState = patchStateFromPayload(payload);
   if (!nextState) return current;
 
-  const sameEnabled = current.enabled === enabled;
-  const sameWorkspace = current.workspacePath === workspacePath;
-  const sameState = sameGitPatchState(current.state, nextState);
-  return sameEnabled && sameWorkspace && sameState ? current : { enabled, state: nextState, workspacePath };
+  return nextLoadedGitPatchState(current, workspacePath, enabled, nextState);
 };
 
 export const patchStateAfterResult = (
@@ -124,9 +154,4 @@ export const patchStateAfterResult = (
   workspacePath: string,
   enabled: boolean,
   nextState: GitPatchState
-): LoadedGitPatchState => {
-  const sameEnabled = current.enabled === enabled;
-  const sameWorkspace = current.workspacePath === workspacePath;
-  const sameState = sameGitPatchState(current.state, nextState);
-  return sameEnabled && sameWorkspace && sameState ? current : { enabled, state: nextState, workspacePath };
-};
+): LoadedGitPatchState => nextLoadedGitPatchState(current, workspacePath, enabled, nextState);

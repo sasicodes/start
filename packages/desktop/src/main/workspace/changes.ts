@@ -227,15 +227,11 @@ export class GitChangesService {
     if (refreshPatch) this.storePatch(entry, patch);
     this.watchWorkspace(entry);
 
-    if (sameSummary(previousSummary, nextSummary) && samePatch(previousPatch, nextPatch)) return;
+    const patchChanged = !samePatch(previousPatch, nextPatch);
+    const summaryChanged = !sameSummary(previousSummary, nextSummary);
+    if (!patchChanged && !summaryChanged) return;
 
-    const patchUnavailable = entry.patchLoaded && !entry.patch;
-    this.notify({
-      workspacePath: entry.workspacePath,
-      ...(patchUnavailable ? { patchUnavailable: true } : {}),
-      ...(entry.patch ? { patch: entry.patch } : {}),
-      ...(entry.summary ? { summary: entry.summary } : {})
-    });
+    this.notifyCurrentState(entry);
   }
 
   private watchWorkspace(entry: GitChangesEntry): void {
@@ -291,13 +287,23 @@ export class GitChangesService {
   private handleRefreshFailure(entry: GitChangesEntry): void {
     const hadPatch = Boolean(entry.patch);
     const hadSummary = Boolean(entry.summary);
+    const hadCachedState = hadPatch || hadSummary;
+
     this.storeSummary(entry);
     if (entry.patchLoaded) this.storePatch(entry);
-    if (!hadPatch && !hadSummary) return;
+    if (!hadCachedState) return;
+
+    this.notifyCurrentState(entry);
+  }
+
+  private notifyCurrentState(entry: GitChangesEntry): void {
+    const patchUnavailable = entry.patchLoaded && !entry.patch;
 
     this.notify({
       workspacePath: entry.workspacePath,
-      ...(entry.patchLoaded ? { patchUnavailable: true } : {})
+      ...(patchUnavailable ? { patchUnavailable: true } : {}),
+      ...(entry.patch ? { patch: entry.patch } : {}),
+      ...(entry.summary ? { summary: entry.summary } : {})
     });
   }
 
