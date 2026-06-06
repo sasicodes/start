@@ -206,11 +206,42 @@ struct ChatMessage: Identifiable {
 
 struct Connection: Identifiable {
     let id: UUID
-    let name: String
+    let desktopId: String
     let workspace: Workspace
     let downloadSpeed: String
     let uploadSpeed: String
+    var name: String
     var enabled: Bool
+
+    init(
+        id: UUID = UUID(),
+        desktopId: String,
+        name: String,
+        workspace: Workspace,
+        downloadSpeed: String = "0 KB/s",
+        uploadSpeed: String = "0 KB/s",
+        enabled: Bool
+    ) {
+        self.id = id
+        self.name = name
+        self.enabled = enabled
+        self.desktopId = desktopId
+        self.workspace = workspace
+        self.uploadSpeed = uploadSpeed
+        self.downloadSpeed = downloadSpeed
+    }
+
+    init(pairing: PairingPayload) {
+        let fallbackName = String(pairing.desktopId.prefix(8))
+        let trimmedName = pairing.desktopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        self.init(
+            desktopId: pairing.desktopId,
+            name: trimmedName.isEmpty ? "Desktop \(fallbackName)" : trimmedName,
+            workspace: .start,
+            enabled: true
+        )
+    }
 
     var speedLabel: String {
         guard enabled else { return "Offline" }
@@ -222,9 +253,9 @@ struct Connection: Identifiable {
     }
 
     static let samples = [
-        Connection(id: UUID(), name: "Personal", workspace: .start, downloadSpeed: "1.8 MB/s", uploadSpeed: "420 KB/s", enabled: true),
-        Connection(id: UUID(), name: "Office", workspace: .relay, downloadSpeed: "0 KB/s", uploadSpeed: "0 KB/s", enabled: false),
-        Connection(id: UUID(), name: "Design", workspace: .start, downloadSpeed: "940 KB/s", uploadSpeed: "180 KB/s", enabled: true),
-        Connection(id: UUID(), name: "Staging", workspace: .relay, downloadSpeed: "0 KB/s", uploadSpeed: "0 KB/s", enabled: false)
+        Connection(desktopId: "personal", name: "Personal", workspace: .start, downloadSpeed: "1.8 MB/s", uploadSpeed: "420 KB/s", enabled: true),
+        Connection(desktopId: "office", name: "Office", workspace: .relay, enabled: false),
+        Connection(desktopId: "design", name: "Design", workspace: .start, downloadSpeed: "940 KB/s", uploadSpeed: "180 KB/s", enabled: true),
+        Connection(desktopId: "staging", name: "Staging", workspace: .relay, enabled: false)
     ]
 }

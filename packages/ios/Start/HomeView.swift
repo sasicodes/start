@@ -11,39 +11,26 @@ struct HomeView: View {
     var body: some View {
         @Bindable var appState = appState
         let searchActive = searchFocused || !appState.searchText.isEmpty
+        let connected = !appState.connections.isEmpty
 
-        return ScrollView(showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                titleRow
+        return GeometryReader { geometry in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    titleRow
 
-                contentList
+                    contentList(minHeight: emptyStateHeight(in: geometry.size.height))
+                }
+                .padding(.horizontal, StartTheme.Metrics.pagePadding)
+                .padding(.bottom, StartTheme.Metrics.homeListBottomPadding)
             }
-            .padding(.horizontal, StartTheme.Metrics.pagePadding)
-            .padding(.bottom, StartTheme.Metrics.homeListBottomPadding)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay {
-            VStack {
-                Spacer()
-
-                HStack(spacing: searchActive ? 6 : 10) {
-                    HomeSearchBar(text: $appState.searchText, focused: $searchFocused)
-
-                    if !searchActive {
-                        ChatButton(transitionNamespace: transitionNamespace) {
-                            withAnimation(.smooth(duration: 0.18)) {
-                                appState.openNewChat()
-                            }
-                        }
-                        .transition(.scale(scale: 0.76).combined(with: .opacity))
-                    }
-                }
-                .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: searchActive)
-                .padding(.leading, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
-                .padding(.trailing, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
-                .padding(.bottom, searchActive ? 16 : StartTheme.Metrics.floatingButtonBottomPadding)
+            if connected {
+                connectedBottomControls(searchActive: searchActive, searchText: $appState.searchText)
+            } else {
+                addConnectionBottomButton
             }
-            .ignoresSafeArea(.container, edges: .bottom)
         }
         .refreshable {
             await appState.refreshChats()
@@ -69,21 +56,86 @@ struct HomeView: View {
         }
     }
 
-    private var contentList: some View {
+    private func emptyStateHeight(in height: CGFloat) -> CGFloat {
+        max(
+            320,
+            height - StartTheme.Metrics.floatingButtonSize - StartTheme.Metrics.homeListBottomPadding - 16
+        )
+    }
+
+    private func contentList(minHeight: CGFloat) -> some View {
         Group {
-            if appState.chatsLoaded {
-                WorkspaceChatList(
-                    sections: workspaceChatSections(from: visibleChats, sort: sort),
-                    expandedWorkspaces: $expandedWorkspaces,
-                    transitionNamespace: transitionNamespace
-                )
+            if appState.connections.isEmpty {
+                ConnectionEmptyState(minHeight: minHeight)
                 .transition(.opacity)
+            } else if appState.chatsLoaded {
+                let sections = workspaceChatSections(from: visibleChats, sort: sort)
+
+                if sections.isEmpty {
+                    ChatListEmptyState(searching: !appState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .transition(.opacity)
+                } else {
+                    WorkspaceChatList(
+                        sections: sections,
+                        expandedWorkspaces: $expandedWorkspaces,
+                        transitionNamespace: transitionNamespace
+                    )
+                    .transition(.opacity)
+                }
             } else {
                 SkeletonList()
                     .transition(.opacity)
             }
         }
         .padding(.top, 4)
+    }
+
+    private func connectedBottomControls(searchActive: Bool, searchText: Binding<String>) -> some View {
+        VStack {
+            Spacer()
+
+            HStack(spacing: searchActive ? 6 : 10) {
+                HomeSearchBar(text: searchText, focused: $searchFocused)
+
+                if !searchActive {
+                    ChatButton(transitionNamespace: transitionNamespace) {
+                        withAnimation(.smooth(duration: 0.18)) {
+                            appState.openNewChat()
+                        }
+                    }
+                    .transition(.scale(scale: 0.76).combined(with: .opacity))
+                }
+            }
+            .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: searchActive)
+            .padding(.leading, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+            .padding(.trailing, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+            .padding(.bottom, searchActive ? 16 : StartTheme.Metrics.floatingButtonBottomPadding)
+        }
+        .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    private var addConnectionBottomButton: some View {
+        VStack {
+            Spacer()
+
+            Button {
+                scannerOpen = true
+            } label: {
+                Label("Add connection", systemImage: "plus")
+                    .font(.system(size: 16, weight: .semibold))
+                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(StartTheme.Colors.ink)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: StartTheme.Metrics.floatingButtonHitSize)
+            }
+            .buttonStyle(.plain)
+            .contentShape(Capsule())
+            .glassCapsule()
+            .accessibilityLabel("Add connection")
+            .padding(.horizontal, StartTheme.Metrics.floatingButtonHorizontalPadding)
+            .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
+        }
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
     private var titleRow: some View {
@@ -93,11 +145,13 @@ struct HomeView: View {
                     .font(StartTheme.Text.title)
                     .foregroundStyle(StartTheme.Colors.ink)
 
-                Text(appState.connectionStatusLabel)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.softInk.opacity(0.48))
-                    .contentTransition(.opacity)
-                    .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
+                if !appState.connections.isEmpty {
+                    Text(appState.connectionStatusLabel)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(StartTheme.Colors.softInk.opacity(0.48))
+                        .contentTransition(.opacity)
+                        .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
+                }
             }
             .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
 
@@ -115,6 +169,61 @@ struct HomeView: View {
             )
         }
         .frame(height: StartTheme.Metrics.floatingButtonSize)
+    }
+}
+
+private struct ConnectionEmptyState: View {
+    let minHeight: CGFloat
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Text("No connections")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+
+            VStack(spacing: 4) {
+                Text("Open the desktop app, then go to")
+
+                HStack(spacing: 5) {
+                    Text("Settings")
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+
+                    Text("Mobile")
+                }
+            }
+            .font(.system(size: 14, weight: .regular))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(StartTheme.Colors.softInk)
+            .frame(maxWidth: 260)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: minHeight)
+    }
+}
+
+private struct ChatListEmptyState: View {
+    let searching: Bool
+
+    private var message: String {
+        searching ? "No chats match your search." : "No chats yet."
+    }
+
+    var body: some View {
+        VStack(spacing: 7) {
+            Text(message)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+
+            if !searching {
+                Text("New conversations will appear here.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(StartTheme.Colors.softInk)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 320)
     }
 }
 
@@ -218,19 +327,24 @@ private struct ConnectionScannerSheet: View {
 
     var body: some View {
         QRCodeScannerView { payload in
-            appState.pair(with: payload)
-            dismiss()
+            if appState.pair(with: payload) {
+                dismiss()
+            }
         }
-        .overlay {
+        .overlay(alignment: .center) {
             ScannerReticle()
         }
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(alignment: .bottom) {
+            ScannerInstruction()
+                .padding(.bottom, 18)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 52, style: .continuous))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 14)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+        .padding(.vertical, 18)
+        .ignoresSafeArea(.container, edges: .bottom)
         .presentationDetents([.fraction(0.78)])
-        .presentationCornerRadius(42)
+        .presentationCornerRadius(58)
         .presentationDragIndicator(.visible)
         .presentationBackground(StartTheme.Colors.background)
     }
@@ -238,30 +352,24 @@ private struct ConnectionScannerSheet: View {
 
 private struct ScannerReticle: View {
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(.white.opacity(0.82), lineWidth: 2)
-                .frame(width: 220, height: 220)
-                .shadow(color: .black.opacity(0.24), radius: 18)
-
-            VStack {
-                Spacer()
-
-                PhaseAnimator([0.58, 1.0]) { opacity in
-                    Text("Scan the QR code on your desktop")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(opacity))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
-                } animation: { _ in
-                    .easeInOut(duration: 0.9)
-                }
-                .padding(.bottom, 18)
-            }
-        }
+        RoundedRectangle(cornerRadius: 26, style: .continuous)
+            .stroke(.white.opacity(0.82), lineWidth: 2)
+            .frame(width: 220, height: 220)
+            .shadow(color: .black.opacity(0.24), radius: 18)
         .padding(18)
         .allowsHitTesting(false)
+    }
+}
+
+private struct ScannerInstruction: View {
+    var body: some View {
+        Text("Scan the QR code on your desktop")
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.ultraThinMaterial, in: Capsule())
+            .allowsHitTesting(false)
     }
 }
 
