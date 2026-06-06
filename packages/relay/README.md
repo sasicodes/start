@@ -1,77 +1,35 @@
-# start relay
+Self-hostable relay for **start** remote access. It connects desktop and mobile over authenticated WebSockets; desktop stays the source of truth for workspaces, sessions, files, tools, and model state.
 
-Self-hostable relay for start remote access. The relay connects desktop and mobile over authenticated WebSockets while desktop remains the source of truth for workspaces, sessions, files, tools, and model state.
+The relay stores nothing — no prompts, files, history, or credentials. Connections live in memory, so run a single instance (replicas break pairing, and serverless platforms can't hold the socket open).
 
-The relay does not store prompts, files, session history, or provider credentials.
+### Host on the cloud
 
-## Deploy
+A prebuilt image is published on every change at `ghcr.io/sasicodes/start/relay:latest` (public, no auth to pull).
 
-Run as a single instance on any container host. It keeps connections in memory, so multiple replicas break pairing, and serverless platforms (Vercel) can't hold the WebSocket open. No clone or build needed — a prebuilt image is published on every change at `ghcr.io/sasicodes/start/relay:latest` (make the GHCR package public for anonymous pulls).
+On [Railway](https://railway.app): New Project → Deploy from a Docker Image → `ghcr.io/sasicodes/start/relay:latest`, then set `START_RELAY_TOKEN` to a secret. Copy the service URL (`wss://…`) and the token into the desktop app.
 
-- Render: click [Deploy to Render](https://render.com/deploy?repo=https://github.com/sasicodes/start). It reads [`render.yaml`](../../render.yaml), pulls the image, and generates `START_RELAY_TOKEN`. Keep the `starter` plan — free sleeps on idle.
-- Railway: New Project → Deploy from a Docker Image → `ghcr.io/sasicodes/start/relay:latest`, then add `START_RELAY_TOKEN` (`${{ secret(32) }}`).
+### Host locally behind a proxy
 
-Copy the generated token and the service URL into the desktop app.
-
-## Run locally
+Run the relay (below), then expose it with a tunnel:
 
 ```sh
-pnpm --filter @start/relay build
+ngrok http 8787
+```
+
+Use the tunnel's `wss://…` URL and your token in the desktop app.
+
+### Run locally
+
+```sh
 START_RELAY_TOKEN=change-me pnpm --filter @start/relay start
 ```
 
-Health checks:
+Point the desktop app at `ws://localhost:8787` with the same token.
 
-```sh
-curl http://localhost:8787/health
-curl http://localhost:8787/ready
-```
-
-## Configuration
+### Configuration
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `8787` | HTTP and WebSocket port. |
-| `START_RELAY_TOKEN` | empty | Optional shared token required in client hello messages. |
+| `START_RELAY_TOKEN` | empty | Shared token required in client hello messages. |
 | `START_RELAY_PAIRING_TTL_MS` | `300000` | Pairing code lifetime. |
-
-## WebSocket
-
-Connect to:
-
-```txt
-ws://localhost:8787/connect
-```
-
-The first message must be a hello message:
-
-```json
-{
-  "type": "hello.desktop",
-  "protocolVersion": 1,
-  "desktopId": "desktop-id",
-  "token": "change-me"
-}
-```
-
-or:
-
-```json
-{
-  "type": "hello.mobile",
-  "protocolVersion": 1,
-  "mobileId": "mobile-id",
-  "token": "change-me"
-}
-```
-
-After pairing, the relay only routes opaque command and event payloads. Desktop and mobile validate the application-specific payloads themselves.
-
-## Docker
-
-Build from the repository root:
-
-```sh
-docker build -f packages/relay/Dockerfile -t start-relay .
-docker run --rm -p 8787:8787 -e START_RELAY_TOKEN=change-me start-relay
-```
