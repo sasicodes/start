@@ -24,10 +24,9 @@ interface DetailItemProps {
 
 interface DetailTitleProps {
   detail: TurnDetail;
-  interactive: boolean;
 }
 
-const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
+const DetailTitle = ({ detail }: DetailTitleProps) => {
   const target = detailTarget(detail);
   const index = target ? detail.title.lastIndexOf(target) : -1;
   if (index < 0) return <>{detail.title}</>;
@@ -37,11 +36,7 @@ const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
   return (
     <>
       {before}
-      <span
-        class={tw('text-ink', interactive && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover')}
-      >
-        {target}
-      </span>
+      <span class="text-ink">{target}</span>
       {after}
     </>
   );
@@ -108,7 +103,7 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
         expandable && subdued && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover'
       )}
     >
-      <DetailTitle detail={detail} interactive={expandable && subdued} />
+      <DetailTitle detail={detail} />
     </span>
   );
 
