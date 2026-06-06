@@ -1,4 +1,4 @@
-import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/stream-buffer';
+import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import type { ChatEvent } from '@preload/index';
 import { describe, expect, it, vi } from 'vitest';
 
