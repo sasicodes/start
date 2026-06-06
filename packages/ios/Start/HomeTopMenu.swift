@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HomeTopMenu: View {
     let sort: WorkspaceSort
-    let activeConnectionID: UUID
+    let activeConnectionID: UUID?
     let connections: [Connection]
     let onAddConnection: () -> Void
     let onSelectSort: (WorkspaceSort) -> Void
@@ -10,7 +10,9 @@ struct HomeTopMenu: View {
 
     var body: some View {
         Menu {
-            sortMenu
+            if !connections.isEmpty {
+                sortMenu
+            }
             connectionMenu
         } label: {
             Label("More", systemImage: "ellipsis")
@@ -45,7 +47,9 @@ struct HomeTopMenu: View {
                 Label("New connection", systemImage: "plus")
             }
 
-            Divider()
+            if !connections.isEmpty {
+                Divider()
+            }
 
             ForEach(connections) { connection in
                 Button {

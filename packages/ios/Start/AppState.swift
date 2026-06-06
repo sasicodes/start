@@ -4,9 +4,9 @@ import Observation
 @Observable
 @MainActor
 final class AppState {
-    var activeConnectionID = Connection.samples[0].id
+    var activeConnectionID: UUID?
     var activeWorkspace = Workspace.start
-    var connections = Connection.samples
+    var connections: [Connection]
     var draft = ""
     var searchText = ""
     var promptFocused = false
@@ -14,7 +14,16 @@ final class AppState {
     var path: [AppRoute] = []
     var relay = RelayClient()
 
-    let chats = Chat.samples
+    let chats: [Chat]
+
+    init(connections: [Connection] = [], chats: [Chat] = []) {
+        self.connections = connections
+        self.chats = chats
+
+        guard let connection = connections.first else { return }
+        activeConnectionID = connection.id
+        activeWorkspace = connection.workspace
+    }
 
     var activeBranchName: String {
         activeWorkspace.branchName
@@ -80,12 +89,14 @@ final class AppState {
         activeWorkspace = connection.workspace
     }
 
-    func pair(with payload: String) {
+    func pair(with payload: String) -> Bool {
         guard let data = payload.data(using: .utf8),
               let pairing = try? JSONDecoder().decode(PairingPayload.self, from: data),
               pairing.type == "start.mobile.relay",
               let url = URL(string: pairing.relayUrl)
-        else { return }
+        else { return false }
+
+        upsertConnection(with: pairing)
 
         relay.connect(
             url: url,
@@ -93,6 +104,7 @@ final class AppState {
             token: pairing.relayToken ?? "",
             pairingCode: pairing.code ?? ""
         )
+        return true
     }
 
     func refreshChats() async {
@@ -104,5 +116,20 @@ final class AppState {
 
     func chat(for id: UUID) -> Chat? {
         chats.first { $0.id == id }
+    }
+
+    private func upsertConnection(with pairing: PairingPayload) {
+        if let index = connections.firstIndex(where: { $0.desktopId == pairing.desktopId }) {
+            connections[index].name = Connection(pairing: pairing).name
+            connections[index].enabled = true
+            activeConnectionID = connections[index].id
+            activeWorkspace = connections[index].workspace
+            return
+        }
+
+        let connection = Connection(pairing: pairing)
+        connections.insert(connection, at: 0)
+        activeConnectionID = connection.id
+        activeWorkspace = connection.workspace
     }
 }

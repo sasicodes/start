@@ -211,6 +211,7 @@ struct PairingPayload: Decodable {
     let code: String?
     let relayUrl: String
     let desktopId: String
+    let desktopName: String?
     let relayToken: String?
 }
 
