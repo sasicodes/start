@@ -46,6 +46,10 @@ export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement>) =>
   }, [route.name, surface, textareaRef]);
 
   useEffect(() => {
+    document.documentElement.dataset.surface = surface;
+  }, [surface]);
+
+  useEffect(() => {
     const syncRoute = () => setRoute(currentRoute());
     window.addEventListener('popstate', syncRoute);
     window.addEventListener('hashchange', syncRoute);

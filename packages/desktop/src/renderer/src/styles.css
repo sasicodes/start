@@ -109,12 +109,12 @@
   }
 }
 
-:root[data-solid-window-background="true"] {
+:root[data-solid-window-background="true"]:not([data-surface="composer"]) {
   --color-canvas: oklch(98% 0.002 264);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root[data-solid-window-background="true"] {
+  :root[data-solid-window-background="true"]:not([data-surface="composer"]) {
     --color-canvas: oklch(22% 0.01 255);
   }
 }
