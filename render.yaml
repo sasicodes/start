@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: start-relay
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./packages/relay/Dockerfile
+    dockerContext: .
+    numInstances: 1
+    healthCheckPath: /health
+    envVars:
+      - key: START_RELAY_TOKEN
+        generateValue: true
+      - key: START_RELAY_PAIRING_TTL_MS
+        sync: false

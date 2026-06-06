@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --packages=external --platform=node --target=node24 --outfile=dist/index.js",
+    "build": "esbuild src/index.ts --bundle --format=esm --platform=node --target=node24 --external:bufferutil --external:utf-8-validate --banner:js=\"import{createRequire as __cr}from'node:module';const require=__cr(import.meta.url);\" --outfile=dist/index.js",
     "start": "node dist/index.js",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --pretty false"

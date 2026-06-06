@@ -10,7 +10,6 @@ RUN pnpm install --filter @start/relay... --frozen-lockfile
 
 COPY packages/relay packages/relay
 RUN pnpm --filter @start/relay build
-RUN pnpm --filter @start/relay deploy --prod --legacy --config.allow-unused-patches=true /prod
 
 FROM node:24-alpine
 
@@ -18,7 +17,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8787
 
-COPY --from=build --chown=node:node /prod ./
+COPY --from=build --chown=node:node /app/packages/relay/dist ./dist
 
 USER node
 EXPOSE 8787
