@@ -5,7 +5,7 @@ import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import { motion } from 'motion/react';
 
 const ActivitySequence = ({ items }: { items: TurnActivityItem[] }) => (
-  <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2 p-0">
+  <motion.ul layout="position" transition={accordionLayoutTransition} class="m-0 flex list-none flex-col gap-2.5 p-0">
     {items.map((item) =>
       item.type === 'thinking' ? (
         <motion.li key={item.id} layout="position" transition={accordionLayoutTransition} class="m-0">
