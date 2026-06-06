@@ -8,6 +8,7 @@ const matches = (model: ModelOption, terms: string[]) => {
 };
 
 export const modelProviderId = (model: ModelOption): ModelProviderId => {
+  if (model.provider === 'anthropic') return 'anthropic';
   if (model.provider === 'google') return 'google';
   if (model.provider === 'openai') return 'openai';
   if (matches(model, ['gemini', 'google'])) return 'google';

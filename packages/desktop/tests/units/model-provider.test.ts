@@ -30,6 +30,12 @@ describe('modelProviderId', () => {
     expect(modelProviderId(model({ id: 'claude-haiku-4-5', name: 'haiku', provider: 'openrouter' }))).toBe('anthropic');
   });
 
+  it('keeps Anthropic provider models even when identifiers contain foreign tokens', () => {
+    expect(modelProviderId(model({ id: 'claude-o4-preview', name: 'Claude O4', provider: 'anthropic' }))).toBe(
+      'anthropic'
+    );
+  });
+
   it('classifies Google by provider name', () => {
     expect(modelProviderId(model({ id: 'gemini-3.1-pro-preview', name: 'Gemini Pro', provider: 'google' }))).toBe(
       'google'
