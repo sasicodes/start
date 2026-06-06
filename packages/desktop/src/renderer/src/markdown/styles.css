@@ -8,7 +8,7 @@
 }
 
 .markdown-compact {
-  @apply text-xs leading-5 text-soft;
+  @apply leading-5 text-soft;
 }
 
 .markdown-default > :not(:first-child) {
@@ -54,7 +54,7 @@
 }
 
 .markdown-compact [data-streamdown^="heading-"] {
-  @apply mt-0 text-xs leading-5 font-medium text-soft;
+  @apply mt-0 leading-5 font-medium text-soft;
 }
 
 .thinking-markdown .markdown-compact [data-streamdown^="heading-"] {
@@ -142,7 +142,7 @@
 }
 
 .markdown-compact [data-streamdown="code-block-body"] {
-  @apply text-xs leading-5;
+  @apply leading-5;
 }
 
 .markdown-default [data-streamdown="code-block-body"] pre,
