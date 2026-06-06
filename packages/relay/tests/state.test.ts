@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { RelayState } from '../src/state';
+import { pickUnusedCode, RelayState } from '../src/state';
 import { describe, expect, it } from 'vitest';
 
 const socket = () => ({ close: () => {} }) as unknown as WebSocket;
@@ -106,5 +106,29 @@ describe('RelayState', () => {
     expect(firstDesktop.calls).toEqual(['close']);
     expect(firstMobile.calls).toEqual(['close']);
     expect(state.snapshot()).toEqual({ desktops: 1, mobiles: 1, pairings: 0 });
+  });
+});
+
+describe('pickUnusedCode', () => {
+  it('returns the first code that is not already taken', () => {
+    const codes = ['111111', '222222', '333333'];
+    let index = 0;
+    expect(
+      pickUnusedCode(
+        (code) => code === '111111',
+        () => codes[index++],
+        5
+      )
+    ).toBe('222222');
+  });
+
+  it('throws once the attempt budget is exhausted', () => {
+    expect(() =>
+      pickUnusedCode(
+        () => true,
+        () => '111111',
+        3
+      )
+    ).toThrow(/unique pairing code/u);
   });
 });

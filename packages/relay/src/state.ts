@@ -3,6 +3,15 @@ import type { WebSocket } from 'ws';
 import { maxPairingSessions, pairingCodeMax, pairingCodeMin } from './constants';
 import type { DesktopConnection, MobileConnection, PairingSession, RelaySnapshot } from './types';
 
+export const pickUnusedCode = (isTaken: (code: string) => boolean, nextCode: () => string, maxAttempts: number) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const code = nextCode();
+    if (!isTaken(code)) return code;
+  }
+
+  throw new Error('Unable to allocate a unique pairing code.');
+};
+
 export class RelayState {
   private readonly mobiles = new Map<string, MobileConnection>();
   private readonly routes = new Map<string, Set<string>>();
@@ -102,11 +111,10 @@ export class RelayState {
   }
 
   private unusedPairingCode() {
-    let code = String(randomInt(pairingCodeMin, pairingCodeMax + 1));
-    while (this.pairings.has(code)) {
-      code = String(randomInt(pairingCodeMin, pairingCodeMax + 1));
-    }
-
-    return code;
+    return pickUnusedCode(
+      (code) => this.pairings.has(code),
+      () => String(randomInt(pairingCodeMin, pairingCodeMax + 1)),
+      maxPairingSessions
+    );
   }
 }
