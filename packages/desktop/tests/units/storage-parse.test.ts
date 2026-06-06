@@ -39,4 +39,17 @@ describe('parseStartState', () => {
     expect(state.sessionNotices?.ok?.kind).toBe('completed');
     expect(state.sessionNotices?.ok?.seenAt).toBe(2);
   });
+
+  it('keeps only valid workspace history entries', () => {
+    const state = parseStartState({
+      workspaceHistory: {
+        '   ': 1,
+        '/two': '2',
+        ' /one ': 123,
+        '/three': Number.NaN
+      }
+    });
+
+    expect(state.workspaceHistory).toEqual({ '/one': 123 });
+  });
 });

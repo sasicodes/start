@@ -123,7 +123,7 @@ export const usePanelResize = ({
     }
   }, []);
 
-  const stopResize = useCallback(() => {
+  const clearResizeInteraction = useCallback(() => {
     if (!resizingRef.current) return;
 
     resizingRef.current = false;
@@ -138,8 +138,12 @@ export const usePanelResize = ({
     document.documentElement.style.cursor = interactionStyleRef.current.htmlCursor;
     document.body.style.cursor = interactionStyleRef.current.bodyCursor;
     document.body.style.userSelect = interactionStyleRef.current.userSelect;
-    setResizing(false);
   }, []);
+
+  const stopResize = useCallback(() => {
+    clearResizeInteraction();
+    setResizing(false);
+  }, [clearResizeInteraction]);
 
   const settleWidth = useCallback(
     (width: number) => {
@@ -249,6 +253,9 @@ export const usePanelResize = ({
     [clearSettle, finishResize, scheduleResize, setDocumentCursor, setResizeCursor, stopResize]
   );
 
+  const effectiveResizing = sidePanelVisible && resizing;
+  const effectiveSettling = sidePanelVisible && settling;
+
   useLayoutEffect(() => {
     if (!sidePanelVisible) return;
 
@@ -268,10 +275,11 @@ export const usePanelResize = ({
   useEffect(() => {
     if (!sidePanelVisible) {
       clearSettle();
+      clearResizeInteraction();
+      setResizing(false);
       setSettling(false);
-      stopResize();
     }
-  }, [clearSettle, sidePanelVisible, stopResize]);
+  }, [clearResizeInteraction, clearSettle, sidePanelVisible]);
 
   useEffect(
     () => () => {
@@ -281,5 +289,5 @@ export const usePanelResize = ({
     [clearSettle, stopResize]
   );
 
-  return { initialWidth, resizing, rootRef, settling, startResize };
+  return { initialWidth, resizing: effectiveResizing, rootRef, settling: effectiveSettling, startResize };
 };

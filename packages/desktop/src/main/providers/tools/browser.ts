@@ -1,3 +1,4 @@
+import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
   captureBrowserScreenshot,
   captureBrowserSnapshot,
@@ -11,10 +12,16 @@ import {
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { sendToMainWindow } from '@main/window';
-import { defineTool } from '@earendil-works/pi-coding-agent';
+import * as v from 'valibot';
 
 const openPollMs = 100;
 const openTimeoutMs = 5000;
+const browserPromptGuideline =
+  'Use browser tools only when the user includes @Browser, or while continuing that active @Browser task.';
+const browserToolDefaults = {
+  label: 'browser',
+  promptGuidelines: [browserPromptGuideline]
+};
 
 const emptySchema = {
   type: 'object',
@@ -101,9 +108,13 @@ const browserPressSchema = {
 
 const textResult = (text: string) => ({ details: null, content: [{ text, type: 'text' as const }] });
 
+const browserStringSchema = (label: string) =>
+  v.pipe(v.string(), v.trim(), v.minLength(1, `Enter a browser ${label}.`));
+
 const requiredString = (value: unknown, label: string) => {
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`Enter a browser ${label}.`);
-  return value;
+  const result = v.safeParse(browserStringSchema(label), value);
+  if (result.success) return result.output;
+  throw new Error(`Enter a browser ${label}.`);
 };
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -134,12 +145,12 @@ const waitForBrowserSelection = async (tabId: string) => {
 
 export const createBrowserTools = () => [
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute(_toolCallId, { url, newTab, tabId }) {
-      const normalizedUrl = normalizeBrowserUrl(url);
+      const normalizedUrl = normalizeBrowserUrl(requiredString(url, 'URL'));
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
-      const tabIdValue = typeof tabId === 'string' ? tabId.trim() : '';
+      const tabIdValue = tabId ? requiredString(tabId, 'tab id') : '';
       sendToMainWindow('app:browser-open-request', {
         url: normalizedUrl,
         ...(tabIdValue ? { tabId: tabIdValue, newTab: newTab === true } : { newTab: newTab !== false })
@@ -152,10 +163,10 @@ export const createBrowserTools = () => [
     name: 'browser_open',
     parameters: browserOpenSchema,
     description: 'Open an HTTP or HTTPS URL in the browser panel for explicit viewing or interaction.',
-    promptSnippet: 'Use when the user asks to open/view a page, test a local app, or inspect visual state.'
+    promptSnippet: 'Open a page or local app in the browser.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute(_toolCallId, { tabId }) {
       const tabIdValue = requiredString(tabId, 'tab id');
       sendToMainWindow('app:browser-select-request', { tabId: tabIdValue });
@@ -167,10 +178,10 @@ export const createBrowserTools = () => [
     name: 'browser_select',
     parameters: browserSelectSchema,
     description: 'Select an existing browser tab by id.',
-    promptSnippet: 'Use browser_status first, then select a listed tab id.'
+    promptSnippet: 'Select a tab returned by browser_status.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const status = getBrowserStatus();
       return textResult(
@@ -189,10 +200,10 @@ export const createBrowserTools = () => [
     name: 'browser_status',
     parameters: emptySchema,
     description: 'Read the browser URL, title, loading, and history state.',
-    promptSnippet: 'Use to check what page is open and whether navigation is available.'
+    promptSnippet: 'Read the active browser tab and navigation state.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const result = goBackInBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not go back in the browser.');
@@ -201,10 +212,10 @@ export const createBrowserTools = () => [
     name: 'browser_back',
     parameters: emptySchema,
     description: 'Go back one browser history entry.',
-    promptSnippet: 'Use after browser_status shows back history is available.'
+    promptSnippet: 'Go back after browser_status shows back history.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const result = goForwardInBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not go forward in the browser.');
@@ -213,10 +224,10 @@ export const createBrowserTools = () => [
     name: 'browser_forward',
     parameters: emptySchema,
     description: 'Go forward one browser history entry.',
-    promptSnippet: 'Use after browser_status shows forward history is available.'
+    promptSnippet: 'Go forward after browser_status shows forward history.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const result = reloadBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not reload the browser.');
@@ -225,10 +236,10 @@ export const createBrowserTools = () => [
     name: 'browser_reload',
     parameters: emptySchema,
     description: 'Reload the current browser page.',
-    promptSnippet: 'Refresh the open browser page after stale page state.'
+    promptSnippet: 'Refresh the active browser page after stale state.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute(_toolCallId, { ref }) {
       const refValue = requiredString(ref, 'element ref');
       const result = await clickInBrowser(refValue);
@@ -238,10 +249,10 @@ export const createBrowserTools = () => [
     name: 'browser_click',
     parameters: browserClickSchema,
     description: 'Click an element ref from browser_snapshot.',
-    promptSnippet: 'Use browser_snapshot first, then click a listed element ref.'
+    promptSnippet: 'Click a ref returned by browser_snapshot.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute(_toolCallId, { ref, text, clear }) {
       const refValue = requiredString(ref, 'element ref');
       const textValue = requiredString(text, 'text value');
@@ -252,10 +263,10 @@ export const createBrowserTools = () => [
     name: 'browser_type',
     parameters: browserTypeSchema,
     description: 'Type text into an input ref from browser_snapshot.',
-    promptSnippet: 'Use browser_snapshot first, then type into a listed input ref.'
+    promptSnippet: 'Type into an input ref returned by browser_snapshot.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute(_toolCallId, { key }) {
       const keyValue = requiredString(key, 'key');
       const result = pressInBrowser(keyValue);
@@ -265,10 +276,10 @@ export const createBrowserTools = () => [
     name: 'browser_press',
     parameters: browserPressSchema,
     description: 'Press a supported key in the browser page.',
-    promptSnippet: 'Use for Enter, Tab, Escape, arrows, deletion, or paging keys.'
+    promptSnippet: 'Press Enter, Tab, Escape, or arrow keys in the page.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const result = await captureBrowserScreenshot();
       if (!result.ok) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
@@ -277,10 +288,10 @@ export const createBrowserTools = () => [
     parameters: emptySchema,
     name: 'browser_screenshot',
     description: 'Copy a screenshot of the visible browser page.',
-    promptSnippet: 'Requires an open browser page; copies the visible page.'
+    promptSnippet: 'Capture a visible-page screenshot for visual checks.'
   }),
   defineTool({
-    label: 'browser',
+    ...browserToolDefaults,
     async execute() {
       const result = await captureBrowserSnapshot();
       if (!result.ok || !result.snapshot) throw new Error(result.error ?? 'Could not read the browser page.');
@@ -289,6 +300,6 @@ export const createBrowserTools = () => [
     parameters: emptySchema,
     name: 'browser_snapshot',
     description: 'Read page text, links, headings, and element refs.',
-    promptSnippet: 'Use for the current browser page or to find refs for browser_click/browser_type.'
+    promptSnippet: 'Read page text and refs for browser_click/browser_type.'
   })
 ];

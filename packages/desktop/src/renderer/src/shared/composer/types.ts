@@ -1,4 +1,5 @@
 import type { EffortLevel, ImageAttachment, ModelOption, QueuedMessage } from '@preload/index';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import type { RefObject } from 'preact';
 
 export interface ComposerProps {
@@ -17,7 +18,7 @@ export interface ComposerProps {
   workspacePath: string;
   selectedModelKey: string;
   thinkingLevel: EffortLevel;
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: SettingsTab) => void;
   onExitComplete: () => void;
   onRefillPrevious: () => void;
   noProvidersConfigured: boolean;

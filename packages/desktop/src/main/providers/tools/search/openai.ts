@@ -1,5 +1,12 @@
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { bearerHeaders } from '@main/providers/tools/search/auth';
+import {
+  codexHeaders,
+  codexInput,
+  codexResponsesUrl,
+  codexSearchInstructions,
+  isCodexModel
+} from '@main/providers/tools/search/codex';
 import { postSse } from '@main/providers/tools/search/fetcher';
 import {
   addSource,
@@ -43,23 +50,39 @@ const collectOpenAiOutputItem = (item: JsonRecord, sources: SearchSource[], sear
   }
 };
 
+const openAiHeaders = async (modelRegistry: ModelRegistry, model: SearchModel, defaults: Record<string, string>) => {
+  if (isCodexModel(model)) return codexHeaders(modelRegistry, model, defaults);
+  return bearerHeaders(modelRegistry, model, defaults);
+};
+
+const openAiUrl = (model: SearchModel) => {
+  if (isCodexModel(model)) return codexResponsesUrl(model.baseUrl);
+  return `${trimTrailingSlash(model.baseUrl)}/responses`;
+};
+
+const openAiInput = (query: string, model: SearchModel) => {
+  if (!isCodexModel(model)) return query;
+  return codexInput(query);
+};
+
 export const searchOpenAi = async (
   query: string,
   model: SearchModel,
   modelRegistry: ModelRegistry,
   signal: AbortSignal | null
 ): Promise<SearchResult> => {
-  const headers = await bearerHeaders(modelRegistry, model, {
+  const headers = await openAiHeaders(modelRegistry, model, {
     Accept: 'text/event-stream',
     'Content-Type': 'application/json'
   });
   const body = {
     stream: true,
     store: false,
-    input: query,
+    input: openAiInput(query, model),
     model: model.id,
     tools: [{ type: 'web_search' }],
     include: ['web_search_call.action.sources', 'web_search_call.results'],
+    ...(isCodexModel(model) ? { instructions: codexSearchInstructions } : {}),
     ...(model.reasoning ? { reasoning: { effort: 'none' } } : {})
   };
 
@@ -68,36 +91,33 @@ export const searchOpenAi = async (
   const searchQueries: string[] = [];
   let nativeSearchSeen = false;
 
-  await postSse(
-    { body, headers, signal, label: 'OpenAI', url: `${trimTrailingSlash(model.baseUrl)}/responses` },
-    ({ data }) => {
-      if (!isRecord(data)) return;
-      const event = data;
-      const type = stringValue(event.type);
-      if (type === 'response.output_text.delta') {
-        text += stringValue(event.delta);
-      } else if (type === 'response.output_text.annotation.added') {
-        const annotation = recordValue(event, 'annotation');
-        if (isRecord(annotation)) {
-          const source = openAiCitation(annotation);
-          if (source) addSource(sources, source);
-        }
-      } else if (type === 'response.web_search_call.searching' || type === 'response.web_search_call.completed') {
-        nativeSearchSeen = true;
-      } else if (type === 'response.output_item.added' || type === 'response.output_item.done') {
-        const item = recordValue(event, 'item');
-        if (isRecord(item)) collectOpenAiOutputItem(item, sources, searchQueries);
-      } else if (type === 'response.completed') {
-        const responseRecord = recordValue(event, 'response');
-        for (const item of recordItems(recordValue(responseRecord, 'output'))) {
-          collectOpenAiOutputItem(item, sources, searchQueries);
-        }
-      } else if (type === 'response.failed' || type === 'error') {
-        const error = recordValue(event, 'error') || recordValue(recordValue(event, 'response'), 'error');
-        throw new Error(stringValue(recordValue(error, 'message')) || 'OpenAI web search failed.');
+  await postSse({ body, headers, signal, label: 'OpenAI', url: openAiUrl(model) }, ({ data }) => {
+    if (!isRecord(data)) return;
+    const event = data;
+    const type = stringValue(event.type);
+    if (type === 'response.output_text.delta') {
+      text += stringValue(event.delta);
+    } else if (type === 'response.output_text.annotation.added') {
+      const annotation = recordValue(event, 'annotation');
+      if (isRecord(annotation)) {
+        const source = openAiCitation(annotation);
+        if (source) addSource(sources, source);
       }
+    } else if (type === 'response.web_search_call.searching' || type === 'response.web_search_call.completed') {
+      nativeSearchSeen = true;
+    } else if (type === 'response.output_item.added' || type === 'response.output_item.done') {
+      const item = recordValue(event, 'item');
+      if (isRecord(item)) collectOpenAiOutputItem(item, sources, searchQueries);
+    } else if (type === 'response.completed') {
+      const responseRecord = recordValue(event, 'response');
+      for (const item of recordItems(recordValue(responseRecord, 'output'))) {
+        collectOpenAiOutputItem(item, sources, searchQueries);
+      }
+    } else if (type === 'response.failed' || type === 'error') {
+      const error = recordValue(event, 'error') || recordValue(recordValue(event, 'response'), 'error');
+      throw new Error(stringValue(recordValue(error, 'message')) || 'OpenAI web search failed.');
     }
-  );
+  });
 
   const grounded = sources.length > 0 || nativeSearchSeen;
   return {

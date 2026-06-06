@@ -1,0 +1,18 @@
+export interface KeyboardInput {
+  key?: string;
+  alt?: boolean;
+  meta?: boolean;
+  code?: string;
+  type?: string;
+  shift?: boolean;
+  control?: boolean;
+}
+
+export const isCloseWindowInput = (input: KeyboardInput) => {
+  const key = input.key?.toLowerCase() ?? '';
+  const code = input.code?.toLowerCase() ?? '';
+  const isWKey = key === 'w' || code === 'keyw';
+  const hasCloseModifier = Boolean(input.control || input.meta);
+
+  return input.type === 'keyDown' && isWKey && hasCloseModifier && !input.alt && !input.shift;
+};

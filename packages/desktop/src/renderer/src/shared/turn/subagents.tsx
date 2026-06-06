@@ -29,7 +29,7 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
   const content = (
     <>
       <img alt="" src={agent.avatar} class="size-4 flex-none rounded-full" />
-      <span class="flex min-w-0 flex-1 items-center gap-1.5 text-xs leading-4 text-soft">
+      <span class="flex min-w-0 flex-1 items-center gap-1.5 leading-4 text-soft">
         <AgentName agent={agent} />
         <span class="shrink-0 text-soft">-</span>
         <span class="min-w-0 truncate text-soft">{agent.task}</span>
@@ -62,7 +62,7 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
       <AnimatePresence initial={false}>
         {open && (
           <motion.div key="subagent-summary" {...accordionContentMotion} class="overflow-hidden">
-            <div class="pt-1.5 text-xs leading-5 text-soft [overflow-wrap:anywhere]">
+            <div class="pt-1.5 leading-5 text-soft [overflow-wrap:anywhere]">
               <Markdown source={summary} density="compact" />
             </div>
           </motion.div>

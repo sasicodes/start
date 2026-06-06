@@ -20,6 +20,7 @@
   --color-brand: oklch(0% 0 0);
   --color-danger: oklch(47% 0.19 27);
   --color-success: oklch(52% 0.14 145);
+  --color-progress: oklch(54% 0.19 255);
   --color-link: oklch(54% 0.16 255);
   --color-brand-ink: oklch(100% 0 0);
   --color-composer: oklch(98.8% 0.001 264);
@@ -96,6 +97,7 @@
     --color-brand: oklch(100% 0 0);
     --color-danger: oklch(78% 0.16 22);
     --color-success: oklch(72% 0.15 145);
+    --color-progress: oklch(72% 0.13 255);
     --color-link: oklch(72% 0.13 255);
     --color-composer: oklch(18% 0.005 285);
     --color-brand-ink: oklch(0% 0 0);
@@ -134,6 +136,17 @@ body,
 
 body {
   @apply overflow-hidden bg-transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms;
+    animation-iteration-count: 1;
+    scroll-behavior: auto;
+    transition-duration: 1ms;
+  }
 }
 
 .no-scroll-bar::-webkit-scrollbar {

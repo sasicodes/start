@@ -1,5 +1,7 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { createTurn } from '@renderer/functions/chat';
+import { createDeferredFlush } from '@renderer/shared/chat/flush';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/stream-buffer';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
@@ -16,6 +18,8 @@ import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 
+const streamingFlushDelayMs = 64;
+
 interface MutableRef<T> {
   current: T;
 }
@@ -23,7 +27,7 @@ interface MutableRef<T> {
 interface UseChatEventsOptions {
   onShowChat: () => void;
   clearSession: () => void;
-  onShowSettings: () => void;
+  onShowSettings: (tab: SettingsTab) => void;
   loadModels: () => Promise<void>;
   loadAuthProviders: () => Promise<void>;
   syncStatus: () => Promise<void>;
@@ -64,13 +68,10 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     let streamBuffer: StreamEvent[] = [];
     let assistantBuffer = '';
     let terminalBuffer = '';
-    let streamFrame = 0;
-    let assistantFrame = 0;
-    let terminalFrame = 0;
+    let textAssistantId = '';
     let activityClearedAssistantId: string | null = null;
 
     const flushStream = () => {
-      streamFrame = 0;
       const id = optionsRef.current.assistantIdRef.current;
       const events = streamBuffer;
       streamBuffer = [];
@@ -82,7 +83,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     };
 
     const flushAssistantDelta = () => {
-      assistantFrame = 0;
       const id = optionsRef.current.assistantIdRef.current;
       const delta = assistantBuffer;
       assistantBuffer = '';
@@ -90,34 +90,58 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     };
 
     const flushTerminalDelta = () => {
-      terminalFrame = 0;
       const id = optionsRef.current.terminalIdRef.current;
       const delta = terminalBuffer;
       terminalBuffer = '';
       if (id && delta) appendTurnDelta(setTurns, id, delta);
     };
 
+    const flushTimers = {
+      delayMs: streamingFlushDelayMs,
+      clearTimeout: (id: number) => window.clearTimeout(id),
+      setTimeout: (callback: () => void, delayMs: number) => window.setTimeout(callback, delayMs)
+    };
+    const streamFlush = createDeferredFlush(flushStream, flushTimers);
+    const assistantFlush = createDeferredFlush(flushAssistantDelta, flushTimers);
+    const terminalFlush = createDeferredFlush(flushTerminalDelta, flushTimers);
+
     const queueDetail = (detail: ChatEvent) => {
       streamBuffer.push({ kind: 'detail', event: detail });
-      if (!streamFrame) streamFrame = requestAnimationFrame(flushStream);
+      streamFlush.schedule();
     };
 
     const queueAssistantDelta = (delta: string) => {
+      const id = optionsRef.current.assistantIdRef.current;
+      if (id && delta) textAssistantId = id;
       assistantBuffer += delta;
-      if (!assistantFrame) assistantFrame = requestAnimationFrame(flushAssistantDelta);
+      assistantFlush.schedule();
     };
 
     const queueTerminalDelta = (delta: string) => {
       terminalBuffer += delta;
-      if (!terminalFrame) terminalFrame = requestAnimationFrame(flushTerminalDelta);
+      terminalFlush.schedule();
     };
 
     const queueThinkingDelta = (delta: string) => {
       streamBuffer.push({ kind: 'thinking', delta });
-      if (!streamFrame) streamFrame = requestAnimationFrame(flushStream);
+      streamFlush.schedule();
     };
 
-    const offShowSettings = window.pi.app.onShowSettings(() => optionsRef.current.onShowSettings());
+    const startActivitySegment = () => {
+      const id = optionsRef.current.assistantIdRef.current;
+      if (!id || textAssistantId !== id) return;
+
+      assistantFlush.flushNow();
+      setTurnStreaming(setTurns, id, false);
+
+      const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
+      optionsRef.current.assistantIdRef.current = assistantTurn.id;
+      activityClearedAssistantId = null;
+      textAssistantId = '';
+      setTurns((current) => [...current, assistantTurn]);
+    };
+
+    const offShowSettings = window.pi.app.onShowSettings((tab) => optionsRef.current.onShowSettings(tab));
     const offNewSession = window.pi.chat.onNewSession(() => {
       clearSlashCommandsCache();
       if (optionsRef.current.assistantIdRef.current || optionsRef.current.terminalIdRef.current) {
@@ -134,6 +158,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (restoredStreaming()) return;
       const id = optionsRef.current.assistantIdRef.current;
       if (id) {
+        streamFlush.flushNow();
         if (activityClearedAssistantId !== id) {
           setTurnActivity(setTurns, id);
           activityClearedAssistantId = id;
@@ -144,22 +169,24 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const offThinkingDelta = window.pi.chat.onThinkingDelta((delta) => {
       if (restoredStreaming()) return;
-      if (optionsRef.current.assistantIdRef.current) queueThinkingDelta(delta);
+      if (optionsRef.current.assistantIdRef.current) {
+        startActivitySegment();
+        queueThinkingDelta(delta);
+      }
     });
 
     const offQueueUpdate = window.pi.chat.onQueueUpdate(setQueuedMessages);
 
     const offQueuedTurnStart = window.pi.chat.onQueuedTurnStart((turn) => {
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      flushStream();
-      flushAssistantDelta();
+      streamFlush.flushNow();
+      assistantFlush.flushNow();
       const currentAssistantId = optionsRef.current.assistantIdRef.current;
       const userTurn = createTurn('user', turn.text);
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
       if (currentAssistantId) setTurnStreaming(setTurns, currentAssistantId, false);
       optionsRef.current.assistantIdRef.current = assistantTurn.id;
       activityClearedAssistantId = null;
+      textAssistantId = '';
       setIsGenerating(true);
       setTurns((current) => [...current, userTurn, assistantTurn]);
       scrollTurnToStart(userTurn.id);
@@ -168,15 +195,14 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const offDone = window.pi.chat.onDone(() => {
       if (restoredStreaming()) return;
       const id = optionsRef.current.assistantIdRef.current;
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      flushStream();
-      flushAssistantDelta();
+      streamFlush.flushNow();
+      assistantFlush.flushNow();
       if (id) {
         setTurnActivity(setTurns, id);
         setTurnStreaming(setTurns, id, false);
       }
       activityClearedAssistantId = null;
+      textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
       focusTextarea();
@@ -188,8 +214,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const offCommandDone = window.pi.chat.onCommandDone((output) => {
       const id = optionsRef.current.terminalIdRef.current;
-      if (terminalFrame) cancelAnimationFrame(terminalFrame);
-      flushTerminalDelta();
+      terminalFlush.flushNow();
       optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
       if (id && !output) {
@@ -205,14 +230,12 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const offError = window.pi.chat.onError((turn) => {
       if (restoredStreaming()) return;
       const assistantId = optionsRef.current.assistantIdRef.current;
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      if (terminalFrame) cancelAnimationFrame(terminalFrame);
-      flushStream();
-      flushAssistantDelta();
-      flushTerminalDelta();
+      streamFlush.flushNow();
+      assistantFlush.flushNow();
+      terminalFlush.flushNow();
       if (assistantId) setTurnStreaming(setTurns, assistantId, false);
       activityClearedAssistantId = null;
+      textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
@@ -224,9 +247,10 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
+      startActivitySegment();
       queueDetail(event);
       const activity = turnActivityLabel(event);
-      if (activity) setTurnActivity(setTurns, id, activity);
+      if (activity) setTurnActivity(setTurns, optionsRef.current.assistantIdRef.current ?? id, activity);
     });
 
     const offScopedDelta = window.pi.chat.onScopedDelta(({ tabId, payload }) => {
@@ -235,6 +259,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
+      streamFlush.flushNow();
       if (activityClearedAssistantId !== id) {
         setTurnActivity(setTurns, id);
         activityClearedAssistantId = id;
@@ -245,7 +270,10 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const offScopedThinkingDelta = window.pi.chat.onScopedThinkingDelta(({ tabId, payload }) => {
       if (!restoredStreaming()) return;
       if (!activeScopedSession(tabId)) return;
-      if (optionsRef.current.assistantIdRef.current) queueThinkingDelta(payload);
+      if (optionsRef.current.assistantIdRef.current) {
+        startActivitySegment();
+        queueThinkingDelta(payload);
+      }
     });
 
     const offScopedEvent = window.pi.chat.onScopedEvent(({ tabId, payload }) => {
@@ -254,24 +282,24 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
+      startActivitySegment();
       queueDetail(payload);
       const activity = turnActivityLabel(payload);
-      if (activity) setTurnActivity(setTurns, id, activity);
+      if (activity) setTurnActivity(setTurns, optionsRef.current.assistantIdRef.current ?? id, activity);
     });
 
     const offScopedDone = window.pi.chat.onScopedDone(({ tabId }) => {
       if (!restoredStreaming()) return;
       if (!activeScopedSession(tabId)) return;
       const id = optionsRef.current.assistantIdRef.current;
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      flushStream();
-      flushAssistantDelta();
+      streamFlush.flushNow();
+      assistantFlush.flushNow();
       if (id) {
         setTurnActivity(setTurns, id);
         setTurnStreaming(setTurns, id, false);
       }
       activityClearedAssistantId = null;
+      textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
       focusTextarea();
@@ -281,12 +309,11 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (!restoredStreaming()) return;
       if (!activeScopedSession(tabId)) return;
       const assistantId = optionsRef.current.assistantIdRef.current;
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      flushStream();
-      flushAssistantDelta();
+      streamFlush.flushNow();
+      assistantFlush.flushNow();
       if (assistantId) setTurnStreaming(setTurns, assistantId, false);
       activityClearedAssistantId = null;
+      textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
       setTurns((current) => [...current, createTurn('system', payload)]);
@@ -321,9 +348,9 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       offShowSettings();
       offCommandDone();
       offCommandDelta();
-      if (streamFrame) cancelAnimationFrame(streamFrame);
-      if (assistantFrame) cancelAnimationFrame(assistantFrame);
-      if (terminalFrame) cancelAnimationFrame(terminalFrame);
+      streamFlush.cancel();
+      assistantFlush.cancel();
+      terminalFlush.cancel();
     };
   }, [refreshChatState]);
 };

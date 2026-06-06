@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 
 const workspaceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const desktopPackagePath = join(workspaceRoot, 'packages', 'desktop', 'package.json');
+const webPackagePath = join(workspaceRoot, 'packages', 'web', 'package.json');
+const releasePackagePaths = ['packages/desktop/package.json', 'packages/web/package.json'];
 const semverPattern = /^v?(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 const run = (command, options = {}) => execSync(command, { encoding: 'utf8', stdio: 'inherit', ...options });
@@ -67,24 +69,16 @@ const listWorkspaceChanges = () => {
 
 const ensureWorkingTreeClean = () => {
   const statusLines = listWorkspaceChanges();
-  const unexpected = statusLines.filter((path) => path !== 'packages/desktop/package.json');
 
-  if (unexpected.length > 0) {
-    throw new Error(
-      `Working tree is dirty: ${statusLines.join(', ')}. Keep only desktop package.json changes for this release.`
-    );
-  }
-
-  if (statusLines.includes('packages/desktop/package.json')) {
-    throw new Error(
-      'Unexpected pre-existing change in packages/desktop/package.json. Commit or discard it before releasing.'
-    );
+  if (statusLines.length > 0) {
+    throw new Error(`Working tree is dirty: ${statusLines.join(', ')}. Commit or discard changes before releasing.`);
   }
 };
 
 const { releaseVersion, dryRun, push } = parseArgs();
-const packageJson = JSON.parse(readFileSync(desktopPackagePath, 'utf8'));
-const currentVersion = String(packageJson.version ?? '').trim();
+const desktopPackageJson = JSON.parse(readFileSync(desktopPackagePath, 'utf8'));
+const webPackageJson = JSON.parse(readFileSync(webPackagePath, 'utf8'));
+const currentVersion = String(desktopPackageJson.version ?? '').trim();
 
 if (!isSemver(currentVersion)) {
   throw new Error(`Invalid desktop package version: ${currentVersion}`);
@@ -104,6 +98,7 @@ if (existingTag) {
 
 if (dryRun) {
   process.stdout.write(`Would update desktop version from ${currentVersion} to ${nextVersion}\n`);
+  process.stdout.write(`Would update web package version to ${nextVersion}\n`);
   process.stdout.write(`Would create tag ${tag}\n`);
   if (push) {
     process.stdout.write('Would push commit and tag\n');
@@ -113,15 +108,19 @@ if (dryRun) {
 
 ensureWorkingTreeClean();
 
-packageJson.version = nextVersion;
-writeFileSync(desktopPackagePath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+desktopPackageJson.version = nextVersion;
+webPackageJson.version = nextVersion;
+writeFileSync(desktopPackagePath, `${JSON.stringify(desktopPackageJson, null, 2)}\n`, 'utf8');
+writeFileSync(webPackagePath, `${JSON.stringify(webPackageJson, null, 2)}\n`, 'utf8');
 
 const statusAfterWrite = listWorkspaceChanges();
-if (statusAfterWrite.length !== 1 || statusAfterWrite[0] !== 'packages/desktop/package.json') {
+const unexpectedChanges = statusAfterWrite.filter((path) => !releasePackagePaths.includes(path));
+const missingChanges = releasePackagePaths.filter((path) => !statusAfterWrite.includes(path));
+if (unexpectedChanges.length > 0 || missingChanges.length > 0) {
   throw new Error(`Release edit failed: unexpected changes after version bump (${statusAfterWrite.join(', ')}).`);
 }
 
-run('git add packages/desktop/package.json', { cwd: workspaceRoot });
+run(`git add ${releasePackagePaths.join(' ')}`, { cwd: workspaceRoot });
 run(`git commit -m "chore: bump desktop version to ${nextVersion}"`, { cwd: workspaceRoot });
 run(`git tag -a ${tag} -m "${tag}"`, { cwd: workspaceRoot });
 

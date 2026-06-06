@@ -1,5 +1,6 @@
 import { Attachments } from '@renderer/shared/composer/attachments';
 import { Generate } from '@renderer/shared/composer/generate';
+import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import { Model } from '@renderer/shared/composer/model';
 import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
@@ -61,15 +62,18 @@ export const Composer = memo(
     const isCommandMode = commandMode(draft);
     const singleLine = overlay;
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
+    const textareaLayoutRef = useRef(initialComposerTextareaLayoutState());
     const [isMultiline, setIsMultiline] = useState(false);
     const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
+    const resetTextareaLayout = useCallback((element: HTMLTextAreaElement) => {
+      element.style.height = '';
+      textareaLayoutRef.current = initialComposerTextareaLayoutState();
+      setIsMultiline(false);
+    }, []);
     const updateTextareaLayout = useCallback((element: HTMLTextAreaElement, value: string) => {
-      const hasText = value.trim().length > 0;
-      element.style.height = 'auto';
-      const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
-      const nextHeight = Math.min(element.scrollHeight, lineHeight * 4.25);
-      element.style.height = hasText ? `${nextHeight}px` : '';
-      setIsMultiline(hasText && (element.scrollHeight > lineHeight * 1.6 || value.includes('\n')));
+      const nextLayout = syncComposerTextareaLayout(element, value, textareaLayoutRef.current);
+      textareaLayoutRef.current = nextLayout;
+      setIsMultiline(nextLayout.multiline);
     }, []);
     const setPromptInputRef = useCallback(
       (element: HTMLTextAreaElement | null) => {
@@ -122,13 +126,12 @@ export const Composer = memo(
     useLayoutEffect(() => {
       const element = promptInputRef.current;
       if (!element || singleLine) {
-        if (element) element.style.height = '';
-        setIsMultiline(false);
+        if (element) resetTextareaLayout(element);
         return;
       }
 
       updateTextareaLayout(element, draft);
-    }, [draft, singleLine, updateTextareaLayout]);
+    }, [draft, layered, resetTextareaLayout, singleLine, updateTextareaLayout]);
 
     const completeFinderItem = (item: FinderItem, enterDirectory: boolean) => {
       if (slashCommandToken) {

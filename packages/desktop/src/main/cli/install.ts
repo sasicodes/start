@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { appName, appId, isMac, isProd } from '@main/application';
@@ -62,6 +61,9 @@ chmod 755 "$tmp_path"
 mv "$tmp_path" "$bin_path"
 `;
 
+export const cliInstallShellCommand = (appBundlePath: string) =>
+  `/bin/sh -c ${shellQuote(cliInstallScriptSource(appBundlePath))}`;
+
 const unavailableStatus = (): CliInstallStatus | null => {
   if (!isMac) {
     return {
@@ -122,21 +124,14 @@ export const installCliCommand = async (): Promise<CliInstallResult> => {
     return { ok: false, status, error: status.reason };
   }
 
-  const scriptPath = path.join(tmpdir(), `start-cli-install-${process.pid}.sh`);
-  const script = cliInstallScriptSource(currentAppBundlePath());
-
-  await writeFile(scriptPath, script, { mode: 0o700 });
-
   try {
     await execFileAsync('/usr/bin/osascript', [
       '-e',
-      `do shell script ${appleScriptString(`/bin/sh ${shellQuote(scriptPath)}`)} with administrator privileges`
+      `do shell script ${appleScriptString(cliInstallShellCommand(currentAppBundlePath()))} with administrator privileges`
     ]);
     return { ok: true, status: await getCliInstallStatus() };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Command line installation failed.';
     return { ok: false, status: await getCliInstallStatus(), error: message };
-  } finally {
-    await rm(scriptPath, { force: true }).catch(() => {});
   }
 };

@@ -1,6 +1,6 @@
 # Releasing the desktop app
 
-`main` is protected, so the version bump lands via PR. The desktop release workflow (`.github/workflows/release-desktop.yml`) triggers on tags starting with `v` and publishes the macOS build. Sign the tag (`git tag -s`) so GitHub shows Verified.
+`main` is protected, so the version bump lands via PR. The desktop release workflow (`.github/workflows/release-desktop.yml`) triggers on tags starting with `v` and publishes the macOS build. The release script also updates `packages/web/package.json` so the web deployment sees a `packages/web` change and rebuilds download links from the desktop version. Sign the tag (`git tag -s`) so GitHub shows Verified.
 
 Examples below use `v0.1.0-alpha.4` — substitute the actual release tag.
 

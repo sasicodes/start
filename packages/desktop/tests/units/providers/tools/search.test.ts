@@ -44,6 +44,13 @@ const legacyRegistry = (apiKey: string) =>
     getApiKey: vi.fn().mockResolvedValue(apiKey)
   }) as unknown as ModelRegistry;
 
+const codexToken = (accountId = 'account-1') => {
+  const payload = Buffer.from(
+    JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: accountId } })
+  ).toString('base64url');
+  return `header.${payload}.signature`;
+};
+
 const requestInit = (index = 0) => {
   const init = fetchMock.mock.calls[index]?.[1];
   if (!isRecord(init)) throw new Error('Expected fetch request init.');
@@ -91,6 +98,8 @@ afterEach(() => {
 describe('web search helpers', () => {
   it('detects built-in providers and rejects custom providers', () => {
     expect(searchProvider(model({ provider: 'openai', api: 'openai-responses' }))).toBe('openai');
+    expect(searchProvider(model({ provider: 'openai-codex', api: 'openai-responses' }))).toBe('openai');
+    expect(searchProvider(model({ provider: 'openai-codex', api: 'openai-codex-responses' }))).toBe('openai');
     expect(searchProvider(model({ provider: 'anthropic', api: 'anthropic-messages' }))).toBe('anthropic');
     expect(searchProvider(model({ provider: 'google', api: 'google-generative-ai' }))).toBe('google');
     expect(searchProvider(model({ provider: 'google-generative-ai', api: 'google-generative-ai' }))).toBe('google');
@@ -158,6 +167,63 @@ describe('web search provider calls', () => {
     });
   });
 
+  it('calls OpenAI Codex Responses web search with subscription headers', async () => {
+    fetchMock.mockResolvedValue(responseFromSse([{ type: 'response.output_text.delta', delta: 'Codex answer' }]));
+
+    const result = await runWebSearch({
+      query: 'codex docs',
+      signal: null,
+      modelRegistry: registry({ ok: true, apiKey: codexToken('account-2') }),
+      model: model({
+        baseUrl: 'https://chatgpt.com/backend-api',
+        api: 'openai-codex-responses',
+        provider: 'openai-codex',
+        id: 'gpt-5.3-codex'
+      })
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://chatgpt.com/backend-api/codex/responses',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(requestHeaders()).toMatchObject({
+      Authorization: `Bearer ${codexToken('account-2')}`,
+      'OpenAI-Beta': 'responses=experimental',
+      'chatgpt-account-id': 'account-2',
+      originator: 'pi'
+    });
+    expect(requestBody()).toMatchObject({
+      input: [{ role: 'user', content: [{ type: 'input_text', text: 'codex docs' }] }],
+      instructions: 'Use web search to answer the user query with current, source-backed information.'
+    });
+    expect(result).toMatchObject({ text: 'Codex answer', provider: 'openai' });
+  });
+
+  it('uses provided Codex account headers without requiring a JWT-shaped token', async () => {
+    fetchMock.mockResolvedValue(responseFromSse([]));
+
+    await runWebSearch({
+      query: 'codex docs',
+      signal: null,
+      modelRegistry: registry({
+        ok: true,
+        apiKey: 'opaque-token',
+        headers: { 'chatgpt-account-id': 'provided-account' }
+      }),
+      model: model({
+        baseUrl: 'https://chatgpt.com/backend-api',
+        api: 'openai-codex-responses',
+        provider: 'openai-codex',
+        id: 'gpt-5.3-codex'
+      })
+    });
+
+    expect(requestHeaders()).toMatchObject({
+      Authorization: 'Bearer opaque-token',
+      'chatgpt-account-id': 'provided-account'
+    });
+  });
+
   it('calls Anthropic Messages web search and parses search results', async () => {
     fetchMock.mockResolvedValue(
       responseFromSse([
@@ -214,6 +280,20 @@ describe('web search provider calls', () => {
     expect(requestHeaders()['x-api-key']).toBeFalsy();
   });
 
+  it('keeps provided Anthropic API key headers without adding duplicates', async () => {
+    fetchMock.mockResolvedValue(responseFromSse([]));
+
+    await runWebSearch({
+      query: 'release notes',
+      signal: null,
+      modelRegistry: registry({ ok: true, apiKey: 'fallback-key', headers: { 'X-Api-Key': 'provided-key' } }),
+      model: model({ provider: 'anthropic', api: 'anthropic-messages' })
+    });
+
+    expect(requestHeaders()).toMatchObject({ 'X-Api-Key': 'provided-key' });
+    expect(requestHeaders()['x-api-key']).toBeFalsy();
+  });
+
   it('calls Gemini with Google Search grounding and parses grounding metadata', async () => {
     fetchMock.mockResolvedValue(
       responseFromSse([
@@ -246,6 +326,7 @@ describe('web search provider calls', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse'
     );
+    expect(requestHeaders()).toMatchObject({ 'x-goog-api-key': 'key-1' });
     const body = requestBody();
     expect(body.tools).toEqual([{ google_search: {} }]);
     expect(result).toMatchObject({
@@ -255,6 +336,25 @@ describe('web search provider calls', () => {
       searchQueries: ['gemini query'],
       sources: [{ title: 'Gemini Docs', url: 'https://example.com/gemini' }]
     });
+  });
+
+  it('keeps provided Gemini API key headers without adding duplicates', async () => {
+    fetchMock.mockResolvedValue(responseFromSse([]));
+
+    await runWebSearch({
+      query: 'gemini query',
+      signal: null,
+      modelRegistry: registry({ ok: true, apiKey: 'fallback-key', headers: { 'X-Goog-Api-Key': 'provided-key' } }),
+      model: model({
+        provider: 'google-generative-ai',
+        api: 'google-generative-ai',
+        id: 'gemini-3.5-flash',
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta'
+      })
+    });
+
+    expect(requestHeaders()).toMatchObject({ 'X-Goog-Api-Key': 'provided-key' });
+    expect(requestHeaders()['x-goog-api-key']).toBeFalsy();
   });
 
   it('throws Google stream errors instead of returning an empty ungrounded result', async () => {
@@ -320,6 +420,7 @@ describe('web_search tool', () => {
 
     expect(result.content[0]?.text).toBe(unsupportedWebSearchMessage);
     expect(result.details).toMatchObject({ error: 'unsupported_provider', query: 'search' });
+    expect(result.details).not.toHaveProperty('resultCount');
   });
 
   it('returns a clear no-model result when no model is selected', async () => {
@@ -327,6 +428,15 @@ describe('web_search tool', () => {
 
     expect(result.content[0]?.text).toBe(noModelWebSearchMessage);
     expect(result.details).toMatchObject({ error: 'no_model', query: 'search' });
+  });
+
+  it('accepts array query arguments from providers', async () => {
+    fetchMock.mockResolvedValue(responseFromSse([{ type: 'response.output_text.delta', delta: 'Array answer' }]));
+
+    const result = await tool(model({ provider: 'openai' })).execute('call-1', { query: ['array', 'query'] });
+
+    expect(requestBody()).toMatchObject({ input: 'array query' });
+    expect(result.content[0]?.text).toContain('Array answer');
   });
 
   it('adds sources and an ungrounded warning to tool output', async () => {

@@ -1,10 +1,13 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
 import {
   attentionLabel,
+  attentionCountLabel,
+  attentionStatusCount,
   sessionAttentionStatus,
   topAttentionStatus,
   type AttentionState
 } from '@renderer/shared/attention-status';
+import { AttentionBadge } from '@renderer/shared/attention-badge';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -25,11 +28,8 @@ const pageOptions = (workspacePath: string, limit: number, offset = 0) => ({
 const sessionAttention = (session: RecentSession, activeSessionId: string): AttentionState =>
   sessionAttentionStatus(session.id, activeSessionId, session.status, session.noticeKind);
 
-const recentSessionsAttention = (sessions: RecentSession[], activeSessionId: string) =>
-  topAttentionStatus(sessions.map((session) => sessionAttention(session, activeSessionId)));
-
-const recentSessionsAttentionCount = (sessions: RecentSession[], activeSessionId: string) =>
-  sessions.filter((session) => sessionAttention(session, activeSessionId)).length;
+const recentSessionsAttentionStatuses = (sessions: RecentSession[], activeSessionId: string) =>
+  sessions.map((session) => sessionAttention(session, activeSessionId));
 
 const acknowledgeSession = (session: RecentSession): RecentSession => {
   const { noticeKind, status, ...rest } = session;
@@ -65,10 +65,10 @@ const SessionAttention = ({ attention }: { attention: AttentionState }) => {
   return (
     <span
       class={tw(
-        'font-mono text-[10px] leading-4 font-semibold text-soft uppercase',
+        'font-mono text-[10px] leading-4 font-semibold uppercase',
         attention === 'failed' && 'text-danger',
         attention === 'completed' && 'text-success',
-        attention === 'generating' && 'text-blue-500'
+        attention === 'generating' && 'text-progress'
       )}
     >
       {attentionLabel(attention)}
@@ -196,9 +196,10 @@ export const RecentSessions = memo(
       [onOpenSession]
     );
 
-    const attention = recentSessionsAttention(sessions, activeSessionId);
-    const attentionCount = recentSessionsAttentionCount(sessions, activeSessionId);
-    const attentionCountLabel = attentionCount > 99 ? '99+' : String(attentionCount);
+    const attentionStatuses = recentSessionsAttentionStatuses(sessions, activeSessionId);
+    const attention = topAttentionStatus(attentionStatuses);
+    const visibleAttentionCount = attentionStatusCount(attentionStatuses);
+    const visibleAttentionCountLabel = attentionCountLabel(visibleAttentionCount);
 
     useEffect(() => {
       return () => {
@@ -241,18 +242,7 @@ export const RecentSessions = memo(
               className="relative grid size-11.5 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors select-none hover:bg-control focus-visible:bg-control"
             >
               <HistoryIcon class="size-5" />
-              {attention && (
-                <span
-                  class={tw(
-                    'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
-                    attention === 'failed' && 'bg-danger',
-                    attention === 'completed' && 'bg-success',
-                    attention === 'generating' && 'animate-pulse bg-blue-500 motion-reduce:animate-none'
-                  )}
-                >
-                  {attentionCountLabel}
-                </span>
-              )}
+              <AttentionBadge kind={attention} countLabel={visibleAttentionCountLabel} />
             </AppMenu.Trigger>
           </div>
         </Tooltip>

@@ -1,4 +1,5 @@
 import { modelProviderId } from '@renderer/shared/models/provider';
+import { providerSettingsTab } from '@renderer/shared/settings/tab';
 import type { ModelOption } from '@preload/index';
 import { describe, expect, it } from 'vitest';
 
@@ -15,6 +16,10 @@ const model = (overrides: Partial<ModelOption>): ModelOption => ({
 });
 
 describe('modelProviderId', () => {
+  it('routes model setup actions to provider settings', () => {
+    expect(providerSettingsTab).toBe('providers');
+  });
+
   it('classifies Anthropic by provider name', () => {
     expect(modelProviderId(model({ id: 'claude-opus-4-7', name: 'Claude Opus', provider: 'anthropic' }))).toBe(
       'anthropic'

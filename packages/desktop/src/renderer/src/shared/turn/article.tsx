@@ -19,9 +19,42 @@ const hasSupplement = (turn: Turn) =>
   Boolean(turn.thinking) || Boolean(turn.details?.length) || Boolean(turn.activityItems?.length);
 
 const shouldShowBody = (turn: Turn) =>
-  Boolean(turn.text) || (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
+  Boolean(turn.text) ||
+  (turn.role === 'user' && Boolean(turn.attachments?.length)) ||
+  (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
+
+const UserAttachments = memo(({ turn }: { turn: Turn }) => {
+  const attachments = turn.attachments ?? [];
+  if (turn.role !== 'user' || attachments.length === 0) return null;
+
+  const visibleAttachments = attachments.slice(0, 4);
+  const overflowCount = attachments.length - visibleAttachments.length;
+
+  return (
+    <div class="mt-2 flex items-center justify-end -space-x-1.5">
+      {visibleAttachments.map((attachment, index) => (
+        <button
+          key={attachment.id}
+          type="button"
+          style={{ zIndex: visibleAttachments.length - index }}
+          aria-label={`Open ${attachment.name}`}
+          onClick={() => window.pi.app.openPath(attachment.path).catch(() => {})}
+          onDragStart={(event) => event.preventDefault()}
+          class="relative grid size-7 place-items-center overflow-hidden rounded-full border border-line bg-composer p-0 select-none transition-opacity hover:opacity-90 focus-visible:opacity-90 focus-visible:outline-0"
+        >
+          <img alt="" draggable={false} src={attachment.previewUrl} class="size-full object-cover" />
+        </button>
+      ))}
+      {overflowCount > 0 && (
+        <span class="relative grid size-7 place-items-center rounded-full border border-line bg-composer text-[10px] leading-none font-semibold text-ink">
+          +{overflowCount}
+        </span>
+      )}
+    </div>
+  );
+});
 
 const TurnActions = memo(({ turn }: { turn: Turn }) => {
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
@@ -70,6 +103,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
       )}
     >
       {useMarkdown ? <Markdown source={turn.text} streaming={Boolean(turn.streaming)} /> : fallbackText(turn)}
+      <UserAttachments turn={turn} />
     </div>
   );
 });

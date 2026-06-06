@@ -8,6 +8,10 @@ export const attentionLabel = (status: AttentionState): string => {
   return status;
 };
 
+export const attentionStatusCount = (statuses: AttentionState[]): number => statuses.filter((status) => status).length;
+
+export const attentionCountLabel = (count: number): string => (count > 99 ? '99+' : String(count));
+
 export const attentionStatus = (status: AgentTabStatus | undefined, noticeKind?: SessionNoticeKind): AttentionState => {
   if (status && status !== 'idle') return status;
   return noticeKind ?? '';

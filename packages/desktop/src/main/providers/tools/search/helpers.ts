@@ -61,6 +61,9 @@ export const searchProvider = (model: SearchModel): WebSearchProvider | null => 
   const api = model.api.toLowerCase();
 
   if (provider === 'openai' && api === 'openai-responses') return 'openai';
+  if (provider === 'openai-codex' && (api === 'openai-responses' || api === 'openai-codex-responses')) {
+    return 'openai';
+  }
   if (provider === 'anthropic' && api === 'anthropic-messages') return 'anthropic';
   if (provider === 'google' && api === 'google-generative-ai') return 'google';
   if (provider === 'google-generative-ai' && api === 'google-generative-ai') return 'google';

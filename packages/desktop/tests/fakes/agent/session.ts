@@ -4,6 +4,10 @@ import type { FakeSessionManager } from './session-manager.js';
 import { sessionRegistry } from './state.js';
 import type { FakeModel } from './state.js';
 
+interface FakeTool {
+  name: string;
+}
+
 export type FakeAgentSessionEvent =
   | { type: 'message_start'; message: { role: 'user' | 'assistant'; content: unknown } }
   | { type: 'queue_update'; steering: readonly string[]; followUp: readonly string[] }
@@ -23,6 +27,7 @@ export interface CreateAgentSessionOptions {
   model: FakeModel;
   thinkingLevel: string;
   authStorage: FakeAuthStorage;
+  customTools?: FakeTool[];
   modelRegistry: FakeModelRegistry;
   sessionManager: FakeSessionManager;
 }
@@ -45,9 +50,11 @@ export class FakeAgentSession {
 
   followUpQueue: string[] = [];
   steerQueue: string[] = [];
+  followUpImages: unknown[] = [];
+  steerImages: unknown[] = [];
 
   private readonly listeners = new Set<Listener>();
-  private readonly tools = [{ name: 'fake-tool' }];
+  private readonly tools: FakeTool[];
   private activeToolNames: string[] = [];
 
   private promptResolve: (() => void) | null = null;
@@ -58,6 +65,7 @@ export class FakeAgentSession {
   constructor(options: CreateAgentSessionOptions) {
     this.sessionManager = options.sessionManager;
     this.thinkingLevel = options.thinkingLevel;
+    this.tools = [{ name: 'fake-tool' }, ...(options.customTools ?? [])];
     sessionRegistry.set(options.sessionManager.getSessionId(), this);
   }
 
@@ -150,20 +158,29 @@ export class FakeAgentSession {
     reject?.(error);
   }
 
-  async followUp(text: string, _images?: unknown) {
-    this.followUpQueue.push(text);
+  async followUp(text: string, images?: unknown) {
+    this.followUpImages.push(images);
+    this.followUpQueue.push(this.queuedText(text, images));
     this.pushEvent({ type: 'queue_update', steering: this.steerQueue, followUp: this.followUpQueue });
   }
 
-  async steer(text: string, _images?: unknown) {
-    this.steerQueue.push(text);
+  async steer(text: string, images?: unknown) {
+    this.steerImages.push(images);
+    this.steerQueue.push(this.queuedText(text, images));
     this.pushEvent({ type: 'queue_update', steering: this.steerQueue, followUp: this.followUpQueue });
   }
 
   clearQueue() {
     this.followUpQueue = [];
     this.steerQueue = [];
+    this.followUpImages = [];
+    this.steerImages = [];
     this.pushEvent({ type: 'queue_update', steering: [], followUp: [] });
+  }
+
+  private queuedText(text: string, images: unknown) {
+    const count = Array.isArray(images) ? images.length : 0;
+    return count > 0 ? `${text}\n[image ${count}]` : text;
   }
 
   async executeBash(_command: string, _chunk: (chunk: string) => void, _options: unknown) {

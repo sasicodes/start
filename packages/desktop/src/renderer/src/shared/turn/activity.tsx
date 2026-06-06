@@ -1,5 +1,5 @@
 import { ActivityItems } from '@renderer/shared/turn/details';
-import { activityLabel } from '@renderer/shared/turn/label';
+import { activityLabelParts } from '@renderer/shared/turn/label';
 import { hasActivityDetails } from '@renderer/shared/turn/sequence';
 import { Working } from '@renderer/shared/turn/working';
 import { ChevronRightIcon } from '@renderer/ui/icons';
@@ -24,10 +24,13 @@ export const TurnActivity = ({ items, details, working, thinking, createdAt }: T
 
   if (!working && !hasDetails) return null;
 
+  const completedLabel = activityLabelParts({ createdAt, details, working: false });
   const label = working ? (
     <Working details={details} createdAt={createdAt} />
   ) : (
-    <span class="truncate">{activityLabel({ createdAt, details, working: false })}</span>
+    <span class="truncate">
+      {completedLabel.verb} <span class="tabular-nums">{completedLabel.duration}</span>
+    </span>
   );
 
   return (

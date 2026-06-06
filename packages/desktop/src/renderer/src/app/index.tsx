@@ -17,6 +17,7 @@ import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 
@@ -47,15 +48,18 @@ export const App = () => {
     toggleGitChangesPanel
   } = useSessionPanels({ surface });
 
-  const showSettings = useCallback(() => {
-    if (surface === 'composer') {
-      window.pi.app.openSettings().catch(() => {});
-      return;
-    }
+  const showSettings = useCallback(
+    (tab: SettingsTab = 'personalization') => {
+      if (surface === 'composer') {
+        window.pi.app.openSettings(tab).catch(() => {});
+        return;
+      }
 
-    setSurface('main');
-    openSettingsPanel();
-  }, [openSettingsPanel, setSurface, surface]);
+      setSurface('main');
+      openSettingsPanel(tab);
+    },
+    [openSettingsPanel, setSurface, surface]
+  );
 
   const showShortcuts = useCallback(() => {
     if (surface === 'composer') {
@@ -343,9 +347,8 @@ export const App = () => {
       gitPanelVisible={gitPanelVisible}
       isGenerating={isGenerating}
       activeSessionId={activeSessionId}
-      onNewSession={startNewSession}
-      showNewSession={hasTurns}
       onOpenSettings={toggleSettings}
+      workspaceCollapsed={hasTurns}
       sessionRoutePending={sessionRoutePending}
       settingsPanelVisible={settingsPanelVisible}
       onToggleGitPanel={toggleGitChangesPanel}

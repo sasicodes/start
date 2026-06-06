@@ -24,10 +24,9 @@ interface DetailItemProps {
 
 interface DetailTitleProps {
   detail: TurnDetail;
-  interactive: boolean;
 }
 
-const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
+const DetailTitle = ({ detail }: DetailTitleProps) => {
   const target = detailTarget(detail);
   const index = target ? detail.title.lastIndexOf(target) : -1;
   if (index < 0) return <>{detail.title}</>;
@@ -37,11 +36,7 @@ const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
   return (
     <>
       {before}
-      <span
-        class={tw('text-ink', interactive && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover')}
-      >
-        {target}
-      </span>
+      <span class="text-ink">{target}</span>
       {after}
     </>
   );
@@ -49,10 +44,10 @@ const DetailTitle = ({ detail, interactive }: DetailTitleProps) => {
 
 const DetailMetric = ({ value }: { value: string }) => {
   const metric = splitDiffMetric(value);
-  if (!metric) return <span class="shrink-0 text-xs leading-4 text-soft">{value}</span>;
+  if (!metric) return <span class="shrink-0 leading-4 text-soft">{value}</span>;
 
   return (
-    <span class="shrink-0 text-xs leading-4 text-soft">
+    <span class="shrink-0 leading-4 text-soft">
       {metric.label}
       <span class="text-success">{metric.added}</span> <span class="text-danger">{metric.removed}</span>
     </span>
@@ -64,16 +59,16 @@ const DetailContent = ({ detail, meta, renderSubagents }: DetailItemProps & { me
   const hasSubagents = Boolean(subagents);
 
   return (
-    <div class="max-w-full text-xs leading-5 text-soft [overflow-wrap:anywhere]">
+    <div class="max-w-full leading-5 text-soft [overflow-wrap:anywhere]">
       {subagents}
       {meta &&
         (isCodeMeta(meta) ? (
           <Markdown source={meta} density="compact" />
         ) : (
-          <p class={tw('m-0 text-xs leading-5 text-soft', hasSubagents && 'mt-2')}>{meta}</p>
+          <p class={tw('m-0 leading-5 text-soft', hasSubagents && 'mt-2')}>{meta}</p>
         ))}
       {detail.body && (
-        <div class={tw('max-w-full text-xs leading-5 text-soft [overflow-wrap:anywhere]', meta && 'mt-1')}>
+        <div class={tw('max-w-full leading-5 text-soft [overflow-wrap:anywhere]', meta && 'mt-1')}>
           <Markdown source={detail.body} density="compact" />
         </div>
       )}
@@ -85,7 +80,7 @@ export const ThinkingSection = ({ thinking }: { thinking: string }) => {
   if (!thinking) return null;
 
   return (
-    <div class="thinking-markdown text-xs leading-5 text-soft">
+    <div class="thinking-markdown leading-5 text-soft">
       <Markdown source={thinkingMarkdown(thinking)} density="compact" />
     </div>
   );
@@ -108,7 +103,7 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
         expandable && subdued && 'group-hover/detail:text-hover group-focus-visible/detail:text-hover'
       )}
     >
-      <DetailTitle detail={detail} interactive={expandable && subdued} />
+      <DetailTitle detail={detail} />
     </span>
   );
 
@@ -117,7 +112,7 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
       <motion.li
         layout="position"
         transition={accordionLayoutTransition}
-        class="m-0 flex min-w-0 items-center gap-1.5 text-xs leading-4"
+        class="m-0 flex min-w-0 items-center gap-1.5 leading-4"
       >
         {avatars}
         {title}
@@ -127,12 +122,12 @@ export const DetailItem = ({ detail, renderSubagents }: DetailItemProps) => {
   }
 
   return (
-    <motion.li layout="position" transition={accordionLayoutTransition} class="m-0 text-xs leading-4">
+    <motion.li layout="position" transition={accordionLayoutTransition} class="m-0 leading-4">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        class="group/detail inline-flex max-w-full min-w-0 items-center gap-1.5 border-0 bg-transparent p-0 text-left text-xs leading-4 outline-0 transition-colors hover:text-hover focus-visible:text-hover"
+        class="group/detail inline-flex max-w-full min-w-0 items-center gap-1.5 border-0 bg-transparent p-0 text-left leading-4 outline-0 transition-colors hover:text-hover focus-visible:text-hover"
       >
         {avatars}
         {title}

@@ -1,4 +1,5 @@
 import { fileHasTextDiff, isTooLargeToShow } from '@renderer/shared/workspace/changes/diff/estimate';
+import { requestDiffFileHighlighting } from '@renderer/shared/workspace/changes/diff/highlight';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
 import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
@@ -8,15 +9,17 @@ import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/ch
 import { ArrowUpIcon, ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
+import { useEffect } from 'preact/hooks';
 
 interface DiffFileProps {
   cwd: string;
-  open: boolean;
   file: PatchFile;
+  open: boolean;
   entryKey: string;
   language: string;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
+  onHighlight: () => void;
   highlightRevision: number;
   onToggle: (entryKey: string, currentlyOpen: boolean) => void;
 }
@@ -113,12 +116,24 @@ const FallbackDiff = ({ cwd, file, kind }: { cwd: string; file: PatchFile; kind:
 interface DiffBodyProps {
   cwd: string;
   file: PatchFile;
-  language: string;
   kind: PatchFileKind;
+  language: string;
   status: DiffFileStatus;
   viewMode: DiffViewMode;
   highlightRevision: number;
 }
+
+const useDiffFileHighlighting = (file: PatchFile, open: boolean, language: string, onHighlight: () => void) => {
+  const kind = patchFileKind(file);
+  const highlightable = open && fileHasTextDiff(file) && !isTooLargeToShow(file);
+
+  useEffect(() => {
+    if (!highlightable) return;
+    return requestDiffFileHighlighting(file, language, onHighlight);
+  }, [file, highlightable, language, onHighlight]);
+
+  return kind;
+};
 
 const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevision }: DiffBodyProps) => {
   if (kind === 'image') return <ImageDiff cwd={cwd} file={file} status={status} />;
@@ -128,8 +143,19 @@ const DiffBody = ({ cwd, file, kind, status, language, viewMode, highlightRevisi
 };
 
 export const DiffFile = memo(
-  ({ cwd, file, open, status, entryKey, language, onToggle, viewMode, highlightRevision }: DiffFileProps) => {
-    const kind = patchFileKind(file);
+  ({
+    cwd,
+    file,
+    open,
+    status,
+    entryKey,
+    language,
+    onToggle,
+    viewMode,
+    onHighlight,
+    highlightRevision
+  }: DiffFileProps) => {
+    const kind = useDiffFileHighlighting(file, open, language, onHighlight);
 
     return (
       <section class="min-w-0 border-t border-line">
@@ -137,7 +163,7 @@ export const DiffFile = memo(
           type="button"
           aria-expanded={open}
           onClick={() => onToggle(entryKey, open)}
-          class="group/file flex w-full min-w-0 items-center justify-between gap-3 border-0 bg-transparent px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
+          class="group/file sticky top-10 z-20 flex w-full min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-line bg-panel px-4 py-2.5 text-left outline-0 transition-colors hover:text-hover focus-visible:text-hover"
         >
           <div class="flex min-w-0 items-center gap-2">
             <StatusMark status={status} />

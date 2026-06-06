@@ -19,7 +19,15 @@ export const stripAttachmentData = (attachment: PreparedImageAttachment): ImageA
 
 export const prepareClipboardImage = async (): Promise<PreparedImageAttachment | null> => null;
 
-export const prepareDroppedFiles = async (_paths: string[]): Promise<PreparedFiles> => ({
+export const prepareDroppedFiles = async (paths: string[]): Promise<PreparedFiles> => ({
   pathTokens: [],
-  attachments: []
+  attachments: paths.map((path, index) => ({
+    path,
+    type: 'image',
+    id: `attach-${index}`,
+    data: `base64-${index}`,
+    name: `image-${index}.png`,
+    mimeType: 'image/png',
+    previewUrl: `data:image/png;base64,preview-${index}`
+  }))
 });

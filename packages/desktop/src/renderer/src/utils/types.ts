@@ -1,4 +1,4 @@
-import type { HistoryTurnDetail } from '@preload/index';
+import type { HistoryTurnDetail, ImageAttachment } from '@preload/index';
 
 export type TurnDetail = HistoryTurnDetail;
 
@@ -25,5 +25,6 @@ export type Turn = {
   streaming?: boolean;
   details?: TurnDetail[];
   activityItems?: TurnActivityItem[];
+  attachments?: ImageAttachment[];
   role: 'user' | 'assistant' | 'system' | 'event' | 'terminal';
 };

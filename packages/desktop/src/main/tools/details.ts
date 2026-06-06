@@ -204,8 +204,10 @@ const diffStats = (details: unknown) => {
 
 const toolMetric = (toolName: string, args: Record<string, unknown>, result?: unknown) => {
   if (toolName === 'subagent_spawn') return '';
-  if (toolName === 'web_search' && isRecord(result) && isRecord(result.details))
-    return countLabel(numberValue(result.details.resultCount), 'result');
+  if (toolName === 'web_search' && isRecord(result) && isRecord(result.details)) {
+    const resultCount = result.details.resultCount;
+    return typeof resultCount === 'number' ? countLabel(resultCount, 'result') : '';
+  }
   if (toolName === 'edit') {
     const stats = isRecord(result) ? diffStats(result.details) : '';
     const changes = Array.isArray(args.edits) ? countLabel(args.edits.length, 'change') : '';

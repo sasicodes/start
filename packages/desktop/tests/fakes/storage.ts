@@ -6,14 +6,15 @@ export interface StartState {
   selectedModelKey?: string;
   solidWindowBackground: boolean;
   selectedThinkingLevel: EffortLevel;
-  sessionNotices?: Record<string, SessionNotice>;
+  workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
+  sessionNotices?: Record<string, SessionNotice>;
 }
 
 const defaultStartState: StartState = {
-  composerShortcut: 'Control+Space',
   solidWindowBackground: false,
-  selectedThinkingLevel: 'medium'
+  selectedThinkingLevel: 'medium',
+  composerShortcut: 'Control+Space'
 };
 
 let currentState: StartState = { ...defaultStartState };

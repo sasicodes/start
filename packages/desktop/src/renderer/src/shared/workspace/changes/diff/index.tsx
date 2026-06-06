@@ -2,7 +2,6 @@ import type { GitPatchSection } from '@preload/index';
 import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
 import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
-import { runDiffHighlighting } from '@renderer/shared/workspace/changes/diff/highlight';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
@@ -13,6 +12,11 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 interface ParseResponse {
   jobId: number;
   results: PatchFile[][];
+}
+
+interface LoadedDiffEntriesState {
+  sections: GitPatchSection[];
+  state: DiffEntriesState;
 }
 
 const entryKey = (entry: DiffEntry) => entry.key;
@@ -37,18 +41,17 @@ const postParseJob = (
   return () => worker.removeEventListener('message', onMessage);
 };
 
-const useDiffEntries = (sections: GitPatchSection[]) => {
-  const [entryState, setEntryState] = useState<DiffEntriesState>({ kind: 'parsing' });
+const useDiffEntries = (sections: GitPatchSection[]): DiffEntriesState => {
+  const [entryState, setEntryState] = useState<LoadedDiffEntriesState>({ sections, state: { kind: 'parsing' } });
   const workerRef = useRef<Worker | null>(null);
   const jobIdRef = useRef(0);
 
   useEffect(() => {
     if (!workerRef.current) workerRef.current = createParserWorker();
     jobIdRef.current += 1;
-    setEntryState((current) => (current.kind === 'parsing' ? current : { kind: 'parsing' }));
 
     return postParseJob(workerRef.current, jobIdRef.current, sections, (entries) =>
-      setEntryState({ entries, kind: 'ready' })
+      setEntryState({ sections, state: { entries, kind: 'ready' } })
     );
   }, [sections]);
 
@@ -60,18 +63,7 @@ const useDiffEntries = (sections: GitPatchSection[]) => {
     []
   );
 
-  return entryState;
-};
-
-const useDiffHighlighting = (entryState: DiffEntriesState) => {
-  const [highlightRevision, setHighlightRevision] = useState(0);
-
-  useEffect(() => {
-    if (entryState.kind !== 'ready' || entryState.entries.length === 0) return;
-    return runDiffHighlighting(entryState.entries, () => setHighlightRevision((value) => value + 1));
-  }, [entryState]);
-
-  return highlightRevision;
+  return entryState.sections === sections ? entryState.state : { kind: 'parsing' };
 };
 
 export const GitDiffViewer = ({
@@ -86,9 +78,13 @@ export const GitDiffViewer = ({
   const entryState = useDiffEntries(sections);
   const ready = entryState.kind === 'ready';
   const entries = ready ? entryState.entries : [];
-  const highlightRevision = useDiffHighlighting(entryState);
   const limited = sections.some((section) => section.limited && !section.patch);
+  const [highlightRevision, setHighlightRevision] = useState(0);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+
+  const onHighlight = useCallback(() => {
+    setHighlightRevision((value) => value + 1);
+  }, []);
 
   const onToggle = useCallback((key: string, currentlyOpen: boolean) => {
     setToggled((previous) => toggleOpen(previous, key, currentlyOpen));
@@ -100,18 +96,19 @@ export const GitDiffViewer = ({
       return (
         <DiffFile
           cwd={cwd}
-          open={open}
           file={entry.file}
-          onToggle={onToggle}
-          viewMode={viewMode}
+          open={open}
           entryKey={entry.key}
           status={entry.status}
           language={entry.language}
+          onToggle={onToggle}
+          viewMode={viewMode}
+          onHighlight={onHighlight}
           highlightRevision={highlightRevision}
         />
       );
     },
-    [cwd, toggled, onToggle, viewMode, highlightRevision]
+    [cwd, toggled, onToggle, viewMode, onHighlight, highlightRevision]
   );
 
   return (

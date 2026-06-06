@@ -45,7 +45,6 @@ export const useSlashCommandItems = (token?: SlashCommandToken) => {
     if (!open) return;
 
     let disposed = false;
-    if (commandsCached) setCommands(cachedCommands);
 
     loadCommands()
       .then((items) => {
@@ -60,11 +59,13 @@ export const useSlashCommandItems = (token?: SlashCommandToken) => {
     };
   }, [open]);
 
+  const availableCommands = commandsCached ? cachedCommands : commands;
+
   return useMemo(() => {
     if (!token) return [];
 
     const query = token.query.trim().toLowerCase();
-    return commands
+    return availableCommands
       .filter((command) => {
         if (!query) return true;
         return command.name.toLowerCase().includes(query) || command.description.toLowerCase().includes(query);
@@ -75,5 +76,5 @@ export const useSlashCommandItems = (token?: SlashCommandToken) => {
         type: 'command' as const,
         ...(command.description ? { description: command.description } : {})
       }));
-  }, [commands, token]);
+  }, [availableCommands, token]);
 };

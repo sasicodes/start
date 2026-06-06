@@ -1,10 +1,15 @@
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
-import { attentionStatus, topAttentionStatus } from '@renderer/shared/attention-status';
+import {
+  attentionStatus,
+  attentionCountLabel,
+  attentionStatusCount,
+  topAttentionStatus
+} from '@renderer/shared/attention-status';
+import { AttentionBadge } from '@renderer/shared/attention-badge';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
-import { Indicator } from '@renderer/shared/indicator';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -12,12 +17,12 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 
 export const Workspace = memo(
   ({
-    collapsed,
     workspacePath,
-    onSelectWorkspace,
-    onChooseDirectory
+    collapsed = false,
+    onChooseDirectory,
+    onSelectWorkspace
   }: {
-    collapsed: boolean;
+    collapsed?: boolean;
     workspacePath: string;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
@@ -26,11 +31,12 @@ export const Workspace = memo(
     const rootRef = useRef<HTMLDivElement>(null);
     const workspace = useWorkspace(workspacePath);
     const { folders } = useWorkspaceFolders({ workspacePath });
-    const attention = topAttentionStatus(
-      folders
-        .filter((folder) => folder.path !== workspacePath)
-        .map((folder) => attentionStatus(folder.status, folder.noticeKind))
-    );
+    const attentionStatuses = folders
+      .filter((folder) => folder.path !== workspacePath)
+      .map((folder) => attentionStatus(folder.status, folder.noticeKind));
+    const attention = topAttentionStatus(attentionStatuses);
+    const visibleAttentionCount = attentionStatusCount(attentionStatuses);
+    const visibleAttentionCountLabel = attentionCountLabel(visibleAttentionCount);
 
     const updateOpen = useCallback((nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -56,7 +62,7 @@ export const Workspace = memo(
               <AppMenu.Trigger
                 aria-label="Workspace folders"
                 className={tw(
-                  'relative flex h-full w-full min-w-0 items-center overflow-hidden rounded-full border-0 bg-composer text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control',
+                  'relative flex h-full w-full min-w-0 items-center rounded-full border-0 bg-composer text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control',
                   collapsed
                     ? 'justify-center gap-0 p-1.75'
                     : 'gap-2 pr-1.5 pl-1.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75'
@@ -65,8 +71,8 @@ export const Workspace = memo(
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img
                     alt=""
-                    src={workspace.iconDataUrl}
                     draggable={false}
+                    src={workspace.iconDataUrl}
                     class="size-full rounded-full object-cover"
                   />
                 </span>
@@ -100,11 +106,7 @@ export const Workspace = memo(
                     )}
                   />
                 </span>
-                {attention && (
-                  <span class="pointer-events-none absolute top-[3px] right-[3px] z-10">
-                    <Indicator kind={attention} />
-                  </span>
-                )}
+                <AttentionBadge kind={attention} countLabel={visibleAttentionCountLabel} />
               </AppMenu.Trigger>
             </div>
           </Tooltip>
@@ -112,8 +114,8 @@ export const Workspace = memo(
             <AppMenu.Positioner
               side="top"
               align="start"
-              anchor={rootRef}
               sideOffset={8}
+              anchor={rootRef}
               className="z-50"
               collisionPadding={12}
             >

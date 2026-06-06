@@ -1,14 +1,15 @@
 import { defineTool, type ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { unsupportedWebSearchMessage, runWebSearch } from '@main/providers/tools/search/providers';
-import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
 import { withSources, withUngroundedWarning } from '@main/providers/tools/search/helpers';
+import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
+import * as v from 'valibot';
 
 export const noModelWebSearchMessage = 'No configured model is available for web search.';
 
 const webSearchSchema = {
   properties: {
     query: {
-      type: 'string',
+      anyOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' }, minItems: 1 }],
       description: 'Search query or question to answer from current public web sources.'
     }
   },
@@ -27,9 +28,22 @@ const toolResult = (text: string, details: Record<string, unknown>) => ({
   content: [{ text, type: 'text' as const }]
 });
 
+const searchQuerySchema = v.pipe(
+  v.union([
+    v.string(),
+    v.pipe(
+      v.array(v.string()),
+      v.transform((items) => items.join(' '))
+    )
+  ]),
+  v.trim(),
+  v.minLength(1, 'Enter a web search query.')
+);
+
 const queryValue = (query: unknown) => {
-  if (typeof query !== 'string' || !query.trim()) throw new Error('Enter a web search query.');
-  return query.trim();
+  const result = v.safeParse(searchQuerySchema, query);
+  if (result.success) return result.output;
+  throw new Error('Enter a web search query.');
 };
 
 export const createWebSearchTools = ({ model, modelRegistry }: CreateWebSearchToolsOptions) => [

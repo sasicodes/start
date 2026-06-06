@@ -40,9 +40,29 @@ describe('workspace switching', () => {
     expect(activationLog()).toContain('/tmp/workspace-c');
   });
 
+  it('keeps the previous workspace in history when switching', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    await chat.switchWorkspace('/tmp/workspace-c');
+
+    const history = getStorageSnapshot().workspaceHistory ?? {};
+    expect(history).toHaveProperty('/tmp/workspace-a');
+    expect(history).toHaveProperty('/tmp/workspace-c');
+  });
+
+  it('shows remembered workspaces even before they have sessions', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    await chat.switchWorkspace('/tmp/workspace-c');
+
+    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([
+      '/tmp/workspace-c',
+      '/tmp/workspace-a'
+    ]);
+  });
+
   it('falls back to the user home directory when no workspace was previously saved', () => {
     const chat = freshChatService();
     expect(chat.getWorkspaceCwd()).toBe(homedir());
+    expect(getStorageSnapshot().workspaceHistory).toHaveProperty(homedir());
   });
 
   it('rejects empty workspace paths without mutating state', async () => {

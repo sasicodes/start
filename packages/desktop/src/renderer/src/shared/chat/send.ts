@@ -1,5 +1,5 @@
 import type { CommandResult, ImageAttachment, SendResult } from '@preload/index';
-import { createTurn } from '@renderer/functions/chat';
+import { createTurn, createUserTurn } from '@renderer/functions/chat';
 import type { TurnUpdater } from '@renderer/shared/chat/turn-summary';
 import { commandInput, commandMode } from '@renderer/shared/input';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
@@ -50,7 +50,7 @@ export const useChatSend = ({
 
         const requestId = sessionRequestRef.current + 1;
         const terminalTurn = createTurn('terminal', '');
-        const userTurn = createTurn('user', text);
+        const userTurn = createUserTurn(text);
         sessionRequestRef.current = requestId;
         terminalIdRef.current = terminalTurn.id;
         setDraft('');
@@ -104,7 +104,7 @@ export const useChatSend = ({
 
       const requestId = sessionRequestRef.current + 1;
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
-      const userTurn = createTurn('user', text);
+      const userTurn = createUserTurn(text, attachments);
       sessionRequestRef.current = requestId;
       assistantIdRef.current = assistantTurn.id;
       setDraft('');

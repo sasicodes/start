@@ -25,6 +25,7 @@ import {
   type BrowserOpenOptions
 } from '@main/browser/index';
 import { ChatService } from '@main/chat';
+import { confirmClose } from '@main/confirm';
 import {
   parseCliAdditionalData,
   parseCliLaunchArgv,
@@ -47,13 +48,15 @@ import {
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
-  createMainWindow,
-  hideComposerWindow,
-  sendToMainWindow,
-  sendToRendererWindows,
+  getMainWindow,
   showMainWindow,
-  submitComposerToMainWindow,
+  createMainWindow,
+  sendToMainWindow,
+  hideComposerWindow,
+  allowMainWindowClose,
   toggleComposerWindow,
+  sendToRendererWindows,
+  submitComposerToMainWindow,
   withComposerBlurSuppressed
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
@@ -64,6 +67,7 @@ import electron from 'electron';
 const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
 
 app.setName(appMenuName);
+if (isDev) app.setPath('userData', nodePath.join(app.getPath('appData'), appMenuName));
 app.commandLine.appendSwitch('enable-features', 'CanvasDrawElement');
 if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
@@ -71,10 +75,12 @@ installWindowHardening();
 const chat = new ChatService();
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
+let appQuitConfirmed = false;
+let appQuitConfirmationOpen = false;
 let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
-let stopWorkspaceChanged: (() => void) | undefined;
 let stopResourceRefresh: (() => void) | null = null;
+let stopWorkspaceChanged: (() => void) | null = null;
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -90,6 +96,8 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
+type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;
   if (!workspacePath) return result;
@@ -98,8 +106,8 @@ const withCachedWorkspace = async <T extends { status?: { workspacePath: string 
   return workspace ? { ...result, workspace } : result;
 };
 
-const showSettings = () => {
-  sendToMainWindow('app:show-settings');
+const showSettings = (tab: SettingsTab = 'personalization') => {
+  sendToMainWindow('app:show-settings', tab);
 };
 
 const showShortcuts = () => {
@@ -140,12 +148,29 @@ const menuActions = () => ({
   onShowSettings: showSettings,
   onShowShortcuts: showShortcuts,
   onQuickAccess: () => toggleQuickAccess('menu'),
-  onNewSession: () => void startNewSession('menu'),
-  onCheckForUpdates: () => void checkForUpdatesNow(),
+  onNewSession: () => startNewSession('menu'),
+  onCheckForUpdates: () => checkForUpdatesNow(),
   recentSessions: chat.getStatusItemRecentSessions(),
-  onOpenRecentSession: (sessionId: string) => void openRecentSession(sessionId),
+  onOpenRecentSession: (sessionId: string) => openRecentSession(sessionId),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
+
+const confirmAppQuit = async () => {
+  if (appQuitConfirmationOpen) return;
+
+  appQuitConfirmationOpen = true;
+  try {
+    const confirmed = await confirmClose(getMainWindow());
+    if (!confirmed) return;
+
+    appQuitConfirmed = true;
+    allowMainWindowClose();
+    app.quit();
+  } catch {
+  } finally {
+    appQuitConfirmationOpen = false;
+  }
+};
 
 const showCliError = (message: string) => {
   dialog.showErrorBox('Start command failed', message);
@@ -275,9 +300,9 @@ if (!singleInstanceLock) {
       hideComposerWindow({ keepAppActive: true });
       showMainWindow();
     });
-    ipcMain.handle('app:open-settings', () => {
+    ipcMain.handle('app:open-settings', (_event, tab: SettingsTab = 'personalization') => {
       hideComposerWindow({ keepAppActive: true });
-      showSettings();
+      showSettings(tab);
     });
     ipcMain.handle('app:open-shortcuts', () => {
       hideComposerWindow({ keepAppActive: true });
@@ -356,25 +381,49 @@ if (!singleInstanceLock) {
   });
 }
 
+const shutdownAnalyticsAndQuit = async () => {
+  try {
+    await shutdownAnalytics();
+  } catch {}
+
+  app.quit();
+};
+
+const shutdownAnalyticsSilently = async () => {
+  try {
+    await shutdownAnalytics();
+  } catch {}
+};
+
+const destroyBrowserSilently = async () => {
+  try {
+    await destroyBrowser();
+  } catch {}
+};
+
 app.on('before-quit', (event) => {
-  if (!quitAfterAnalyticsShutdown) {
-    quitAfterAnalyticsShutdown = true;
+  if (!appQuitConfirmed && getMainWindow()) {
     event.preventDefault();
-    void shutdownAnalytics()
-      .catch(() => {})
-      .finally(() => app.quit());
+    confirmAppQuit();
     return;
   }
 
-  void shutdownAnalytics();
+  if (!quitAfterAnalyticsShutdown) {
+    quitAfterAnalyticsShutdown = true;
+    event.preventDefault();
+    shutdownAnalyticsAndQuit();
+    return;
+  }
+
+  shutdownAnalyticsSilently();
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
   stopWorkspaceChanged?.();
-  stopWorkspaceChanged = undefined;
+  stopWorkspaceChanged = null;
   stopResourceRefresh?.();
   stopResourceRefresh = null;
   stopAutoUpdateChecks();
-  void destroyBrowser();
+  destroyBrowserSilently();
   chat.dispose();
   deactivateWorkspaceAccess();
 });

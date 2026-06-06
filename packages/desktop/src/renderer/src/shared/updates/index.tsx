@@ -1,3 +1,4 @@
+import { animationActive } from '@renderer/shared/animation';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { installUpdate, useUpdateState } from '@renderer/shared/updates/state';
 import {
@@ -7,6 +8,7 @@ import {
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
 import { Tooltip } from '@renderer/ui/tooltip';
+import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
@@ -15,6 +17,8 @@ export const Update = memo(() => {
   const appFocused = useAppFocusState();
 
   if (state.status !== 'downloaded') return null;
+
+  const active = animationActive(appFocused);
 
   return (
     <Tooltip label="Restart to update">
@@ -30,7 +34,10 @@ export const Update = memo(() => {
         <span class="relative inline-block max-w-full truncate leading-5 text-ink">
           <span
             aria-hidden="true"
-            class="pointer-events-none absolute inset-0 bg-[image:var(--shimmer-gradient)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] animate-[activity-text-shimmer_2.4s_linear_infinite] motion-reduce:hidden"
+            class={tw(
+              'pointer-events-none absolute inset-0 bg-[image:var(--shimmer-gradient)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] motion-reduce:hidden',
+              active && 'animate-[activity-text-shimmer_2.4s_linear_infinite]'
+            )}
           >
             Update
           </span>

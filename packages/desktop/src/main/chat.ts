@@ -34,6 +34,7 @@ import {
   upsertSessionOnStart
 } from '@main/sessions';
 import { contextPercent } from '@main/chat/context';
+import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/commands';
@@ -67,6 +68,7 @@ import { workspaceDisplayName } from '@main/utils/workspace';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
+import { workspaceHistoryWith } from '@main/workspace/history';
 import {
   type AgentTab,
   type AgentTabStatus,
@@ -121,7 +123,7 @@ type LiveAssistantTurn = {
   text: string;
   thinking: string;
   createdAt: number;
-  details: HistoryTurn['details'];
+  details: NonNullable<HistoryTurn['details']>;
 };
 
 const liveAssistantHistoryTurn = (turn: LiveAssistantTurn): HistoryTurn => ({
@@ -149,6 +151,13 @@ type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
 type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
+
+const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => ({
+  id: message.id,
+  kind: message.kind,
+  text: message.text,
+  ...(message.images && message.images.length > 0 ? { attachmentCount: message.images.length } : {})
+});
 
 type SessionRuntimeState = {
   abortSequence: number;
@@ -196,6 +205,7 @@ export class ChatService {
   constructor() {
     registerAllCustomProviders(this.modelRegistry, this.customProviders);
     this.modelRegistry.refresh();
+    this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
   }
 
   listCustomProviders(): CustomProviderConfig[] {
@@ -351,7 +361,7 @@ export class ChatService {
       this.workspaceCwd = workspacePath;
       this.runtimeStateForSession(session).isGenerating = false;
       this.setActiveSession(sessionManager);
-      this.persistState({ lastWorkspace: this.workspaceCwd });
+      this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
       this.shouldCreateSession = false;
       return {
@@ -431,7 +441,7 @@ export class ChatService {
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
     this.setActiveSession(sessionManager);
-    this.persistState({ lastWorkspace: this.workspaceCwd });
+    this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
 
     const sessionId = sessionManager.getSessionId();
@@ -509,7 +519,7 @@ export class ChatService {
     this.setActiveSession(session.sessionManager);
     this.runtimeStateForSession(session).isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     this.shouldCreateSession = false;
-    this.persistState({ lastWorkspace: this.workspaceCwd });
+    this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
 
     return {
@@ -539,11 +549,24 @@ export class ChatService {
     const attentionStatuses = this.workspaceAttentionStatuses();
     folders.set(this.workspaceCwd, {
       sessionCount: 0,
-      modified: Date.now(),
       path: this.workspaceCwd,
+      modified: Date.now(),
       name: workspaceDisplayName(this.workspaceCwd),
       ...this.workspaceAttention(this.workspaceCwd, attentionStatuses)
     });
+
+    const workspaceHistory = this.appState.workspaceHistory ?? {};
+    for (const [workspacePath, lastOpenedAt] of Object.entries(workspaceHistory)) {
+      if (folders.has(workspacePath)) continue;
+
+      folders.set(workspacePath, {
+        sessionCount: 0,
+        path: workspacePath,
+        modified: lastOpenedAt,
+        name: workspaceDisplayName(workspacePath),
+        ...this.workspaceAttention(workspacePath, attentionStatuses)
+      });
+    }
 
     for (const session of sessions) {
       if (!session.cwd || session.messageCount === 0) continue;
@@ -570,8 +593,8 @@ export class ChatService {
 
       folders.set(workspacePath, {
         sessionCount: 0,
-        modified: Date.now(),
         path: workspacePath,
+        modified: Date.now(),
         name: workspaceDisplayName(workspacePath),
         ...this.workspaceAttention(workspacePath, attentionStatuses)
       });
@@ -617,7 +640,7 @@ export class ChatService {
         );
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
-      this.persistState({ lastWorkspace: this.workspaceCwd });
+      this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
 
       return { ok: true, status: await this.getStatus() };
@@ -891,6 +914,18 @@ export class ChatService {
       }
 
       if (endError) {
+        if (shouldCompleteAfterStreamError(state.liveAssistantTurn ?? null, endError)) {
+          delete state.liveAssistantTurn;
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            this.setActiveSession(session.sessionManager);
+            this.emit(webContents, 'done', '');
+          } else {
+            this.setNotice(sessionId, workspacePath, 'completed', webContents);
+          }
+          this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+          return { ok: true, sessionId };
+        }
+
         delete state.liveAssistantTurn;
         if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
@@ -1113,11 +1148,7 @@ export class ChatService {
   }
 
   private visibleQueuedMessages(runtimeState = this.activeRuntimeState()): QueuedMessage[] {
-    return (runtimeState?.queuedMessages ?? []).map((message) => ({
-      id: message.id,
-      kind: message.kind,
-      text: message.text
-    }));
+    return (runtimeState?.queuedMessages ?? []).map(visibleQueuedMessage);
   }
 
   private emitQueueUpdate(webContents: WebContents): void {
@@ -1129,8 +1160,8 @@ export class ChatService {
     webContents.send('chat:queue-update', messages);
   }
 
-  private consumeQueuedText(messages: string[], text: string): boolean {
-    const index = messages.indexOf(text);
+  private consumeQueuedMessageText(messages: string[], message: QueuedMessage): boolean {
+    const index = messages.findIndex((text) => this.queuedMessageMatches(message, text));
     if (index === -1) return false;
 
     messages.splice(index, 1);
@@ -1144,26 +1175,26 @@ export class ChatService {
     const steeringMessages = [...steering];
     const followUpMessages = [...followUp];
     const nextMessages: PendingQueuedMessage[] = [];
-    const deliveredMessages: QueuedMessage[] = [];
+    const deliveredMessages: PendingQueuedMessage[] = [];
 
     for (const message of runtimeState.queuedMessages) {
-      if (message.kind === 'steer' && this.consumeQueuedText(steeringMessages, message.text)) {
+      if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
-      } else if (message.kind === 'followUp' && this.consumeQueuedText(followUpMessages, message.text)) {
+      } else if (message.kind === 'followUp' && this.consumeQueuedMessageText(followUpMessages, message)) {
         nextMessages.push(message);
-      } else if (this.consumeQueuedText(steeringMessages, message.text)) {
+      } else if (this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push({ ...message, kind: 'steer' });
-      } else if (this.consumeQueuedText(followUpMessages, message.text)) {
+      } else if (this.consumeQueuedMessageText(followUpMessages, message)) {
         nextMessages.push({ ...message, kind: 'followUp' });
       } else {
-        deliveredMessages.push({ id: message.id, kind: message.kind, text: message.text });
+        deliveredMessages.push(message);
       }
     }
 
     for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
     for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
 
-    runtimeState.queueDeliveryCandidates.push(...deliveredMessages);
+    runtimeState.queueDeliveryCandidates.push(...deliveredMessages.map(visibleQueuedMessage));
     runtimeState.queuedMessages = nextMessages;
     this.emitQueueUpdate(webContents);
   }
@@ -1188,6 +1219,7 @@ export class ChatService {
         ...(images.length > 0 ? { images } : {})
       };
       runtimeState.queuedMessages.push(message);
+      this.emitQueueUpdate(webContents);
       if (images.length > 0) {
         await session.followUp(text, images);
       } else {
@@ -1568,6 +1600,18 @@ export class ChatService {
       ...(this.selectedModelKey ? { selectedModelKey: this.selectedModelKey } : {})
     });
     return model;
+  }
+
+  private workspaceHistoryFor(workspacePath: string): Record<string, number> {
+    const workspaceHistory = this.appState.workspaceHistory ?? {};
+    return workspaceHistoryWith(workspaceHistory, workspacePath);
+  }
+
+  private persistWorkspace(workspacePath: string): void {
+    this.persistState({
+      lastWorkspace: workspacePath,
+      workspaceHistory: this.workspaceHistoryFor(workspacePath)
+    });
   }
 
   private persistState(patch: Partial<StartState>): void {
