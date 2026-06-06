@@ -66,18 +66,19 @@ describe('sub-agent tool details', () => {
     expect(normalizeSubagentTasks({ prompt: 'Review renderer activity UI.' })).toEqual([
       { prompt: 'Review renderer activity UI.' }
     ]);
-    expect(normalizeSubagentTasks({ task: 'Review tests.' })).toEqual([{ prompt: 'Review tests.' }]);
-    expect(normalizeSubagentTasks('{"prompt":"Review JSON input."}')).toEqual([{ prompt: 'Review JSON input.' }]);
+    expect(normalizeSubagentTasks({ tasks: { prompt: 'Review main process.' } })).toEqual([
+      { prompt: 'Review main process.' }
+    ]);
+    expect(normalizeSubagentTasks({ tasks: [{ prompt: 'Review UI.' }, { prompt: 'Review tests.' }] })).toEqual([
+      { prompt: 'Review UI.' },
+      { prompt: 'Review tests.' }
+    ]);
     expect(normalizeSubagentTasks(['Review UI.', 'Review tests.'])).toEqual([
       { prompt: 'Review UI.' },
       { prompt: 'Review tests.' }
     ]);
-    expect(normalizeSubagentTasks({ tasks: { prompt: 'Review main process.' } })).toEqual([
-      { prompt: 'Review main process.' }
-    ]);
-    expect(normalizeSubagentTasks({ tasks: '[{"prompt":"Review serialized tasks."}]' })).toEqual([
-      { prompt: 'Review serialized tasks.' }
-    ]);
+    expect(normalizeSubagentTasks({ tasks: [{ prompt: '  ' }, { name: 'no prompt' }] })).toEqual([]);
+    expect(normalizeSubagentTasks({})).toEqual([]);
 
     const detail = toolEventDetail({
       state: 'active',

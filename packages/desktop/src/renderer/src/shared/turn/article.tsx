@@ -56,7 +56,7 @@ const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   );
 });
 
-const TurnActions = memo(({ actionText = '', turn }: { actionText?: string; turn: Turn }) => {
+const TurnActions = memo(({ turn, actionText = '' }: { turn: Turn; actionText?: string }) => {
   const text = turn.role === 'assistant' ? actionText : turn.text;
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
   if (turn.role === 'assistant' && turn.streaming) return null;
@@ -119,7 +119,7 @@ interface TurnArticleByIdProps {
   actionText?: string;
 }
 
-export const TurnArticle = memo(({ actionText = '', turn }: TurnArticleProps) => {
+export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) => {
   const details = turn.details ?? [];
   const items = turn.activityItems ?? [];
   const thinking = turn.thinking ?? '';
@@ -153,7 +153,7 @@ export const TurnArticle = memo(({ actionText = '', turn }: TurnArticleProps) =>
   );
 });
 
-export const TurnArticleById = memo(({ actionText = '', turnId }: TurnArticleByIdProps) => {
+export const TurnArticleById = memo(({ turnId, actionText = '' }: TurnArticleByIdProps) => {
   const signal = turnSignal(turnId);
   const turn = signal?.value;
 
