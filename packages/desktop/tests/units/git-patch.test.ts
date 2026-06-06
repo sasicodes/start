@@ -1,7 +1,7 @@
+import { execFile } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getGitPatch } from '@main/git';
 import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';

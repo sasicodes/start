@@ -1,9 +1,9 @@
+import type { ChatEvent } from '@preload/index';
 import { activityLabelParts } from '@renderer/shared/turn/label';
-import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { detailMetric } from '@renderer/shared/turn/sequence';
+import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
-import type { ChatEvent } from '@preload/index';
 import { describe, expect, it } from 'vitest';
 
 const baseTurn = (): Turn => ({

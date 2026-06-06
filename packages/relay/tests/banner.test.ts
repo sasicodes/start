@@ -1,5 +1,5 @@
-import { maskToken, relayBanner } from '../src/banner';
 import { describe, expect, it } from 'vitest';
+import { maskToken, relayBanner } from '../src/banner';
 
 describe('maskToken', () => {
   it('returns a hyphen when no token is set', () => {

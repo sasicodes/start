@@ -1,5 +1,5 @@
-import { parseJsonMessage } from '../src/protocol';
 import { describe, expect, it } from 'vitest';
+import { parseJsonMessage } from '../src/protocol';
 
 describe('relay protocol', () => {
   it('parses bounded JSON messages', () => {

@@ -1,7 +1,7 @@
-import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
-import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 import type { WebContents } from 'electron';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
+import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 
 const {
   captureBrowserScreenshot,

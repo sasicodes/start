@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { appName, appId, isMac, isProd } from '@main/application';
+import { appId, appName, isMac, isProd } from '@main/application';
 import { cliWorkspaceFlag } from '@main/cli/args';
 import type { CliInstallResult, CliInstallStatus } from '@preload/index';
 import electron from 'electron';

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { generatedWorkspaceIconDataUrl } from '@main/workspace/icons';
+import { describe, expect, it } from 'vitest';
 
 describe('generatedWorkspaceIconDataUrl', () => {
   it('always returns a data URL for an svg gradient', () => {

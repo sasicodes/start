@@ -1,19 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import {
-  SessionManager,
-  type AuthStorage,
   type AgentSession,
+  type AuthStorage,
   createAgentSession,
   type ModelRegistry,
-  type ToolDefinition,
-  type SettingsManager
+  SessionManager,
+  type SettingsManager,
+  type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
-import { randomUUID } from 'node:crypto';
+import { countLabel } from '@main/details';
 import { agentEndError } from '@main/helpers';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
-import type { SubagentRunResult, SubagentTaskInput, SubagentRunSnapshot } from '@main/subagents/types';
-import { countLabel } from '@main/details';
+import type { SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
 import type { EffortLevel, SubagentActivity } from '@main/types';
 
 interface RunSubagentsOptions {

@@ -2,8 +2,8 @@ import { Markdown } from '@renderer/markdown';
 import { TurnActivity } from '@renderer/shared/turn/activity';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
-import { tw } from '@renderer/utils/tw';
 import { formatTurnTime } from '@renderer/utils/time';
+import { tw } from '@renderer/utils/tw';
 import type { Turn } from '@renderer/utils/types';
 import { memo } from 'preact/compat';
 

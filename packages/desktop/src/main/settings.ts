@@ -1,5 +1,5 @@
 import { loadDesktopId } from '@main/device';
-import { readStartState, updateStartState, type MobileRelaySettings } from '@main/storage';
+import { type MobileRelaySettings, readStartState, updateStartState } from '@main/storage';
 import electron from 'electron';
 import * as v from 'valibot';
 

@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const workspaceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const desktopPackagePath = join(workspaceRoot, 'packages', 'desktop', 'package.json');

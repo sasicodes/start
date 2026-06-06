@@ -1,13 +1,13 @@
 import type { MarkdownProps } from '@renderer/markdown';
 import {
-  codeThemes,
-  markdownIcons,
-  markdownRepair,
-  markdownControls,
-  markdownAnimation,
-  markdownLinkSafety,
   allowMarkdownElement,
-  markdownDisallowedElements
+  codeThemes,
+  markdownAnimation,
+  markdownControls,
+  markdownDisallowedElements,
+  markdownIcons,
+  markdownLinkSafety,
+  markdownRepair
 } from '@renderer/markdown/options';
 import { useMarkdownPlugins } from '@renderer/markdown/plugins';
 import { markdownComponents } from '@renderer/markdown/table';

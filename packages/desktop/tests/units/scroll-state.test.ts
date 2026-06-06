@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import {
   scrollSessionToBottom,
   scrollToBottomButtonState,
   scrollTurnToStart,
   turnScrollIntentState
 } from '@renderer/shared/turn/scroll';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('scroll state', () => {
   beforeEach(() => {

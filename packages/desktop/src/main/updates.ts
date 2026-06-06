@@ -5,6 +5,7 @@ import { sendToRendererWindows } from '@main/window';
 import electron from 'electron';
 
 const { app, ipcMain } = electron;
+
 import electronUpdater from 'electron-updater';
 
 const { autoUpdater } = electronUpdater;

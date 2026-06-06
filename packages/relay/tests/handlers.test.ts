@@ -1,7 +1,7 @@
+import { describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
 import { handleHello } from '../src/handlers';
 import { RelayState } from '../src/state';
-import { describe, expect, it } from 'vitest';
 
 const socket = () => {
   const sent: unknown[] = [];

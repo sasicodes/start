@@ -1,11 +1,11 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import { allowedLatestModelIds, allowedLatestModelOrder } from '@main/models';
 import {
-  effortLevels,
   type EffortLevel,
+  effortLevels,
+  type ProviderAuthKind,
   type ProviderKey,
-  type ThinkingModel,
-  type ProviderAuthKind
+  type ThinkingModel
 } from '@main/types';
 
 export const getSupportedEffortLevels = (model: ThinkingModel): EffortLevel[] => {

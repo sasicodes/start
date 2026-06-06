@@ -1,13 +1,13 @@
-import { useWorkspace } from '@renderer/shared/workspace/info';
-import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
-import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { AttentionBadge } from '@renderer/shared/attention-badge';
 import {
-  attentionStatus,
   attentionCountLabel,
+  attentionStatus,
   attentionStatusCount,
   topAttentionStatus
 } from '@renderer/shared/attention-status';
-import { AttentionBadge } from '@renderer/shared/attention-badge';
+import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { useWorkspace } from '@renderer/shared/workspace/info';
+import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';

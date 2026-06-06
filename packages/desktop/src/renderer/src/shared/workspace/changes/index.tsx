@@ -1,5 +1,18 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
+import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
+import {
+  availableViewModes,
+  emptyGitSummary,
+  type GitPatchViewMode,
+  gitChangesLabel,
+  gitViewLabel,
+  nextViewMode,
+  sectionsForViewMode,
+  summaryForViewMode,
+  useGitChanges,
+  useGitPatch
+} from '@renderer/shared/workspace/changes/state';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import {
   bottomBubbleHiddenMotion,
@@ -12,19 +25,6 @@ import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { lazy, memo, Suspense } from 'preact/compat';
 import { useEffect, useMemo, useState } from 'preact/hooks';
-import {
-  availableViewModes,
-  emptyGitSummary,
-  gitChangesLabel,
-  gitViewLabel,
-  nextViewMode,
-  sectionsForViewMode,
-  summaryForViewMode,
-  type GitPatchViewMode,
-  useGitChanges,
-  useGitPatch
-} from '@renderer/shared/workspace/changes/state';
-import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 
 const gitChangesMaxWidthRatio = 0.7;
 const loadGitDiffViewer = () =>

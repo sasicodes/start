@@ -1,6 +1,6 @@
 import type { RecentSession } from '@preload/index';
-import { RecentSessions } from '@renderer/shared/sessions';
 import { useAppFocusState } from '@renderer/shared/app-focus';
+import { RecentSessions } from '@renderer/shared/sessions';
 import { Workspace } from '@renderer/shared/workspace/picker';
 import {
   bottomBubbleHiddenMotion,

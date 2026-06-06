@@ -1,8 +1,8 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { workspaceDisplayName } from '@main/utils/workspace';
 import { type GitChangeSummary, getGitBranch, getGitChangeSummary, isGitRepository } from '@main/git';
 import { startCacheDir } from '@main/storage';
+import { workspaceDisplayName } from '@main/utils/workspace';
 import { generatedWorkspaceIconDataUrl, workspaceIconDataUrl } from '@main/workspace/icons';
 
 export type WorkspaceInfo = {

@@ -1,7 +1,7 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
-import { sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
-import { useRef, useEffect, useCallback } from 'preact/hooks';
+import { type AppRoute, currentRoute, sameRoute } from '@renderer/utils/route';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 
 interface SessionRouteOptions {
   route: AppRoute;

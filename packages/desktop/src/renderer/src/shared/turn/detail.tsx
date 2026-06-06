@@ -1,14 +1,14 @@
 import { Markdown } from '@renderer/markdown';
+import { SubagentAvatars } from '@renderer/shared/turn/avatars';
 import {
   accordionContentMotion,
   accordionLayoutTransition,
-  detailMetric,
   detailMeta,
+  detailMetric,
   detailTarget,
   isCodeMeta,
   splitDiffMetric
 } from '@renderer/shared/turn/sequence';
-import { SubagentAvatars } from '@renderer/shared/turn/avatars';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';

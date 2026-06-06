@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { ChatService } from '@main/chat';
+import { describe, expect, it } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
 import { freshChatService } from '../helpers/chat-service.js';
 

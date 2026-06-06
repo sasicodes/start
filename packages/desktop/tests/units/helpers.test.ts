@@ -1,3 +1,4 @@
+import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -13,7 +14,6 @@ import {
   textDelta,
   thinkingDelta
 } from '@main/helpers';
-import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import { describe, expect, it } from 'vitest';
 
 describe('helpers', () => {

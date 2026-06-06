@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
-import { activationLog } from '../fakes/workspace-access.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
+import { activationLog } from '../fakes/workspace-access.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 describe('workspace switching', () => {

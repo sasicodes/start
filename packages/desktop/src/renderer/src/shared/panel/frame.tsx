@@ -1,7 +1,7 @@
 import { PanelMotionProvider } from '@renderer/shared/panel/context';
 import { ResizeHandle } from '@renderer/shared/panel/resize-handle';
 import { tw } from '@renderer/utils/tw';
-import type { JSX, ComponentChildren } from 'preact';
+import type { ComponentChildren, JSX } from 'preact';
 
 interface PanelFrameProps {
   label: string;
@@ -32,15 +32,12 @@ export const PanelFrame = ({
       style={{ width: `var(--panel-width, ${initialWidth}px)` }}
       class={tw(
         'relative h-full min-h-0 shrink-0 transform-gpu overflow-visible outline-0 [-webkit-app-region:no-drag]',
-        settling && 'transition-[width] duration-150 ease-out'
+        settling && 'transition-[width] ease-out'
       )}
     >
       <div
         style={{ transform: 'translate3d(var(--panel-offset, 0px), 0, 0)' }}
-        class={tw(
-          'absolute inset-0 transform-gpu shadow-[-14px_0_40px_-16px_oklch(0%_0_0_/_0.12)] dark:shadow-[-14px_0_36px_-14px_oklch(0%_0_0_/_0.24)]',
-          settling && 'transition-transform duration-150 ease-out'
-        )}
+        class={tw('absolute inset-0 transform-gpu border-l border-line', settling && 'transition-transform ease-out')}
       >
         <ResizeHandle resizing={resizing} onPointerDown={onResizePointerDown} />
         <div class="absolute inset-0 min-h-0 overflow-x-hidden overflow-y-auto outline-0 [&::-webkit-scrollbar]:hidden">

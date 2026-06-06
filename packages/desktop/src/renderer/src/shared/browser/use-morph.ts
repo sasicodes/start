@@ -1,4 +1,4 @@
-import { animate, useMotionValue, type AnimationPlaybackControls, type Transition } from 'motion/react';
+import { type AnimationPlaybackControls, animate, type Transition, useMotionValue } from 'motion/react';
 import { useEffect, useRef } from 'preact/hooks';
 
 export const useMorph = (target: number, transition: Transition) => {

@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
 import { confirmClose } from '@main/confirm';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { dialog, resetDialog, setDialogResponse } from '../fakes/electron.js';
 
 describe('confirmClose', () => {
