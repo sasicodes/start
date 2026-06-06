@@ -1,27 +1,57 @@
-import type { DiffEntry } from '@renderer/shared/workspace/changes/diff/types';
+import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 
-type CodeHighlightModule = typeof import('@renderer/shared/workspace/changes/diff/syntax');
-
-interface DiffHighlightItem {
+interface DiffHighlightLine {
   key: string;
   content: string;
-  language: string;
 }
 
-const batchSize = 200;
+interface DiffHighlightResponse {
+  jobId: number;
+  results: DiffHighlightResult[];
+}
+
+interface DiffHighlightResult {
+  key: string;
+  html: string;
+}
+
+const batchSize = 48;
 const cacheLimit = 8000;
 const maxLineLength = 600;
+const workerIdleMs = 15_000;
 const batchesPerRevision = 4;
 const cacheVersion = 'syntax-v2';
 const cache = new Map<string, string>();
 
-let modulePromise: Promise<CodeHighlightModule> | undefined;
+let jobId = 0;
+let idleTimer = 0;
+let activeJobs = 0;
+let worker: Worker | null = null;
 
 const cacheKey = (language: string, content: string) => `${cacheVersion}\0${language}\0${content}`;
 
-const loadHighlighter = () => {
-  modulePromise ??= import('@renderer/shared/workspace/changes/diff/syntax');
-  return modulePromise;
+const createWorker = () => new Worker(new URL('./highlight.worker.ts', import.meta.url), { type: 'module' });
+
+const clearIdleTimer = () => {
+  if (!idleTimer) return;
+  window.clearTimeout(idleTimer);
+  idleTimer = 0;
+};
+
+const scheduleWorkerIdle = () => {
+  if (activeJobs > 0 || !worker || idleTimer) return;
+  idleTimer = window.setTimeout(() => {
+    idleTimer = 0;
+    if (activeJobs > 0) return;
+    worker?.terminate();
+    worker = null;
+  }, workerIdleMs);
+};
+
+const highlightWorker = () => {
+  clearIdleTimer();
+  worker ??= createWorker();
+  return worker;
 };
 
 const writeCache = (key: string, html: string) => {
@@ -31,38 +61,27 @@ const writeCache = (key: string, html: string) => {
   if (firstKey) cache.delete(firstKey);
 };
 
-const collectItems = (entries: DiffEntry[]) => {
-  const items: DiffHighlightItem[] = [];
+export const highlightableDiffLines = (
+  file: PatchFile,
+  language: string,
+  isCached: (key: string) => boolean = (key) => cache.has(key)
+) => {
+  const items: DiffHighlightLine[] = [];
   const seen = new Set<string>();
 
-  for (const entry of entries) {
-    if (!entry.language) continue;
-    for (const hunk of entry.file.hunks) {
-      for (const line of hunk.lines) {
-        if (line.kind === 'meta' || !line.content || line.content.length > maxLineLength) continue;
-        const key = cacheKey(entry.language, line.content);
-        if (seen.has(key) || cache.has(key)) continue;
-        seen.add(key);
-        items.push({ content: line.content, key, language: entry.language });
-      }
+  if (!language) return items;
+
+  for (const hunk of file.hunks) {
+    for (const line of hunk.lines) {
+      if (line.kind === 'meta' || !line.content || line.content.length > maxLineLength) continue;
+      const key = cacheKey(language, line.content);
+      if (seen.has(key) || isCached(key)) continue;
+      seen.add(key);
+      items.push({ content: line.content, key });
     }
   }
-  return items;
-};
 
-const highlightBatch = async (
-  items: DiffHighlightItem[],
-  start: number,
-  end: number,
-  highlightCode: CodeHighlightModule['highlightCode']
-) => {
-  const pending: Promise<void>[] = [];
-  for (let index = start; index < end; index += 1) {
-    const item = items[index];
-    if (!item || cache.has(item.key)) continue;
-    pending.push(highlightCode(item.content, item.language).then((html) => writeCache(item.key, html)));
-  }
-  await Promise.all(pending);
+  return items;
 };
 
 export const highlightedDiffLine = (language: string, content: string, revision: number) => {
@@ -71,40 +90,59 @@ export const highlightedDiffLine = (language: string, content: string, revision:
   return cache.get(cacheKey(language, content)) ?? '';
 };
 
-export const runDiffHighlighting = (entries: DiffEntry[], onRevisionBump: () => void) => {
+const runHighlighting = (language: string, items: DiffHighlightLine[], onRevisionBump: () => void) => {
+  let index = 0;
   let active = true;
-  let frame = 0;
+  let batchesSinceBump = 0;
+  const workerJobId = jobId + 1;
+  const target = highlightWorker();
+  jobId = workerJobId;
+  activeJobs += 1;
 
-  void loadHighlighter()
-    .then(async ({ highlightCode }) => {
-      if (!active) return;
-      const items = collectItems(entries);
-      if (items.length === 0) return;
+  const finish = () => {
+    if (!active) return;
+    active = false;
+    activeJobs = Math.max(0, activeJobs - 1);
+    target.removeEventListener('message', onMessage);
+    scheduleWorkerIdle();
+  };
 
-      let index = 0;
-      let batchesSinceBump = 0;
+  const onMessage = (event: MessageEvent<DiffHighlightResponse>) => {
+    if (event.data.jobId !== workerJobId) return;
+    if (!active) return;
 
-      const tick = async () => {
-        const end = Math.min(index + batchSize, items.length);
-        await highlightBatch(items, index, end, highlightCode);
-        if (!active) return;
+    for (const result of event.data.results) writeCache(result.key, result.html);
 
-        index = end;
-        batchesSinceBump += 1;
+    batchesSinceBump += 1;
+    if (batchesSinceBump >= batchesPerRevision || index >= items.length) {
+      batchesSinceBump = 0;
+      onRevisionBump();
+    }
 
-        if (batchesSinceBump >= batchesPerRevision || index >= items.length) {
-          batchesSinceBump = 0;
-          onRevisionBump();
-        }
-        if (index < items.length) frame = window.requestAnimationFrame(() => void tick());
-      };
+    postNextBatch();
+  };
 
-      frame = window.requestAnimationFrame(() => void tick());
-    })
-    .catch(() => {});
+  const postNextBatch = () => {
+    if (!active) return;
+    if (index >= items.length) {
+      finish();
+      return;
+    }
+    const lines = items.slice(index, index + batchSize);
+    index += batchSize;
+    target.postMessage({ jobId: workerJobId, language, lines });
+  };
+
+  target.addEventListener('message', onMessage);
+  postNextBatch();
 
   return () => {
-    active = false;
-    window.cancelAnimationFrame(frame);
+    finish();
   };
+};
+
+export const requestDiffFileHighlighting = (file: PatchFile, language: string, onRevisionBump: () => void) => {
+  const items = highlightableDiffLines(file, language);
+  if (items.length === 0) return;
+  return runHighlighting(language, items, onRevisionBump);
 };
