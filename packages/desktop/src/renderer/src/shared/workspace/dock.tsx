@@ -13,11 +13,11 @@ import { AnimatePresence, motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
 interface WorkspaceDockProps {
-  isGenerating: boolean;
   workspacePath: string;
+  isGenerating: boolean;
   activeSessionId: string;
-  workspaceCollapsed: boolean;
   onChooseDirectory: () => void;
+  workspaceCollapsed: boolean;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -26,8 +26,8 @@ export const WorkspaceDock = memo(
   ({
     workspacePath,
     isGenerating,
-    activeSessionId,
     onOpenSession,
+    activeSessionId,
     onChooseDirectory,
     workspaceCollapsed,
     onSelectWorkspace
@@ -45,9 +45,9 @@ export const WorkspaceDock = memo(
           {appFocused && (
             <motion.div
               key="workspace-dock-controls"
-              class="flex h-full items-center gap-2"
               animate={bottomBubbleVisibleMotion}
               initial={bottomBubbleHiddenMotion}
+              class="flex h-full items-center gap-2"
               transition={bottomBubbleRevealTransition}
               exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
             >

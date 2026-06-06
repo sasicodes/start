@@ -43,7 +43,7 @@
 - Extract long boolean expressions, multi-branch render logic, chained fallbacks, and repeated checks into named helpers or booleans before JSX.
 - Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
 - In ternaries, the truthy branch carries the meaningful value and the falsy branch is the empty fallback. Flip `state === target ? '' : target` to `state !== target ? target : ''`. Avoid placeholder ternaries like `condition ? '' : value`; split branches or extract helpers.
-- Avoid the `void` operator when a clearer alternative exists. Inside async functions, use `await`. For fire-and-forget calls protected by `try/catch` or `.catch`, drop the `void` and rely on TypeScript's return-type covariance (`() => Promise<void>` assigns to `() => void`). Keep `void` only when the discard is otherwise ambiguous.
+- Avoid the `void` operator when a clearer alternative exists. Inside async functions, prefer `await` with `try/catch` over `.then`/`.catch`. For fire-and-forget calls protected by `try/catch` or `.catch`, drop the `void` and rely on TypeScript's return-type covariance (`() => Promise<void>` assigns to `() => void`). Keep `void` only when the discard is otherwise ambiguous.
 - Use hover backgrounds only when an inline control needs a filled selected affordance; otherwise use text-color feedback.
 - For small icon-only controls, keep visual size stable and expand the hit area with a pseudo-element like `before:absolute before:-inset-2` when precision clicking would be frustrating.
 - For expandable rows, keep identifiers inline in titles and reserve expanded content for supporting output, diffs, or detail bodies.
@@ -62,4 +62,4 @@
 - Avoid single-use constants; inline values unless a name removes meaningful duplication or prevents a maintenance hazard.
 - Prefer empty strings for absent renderer-only string state (selected ids, model keys, paths); omit optional object properties at API boundaries.
 - Never write `undefined` literally. For swallowed promise rejections use `.catch(() => {})`. For absent state, omit the property or use an empty string per the rules above.
-- Sort interface members, type members, JSX props, variables, hooks, hook dependencies, destructured constants, and object constants by total line length when it doesn't hurt readability or break framework conventions.
+- Sort sortable code by total line length when it doesn't hurt readability or break framework conventions: interface and type members, object keys and values, JSX props, variables, hooks, hook dependencies, destructured constants, CSS variables, and written statement objects.

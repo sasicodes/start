@@ -19,11 +19,11 @@ export const Workspace = memo(
   ({
     workspacePath,
     collapsed = false,
-    onSelectWorkspace,
-    onChooseDirectory
+    onChooseDirectory,
+    onSelectWorkspace
   }: {
-    workspacePath: string;
     collapsed?: boolean;
+    workspacePath: string;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
   }) => {
@@ -71,8 +71,8 @@ export const Workspace = memo(
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img
                     alt=""
-                    src={workspace.iconDataUrl}
                     draggable={false}
+                    src={workspace.iconDataUrl}
                     class="size-full rounded-full object-cover"
                   />
                 </span>
@@ -114,8 +114,8 @@ export const Workspace = memo(
             <AppMenu.Positioner
               side="top"
               align="start"
-              anchor={rootRef}
               sideOffset={8}
+              anchor={rootRef}
               className="z-50"
               collisionPadding={12}
             >
