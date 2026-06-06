@@ -29,7 +29,9 @@
     "coding-agent"
   ],
   "author": "sasicodes",
-  "dependencies": {},
+  "dependencies": {
+    "qrcode-generator": "1.4.4"
+  },
   "devDependencies": {
     "@base-ui/react": "1.5.0",
     "@earendil-works/pi-ai": "0.77.0",

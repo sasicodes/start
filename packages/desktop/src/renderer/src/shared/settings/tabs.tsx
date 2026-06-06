@@ -12,6 +12,7 @@ interface SettingsTabsProps {
 const settingsTabs = [
   { value: 'personalization', label: 'Personalization' },
   { value: 'providers', label: 'Providers' },
+  { value: 'mobile', label: 'Mobile' },
   { value: 'shortcuts', label: 'Shortcuts' }
 ] as const;
 

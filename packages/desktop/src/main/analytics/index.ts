@@ -1,8 +1,6 @@
 import { execFile } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { release } from 'node:os';
-import { dirname, join } from 'node:path';
 import { appVersion, isProd } from '@main/application';
 import electron from 'electron';
 import {
@@ -10,13 +8,13 @@ import {
   ANALYTICS_FLUSH_AT,
   POSTHOG_PROJECT_KEY,
   ANALYTICS_HASH_LENGTH,
-  ANALYTICS_STORAGE_NAME,
   ANALYTICS_FLUSH_INTERVAL_MS,
   ANALYTICS_COMMAND_TIMEOUT_MS,
   ANALYTICS_SHUTDOWN_TIMEOUT_MS,
   ANALYTICS_USERNAME_STORAGE_NAME
 } from '@main/constants';
-import { startDir } from '@main/storage';
+import { loadDesktopId } from '@main/device';
+import { readLocalStateValue, writeLocalStateValue } from '@main/local-state';
 import { PostHog } from 'posthog-node';
 
 type AnalyticsPropertyValue = null | number | string | boolean;
@@ -48,40 +46,6 @@ let distinctId = '';
 let launchStartMs = 0;
 let client: PostHog | null = null;
 let identifiedUsername = '';
-
-const readText = (path: string) => readFileSync(path, 'utf8').trim();
-
-const writeText = (path: string, value: string) => {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, value, 'utf8');
-};
-
-const analyticsPath = (name: string) => join(startDir(), name);
-
-const readAnalyticsValue = (name: string) => {
-  try {
-    return readText(analyticsPath(name));
-  } catch {
-    return;
-  }
-};
-
-const writeAnalyticsValue = (name: string, value: string) => {
-  try {
-    writeText(analyticsPath(name), value);
-  } catch {
-    return;
-  }
-};
-
-const loadDistinctId = () => {
-  const current = readAnalyticsValue(ANALYTICS_STORAGE_NAME);
-  if (current) return current;
-
-  const id = randomUUID();
-  writeAnalyticsValue(ANALYTICS_STORAGE_NAME, id);
-  return id;
-};
 
 const baseProperties = (): AnalyticsProperties => ({
   app_version: appVersion,
@@ -170,9 +134,9 @@ export const initAnalytics = () => {
   if (!isProd) return;
   if (client) return;
 
-  distinctId = loadDistinctId();
+  distinctId = loadDesktopId();
   launchStartMs = Date.now();
-  identifiedUsername = readAnalyticsValue(ANALYTICS_USERNAME_STORAGE_NAME) || '';
+  identifiedUsername = readLocalStateValue(ANALYTICS_USERNAME_STORAGE_NAME) || '';
   client = new PostHog(POSTHOG_PROJECT_KEY, {
     host: POSTHOG_HOST,
     flushAt: ANALYTICS_FLUSH_AT,
@@ -191,7 +155,7 @@ export const identifyDeviceUser = async () => {
   if (identifiedUsername === username) return;
 
   identifiedUsername = username;
-  writeAnalyticsValue(ANALYTICS_USERNAME_STORAGE_NAME, username);
+  writeLocalStateValue(ANALYTICS_USERNAME_STORAGE_NAME, username);
   analytics.identify({
     distinctId,
     disableGeoip: true,

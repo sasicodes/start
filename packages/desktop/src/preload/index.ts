@@ -2,7 +2,15 @@ import electron from 'electron';
 
 const { contextBridge, ipcRenderer, webUtils } = electron;
 
+export interface MobileRelaySettings {
+  desktopId: string;
+  enabled: boolean;
+  relayToken: string;
+  relayUrl: string;
+}
+
 export interface AppSettings {
+  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   solidWindowBackground: boolean;
 }
@@ -40,7 +48,7 @@ export interface ChatStatus {
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
-export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
 
 export interface ModelOption {
   id: string;
@@ -408,6 +416,8 @@ const api = {
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
+    setMobileRelaySettings: (settings: MobileRelaySettings): Promise<AppSettingsResult> =>
+      ipcRenderer.invoke('app:set-mobile-relay-settings', settings),
     setSolidWindowBackground: (enabled: boolean): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-solid-window-background', enabled),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),

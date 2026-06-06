@@ -1,7 +1,15 @@
 import type { EffortLevel, SessionNotice } from '@main/types';
 
+export interface MobileRelaySettings {
+  desktopId: string;
+  enabled: boolean;
+  relayToken: string;
+  relayUrl: string;
+}
+
 export interface StartState {
   lastWorkspace?: string;
+  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   selectedModelKey?: string;
   solidWindowBackground: boolean;
@@ -12,6 +20,12 @@ export interface StartState {
 }
 
 const defaultStartState: StartState = {
+  mobileRelay: {
+    enabled: false,
+    desktopId: '',
+    relayUrl: '',
+    relayToken: ''
+  },
   solidWindowBackground: false,
   selectedThinkingLevel: 'medium',
   composerShortcut: 'Control+Space'

@@ -96,7 +96,7 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
-type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
 
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;
@@ -347,6 +347,14 @@ if (!singleInstanceLock) {
       return registered
         ? { ok: true, settings: nextSettings }
         : { ok: false, settings: previousSettings, error: 'That shortcut could not be registered.' };
+    });
+    ipcMain.handle('app:set-mobile-relay-settings', async (_event, mobileRelay: AppSettings['mobileRelay']) => {
+      const nextSettings = await writeAppSettings({
+        ...(appSettings ?? defaultAppSettings),
+        mobileRelay
+      });
+      appSettings = nextSettings;
+      return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
       const previousSettings = appSettings;

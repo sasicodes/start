@@ -7,6 +7,7 @@ const { parseStartState } = await import('@main/storage');
 describe('parseStartState', () => {
   it('falls back to defaults for missing or invalid values', () => {
     const state = parseStartState({});
+    expect(state.mobileRelay).toEqual({ desktopId: '', enabled: false, relayToken: '', relayUrl: '' });
     expect(state.composerShortcut).toBe('Control+Space');
     expect(state.solidWindowBackground).toBe(false);
     expect(state.selectedThinkingLevel).toBe('high');
@@ -16,6 +17,42 @@ describe('parseStartState', () => {
     expect(parseStartState({ solidWindowBackground: true }).solidWindowBackground).toBe(true);
     expect(parseStartState({ solidWindowBackground: false }).solidWindowBackground).toBe(false);
     expect(parseStartState({ solidWindowBackground: 'true' }).solidWindowBackground).toBe(false);
+  });
+
+  it('keeps empty mobile relay strings', () => {
+    expect(
+      parseStartState({
+        mobileRelay: {
+          enabled: true,
+          desktopId: ' ',
+          relayUrl: '',
+          relayToken: ''
+        }
+      }).mobileRelay
+    ).toEqual({
+      enabled: true,
+      desktopId: '',
+      relayUrl: '',
+      relayToken: ''
+    });
+  });
+
+  it('keeps trimmed mobile relay settings', () => {
+    expect(
+      parseStartState({
+        mobileRelay: {
+          enabled: true,
+          desktopId: ' desktop ',
+          relayUrl: ' wss://relay.example.com/connect ',
+          relayToken: ' token '
+        }
+      }).mobileRelay
+    ).toEqual({
+      enabled: true,
+      desktopId: 'desktop',
+      relayUrl: 'wss://relay.example.com/connect',
+      relayToken: 'token'
+    });
   });
 
   it('keeps a valid thinking level and ignores unknown ones', () => {

@@ -3,6 +3,7 @@ export const ANALYTICS_HASH_LENGTH = 20;
 export const ANALYTICS_FLUSH_INTERVAL_MS = 5000;
 export const ANALYTICS_COMMAND_TIMEOUT_MS = 3000;
 export const ANALYTICS_SHUTDOWN_TIMEOUT_MS = 2000;
+export const DESKTOP_ID_STORAGE_NAME = 'desktop-id';
 export const ANALYTICS_STORAGE_NAME = 'analytics';
 export const ANALYTICS_USERNAME_STORAGE_NAME = 'analytics-username';
 

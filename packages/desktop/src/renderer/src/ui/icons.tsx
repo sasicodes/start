@@ -32,6 +32,18 @@ export const PlusIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWi
   </svg>
 );
 
+export const QrIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M13.75 13.75V16.25H16.25M17.75 13.75H20.25M20.25 17.75H17.75V20.25M13.75 19.75V20.25M6.75 20.25H7.25C8.90685 20.25 10.25 18.9069 10.25 17.25V16.75C10.25 15.0931 8.90685 13.75 7.25 13.75H6.75C5.09315 13.75 3.75 15.0931 3.75 16.75V17.25C3.75 18.9069 5.09315 20.25 6.75 20.25ZM16.75 10.25H17.25C18.9069 10.25 20.25 8.90685 20.25 7.25V6.75C20.25 5.09315 18.9069 3.75 17.25 3.75H16.75C15.0931 3.75 13.75 5.09315 13.75 6.75V7.25C13.75 8.90685 15.0931 10.25 16.75 10.25ZM6.75 10.25H7.25C8.90685 10.25 10.25 8.90685 10.25 7.25V6.75C10.25 5.09315 8.90685 3.75 7.25 3.75H6.75C5.09315 3.75 3.75 5.09315 3.75 6.75V7.25C3.75 8.90685 5.09315 10.25 6.75 10.25Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const ChevronLeftIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
