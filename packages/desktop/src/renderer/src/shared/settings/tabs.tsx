@@ -1,5 +1,5 @@
-import type { SettingsTab } from '@renderer/shared/settings/tab';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { computeTabReveal, type SettingsTab, type TabReveal } from '@renderer/shared/settings/tab';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 export type { SettingsTab };
 
@@ -15,25 +15,19 @@ const settingsTabs = [
   { value: 'shortcuts', label: 'Shortcuts' }
 ] as const;
 
-interface TabReveal {
-  left: number;
-  right: number;
-}
-
 export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
   const listRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [reveal, setReveal] = useState<TabReveal>({ left: 0, right: 0 });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const updateReveal = () => {
       const list = listRef.current;
       const index = settingsTabs.findIndex((tab) => tab.value === value);
       const button = tabRefs.current[index] ?? null;
       if (!list || !button) return;
 
-      const left = button.offsetLeft;
-      setReveal({ left, right: list.offsetWidth - (left + button.offsetWidth) });
+      setReveal(computeTabReveal(list.offsetWidth, button.offsetLeft, button.offsetWidth));
     };
 
     updateReveal();
