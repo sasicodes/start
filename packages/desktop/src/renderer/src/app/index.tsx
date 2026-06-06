@@ -344,6 +344,7 @@ export const App = () => {
       isGenerating={isGenerating}
       activeSessionId={activeSessionId}
       onOpenSettings={toggleSettings}
+      workspaceCollapsed={hasTurns}
       sessionRoutePending={sessionRoutePending}
       settingsPanelVisible={settingsPanelVisible}
       onToggleGitPanel={toggleGitChangesPanel}

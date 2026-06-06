@@ -13,10 +13,12 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 export const Workspace = memo(
   ({
     workspacePath,
+    collapsed = false,
     onSelectWorkspace,
     onChooseDirectory
   }: {
     workspacePath: string;
+    collapsed?: boolean;
     onChooseDirectory: () => void;
     onSelectWorkspace: (path: string) => void;
   }) => {
@@ -43,14 +45,22 @@ export const Workspace = memo(
     return (
       <div
         ref={rootRef}
-        class="h-11.5 w-64 max-w-[calc(100vw-2.25rem)] text-soft transition-[width] duration-150 ease-out select-none @max-workspace-dock/chat:size-11.5"
+        class={tw(
+          'h-11.5 text-soft transition-[width] duration-150 ease-out select-none',
+          collapsed ? 'w-11.5' : 'w-64 max-w-[calc(100vw-2.25rem)] @max-workspace-dock/chat:size-11.5'
+        )}
       >
         <AppMenu.Root open={open} onOpenChange={updateOpen}>
           <Tooltip label={tooltipLabel} disabled={open}>
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger
                 aria-label="Workspace folders"
-                className="relative flex h-full w-full min-w-0 items-center gap-2 overflow-hidden rounded-full border-0 bg-composer pr-1.5 pl-1.5 text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75"
+                className={tw(
+                  'relative flex h-full w-full min-w-0 items-center overflow-hidden rounded-full border-0 bg-composer text-left text-soft shadow-shell outline-0 transition-[background-color,padding] duration-150 ease-out hover:bg-control focus-visible:bg-control',
+                  collapsed
+                    ? 'justify-center gap-0 p-1.75'
+                    : 'gap-2 pr-1.5 pl-1.5 @max-workspace-dock/chat:justify-center @max-workspace-dock/chat:gap-0 @max-workspace-dock/chat:p-1.75'
+                )}
               >
                 <span class="grid size-8 flex-none place-items-center overflow-hidden rounded-full bg-white">
                   <img
@@ -61,7 +71,10 @@ export const Workspace = memo(
                   />
                 </span>
                 <span
-                  class="flex min-w-0 flex-1 flex-col justify-center gap-0.5 transition-[opacity,transform] duration-150 ease-out @max-workspace-dock/chat:hidden"
+                  class={tw(
+                    'flex min-w-0 flex-1 flex-col justify-center gap-0.5 transition-[opacity,transform] duration-150 ease-out @max-workspace-dock/chat:hidden',
+                    collapsed && 'hidden'
+                  )}
                 >
                   <span class="flex min-w-0 items-center gap-1.5">
                     <span class="truncate text-sm leading-4 font-medium text-ink">{workspace.folderName}</span>
@@ -70,9 +83,15 @@ export const Workspace = memo(
                     {workspace.branchName ?? workspace.path}
                   </span>
                 </span>
-                <span aria-hidden="true" class="h-full w-0.5 shrink-0 bg-line @max-workspace-dock/chat:hidden" />
                 <span
-                  class="grid h-full w-8 shrink-0 place-items-center rounded-r-full text-ink @max-workspace-dock/chat:hidden"
+                  aria-hidden="true"
+                  class={tw('h-full w-0.5 shrink-0 bg-line @max-workspace-dock/chat:hidden', collapsed && 'hidden')}
+                />
+                <span
+                  class={tw(
+                    'grid h-full w-8 shrink-0 place-items-center rounded-r-full text-ink @max-workspace-dock/chat:hidden',
+                    collapsed && 'hidden'
+                  )}
                 >
                   <ChevronDownIcon
                     class={tw(

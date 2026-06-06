@@ -16,6 +16,7 @@ interface WorkspaceDockProps {
   isGenerating: boolean;
   workspacePath: string;
   activeSessionId: string;
+  workspaceCollapsed: boolean;
   onChooseDirectory: () => void;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
@@ -28,6 +29,7 @@ export const WorkspaceDock = memo(
     activeSessionId,
     onOpenSession,
     onChooseDirectory,
+    workspaceCollapsed,
     onSelectWorkspace
   }: WorkspaceDockProps) => {
     const appFocused = useAppFocusState();
@@ -50,6 +52,7 @@ export const WorkspaceDock = memo(
               exit={{ ...bottomBubbleHiddenMotion, transition: bottomBubbleHideTransition }}
             >
               <Workspace
+                collapsed={workspaceCollapsed}
                 workspacePath={workspacePath}
                 onChooseDirectory={onChooseDirectory}
                 onSelectWorkspace={onSelectWorkspace}
