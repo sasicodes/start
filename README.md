@@ -1,3 +1,5 @@
+![Start](assets/banner.png)
+
 **Start**, your coding assistant.
 
 ```text
