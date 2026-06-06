@@ -3,7 +3,7 @@ import { routeUrl, sameRoute, currentRoute, type AppRoute } from '@renderer/util
 import type { RefObject } from 'preact';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 
-const initialSurface = (): AppSurface =>
+export const initialSurface = (): AppSurface =>
   new URLSearchParams(window.location.search).get('surface') === 'composer' ? 'composer' : 'main';
 
 export const routeForSession = (sessionId: string): AppRoute =>
