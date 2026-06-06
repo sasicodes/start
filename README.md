@@ -1,3 +1,5 @@
+![Start](assets/banner.png)
+
 **Start**, your coding assistant.
 
 ```text
@@ -15,7 +17,7 @@ Use pnpm.
 
 - install: `pnpm install`
 
-- [desktop](https://github.com/sasicodes/start/tree/main/packages/desktop): `pnpm dev` or `pnpm desktop`
+- [desktop](https://github.com/sasicodes/start/tree/main/packages/desktop): `pnpm dev`
 - [ios](https://github.com/sasicodes/start/tree/main/packages/ios): open in Xcode
 - [relay](https://github.com/sasicodes/start/tree/main/packages/relay): `pnpm relay`
 - [web](https://github.com/sasicodes/start/tree/main/packages/web): `pnpm web`

@@ -992,9 +992,7 @@ export class ChatService {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
-    if (!session) return this.visibleQueuedMessages();
-    if (!runtimeState) return this.visibleQueuedMessages();
-    if (!message) return this.visibleQueuedMessages();
+    if (!session || !runtimeState || !message) return this.visibleQueuedMessages();
 
     const canSteerQueuedMessage = runtimeState.isGenerating && session.isStreaming;
     if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
@@ -1175,7 +1173,7 @@ export class ChatService {
     session: AgentSession,
     runtimeState: SessionRuntimeState
   ): Promise<SendResult> {
-    if (!session?.isStreaming) return { ok: false, error: 'The response is still starting.' };
+    if (!session.isStreaming) return { ok: false, error: 'The response is still starting.' };
 
     const id = randomUUID();
 

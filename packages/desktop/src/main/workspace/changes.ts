@@ -68,14 +68,6 @@ const samePatch = (first: GitPatch | null, second: GitPatch | null) => {
   });
 };
 
-const stdoutFromExecResult = (value: unknown) => {
-  if (typeof value === 'string') return value;
-  if (!value || typeof value !== 'object') return '';
-
-  const result = value as { stdout?: unknown };
-  return typeof result.stdout === 'string' ? result.stdout : '';
-};
-
 const fallbackGitWatchTargets = (workspacePath: string): GitWatchTarget[] => [
   {
     path: workspacePath,
@@ -91,13 +83,12 @@ const gitWatchDirectories = async (workspacePath: string) => {
   const directories = new Set([workspacePath]);
 
   try {
-    const result = await execFileAsync('git', gitWatchDirectoryArgs, {
+    const { stdout } = await execFileAsync('git', gitWatchDirectoryArgs, {
       cwd: workspacePath,
       encoding: 'utf8',
       maxBuffer: 4 * 1024 * 1024,
       timeout: 1200
     });
-    const stdout = stdoutFromExecResult(result);
 
     for (const filePath of stdout.split('\0')) {
       let directory = path.dirname(filePath);

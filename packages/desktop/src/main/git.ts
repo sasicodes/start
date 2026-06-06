@@ -2,6 +2,7 @@ import { execFile, spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { resolveInside } from '@main/utils/workspace';
 
 export type GitChangeSummary = {
   filesChanged: number;
@@ -335,9 +336,8 @@ export const getGitPatch = async (cwd: string): Promise<GitPatch | undefined> =>
 
 const readWorkingTreeBuffer = async (cwd: string, filePath: string): Promise<Buffer | undefined> => {
   try {
-    const cwdResolved = path.resolve(cwd);
-    const absolutePath = path.resolve(cwdResolved, filePath);
-    if (!absolutePath.startsWith(cwdResolved + path.sep) && absolutePath !== cwdResolved) return;
+    const absolutePath = resolveInside(cwd, filePath);
+    if (!absolutePath) return;
 
     const details = await stat(absolutePath);
     if (!details.isFile() || details.size > gitFileBlobMaxBytes) return;

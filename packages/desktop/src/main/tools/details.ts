@@ -2,21 +2,6 @@ import { countLabel, isRecord, numberValue, stringValue, textContent } from '@ma
 import { subagentActivityList, subagentTaskCount } from '@main/subagents/activity';
 import type { ChatEvent, TurnDetailState } from '@main/types';
 
-const detailValue = (event: ChatEvent, value: string) => {
-  if (value) event.detail = value;
-  return event;
-};
-
-const metricValue = (event: ChatEvent, value: string) => {
-  if (value) event.metric = value;
-  return event;
-};
-
-const bodyValue = (event: ChatEvent, value: string) => {
-  if (value) event.body = value;
-  return event;
-};
-
 const recordPath = (args: Record<string, unknown>) => stringValue(args.path) || '.';
 
 const browserToolTitles: Record<string, { active: string; done: string; error: string; result: string }> = {
@@ -328,9 +313,9 @@ export const toolEventDetail = ({
     title: toolTitle(toolName, safeArgs, nextState)
   };
 
-  bodyValue(event, body);
-  detailValue(event, detail);
-  metricValue(event, metric);
+  if (body) event.body = body;
+  if (detail) event.detail = detail;
+  if (metric) event.metric = metric;
   const subagents = subagentActivityList(result);
   if (subagents.length > 0) event.subagents = subagents;
   return event;

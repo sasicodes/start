@@ -12,9 +12,19 @@ const fsMocks = vi.hoisted(() => ({
   watch: vi.fn()
 }));
 
-const childProcessMocks = vi.hoisted(() => ({
-  execFile: vi.fn()
-}));
+const childProcessMocks = vi.hoisted(() => {
+  const execFile = vi.fn();
+  Object.defineProperty(execFile, Symbol.for('nodejs.util.promisify.custom'), {
+    value: (command: string, args: string[], options: object) =>
+      new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        execFile(command, args, options, (error: Error | null, stdout: string, stderr: string) => {
+          if (error) reject(error);
+          else resolve({ stdout, stderr });
+        });
+      })
+  });
+  return { execFile };
+});
 
 class FakeWatcher extends EventEmitter {
   closed = false;
