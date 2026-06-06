@@ -1,5 +1,5 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
-import type { SettingsTab } from '@renderer/shared/settings/tabs';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { useState, useEffect, useCallback } from 'preact/hooks';
 
 interface SessionPanelsOptions {

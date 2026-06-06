@@ -40,6 +40,8 @@ export interface ChatStatus {
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
+export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+
 export interface ModelOption {
   id: string;
   key: string;
@@ -409,7 +411,7 @@ const api = {
       ipcRenderer.invoke('app:set-solid-window-background', enabled),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),
     showMain: (): Promise<void> => ipcRenderer.invoke('app:show-main'),
-    openSettings: (): Promise<void> => ipcRenderer.invoke('app:open-settings'),
+    openSettings: (tab: SettingsTab = 'personalization'): Promise<void> => ipcRenderer.invoke('app:open-settings', tab),
     openShortcuts: (): Promise<void> => ipcRenderer.invoke('app:open-shortcuts'),
     submitComposer: (prompt: string, attachments: ImageAttachment[] = []): Promise<void> =>
       ipcRenderer.invoke('app:submit-composer', prompt, attachments),
@@ -430,7 +432,8 @@ const api = {
       onIpc<[AppFocusState]>('app:focus-state-changed', listener),
     onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>
       onIpc<[UpdateState]>('app:update-state-changed', listener),
-    onShowSettings: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-settings', listener),
+    onShowSettings: (listener: (tab: SettingsTab) => void): IpcDisposer =>
+      onIpc<[SettingsTab]>('app:show-settings', listener),
     onShowShortcuts: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-shortcuts', listener),
     onSubmitComposer: (listener: (prompt: string, attachments: ImageAttachment[]) => void): IpcDisposer =>
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>

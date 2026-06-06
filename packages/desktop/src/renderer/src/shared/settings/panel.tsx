@@ -3,7 +3,8 @@ import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { Personalization } from '@renderer/shared/settings/personalization';
 import { Providers } from '@renderer/shared/settings/providers';
 import { Shortcuts } from '@renderer/shared/settings/shortcuts';
-import { SettingsTabs, type SettingsTab } from '@renderer/shared/settings/tabs';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { SettingsTabs } from '@renderer/shared/settings/tabs';
 import { memo } from 'preact/compat';
 
 interface SettingsProps {

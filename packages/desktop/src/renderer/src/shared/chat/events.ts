@@ -1,4 +1,5 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { createTurn } from '@renderer/functions/chat';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/stream-buffer';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
@@ -23,7 +24,7 @@ interface MutableRef<T> {
 interface UseChatEventsOptions {
   onShowChat: () => void;
   clearSession: () => void;
-  onShowSettings: () => void;
+  onShowSettings: (tab: SettingsTab) => void;
   loadModels: () => Promise<void>;
   loadAuthProviders: () => Promise<void>;
   syncStatus: () => Promise<void>;
@@ -117,7 +118,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (!streamFrame) streamFrame = requestAnimationFrame(flushStream);
     };
 
-    const offShowSettings = window.pi.app.onShowSettings(() => optionsRef.current.onShowSettings());
+    const offShowSettings = window.pi.app.onShowSettings((tab) => optionsRef.current.onShowSettings(tab));
     const offNewSession = window.pi.chat.onNewSession(() => {
       clearSlashCommandsCache();
       if (optionsRef.current.assistantIdRef.current || optionsRef.current.terminalIdRef.current) {

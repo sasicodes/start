@@ -1,5 +1,6 @@
 import type { ModelOption } from '@preload/index';
 import { modelProviderId, type ModelProviderId } from '@renderer/shared/models/provider';
+import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import {
   AnthropicIcon,
@@ -22,7 +23,7 @@ interface ProviderGroup {
 
 interface ModelsProps {
   models: ModelOption[];
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: SettingsTab) => void;
   selectedModel: ModelOption | undefined;
   onSelectModel: (modelKey: string) => void;
 }
@@ -120,10 +121,12 @@ const ModelOptions = ({
 };
 
 const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<ModelsProps, 'onOpenSettings'>) => {
+  const openProviderSettings = () => onOpenSettings(providerSettingsTab);
+
   return (
     <AppMenu.Item
-      onClick={onOpenSettings}
-      onPointerDown={onOpenSettings}
+      onClick={openProviderSettings}
+      onPointerDown={openProviderSettings}
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
       <GearIcon class="size-4" />

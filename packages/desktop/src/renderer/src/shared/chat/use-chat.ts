@@ -11,6 +11,7 @@ import { createTurn } from '@renderer/functions/chat';
 import { useChatEvents } from '@renderer/shared/chat/events';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
@@ -22,7 +23,7 @@ import { useCallback, useRef, useState } from 'preact/hooks';
 
 interface UseChatOptions {
   onShowChat: () => void;
-  onShowSettings: () => void;
+  onShowSettings: (tab: SettingsTab) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
 }
 

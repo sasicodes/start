@@ -90,6 +90,8 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
+type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;
   if (!workspacePath) return result;
@@ -98,8 +100,8 @@ const withCachedWorkspace = async <T extends { status?: { workspacePath: string 
   return workspace ? { ...result, workspace } : result;
 };
 
-const showSettings = () => {
-  sendToMainWindow('app:show-settings');
+const showSettings = (tab: SettingsTab = 'personalization') => {
+  sendToMainWindow('app:show-settings', tab);
 };
 
 const showShortcuts = () => {
@@ -275,9 +277,9 @@ if (!singleInstanceLock) {
       hideComposerWindow({ keepAppActive: true });
       showMainWindow();
     });
-    ipcMain.handle('app:open-settings', () => {
+    ipcMain.handle('app:open-settings', (_event, tab: SettingsTab = 'personalization') => {
       hideComposerWindow({ keepAppActive: true });
-      showSettings();
+      showSettings(tab);
     });
     ipcMain.handle('app:open-shortcuts', () => {
       hideComposerWindow({ keepAppActive: true });

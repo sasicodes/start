@@ -3,7 +3,7 @@ import type { SidePanelMode } from '@renderer/app/types';
 import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
 import { Settings } from '@renderer/shared/settings/panel';
-import type { SettingsTab } from '@renderer/shared/settings/tabs';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { memo } from 'preact/compat';
 

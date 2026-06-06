@@ -1,7 +1,8 @@
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-export type SettingsTab = 'personalization' | 'providers' | 'shortcuts';
+export type { SettingsTab };
 
 interface SettingsTabsProps {
   value: SettingsTab;

@@ -4,6 +4,7 @@ import { Thinking } from '@renderer/shared/composer/thinking';
 import { effortLevels } from '@renderer/shared/effort';
 import { Models, ProviderIcon, ProviderIconTicker } from '@renderer/shared/models';
 import { modelProviderId } from '@renderer/shared/models/provider';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { playCycleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -16,7 +17,7 @@ interface ModelProps {
   models: ModelOption[];
   modelsLoaded: boolean;
   thinkingLevel: EffortLevel;
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: SettingsTab) => void;
   selectedModelKey: string;
   onSelectModel: (modelKey: string) => void;
   onSelectThinkingLevel: (level: EffortLevel) => void;
