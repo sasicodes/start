@@ -247,7 +247,7 @@ export const RecentSessions = memo(
                     'pointer-events-none absolute -top-1 -right-1 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
                     attention === 'failed' && 'bg-danger',
                     attention === 'completed' && 'bg-success',
-                    attention === 'generating' && 'animate-pulse bg-blue-500 motion-reduce:animate-none'
+                    attention === 'generating' && 'bg-blue-500'
                   )}
                 >
                   {attentionCountLabel}

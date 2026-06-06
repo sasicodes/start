@@ -61,18 +61,11 @@ describe('sub-agent tool details', () => {
     expect(detail.subagents?.[0]?.task).toBe('Review renderer activity UI.');
   });
 
-  it('expands completed summaries and visible tool events', () => {
+  it('expands completed summaries', () => {
     expect(subagentExpandable({ ...agent, summary: 'Done.' })).toBe(true);
     expect(subagentExpandable({ ...agent, status: 'running', summary: 'Partial.' })).toBe(false);
     expect(subagentExpandable({ ...agent, status: 'queued', summary: 'Pending.' })).toBe(false);
     expect(subagentExpandable({ ...agent, summary: '.' })).toBe(false);
-    expect(
-      subagentExpandable({
-        ...agent,
-        status: 'running',
-        toolEvents: [{ key: 'tool-1', kind: 'tool', state: 'active', title: 'Running command cat .env' }]
-      })
-    ).toBe(true);
     expect(subagentExpandable(agent)).toBe(false);
   });
 

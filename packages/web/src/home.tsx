@@ -13,9 +13,15 @@ export const Home = () => {
   const lenisRef = useRef<Lenis | null>(null);
 
   const startLoop = useCallback(() => {
-    const lenis = lenisRef.current;
-    if (!lenis) return;
+    if (rafId.current) return;
+
     const raf = (time: number) => {
+      const lenis = lenisRef.current;
+      if (!lenis) {
+        rafId.current = 0;
+        return;
+      }
+
       lenis.raf(time);
       rafId.current = requestAnimationFrame(raf);
     };
@@ -23,7 +29,10 @@ export const Home = () => {
   }, []);
 
   const stopLoop = useCallback(() => {
+    if (!rafId.current) return;
+
     cancelAnimationFrame(rafId.current);
+    rafId.current = 0;
   }, []);
 
   useEffect(() => {

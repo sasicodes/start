@@ -19,7 +19,7 @@ describe('sub-agent runtime', () => {
     resetAgentRegistry();
   });
 
-  it('keeps full sub-agent tools enabled while surfacing nested tool details', async () => {
+  it('keeps full sub-agent tools enabled', async () => {
     const snapshots: SubagentRunSnapshot[] = [];
     const run = runSubagents({
       model,
@@ -43,25 +43,9 @@ describe('sub-agent runtime', () => {
     expect(session.getAllTools().map(({ name }) => name)).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
     expect(session.getActiveToolNames()).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
 
-    session.finishPrompt([
-      {
-        args: { command: 'cat .env' },
-        toolCallId: 'tool-1',
-        toolName: 'bash',
-        type: 'tool_execution_start'
-      },
-      {
-        result: { content: [{ text: 'SECRET_TOKEN=abc123', type: 'text' }] },
-        toolCallId: 'tool-1',
-        toolName: 'bash',
-        type: 'tool_execution_end'
-      }
-    ]);
+    session.finishPrompt();
 
     await expect(run).resolves.toMatchObject({ agents: [{ status: 'completed' }] });
-
-    const agent = snapshots.at(-1)?.agents[0];
-    expect(agent?.toolEvents?.[0]?.title).toBe('Ran command cat .env');
-    expect(agent?.toolEvents?.[0]?.body).toContain('SECRET_TOKEN=abc123');
+    expect(snapshots.at(-1)?.agents[0]?.status).toBe('completed');
   });
 });

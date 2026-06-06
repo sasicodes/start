@@ -117,7 +117,6 @@ export interface SubagentActivity {
   summary?: string;
   accentColor: string;
   status: SubagentStatus;
-  toolEvents?: ChatEvent[];
 }
 
 export type HistoryTurnDetail = ChatEvent & {

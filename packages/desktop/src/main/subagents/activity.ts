@@ -3,18 +3,6 @@ import { isRecord } from '@main/details';
 import type { SubagentActivity } from '@main/types';
 
 const subagentStatusSchema = v.picklist(['cancelled', 'completed', 'failed', 'queued', 'running']);
-const turnDetailKindSchema = v.picklist(['error', 'metadata', 'tool']);
-const turnDetailStateSchema = v.picklist(['active', 'done', 'error', 'queued']);
-
-const subagentToolEventSchema = v.object({
-  key: v.string(),
-  body: v.optional(v.string()),
-  kind: turnDetailKindSchema,
-  title: v.string(),
-  detail: v.optional(v.string()),
-  metric: v.optional(v.string()),
-  state: turnDetailStateSchema
-});
 
 const subagentActivitySchema = v.object({
   id: v.string(),
@@ -22,7 +10,6 @@ const subagentActivitySchema = v.object({
   task: v.string(),
   avatar: v.string(),
   summary: v.optional(v.string()),
-  toolEvents: v.optional(v.array(subagentToolEventSchema)),
   accentColor: v.string(),
   status: subagentStatusSchema
 });
@@ -43,8 +30,7 @@ const parseSubagentActivity = (value: unknown): SubagentActivity | null => {
     avatar: activity.avatar,
     status: activity.status,
     accentColor: activity.accentColor,
-    ...(activity.summary ? { summary: activity.summary } : {}),
-    ...(activity.toolEvents && activity.toolEvents.length > 0 ? { toolEvents: activity.toolEvents } : {})
+    ...(activity.summary ? { summary: activity.summary } : {})
   };
 };
 

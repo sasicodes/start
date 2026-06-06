@@ -8,7 +8,4 @@ export const subagentSummary = (agent: SubagentActivity) => {
 };
 
 export const subagentExpandable = (agent: SubagentActivity) =>
-  Boolean(
-    (agent.toolEvents && agent.toolEvents.length > 0) ||
-      (subagentSummary(agent) && agent.status !== 'queued' && agent.status !== 'running')
-  );
+  Boolean(subagentSummary(agent) && agent.status !== 'queued' && agent.status !== 'running');

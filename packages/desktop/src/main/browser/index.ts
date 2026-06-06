@@ -65,12 +65,14 @@ type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace:
 
 interface BrowserTab {
   id: string;
+  lastUsedOrder: number;
   view: ElectronWebContentsView;
 }
 
 let nextBrowserTabId = 1;
 let activeTabId = '';
 let attachedTabId = '';
+let browserTabUseOrder = 0;
 let lastBounds: BrowserBounds | null = null;
 let ownerWindow: ElectronBrowserWindow | null = null;
 let ownerWindowClosedHandler: (() => void) | null = null;
@@ -80,6 +82,7 @@ const browserTabs = new Map<string, BrowserTab>();
 
 const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
+const maxBrowserTabs = 8;
 const allowedKeyCodes = new Set([
   'Tab',
   'End',
@@ -121,6 +124,11 @@ const tabStatus = (tab: BrowserTab): BrowserTabStatus => ({
 });
 
 const activeTab = (): BrowserTab | null => browserTabs.get(activeTabId) ?? null;
+
+const touchBrowserTab = (tab: BrowserTab) => {
+  browserTabUseOrder += 1;
+  tab.lastUsedOrder = browserTabUseOrder;
+};
 
 const tabWithUrl = (url: string): BrowserTab | null => {
   for (const tab of browserTabs.values()) {
@@ -190,9 +198,11 @@ const createBrowserView = () => {
 
 const createBrowserTab = (): BrowserTab => {
   const tab = {
-    id: `tab-${nextBrowserTabId}`,
-    view: createBrowserView()
+    lastUsedOrder: 0,
+    view: createBrowserView(),
+    id: `tab-${nextBrowserTabId}`
   };
+  touchBrowserTab(tab);
   nextBrowserTabId += 1;
   browserTabs.set(tab.id, tab);
   activeTabId = tab.id;
@@ -212,6 +222,29 @@ const detachAttachedTab = () => {
   const tab = browserTabs.get(attachedTabId);
   if (ownerWindow && tab && !ownerWindow.isDestroyed()) ownerWindow.contentView.removeChildView(tab.view);
   attachedTabId = '';
+};
+
+const closeBrowserTabById = (tabId: string) => {
+  const tab = browserTabs.get(tabId);
+  if (!tab) return false;
+
+  const nextTabId = activeTabId === tabId ? nextActiveTabIdAfterClose(tabId) : activeTabId;
+  if (attachedTabId === tabId) detachAttachedTab();
+  browserTabs.delete(tabId);
+  tab.view.webContents.stop();
+  tab.view.webContents.close();
+  activeTabId = nextTabId;
+  return true;
+};
+
+const closeInactiveBrowserTabsOverLimit = () => {
+  while (browserTabs.size > maxBrowserTabs) {
+    const tab = [...browserTabs.values()]
+      .filter((item) => item.id !== activeTabId)
+      .sort((first, second) => first.lastUsedOrder - second.lastUsedOrder)[0];
+    if (!tab) return;
+    closeBrowserTabById(tab.id);
+  }
 };
 
 const detachBrowserWindow = () => {
@@ -244,13 +277,17 @@ const closeBrowserTabs = () => {
   activeTabId = '';
   nextBrowserTabId = 1;
   lastBounds = null;
+  browserTabUseOrder = 0;
   sendStatus();
   sendToRendererWindows('app:browser-inspect-state', false);
 };
 
 const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
   const tab = ensureActiveTab();
-  if (ownerWindow === window && attachedTabId === tab.id) return tab.view;
+  if (ownerWindow === window && attachedTabId === tab.id) {
+    touchBrowserTab(tab);
+    return tab.view;
+  }
 
   if (ownerWindow !== window) {
     detachBrowserWindow();
@@ -273,6 +310,7 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
     detachAttachedTab();
   }
 
+  touchBrowserTab(tab);
   window.contentView.addChildView(tab.view);
   attachedTabId = tab.id;
   if (lastBounds) tab.view.setBounds(lastBounds);
@@ -320,6 +358,7 @@ export const openBrowserUrl = async (
   } else if (options.newTab) {
     activeTabId = tabWithUrl(url)?.id ?? createBrowserTab().id;
   }
+  closeInactiveBrowserTabsOverLimit();
 
   const view = attachActiveBrowserView(window);
   view.webContents.focus();
@@ -344,6 +383,7 @@ export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
   createBrowserTab();
+  closeInactiveBrowserTabsOverLimit();
   attachActiveBrowserView(window);
   sendStatus();
   return { ok: true, status: statusFromView() };
@@ -366,14 +406,8 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   if (!tab) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
 
   const wasAttached = attachedTabId === tabId;
-  const wasActive = activeTabId === tabId;
-  const nextTabId = wasActive ? nextActiveTabIdAfterClose(tabId) : activeTabId;
 
-  if (wasAttached) detachAttachedTab();
-  browserTabs.delete(tabId);
-  tab.view.webContents.stop();
-  tab.view.webContents.close();
-  activeTabId = nextTabId;
+  closeBrowserTabById(tabId);
 
   if (activeTabId) {
     const window = windowFromSender(sender);
