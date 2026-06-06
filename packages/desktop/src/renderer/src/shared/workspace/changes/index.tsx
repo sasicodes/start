@@ -118,11 +118,8 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
     void loadGitDiffViewer();
   }, [patch]);
 
-  if (diffReady.path !== path && diffReady.ready) setDiffReady({ path, ready: false });
-
   const availableModes = patch.kind === 'ready' ? availableViewModes(patch.patch.sections) : ['all'];
   const effectiveViewMode = availableModes.includes(viewMode) ? viewMode : 'all';
-  if (viewMode !== effectiveViewMode) setViewMode(effectiveViewMode);
 
   const visibleSections = useMemo(
     () => (patch.kind === 'ready' ? sectionsForViewMode(patch.patch.sections, effectiveViewMode) : []),

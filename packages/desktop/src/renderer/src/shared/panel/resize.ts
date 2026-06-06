@@ -253,10 +253,8 @@ export const usePanelResize = ({
     [clearSettle, finishResize, scheduleResize, setDocumentCursor, setResizeCursor, stopResize]
   );
 
-  if (!sidePanelVisible) {
-    if (resizing) setResizing(false);
-    if (settling) setSettling(false);
-  }
+  const effectiveResizing = sidePanelVisible && resizing;
+  const effectiveSettling = sidePanelVisible && settling;
 
   useLayoutEffect(() => {
     if (!sidePanelVisible) return;
@@ -278,6 +276,8 @@ export const usePanelResize = ({
     if (!sidePanelVisible) {
       clearSettle();
       clearResizeInteraction();
+      setResizing(false);
+      setSettling(false);
     }
   }, [clearResizeInteraction, clearSettle, sidePanelVisible]);
 
@@ -289,5 +289,5 @@ export const usePanelResize = ({
     [clearSettle, stopResize]
   );
 
-  return { initialWidth, resizing, rootRef, settling, startResize };
+  return { initialWidth, resizing: effectiveResizing, rootRef, settling: effectiveSettling, startResize };
 };
