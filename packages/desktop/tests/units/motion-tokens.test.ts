@@ -11,11 +11,11 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('motion tokens', () => {
-  it('uses translate (y) and opacity for the bottom bubble — no scale', () => {
+  it('uses opacity only for the bottom bubble', () => {
     expect(bottomBubbleHiddenMotion).not.toHaveProperty('scale');
     expect(bottomBubbleVisibleMotion).not.toHaveProperty('scale');
-    expect(bottomBubbleHiddenMotion).toHaveProperty('y');
-    expect(bottomBubbleVisibleMotion).toHaveProperty('y');
+    expect(bottomBubbleHiddenMotion).not.toHaveProperty('y');
+    expect(bottomBubbleVisibleMotion).not.toHaveProperty('y');
     expect(bottomBubbleHiddenMotion).toHaveProperty('opacity');
     expect(bottomBubbleVisibleMotion).toHaveProperty('opacity');
   });
@@ -28,7 +28,7 @@ describe('motion tokens', () => {
   });
 
   it('bottom-bubble reveal and hide stay under 150ms each', () => {
-    expect(bottomBubbleRevealTransition.y.duration).toBeLessThanOrEqual(0.15);
-    expect(bottomBubbleHideTransition.y.duration).toBeLessThanOrEqual(0.1);
+    expect(bottomBubbleRevealTransition.opacity.duration).toBeLessThanOrEqual(0.15);
+    expect(bottomBubbleHideTransition.opacity.duration).toBeLessThanOrEqual(0.1);
   });
 });
