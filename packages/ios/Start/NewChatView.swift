@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct NewSessionView: View {
+struct NewChatView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
 
@@ -23,7 +23,7 @@ struct NewSessionView: View {
 
                 Spacer(minLength: 0)
 
-                SessionPromptFooter(
+                ChatPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
                     accessibilityHint: "Type what you want to work on",
@@ -56,17 +56,17 @@ struct NewSessionView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            SessionHeaderIconButton(systemName: "chevron.left", accessibilityLabel: "Back") {
+            ChatHeaderIconButton(systemName: "chevron.left", accessibilityLabel: "Back") {
                 close()
             }
-            .accessibilityHint("Returns to sessions")
+            .accessibilityHint("Returns to chats")
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("New session")
+                Text("New chat")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(StartTheme.Colors.ink)
 
-                SessionHeaderMetadata(
+                ChatHeaderMetadata(
                     branchName: appState.activeBranchName,
                     workspaceName: appState.activeProjectName
                 )
@@ -74,7 +74,7 @@ struct NewSessionView: View {
 
             Spacer()
 
-            SessionHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
+            ChatHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
         }
         .padding(.top, 8)
         .padding(.bottom, 8)
@@ -102,7 +102,7 @@ struct NewSessionView: View {
 
 
 #Preview {
-    NewSessionView()
+    NewChatView()
         .environment(AppState())
         .preferredColorScheme(.dark)
 }

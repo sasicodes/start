@@ -19,13 +19,13 @@ struct RootView: View {
                             switch route {
                             case .home:
                                 HomeView(transitionNamespace: transitionNamespace)
-                            case .newSession:
-                                NewSessionView()
-                                    .navigationTransition(.zoom(sourceID: "new-session", in: transitionNamespace))
-                            case let .session(id):
-                                if let session = appState.session(for: id) {
-                                    SessionDetailView(session: session)
-                                        .navigationTransition(.zoom(sourceID: session.id, in: transitionNamespace))
+                            case .newChat:
+                                NewChatView()
+                                    .navigationTransition(.zoom(sourceID: "new-chat", in: transitionNamespace))
+                            case let .chat(id):
+                                if let chat = appState.chat(for: id) {
+                                    ChatDetailView(chat: chat)
+                                        .navigationTransition(.zoom(sourceID: chat.id, in: transitionNamespace))
                                 } else {
                                     HomeView(transitionNamespace: transitionNamespace)
                                 }

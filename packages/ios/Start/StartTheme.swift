@@ -17,7 +17,7 @@ enum StartTheme {
         static let floatingButtonHitSize: CGFloat = 50
         static let cornerButtonPadding: CGFloat = 18
         static let pagePadding: CGFloat = 18
-        static let sessionListTopPadding: CGFloat = 12
+        static let chatListTopPadding: CGFloat = 12
         static let homeListBottomPadding = floatingButtonHitSize + floatingButtonHorizontalPadding + 18
     }
 

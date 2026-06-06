@@ -10,11 +10,11 @@ final class AppState {
     var draft = ""
     var searchText = ""
     var promptFocused = false
-    var sessionsLoaded = false
+    var chatsLoaded = false
     var path: [AppRoute] = []
     var relay = RelayClient()
 
-    let sessions = Session.samples
+    let chats = Chat.samples
 
     var activeBranchName: String {
         activeWorkspace.branchName
@@ -40,25 +40,25 @@ final class AppState {
         path.last ?? .home
     }
 
-    func openNewSession() {
+    func openNewChat() {
         draft = ""
         promptFocused = false
-        path = [.newSession]
+        path = [.newChat]
     }
 
-    func closeNewSession() {
+    func closeNewChat() {
         promptFocused = false
         path = []
         draft = ""
     }
 
-    func openSession(_ session: Session) {
+    func openChat(_ chat: Chat) {
         draft = ""
         promptFocused = false
-        path = [.session(session.id)]
+        path = [.chat(chat.id)]
     }
 
-    func closeSession() {
+    func closeChat() {
         promptFocused = false
         path = []
         draft = ""
@@ -95,14 +95,14 @@ final class AppState {
         )
     }
 
-    func refreshSessions() async {
-        sessionsLoaded = false
+    func refreshChats() async {
+        chatsLoaded = false
         try? await Task.sleep(for: .milliseconds(420))
         guard !Task.isCancelled else { return }
-        sessionsLoaded = true
+        chatsLoaded = true
     }
 
-    func session(for id: UUID) -> Session? {
-        sessions.first { $0.id == id }
+    func chat(for id: UUID) -> Chat? {
+        chats.first { $0.id == id }
     }
 }

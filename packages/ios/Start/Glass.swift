@@ -25,7 +25,7 @@ struct GlassIconButton: View {
     }
 }
 
-struct SessionHeaderIconButton: View {
+struct ChatHeaderIconButton: View {
     let systemName: String
     let accessibilityLabel: String
     let action: () -> Void

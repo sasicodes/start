@@ -30,9 +30,9 @@ struct HomeView: View {
                     HomeSearchBar(text: $appState.searchText, focused: $searchFocused)
 
                     if !searchActive {
-                        SessionButton(transitionNamespace: transitionNamespace) {
+                        ChatButton(transitionNamespace: transitionNamespace) {
                             withAnimation(.smooth(duration: 0.18)) {
-                                appState.openNewSession()
+                                appState.openNewChat()
                             }
                         }
                         .transition(.scale(scale: 0.76).combined(with: .opacity))
@@ -46,34 +46,34 @@ struct HomeView: View {
             .ignoresSafeArea(.container, edges: .bottom)
         }
         .refreshable {
-            await appState.refreshSessions()
+            await appState.refreshChats()
         }
-        .animation(.easeOut(duration: 0.16), value: appState.sessionsLoaded)
+        .animation(.easeOut(duration: 0.16), value: appState.chatsLoaded)
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
         .task {
-            guard !appState.sessionsLoaded else { return }
-            appState.sessionsLoaded = true
+            guard !appState.chatsLoaded else { return }
+            appState.chatsLoaded = true
         }
     }
 
-    private var visibleSessions: [Session] {
+    private var visibleChats: [Chat] {
         let query = appState.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return appState.sessions }
+        guard !query.isEmpty else { return appState.chats }
 
-        return appState.sessions.filter { session in
-            session.title.localizedCaseInsensitiveContains(query)
-                || session.projectName.localizedCaseInsensitiveContains(query)
-                || session.branchName.localizedCaseInsensitiveContains(query)
+        return appState.chats.filter { chat in
+            chat.title.localizedCaseInsensitiveContains(query)
+                || chat.projectName.localizedCaseInsensitiveContains(query)
+                || chat.branchName.localizedCaseInsensitiveContains(query)
         }
     }
 
     private var contentList: some View {
         Group {
-            if appState.sessionsLoaded {
-                WorkspaceSessionList(
-                    sections: workspaceSessionSections(from: visibleSessions, sort: sort),
+            if appState.chatsLoaded {
+                WorkspaceChatList(
+                    sections: workspaceChatSections(from: visibleChats, sort: sort),
                     expandedWorkspaces: $expandedWorkspaces,
                     transitionNamespace: transitionNamespace
                 )
@@ -146,7 +146,7 @@ private struct HomeSearchBar: View {
                     .submitLabel(.search)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
-                    .accessibilityLabel("Search sessions")
+                    .accessibilityLabel("Search chats")
                     .onSubmit {
                         focused = false
                     }

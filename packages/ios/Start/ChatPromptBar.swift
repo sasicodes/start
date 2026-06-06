@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SessionPromptFooter: View {
+struct ChatPromptFooter: View {
     @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var focused: Bool
@@ -11,7 +11,7 @@ struct SessionPromptFooter: View {
     let placeholder: String
 
     var body: some View {
-        SessionPromptBar(
+        ChatPromptBar(
             text: $text,
             focused: $focused,
             accessibilityHint: accessibilityHint,
@@ -31,7 +31,7 @@ struct SessionPromptFooter: View {
     }
 }
 
-struct SessionPromptBar: View {
+struct ChatPromptBar: View {
     @Binding var text: String
     @FocusState.Binding var focused: Bool
     @State private var filePickerOpen = false

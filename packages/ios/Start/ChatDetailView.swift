@@ -1,16 +1,16 @@
 import SwiftUI
 
-struct SessionDetailView: View {
+struct ChatDetailView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
     @State private var focusTask: Task<Void, Never>?
 
-    let session: Session
-    private let messages: [SessionMessage]
+    let chat: Chat
+    private let messages: [ChatMessage]
 
-    init(session: Session) {
-        self.session = session
-        messages = SessionMessage.samples(for: session)
+    init(chat: Chat) {
+        self.chat = chat
+        messages = ChatMessage.samples(for: chat)
     }
 
     var body: some View {
@@ -40,10 +40,10 @@ struct SessionDetailView: View {
 
                 Spacer(minLength: 0)
 
-                SessionPromptFooter(
+                ChatPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
-                    accessibilityHint: "Type a follow-up for this session",
+                    accessibilityHint: "Type a follow-up for this chat",
                     accessibilityLabel: "Reply",
                     placeholder: "Ask for follow-ups"
                 )
@@ -63,7 +63,7 @@ struct SessionDetailView: View {
         .onAppear {
             focusTask = Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(140))
-                guard case .session = appState.route else { return }
+                guard case .chat = appState.route else { return }
                 appState.promptFocused = false
             }
         }
@@ -81,24 +81,24 @@ struct SessionDetailView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            SessionHeaderIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: close)
-                .accessibilityHint("Returns to sessions")
+            ChatHeaderIconButton(systemName: "chevron.left", accessibilityLabel: "Back", action: close)
+                .accessibilityHint("Returns to chats")
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.title)
+                Text(chat.title)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(StartTheme.Colors.ink)
                     .lineLimit(1)
 
-                SessionHeaderMetadata(
-                    branchName: session.branchName,
-                    workspaceName: session.projectName
+                ChatHeaderMetadata(
+                    branchName: chat.branchName,
+                    workspaceName: chat.projectName
                 )
             }
 
             Spacer()
 
-            SessionHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
+            ChatHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
         }
         .padding(.top, 8)
         .padding(.bottom, 8)
@@ -127,7 +127,7 @@ struct SessionDetailView: View {
 }
 
 private struct MessageRow: View {
-    let message: SessionMessage
+    let message: ChatMessage
 
     private var alignment: Alignment {
         message.role == .user ? .trailing : .leading
@@ -156,7 +156,7 @@ private struct MessageRow: View {
 
 
 #Preview {
-    SessionDetailView(session: Session.samples[0])
+    ChatDetailView(chat: Chat.samples[0])
         .environment(AppState())
         .preferredColorScheme(.dark)
 }

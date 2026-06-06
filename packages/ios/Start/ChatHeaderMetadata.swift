@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SessionHeaderMetadata: View {
+struct ChatHeaderMetadata: View {
     let branchName: String
     let workspaceName: String
 

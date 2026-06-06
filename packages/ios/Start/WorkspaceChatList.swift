@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum WorkspaceSessionListMetrics {
+private enum WorkspaceChatListMetrics {
     static let titleFont = Font.system(size: 17, weight: .regular)
     static let headingFont = Font.system(size: 15, weight: .semibold)
     static let rowMinHeight: CGFloat = 44
@@ -8,17 +8,17 @@ private enum WorkspaceSessionListMetrics {
     static let sectionSpacing: CGFloat = 14
 }
 
-struct WorkspaceSessionList: View {
+struct WorkspaceChatList: View {
     @Environment(AppState.self) private var appState
 
-    let sections: [WorkspaceSessionSection]
+    let sections: [WorkspaceChatSection]
     @Binding var expandedWorkspaces: Set<Workspace>
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        LazyVStack(alignment: .leading, spacing: WorkspaceSessionListMetrics.sectionSpacing) {
+        LazyVStack(alignment: .leading, spacing: WorkspaceChatListMetrics.sectionSpacing) {
             ForEach(sections) { section in
-                WorkspaceSessionAccordion(
+                WorkspaceChatAccordion(
                     section: section,
                     expanded: expandedWorkspaces.contains(section.workspace),
                     transitionNamespace: transitionNamespace,
@@ -27,7 +27,7 @@ struct WorkspaceSessionList: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, StartTheme.Metrics.sessionListTopPadding)
+        .padding(.top, StartTheme.Metrics.chatListTopPadding)
     }
 
     private func toggle(_ workspace: Workspace) {
@@ -41,10 +41,10 @@ struct WorkspaceSessionList: View {
     }
 }
 
-private struct WorkspaceSessionAccordion: View {
+private struct WorkspaceChatAccordion: View {
     @Environment(AppState.self) private var appState
 
-    let section: WorkspaceSessionSection
+    let section: WorkspaceChatSection
     let expanded: Bool
     let transitionNamespace: Namespace.ID
     let onToggle: () -> Void
@@ -59,7 +59,7 @@ private struct WorkspaceSessionAccordion: View {
                         .animation(.snappy(duration: 0.08, extraBounce: 0), value: expanded)
 
                     Text(section.workspace.rawValue)
-                        .font(WorkspaceSessionListMetrics.headingFont)
+                        .font(WorkspaceChatListMetrics.headingFont)
 
                     Spacer()
                 }
@@ -72,9 +72,9 @@ private struct WorkspaceSessionAccordion: View {
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
 
             if expanded {
-                LazyVStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
-                    ForEach(section.sessions) { session in
-                        SessionRow(session: session, transitionNamespace: transitionNamespace)
+                LazyVStack(spacing: WorkspaceChatListMetrics.rowSpacing) {
+                    ForEach(section.chats) { chat in
+                        ChatRow(chat: chat, transitionNamespace: transitionNamespace)
                     }
                 }
             }
@@ -85,33 +85,33 @@ private struct WorkspaceSessionAccordion: View {
     }
 }
 
-private struct SessionRow: View {
+private struct ChatRow: View {
     @Environment(AppState.self) private var appState
 
-    let session: Session
+    let chat: Chat
     let transitionNamespace: Namespace.ID
 
     var body: some View {
         Button {
             withAnimation(.smooth(duration: 0.18)) {
-                appState.openSession(session)
+                appState.openChat(chat)
             }
         } label: {
             HStack(alignment: .top) {
-                Text(session.title)
-                    .font(WorkspaceSessionListMetrics.titleFont)
+                Text(chat.title)
+                    .font(WorkspaceChatListMetrics.titleFont)
                     .foregroundStyle(StartTheme.Colors.ink)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: WorkspaceSessionListMetrics.rowMinHeight, alignment: .leading)
+            .frame(minHeight: WorkspaceChatListMetrics.rowMinHeight, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .matchedTransitionSource(id: session.id, in: transitionNamespace)
+        .matchedTransitionSource(id: chat.id, in: transitionNamespace)
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(session.title)
-        .accessibilityHint("Opens session")
+        .accessibilityLabel(chat.title)
+        .accessibilityHint("Opens chat")
     }
 }
 
@@ -121,7 +121,7 @@ struct SkeletonList: View {
     ]
 
     var body: some View {
-        LazyVStack(spacing: WorkspaceSessionListMetrics.rowSpacing) {
+        LazyVStack(spacing: WorkspaceChatListMetrics.rowSpacing) {
             ForEach(Array(Self.titleWidthRatios.enumerated()), id: \.offset) { _, ratio in
                 HStack {
                     SkeletonTextLine(width: 240 * ratio)
@@ -129,10 +129,10 @@ struct SkeletonList: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(minHeight: WorkspaceSessionListMetrics.rowMinHeight, alignment: .leading)
+                .frame(minHeight: WorkspaceChatListMetrics.rowMinHeight, alignment: .leading)
             }
         }
-        .padding(.top, StartTheme.Metrics.sessionListTopPadding)
+        .padding(.top, StartTheme.Metrics.chatListTopPadding)
         .accessibilityHidden(true)
     }
 }
@@ -141,8 +141,8 @@ private struct SkeletonTextLine: View {
     let width: CGFloat
 
     var body: some View {
-        Text("Session title")
-            .font(WorkspaceSessionListMetrics.titleFont)
+        Text("Chat title")
+            .font(WorkspaceChatListMetrics.titleFont)
             .lineLimit(1)
             .hidden()
             .frame(width: width, alignment: .leading)
