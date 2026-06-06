@@ -1,6 +1,7 @@
-import { execFileSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch } from '@main/git';
 
 export interface GitChangesPayload {
@@ -20,6 +21,7 @@ interface GitChangesEntry {
   summary?: GitChangeSummary;
   summaryLoaded: boolean;
   summaryRequest?: Promise<MaybeGitChangeSummary>;
+  watchRequest?: Promise<void>;
 }
 
 interface GitChangesServiceOptions {
@@ -36,6 +38,7 @@ const gitChangesDebounceMs = 180;
 const gitDirectoryName = '.git';
 const maxWorkspaceWatchDirectories = 512;
 const gitWatchDirectoryArgs = ['ls-files', '-co', '--exclude-standard', '-z'];
+const execFileAsync = promisify(execFile);
 type MaybeGitPatch = Awaited<ReturnType<typeof getGitPatch>>;
 type MaybeGitChangeSummary = Awaited<ReturnType<typeof getGitChangeSummary>>;
 
@@ -65,18 +68,38 @@ const samePatch = (first: GitPatch | null, second: GitPatch | null) => {
   });
 };
 
-const gitWatchDirectories = (workspacePath: string) => {
+const stdoutFromExecResult = (value: unknown) => {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return '';
+
+  const result = value as { stdout?: unknown };
+  return typeof result.stdout === 'string' ? result.stdout : '';
+};
+
+const fallbackGitWatchTargets = (workspacePath: string): GitWatchTarget[] => [
+  {
+    path: workspacePath,
+    recursive: false
+  },
+  {
+    path: path.join(workspacePath, gitDirectoryName),
+    recursive: true
+  }
+];
+
+const gitWatchDirectories = async (workspacePath: string) => {
   const directories = new Set([workspacePath]);
 
   try {
-    const output = execFileSync('git', gitWatchDirectoryArgs, {
+    const result = await execFileAsync('git', gitWatchDirectoryArgs, {
       cwd: workspacePath,
       encoding: 'utf8',
       maxBuffer: 4 * 1024 * 1024,
       timeout: 1200
     });
+    const stdout = stdoutFromExecResult(result);
 
-    for (const filePath of output.split('\0')) {
+    for (const filePath of stdout.split('\0')) {
       let directory = path.dirname(filePath);
       while (directory && directory !== '.') {
         directories.add(path.join(workspacePath, directory));
@@ -90,16 +113,19 @@ const gitWatchDirectories = (workspacePath: string) => {
   return [...directories].sort((first, second) => first.length - second.length).slice(0, maxWorkspaceWatchDirectories);
 };
 
-const gitWatchTargets = (workspacePath: string): GitWatchTarget[] => [
-  ...gitWatchDirectories(workspacePath).map((directory) => ({
-    path: directory,
-    recursive: false
-  })),
-  {
-    path: path.join(workspacePath, gitDirectoryName),
-    recursive: true
-  }
-];
+const gitWatchTargets = async (workspacePath: string): Promise<GitWatchTarget[]> => {
+  const directories = await gitWatchDirectories(workspacePath);
+  return [
+    ...directories.map((directory) => ({
+      path: directory,
+      recursive: false
+    })),
+    {
+      path: path.join(workspacePath, gitDirectoryName),
+      recursive: true
+    }
+  ];
+};
 
 export class GitChangesService {
   private readonly entries = new Map<string, GitChangesEntry>();
@@ -141,6 +167,7 @@ export class GitChangesService {
       workspacePath: key
     };
     this.entries.set(key, entry);
+    this.applyWatchTargets(entry, fallbackGitWatchTargets(entry.workspacePath));
     this.watchWorkspace(entry);
     return entry;
   }
@@ -212,7 +239,19 @@ export class GitChangesService {
   }
 
   private watchWorkspace(entry: GitChangesEntry): void {
-    const targets = gitWatchTargets(entry.workspacePath);
+    if (entry.watchRequest) return;
+
+    let request: Promise<void>;
+    request = gitWatchTargets(entry.workspacePath)
+      .then((targets) => this.applyWatchTargets(entry, targets))
+      .catch(() => this.applyWatchTargets(entry, fallbackGitWatchTargets(entry.workspacePath)))
+      .finally(() => {
+        if (entry.watchRequest === request) delete entry.watchRequest;
+      });
+    entry.watchRequest = request;
+  }
+
+  private applyWatchTargets(entry: GitChangesEntry, targets: GitWatchTarget[]): void {
     const targetPaths = new Set(targets.map((target) => target.path));
 
     for (const targetPath of entry.watchers.keys()) {

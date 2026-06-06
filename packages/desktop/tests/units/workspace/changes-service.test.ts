@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import type { ChildProcess } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const gitMocks = vi.hoisted(() => ({
@@ -12,7 +13,7 @@ const fsMocks = vi.hoisted(() => ({
 }));
 
 const childProcessMocks = vi.hoisted(() => ({
-  execFileSync: vi.fn()
+  execFile: vi.fn()
 }));
 
 class FakeWatcher extends EventEmitter {
@@ -80,7 +81,17 @@ describe('GitChangesService', () => {
       fsMocks.watchers.push(watcher);
       return watcher;
     });
-    childProcessMocks.execFileSync.mockReturnValue('src/index.ts\0packages/app/view.tsx\0');
+    childProcessMocks.execFile.mockImplementation(
+      (
+        _command: string,
+        _args: string[],
+        _options: object,
+        callback: (error: Error | null, stdout: string, stderr: string) => void
+      ) => {
+        callback(null, 'src/index.ts\0packages/app/view.tsx\0', '');
+        return new EventEmitter() as ChildProcess;
+      }
+    );
     gitMocks.getGitPatch.mockResolvedValue(patch);
     gitMocks.getGitChangeSummary.mockResolvedValue(initialSummary);
   });
@@ -138,14 +149,13 @@ describe('GitChangesService', () => {
     const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
 
     await service.getSummary();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
 
-    expect(fsMocks.watch.mock.calls.map(([targetPath]) => targetPath)).toEqual([
-      '/repo',
-      '/repo/src',
-      '/repo/packages',
-      '/repo/packages/app',
-      '/repo/.git'
-    ]);
+    expect(new Set(fsMocks.watch.mock.calls.map(([targetPath]) => targetPath))).toEqual(
+      new Set(['/repo', '/repo/.git', '/repo/src', '/repo/packages', '/repo/packages/app'])
+    );
   });
 
   it('caches patch reads and publishes the current summary after changes', async () => {
