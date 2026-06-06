@@ -3,16 +3,16 @@ import electron from 'electron';
 const { contextBridge, ipcRenderer, webUtils } = electron;
 
 export interface MobileRelaySettings {
-  desktopId: string;
   enabled: boolean;
-  relayToken: string;
   relayUrl: string;
+  desktopId: string;
+  relayToken: string;
 }
 
 export interface AppSettings {
-  mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   solidWindowBackground: boolean;
+  mobileRelay: MobileRelaySettings;
 }
 
 export interface AppSettingsResult {

@@ -1,6 +1,8 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
 import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
 import { QrIcon, TrashIcon } from '@renderer/ui/icons';
+import { tw } from '@renderer/utils/tw';
+import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 
 interface MobileProps {
@@ -57,6 +59,27 @@ const useMobileRelayCode = (enabled: boolean) => {
   return code;
 };
 
+interface IconActionProps {
+  label: string;
+  danger?: boolean;
+  onClick: () => void;
+  children: ComponentChildren;
+}
+
+const IconAction = ({ label, danger, onClick, children }: IconActionProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={label}
+    class={tw(
+      "relative inline-flex size-4 items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] [&_svg]:block [&_svg]:size-4",
+      danger ? 'hover:text-danger focus-visible:text-danger' : 'hover:text-ink focus-visible:text-ink'
+    )}
+  >
+    {children}
+  </button>
+);
+
 const MobileInput = ({ type, value, onInput, placeholder }: MobileInputProps) => (
   <input
     type={type}
@@ -86,9 +109,7 @@ const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => (
         class="grid size-44 place-items-center rounded-2xl bg-white p-3 text-zinc-950 shadow-shell [&_svg]:block [&_svg]:size-full"
         dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings, code) }}
       />
-      <p class="m-0 rounded-full bg-composer px-3 py-1.5 text-center text-xs leading-4 font-medium text-soft shadow-shell">
-        Scan to pair
-      </p>
+      <p class="m-0 text-center text-xs leading-4 font-medium text-soft">Scan to pair</p>
     </section>
   </div>
 );
@@ -103,13 +124,9 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
     setDraftState({ settingsKey, settings: { ...draft, ...patch } });
   };
 
-  const persist = async (nextSettings: MobileRelaySettings) => {
-    await onChange(nextSettings);
-  };
-
   const save = async () => {
     const relayUrl = normalizedRelayUrl(draft.relayUrl);
-    await persist({
+    await onChange({
       ...draft,
       enabled: Boolean(relayUrl),
       relayUrl,
@@ -121,7 +138,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
     const nextSettings = { ...draft, enabled: false, relayUrl: '', relayToken: '' };
     setQrOpen(false);
     setDraftState({ settingsKey, settings: nextSettings });
-    await persist(nextSettings);
+    await onChange(nextSettings);
   };
 
   const canSave = Boolean(draft.desktopId && draft.relayUrl.trim());
@@ -139,22 +156,12 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
         </div>
         {qrAvailable && (
           <div class="flex flex-none items-center gap-4">
-            <button
-              type="button"
-              aria-label="Show pairing QR"
-              onClick={() => setQrOpen(true)}
-              class="relative inline-flex size-4 items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-ink focus-visible:text-ink [&_svg]:block [&_svg]:size-4"
-            >
+            <IconAction label="Show pairing QR" onClick={() => setQrOpen(true)}>
               <QrIcon />
-            </button>
-            <button
-              type="button"
-              aria-label="Delete mobile relay settings"
-              onClick={() => remove().catch(() => {})}
-              class="relative inline-flex size-4 items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-danger focus-visible:text-danger [&_svg]:block [&_svg]:size-4"
-            >
+            </IconAction>
+            <IconAction label="Delete mobile relay settings" danger onClick={() => remove().catch(() => {})}>
               <TrashIcon />
-            </button>
+            </IconAction>
           </div>
         )}
       </div>

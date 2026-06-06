@@ -26,8 +26,8 @@ export interface DesktopConnection {
 
 export interface MobileConnection {
   name?: string;
-  socket: WebSocket;
   mobileId: string;
+  socket: WebSocket;
   connectedAt: number;
 }
 

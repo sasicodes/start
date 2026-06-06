@@ -19,9 +19,9 @@ export const defaultMobileRelaySettings = {
 } satisfies MobileRelaySettings;
 
 export const defaultAppSettings = {
-  mobileRelay: defaultMobileRelaySettings,
+  solidWindowBackground: false,
   composerShortcut: 'Control+Space',
-  solidWindowBackground: false
+  mobileRelay: defaultMobileRelaySettings
 } satisfies AppSettings;
 
 const booleanSchema = v.fallback(v.boolean(), false);
