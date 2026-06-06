@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { allowedLatestModelIds, allowedLatestModelOrder, models } from '@main/models';
+import { describe, expect, it } from 'vitest';
 
 describe('models allowlist', () => {
   it('exposes only the three supported providers', () => {

@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { FakeAuthStorage, FakeModelRegistry } from './auth.js';
 import type { FakeSessionManager } from './session-manager.js';
-import { sessionRegistry } from './state.js';
 import type { FakeModel } from './state.js';
+import { sessionRegistry } from './state.js';
 
 interface FakeTool {
   name: string;

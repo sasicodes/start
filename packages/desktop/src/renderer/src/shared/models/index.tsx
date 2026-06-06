@@ -1,5 +1,5 @@
 import type { ModelOption } from '@preload/index';
-import { modelProviderId, type ModelProviderId } from '@renderer/shared/models/provider';
+import { type ModelProviderId, modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { AnthropicIcon, CheckIcon, ChevronRightIcon, GearIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';

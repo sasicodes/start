@@ -1,4 +1,4 @@
-import { parseGitPatch, type PatchFile } from './parser';
+import { type PatchFile, parseGitPatch } from './parser';
 
 interface ParseRequest {
   jobId: number;

@@ -1,6 +1,6 @@
 import { cumulativeHeights, firstVisibleIndex, lastVisibleIndex, totalHeight } from '@renderer/ui/virtual/geometry';
-import { Fragment } from 'preact';
 import type { ComponentChildren, RefObject } from 'preact';
+import { Fragment } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface VirtualProps<T> {

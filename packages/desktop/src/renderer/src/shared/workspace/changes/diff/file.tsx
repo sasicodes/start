@@ -2,7 +2,7 @@ import { fileHasTextDiff, isTooLargeToShow } from '@renderer/shared/workspace/ch
 import { requestDiffFileHighlighting } from '@renderer/shared/workspace/changes/diff/highlight';
 import { DiffHunks } from '@renderer/shared/workspace/changes/diff/hunk';
 import { ImageDiff } from '@renderer/shared/workspace/changes/diff/image';
-import { patchFileKind, type PatchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
+import { type PatchFileKind, patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { Reveal } from '@renderer/shared/workspace/changes/diff/reveal';
 import type { DiffFileStatus, DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';

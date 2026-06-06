@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { promptPlaceholder } from '@renderer/shared/placeholder';
+import { describe, expect, it } from 'vitest';
 
 const followUp = (contextPercent: number, index = 0) => promptPlaceholder(true, false, contextPercent, index);
 

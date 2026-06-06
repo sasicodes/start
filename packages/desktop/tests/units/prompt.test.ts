@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
+import { describe, expect, it } from 'vitest';
 
 interface BeforeAgentStartEvent {
   systemPrompt: string;

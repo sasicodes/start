@@ -1,4 +1,4 @@
-import { batch, signal, untracked, type Signal } from '@preact/signals';
+import { batch, type Signal, signal, untracked } from '@preact/signals';
 import type { Turn } from '@renderer/utils/types';
 
 export const selectedModelKeyState = signal('');

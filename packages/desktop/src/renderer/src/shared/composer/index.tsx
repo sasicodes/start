@@ -1,9 +1,9 @@
 import { Attachments } from '@renderer/shared/composer/attachments';
 import { Generate } from '@renderer/shared/composer/generate';
-import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import { Model } from '@renderer/shared/composer/model';
 import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
+import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';

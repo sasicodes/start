@@ -1,6 +1,6 @@
+import { describe, expect, it } from 'vitest';
 import type { WebSocket } from 'ws';
 import { pickUnusedCode, RelayState } from '../src/state';
-import { describe, expect, it } from 'vitest';
 
 const socket = () => ({ close: () => {} }) as unknown as WebSocket;
 

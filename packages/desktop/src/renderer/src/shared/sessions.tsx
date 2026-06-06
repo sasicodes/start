@@ -1,18 +1,18 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
+import { AttentionBadge } from '@renderer/shared/attention-badge';
 import {
-  attentionLabel,
+  type AttentionState,
   attentionCountLabel,
+  attentionLabel,
   attentionStatusCount,
   sessionAttentionStatus,
-  topAttentionStatus,
-  type AttentionState
+  topAttentionStatus
 } from '@renderer/shared/attention-status';
-import { AttentionBadge } from '@renderer/shared/attention-badge';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { tw } from '@renderer/utils/tw';
 import { formatRelativeTime } from '@renderer/utils/time';
+import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 

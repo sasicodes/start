@@ -1,5 +1,5 @@
-import { MAC_DOWNLOADS } from '@/constants';
 import { useEffect, useRef } from 'react';
+import { MAC_DOWNLOADS } from '@/constants';
 
 const STAR_COUNT = 140;
 const FADE_IN_MS = 300;

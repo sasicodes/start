@@ -1,6 +1,6 @@
+import type { ModelOption } from '@preload/index';
 import { modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab } from '@renderer/shared/settings/tab';
-import type { ModelOption } from '@preload/index';
 import { describe, expect, it } from 'vitest';
 
 const model = (overrides: Partial<ModelOption>): ModelOption => ({

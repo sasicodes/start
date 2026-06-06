@@ -1,8 +1,8 @@
-import { useWorkspace } from '@renderer/shared/workspace/info';
-import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
-import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { attentionStatus, topAttentionStatus } from '@renderer/shared/attention-status';
 import { Indicator } from '@renderer/shared/indicator';
+import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { useWorkspace } from '@renderer/shared/workspace/info';
+import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { useCallback, useState } from 'preact/hooks';

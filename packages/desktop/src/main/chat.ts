@@ -12,31 +12,21 @@ import {
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
 import { appVersion } from '@main/application';
-import { closeStartDb, openStartDb } from '@main/db';
-import { resolveAuthBackend } from '@main/providers/auth';
-import { InMemorySettingsBackend } from '@main/providers/settings';
-import { createStartCustomTools } from '@main/providers/tools/index';
 import {
-  archiveSession,
-  getSession,
-  listRecentSessions,
-  unarchiveSession,
-  updateSessionOnTurnEnd,
-  updateSessionThinkingLevel,
-  updateSessionTitle,
-  upsertSessionOnStart
-} from '@main/sessions';
+  type PreparedImageAttachment,
+  prepareClipboardImage as prepareClipboardImageAttachment,
+  prepareDroppedFiles as prepareDroppedFileAttachments,
+  stripAttachmentData
+} from '@main/attachments';
+import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/commands';
 import { contextPercent } from '@main/chat/context';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
 import { recentSessionsPage } from '@main/chat/recents';
-import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/commands';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
+import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { createStartResourceLoader } from '@main/prompt/loader';
-import { SubagentNameAllocator } from '@main/subagents/allocator';
-import { historyTurns } from '@main/history';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -51,26 +41,31 @@ import {
   textDelta,
   thinkingDelta
 } from '@main/helpers';
+import { historyTurns } from '@main/history';
+import { createStartResourceLoader } from '@main/prompt/loader';
+import { resolveAuthBackend } from '@main/providers/auth';
+import { InMemorySettingsBackend } from '@main/providers/settings';
+import { createStartCustomTools } from '@main/providers/tools/index';
 import {
-  type PreparedImageAttachment,
-  prepareClipboardImage as prepareClipboardImageAttachment,
-  prepareDroppedFiles as prepareDroppedFileAttachments,
-  stripAttachmentData
-} from '@main/attachments';
-import { workspaceDisplayName } from '@main/utils/workspace';
+  archiveSession,
+  getSession,
+  listRecentSessions,
+  unarchiveSession,
+  updateSessionOnTurnEnd,
+  updateSessionThinkingLevel,
+  updateSessionTitle,
+  upsertSessionOnStart
+} from '@main/sessions';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
-import { sendToRendererWindows } from '@main/window';
-import { activateWorkspaceAccess } from '@main/workspace/access';
-import { workspaceHistoryWith } from '@main/workspace/history';
+import { SubagentNameAllocator } from '@main/subagents/allocator';
 import {
   type AgentTab,
   type AgentTabStatus,
   type ChatEvent,
   type ChatStatus,
-  type EffortLevel,
   type CommandResult,
+  type EffortLevel,
   effortLevels,
-  type SessionNotice,
   type HistoryTurn,
   type ImageAttachment,
   type ModelOption,
@@ -83,10 +78,15 @@ import {
   type RecentSessionsOptions,
   type RecentSessionsPage,
   type SendResult,
+  type SessionNotice,
   type StatusItemRecentSession,
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
+import { workspaceDisplayName } from '@main/utils/workspace';
+import { sendToRendererWindows } from '@main/window';
+import { activateWorkspaceAccess } from '@main/workspace/access';
+import { workspaceHistoryWith } from '@main/workspace/history';
 import type { WebContents } from 'electron';
 import electron from 'electron';
 

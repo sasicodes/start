@@ -1,6 +1,6 @@
 import type { Usage } from '@earendil-works/pi-ai';
-import { describe, expect, it } from 'vitest';
 import { contextPercent } from '@main/chat/context';
+import { describe, expect, it } from 'vitest';
 
 const usage = (input: number, cacheRead = 0, cacheWrite = 0): Usage => ({
   input,

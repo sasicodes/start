@@ -1,18 +1,18 @@
 import { isDev } from '@main/application';
 import { attachInspectListener, startInspect, stopInspect } from '@main/browser/inspect/index';
 import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
+import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
 import { normalizeBrowserUrl } from '@main/browser/url';
-import { readBrowserSnapshot, type BrowserSnapshot } from '@main/browser/snapshot';
 import { sendToRendererWindows } from '@main/window';
 import {
-  shell,
-  clipboard,
   BrowserWindow,
-  WebContentsView,
-  type Event as ElectronEvent,
-  type WebContents,
+  clipboard,
   type BrowserWindow as ElectronBrowserWindow,
-  type WebContentsView as ElectronWebContentsView
+  type Event as ElectronEvent,
+  type WebContentsView as ElectronWebContentsView,
+  shell,
+  type WebContents,
+  WebContentsView
 } from 'electron';
 
 export interface BrowserBounds {

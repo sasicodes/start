@@ -1,15 +1,15 @@
 import {
   clamp,
+  defaultMaxPanelWidthRatio,
+  getPanelCollapseWidth,
   getResizeCursor,
+  panelSettleDurationMs,
   type ResizeCursor,
   readStoredPanelWidth,
-  getPanelCollapseWidth,
-  panelSettleDurationMs,
-  writeStoredPanelWidth,
-  defaultMaxPanelWidthRatio
+  writeStoredPanelWidth
 } from '@renderer/shared/panel/width';
 import type { JSX } from 'preact';
-import { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface UsePanelResizeOptions {
   fallbackWidth: number;

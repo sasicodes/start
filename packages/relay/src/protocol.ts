@@ -1,11 +1,11 @@
 import * as v from 'valibot';
 import {
+  clientNameMaxLength,
   idMaxLength,
-  tokenMaxLength,
   messageMaxBytes,
-  protocolVersion,
   pairingCodeLength,
-  clientNameMaxLength
+  protocolVersion,
+  tokenMaxLength
 } from './constants';
 import type { JsonMessageResult } from './types';
 

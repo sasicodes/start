@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import { toolEventDetail } from '@main/tools/details';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
+import { describe, expect, it } from 'vitest';
 
 describe('sub-agent tool details', () => {
   const agent = {

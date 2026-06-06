@@ -2,19 +2,19 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
 import { appVersion, isProd } from '@main/application';
-import electron from 'electron';
 import {
-  POSTHOG_HOST,
-  ANALYTICS_FLUSH_AT,
-  POSTHOG_PROJECT_KEY,
-  ANALYTICS_HASH_LENGTH,
-  ANALYTICS_FLUSH_INTERVAL_MS,
   ANALYTICS_COMMAND_TIMEOUT_MS,
+  ANALYTICS_FLUSH_AT,
+  ANALYTICS_FLUSH_INTERVAL_MS,
+  ANALYTICS_HASH_LENGTH,
   ANALYTICS_SHUTDOWN_TIMEOUT_MS,
-  ANALYTICS_USERNAME_STORAGE_NAME
+  ANALYTICS_USERNAME_STORAGE_NAME,
+  POSTHOG_HOST,
+  POSTHOG_PROJECT_KEY
 } from '@main/constants';
 import { loadDesktopId } from '@main/device';
 import { readLocalStateValue, writeLocalStateValue } from '@main/local-state';
+import electron from 'electron';
 import { PostHog } from 'posthog-node';
 
 type AnalyticsPropertyValue = null | number | string | boolean;

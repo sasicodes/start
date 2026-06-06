@@ -1,7 +1,7 @@
 import type { AppSurface } from '@renderer/app/types';
-import { routeUrl, sameRoute, currentRoute, type AppRoute } from '@renderer/utils/route';
+import { type AppRoute, currentRoute, routeUrl, sameRoute } from '@renderer/utils/route';
 import type { RefObject } from 'preact';
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useCallback, useEffect, useState } from 'preact/hooks';
 
 export const initialSurface = (): AppSurface =>
   new URLSearchParams(window.location.search).get('surface') === 'composer' ? 'composer' : 'main';

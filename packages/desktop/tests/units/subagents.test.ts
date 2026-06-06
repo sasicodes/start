@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAvatar, subagentPalettes } from '@main/subagents/avatar';
 import { subagentNames } from '@main/subagents/names';
+import { describe, expect, it } from 'vitest';
 
 describe('sub-agent identity', () => {
   it('assigns unique names before reusing the pool with suffixes', () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { isCloseWindowInput } from '@main/utils/keyboard';
+import { describe, expect, it } from 'vitest';
 
 describe('isCloseWindowInput', () => {
   it('accepts control w keydown', () => {

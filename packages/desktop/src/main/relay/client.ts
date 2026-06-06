@@ -1,13 +1,13 @@
-import { WebSocket } from 'ws';
-import type { MobileRelaySettings } from '@main/storage';
 import {
   desktopEventMessage,
   helloDesktopMessage,
   pairingCreateMessage,
   parseRelayServerMessage,
-  relayReply,
-  type RelayCommand
+  type RelayCommand,
+  relayReply
 } from '@main/relay/protocol';
+import type { MobileRelaySettings } from '@main/storage';
+import { WebSocket } from 'ws';
 
 export interface RelaySocket {
   close: () => void;

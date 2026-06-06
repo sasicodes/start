@@ -1,6 +1,6 @@
-import { isMac, isProd, appIconPath, appMenuName, trayIconPath } from '@main/application';
+import { appIconPath, appMenuName, isMac, isProd, trayIconPath } from '@main/application';
 import type { StatusItemRecentSession } from '@main/types';
-import type { MenuItemConstructorOptions, Tray as ElectronTray } from 'electron';
+import type { Tray as ElectronTray, MenuItemConstructorOptions } from 'electron';
 import electron from 'electron';
 
 const { app, Menu, Tray, nativeImage } = electron;

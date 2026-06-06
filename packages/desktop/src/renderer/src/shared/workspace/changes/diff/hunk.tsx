@@ -1,8 +1,8 @@
 import { highlightedDiffLine } from '@renderer/shared/workspace/changes/diff/highlight';
 import type { PatchFile, PatchLine } from '@renderer/shared/workspace/changes/diff/parser';
 import type { SplitDiffCell, SplitDiffRow, SplitDiffTone } from '@renderer/shared/workspace/changes/diff/rows';
-import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { splitDiffRows } from '@renderer/shared/workspace/changes/diff/rows';
+import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useMemo } from 'preact/hooks';

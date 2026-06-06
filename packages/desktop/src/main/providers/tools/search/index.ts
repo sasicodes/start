@@ -1,6 +1,6 @@
 import { defineTool, type ModelRegistry } from '@earendil-works/pi-coding-agent';
-import { unsupportedWebSearchMessage, runWebSearch } from '@main/providers/tools/search/providers';
 import { withSources, withUngroundedWarning } from '@main/providers/tools/search/helpers';
+import { runWebSearch, unsupportedWebSearchMessage } from '@main/providers/tools/search/providers';
 import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
 import * as v from 'valibot';
 

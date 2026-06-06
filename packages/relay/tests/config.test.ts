@@ -1,5 +1,5 @@
-import { loadConfig, tokenWarning } from '../src/config';
 import { describe, expect, it } from 'vitest';
+import { loadConfig, tokenWarning } from '../src/config';
 
 describe('loadConfig', () => {
   it('loads relay token and server settings from the environment', () => {

@@ -1,6 +1,6 @@
-import * as v from 'valibot';
 import { isRecord } from '@main/details';
 import type { SubagentActivity } from '@main/types';
+import * as v from 'valibot';
 
 const subagentStatusSchema = v.picklist(['cancelled', 'completed', 'failed', 'queued', 'running']);
 

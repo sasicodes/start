@@ -1,9 +1,9 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
-import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { createTurn } from '@renderer/functions/chat';
-import { createDeferredFlush } from '@renderer/shared/chat/flush';
-import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
+import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
+import { createDeferredFlush } from '@renderer/shared/chat/flush';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {

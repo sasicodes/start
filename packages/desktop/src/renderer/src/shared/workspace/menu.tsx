@@ -1,8 +1,8 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { attentionStatus } from '@renderer/shared/attention-status';
+import { Indicator } from '@renderer/shared/indicator';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
-import { Indicator } from '@renderer/shared/indicator';
 import { tw } from '@renderer/utils/tw';
 
 const WorkspaceAttention = ({ folder }: { folder: WorkspaceFolder }) => {

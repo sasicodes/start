@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { InMemorySettingsBackend } from '@main/providers/settings';
+import { describe, expect, it } from 'vitest';
 
 describe('InMemorySettingsBackend', () => {
   it('returns undefined to the first reader', () => {

@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { resolveCssVar, resolveDiagramThemeVariables } from '@renderer/markdown/diagram/theme';
+import { describe, expect, it } from 'vitest';
 
 const fakeLookup = (table: Record<string, string>) => (name: string) => table[name] ?? '';
 

@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import {
   bottomBubbleHiddenMotion,
   bottomBubbleHideTransition,
@@ -9,6 +8,7 @@ import {
   openMotionTransition,
   quickLayoutTransition
 } from '@renderer/ui/motion';
+import { describe, expect, it } from 'vitest';
 
 describe('motion tokens', () => {
   it('uses translate (y) and opacity for the bottom bubble — no scale', () => {

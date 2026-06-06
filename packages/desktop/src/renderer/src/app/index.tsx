@@ -1,7 +1,6 @@
 import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
-import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
 import {
@@ -14,12 +13,13 @@ import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
+import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
-import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 export const App = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);

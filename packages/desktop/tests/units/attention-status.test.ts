@@ -1,6 +1,6 @@
 import {
-  attentionLabel,
   attentionCountLabel,
+  attentionLabel,
   attentionStatusCount,
   sessionAttentionStatus
 } from '@renderer/shared/attention-status';

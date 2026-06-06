@@ -3,7 +3,7 @@ import { appIconPath, appName, isDev, isMac } from '@main/application';
 import { confirmClose } from '@main/confirm';
 import { environment } from '@main/environment';
 import { isCloseWindowInput } from '@main/utils/keyboard';
-import type { BrowserWindow as ElectronBrowserWindow, BrowserWindowConstructorOptions } from 'electron';
+import type { BrowserWindowConstructorOptions, BrowserWindow as ElectronBrowserWindow } from 'electron';
 import electron from 'electron';
 
 const { app, BrowserWindow, screen, shell } = electron;

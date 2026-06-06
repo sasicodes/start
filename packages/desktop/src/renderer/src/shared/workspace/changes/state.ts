@@ -1,12 +1,12 @@
 import type { GitChangeSummary, GitPatch, GitPatchSection, GitPatchSectionKind } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
-import {
-  resolvedGitPatchState,
-  resolvedGitSummaryState,
-  type LoadedGitPatchState,
-  type LoadedGitSummaryState
-} from '@renderer/shared/workspace/changes/utils/resolve';
 import type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
+import {
+  type LoadedGitPatchState,
+  type LoadedGitSummaryState,
+  resolvedGitPatchState,
+  resolvedGitSummaryState
+} from '@renderer/shared/workspace/changes/utils/resolve';
 import { useEffect, useState } from 'preact/hooks';
 
 export type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';

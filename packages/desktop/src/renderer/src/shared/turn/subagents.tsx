@@ -1,8 +1,8 @@
 import type { SubagentActivity } from '@preload/index';
 import { Markdown } from '@renderer/markdown';
+import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
 import { ShimmerText } from '@renderer/shared/turn/shimmer';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
-import { accordionContentMotion, accordionLayoutTransition } from '@renderer/shared/turn/sequence';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 

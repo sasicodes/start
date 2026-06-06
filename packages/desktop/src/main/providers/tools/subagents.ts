@@ -1,12 +1,12 @@
 import {
-  defineTool,
   type AuthStorage,
+  defineTool,
   type ModelRegistry,
   type SettingsManager,
   type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
-import { runSubagents } from '@main/subagents/runtime';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
+import { runSubagents } from '@main/subagents/runtime';
 import type { SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
 import type { EffortLevel } from '@main/types';
 

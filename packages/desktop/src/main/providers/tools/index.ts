@@ -1,6 +1,6 @@
 import { createBrowserTools } from '@main/providers/tools/browser';
+import { type CreateWebSearchToolsOptions, createWebSearchTools } from '@main/providers/tools/search/index';
 import { createSubagentTools } from '@main/providers/tools/subagents';
-import { createWebSearchTools, type CreateWebSearchToolsOptions } from '@main/providers/tools/search/index';
 
 type SubagentToolsOptions = Parameters<typeof createSubagentTools>[0];
 

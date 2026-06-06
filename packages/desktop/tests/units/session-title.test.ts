@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import { truncateTitle } from '@main/sessions';
+import { describe, expect, it } from 'vitest';
 
 describe('truncateTitle', () => {
   it('falls back to "Untitled session" when text is empty', () => {

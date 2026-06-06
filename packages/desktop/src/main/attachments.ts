@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import electron from 'electron';
 import type { ImageAttachment, PreparedDropFiles } from '@main/types';
+import electron from 'electron';
 
 const { app, clipboard, nativeImage } = electron;
 

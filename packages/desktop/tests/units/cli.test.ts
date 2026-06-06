@@ -1,6 +1,6 @@
 import { mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { cliWorkspaceFlag, parseCliAdditionalData, parseCliLaunchArgv, resolveCliWorkspacePath } from '@main/cli/args';
 import { cliInstallScriptSource, cliInstallShellCommand, cliWrapperSource } from '@main/cli/install';
 

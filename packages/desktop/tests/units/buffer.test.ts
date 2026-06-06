@@ -1,5 +1,5 @@
-import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import type { ChatEvent } from '@preload/index';
+import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { describe, expect, it, vi } from 'vitest';
 
 const detail = (key: string): ChatEvent => ({ key, title: key, kind: 'tool', state: 'done' });

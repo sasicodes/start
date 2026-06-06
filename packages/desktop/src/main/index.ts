@@ -1,4 +1,4 @@
-import { initAnalytics, shutdownAnalytics } from '@main/analytics/index';
+import nodePath from 'node:path';
 import {
   trackAppOpened,
   trackComposerSubmitted,
@@ -6,10 +6,12 @@ import {
   trackSessionCreated,
   trackShortcutChanged
 } from '@main/analytics/events';
+import { initAnalytics, shutdownAnalytics } from '@main/analytics/index';
 import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main/application';
 import {
-  closeBrowserTab,
+  type BrowserOpenOptions,
   captureBrowserScreenshot,
+  closeBrowserTab,
   destroyBrowser,
   getBrowserStatus,
   goBackInBrowser,
@@ -21,23 +23,24 @@ import {
   setBrowserBounds,
   startBrowserInspect,
   stopBrowser,
-  stopBrowserInspect,
-  type BrowserOpenOptions
+  stopBrowserInspect
 } from '@main/browser/index';
 import { ChatService } from '@main/chat';
-import { confirmClose } from '@main/confirm';
 import {
+  type CliLaunchRequest,
   parseCliAdditionalData,
   parseCliLaunchArgv,
-  resolveCliWorkspacePath,
-  type CliLaunchRequest
+  resolveCliWorkspacePath
 } from '@main/cli/args';
 import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
-import { getAppFocusState, onAppFocusChanged, clearAppFocusTimer, scheduleAppFocusStateChanged } from '@main/focus';
-import { getGitChangeSummary, getGitFileBlob, getGitPatch, type GitFileRef } from '@main/git';
+import { confirmClose } from '@main/confirm';
+import { clearAppFocusTimer, getAppFocusState, onAppFocusChanged, scheduleAppFocusStateChanged } from '@main/focus';
+import { type GitFileRef, getGitChangeSummary, getGitFileBlob, getGitPatch } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
+import { DesktopRelay } from '@main/relay/client';
+import type { RelayCommand } from '@main/relay/protocol';
 import { listRootItems, type RootItemsScope } from '@main/root/items';
 import {
   type AppSettings,
@@ -46,24 +49,21 @@ import {
   validateAccelerator,
   writeAppSettings
 } from '@main/settings';
-import { DesktopRelay } from '@main/relay/client';
-import type { RelayCommand } from '@main/relay/protocol';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import {
-  getMainWindow,
-  showMainWindow,
-  createMainWindow,
-  sendToMainWindow,
-  hideComposerWindow,
   allowMainWindowClose,
-  toggleComposerWindow,
+  createMainWindow,
+  getMainWindow,
+  hideComposerWindow,
+  sendToMainWindow,
   sendToRendererWindows,
+  showMainWindow,
   submitComposerToMainWindow,
+  toggleComposerWindow,
   withComposerBlurSuppressed
 } from '@main/window';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
-import nodePath from 'node:path';
 import electron from 'electron';
 
 const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
