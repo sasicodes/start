@@ -112,6 +112,14 @@ private struct ConnectionScannerSheet: View {
     }
 }
 
+private enum SessionListMetrics {
+    static let dateFont = Font.system(size: 13, weight: .medium)
+    static let titleFont = Font.system(size: 17, weight: .regular)
+    static let rowMinHeight: CGFloat = 44
+    static let rowSpacing: CGFloat = 10
+    static let rowTextSpacing: CGFloat = 12
+}
+
 private struct SessionList: View {
     @Environment(AppState.self) private var appState
 
@@ -119,28 +127,25 @@ private struct SessionList: View {
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: SessionListMetrics.rowSpacing) {
             ForEach(sessions) { session in
                 Button {
                     withTransaction(Transaction(animation: .easeOut(duration: 0.1))) {
                         appState.openSession(session)
                     }
                 } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    SessionRowLayout {
                         Text(session.title)
-                            .font(.system(size: 17, weight: .regular))
+                            .font(SessionListMetrics.titleFont)
                             .foregroundStyle(.white.opacity(0.88))
                             .lineLimit(1)
 
-                        Spacer()
+                        Spacer(minLength: SessionListMetrics.rowTextSpacing)
 
                         Text(session.updatedAt)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(SessionListMetrics.dateFont)
                             .foregroundStyle(.white.opacity(0.48))
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
                 }
                 .matchedTransitionSource(id: session.id, in: transitionNamespace)
                 .buttonStyle(.plain)
@@ -153,22 +158,53 @@ private struct SessionList: View {
     }
 }
 
+private struct SessionRowLayout<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: SessionListMetrics.rowTextSpacing) {
+            content()
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: SessionListMetrics.rowMinHeight)
+        .contentShape(Rectangle())
+    }
+}
+
 private struct SkeletonList: View {
-    private static let widthRatios: [CGFloat] = [
+    private static let titleWidthRatios: [CGFloat] = [
         0.52, 0.72, 0.92, 0.64, 0.84, 1.0, 0.72, 0.9, 0.58, 0.78, 0.96, 0.68, 0.86, 0.62, 0.76
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            ForEach(Array(Self.widthRatios.enumerated()), id: \.offset) { _, ratio in
-                Capsule()
-                    .fill(.white.opacity(0.12))
-                    .frame(maxWidth: 320 * ratio, alignment: .leading)
-                    .frame(height: 23)
+        VStack(spacing: SessionListMetrics.rowSpacing) {
+            ForEach(Array(Self.titleWidthRatios.enumerated()), id: \.offset) { _, ratio in
+                SessionRowLayout {
+                    SkeletonTextLine(width: 240 * ratio)
+
+                    Spacer(minLength: SessionListMetrics.rowTextSpacing)
+                }
             }
         }
         .padding(.top, StartTheme.Metrics.sessionListTopPadding)
         .accessibilityHidden(true)
+    }
+}
+
+private struct SkeletonTextLine: View {
+    let width: CGFloat
+
+    var body: some View {
+        Text("Session title")
+            .font(SessionListMetrics.titleFont)
+            .lineLimit(1)
+            .hidden()
+            .frame(width: width, alignment: .leading)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(.white.opacity(0.12))
+                    .frame(width: width, height: 23)
+            }
     }
 }
 

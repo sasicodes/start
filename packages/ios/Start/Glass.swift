@@ -4,8 +4,8 @@ struct GlassIconButton: View {
     let systemName: String
     let accessibilityLabel: String
     let action: () -> Void
-    var iconSize: CGFloat = 22
-    var size: CGFloat = 50
+    var iconSize: CGFloat = StartTheme.Metrics.floatingButtonIconSize
+    var size: CGFloat = StartTheme.Metrics.floatingButtonSize
 
     var body: some View {
         Button(action: action) {

@@ -36,7 +36,7 @@ struct ConnectionMenuButton: View {
         } label: {
             Label("Connections", systemImage: "globe")
                 .labelStyle(.iconOnly)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
                 .accessibilityHidden(true)

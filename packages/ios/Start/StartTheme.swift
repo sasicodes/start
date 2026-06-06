@@ -3,6 +3,7 @@ import SwiftUI
 enum StartTheme {
     enum Metrics {
         static let floatingButtonBottomPadding: CGFloat = 24
+        static let floatingButtonIconSize: CGFloat = 22
         static let floatingButtonSize: CGFloat = 50
         static let cornerButtonPadding: CGFloat = 18
         static let pagePadding: CGFloat = 18
