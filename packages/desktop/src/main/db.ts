@@ -18,11 +18,6 @@ const schema = `CREATE TABLE IF NOT EXISTS app_state (
      ciphertext BLOB NOT NULL,
      updated_at INTEGER NOT NULL
    );
-   CREATE TABLE IF NOT EXISTS custom_models (
-     name       TEXT PRIMARY KEY,
-     ciphertext BLOB NOT NULL,
-     updated_at INTEGER NOT NULL
-   );
    CREATE TABLE IF NOT EXISTS sessions (
      id                   TEXT    PRIMARY KEY,
      path                 TEXT    NOT NULL,

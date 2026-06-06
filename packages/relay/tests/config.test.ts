@@ -1,4 +1,4 @@
-import { loadConfig } from '../src/config';
+import { loadConfig, tokenWarning } from '../src/config';
 import { describe, expect, it } from 'vitest';
 
 describe('loadConfig', () => {
@@ -22,5 +22,15 @@ describe('loadConfig', () => {
       token: '',
       pairingTtlMs: 300000
     });
+  });
+});
+
+describe('tokenWarning', () => {
+  it('warns when no token is configured', () => {
+    expect(tokenWarning('')).toMatch(/START_RELAY_TOKEN is not set/u);
+  });
+
+  it('stays silent when a token is configured', () => {
+    expect(tokenWarning('secret')).toBe('');
   });
 });

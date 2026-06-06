@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { RelayState } from '../src/state';
+import { pickUnusedCode, RelayState } from '../src/state';
 import { describe, expect, it } from 'vitest';
 
 const socket = () => ({ close: () => {} }) as unknown as WebSocket;
@@ -22,6 +22,14 @@ describe('RelayState', () => {
     expect(pairing.code).toHaveLength(6);
     expect(state.consumePairing(pairing.code)?.desktopId).toBe('desktop-1');
     expect(state.consumePairing(pairing.code)).toBeNull();
+  });
+
+  it('generates unique six-digit numeric pairing codes', () => {
+    const state = new RelayState();
+    const codes = Array.from({ length: 100 }, () => state.createPairing('desktop-1', 1000).code);
+
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) expect(code).toMatch(/^[1-9]\d{5}$/u);
   });
 
   it('drops expired pairing codes on access', () => {
@@ -98,5 +106,29 @@ describe('RelayState', () => {
     expect(firstDesktop.calls).toEqual(['close']);
     expect(firstMobile.calls).toEqual(['close']);
     expect(state.snapshot()).toEqual({ desktops: 1, mobiles: 1, pairings: 0 });
+  });
+});
+
+describe('pickUnusedCode', () => {
+  it('returns the first code that is not already taken', () => {
+    const codes = ['111111', '222222', '333333'];
+    let index = 0;
+    expect(
+      pickUnusedCode(
+        (code) => code === '111111',
+        () => codes[index++],
+        5
+      )
+    ).toBe('222222');
+  });
+
+  it('throws once the attempt budget is exhausted', () => {
+    expect(() =>
+      pickUnusedCode(
+        () => true,
+        () => '111111',
+        3
+      )
+    ).toThrow(/unique pairing code/u);
   });
 });

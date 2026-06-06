@@ -25,7 +25,7 @@ const browserFinderItemMatches = (query: string) => {
 };
 
 export const browserFinderItems = (token: FinderToken | undefined): BrowserFinderItem[] => {
-  if (!token || token.marker !== '@' || token.folderPath) return [];
+  if (token?.marker !== '@' || token.folderPath) return [];
   return browserFinderItemMatches(token.query) ? [browserFinderItem] : [];
 };
 

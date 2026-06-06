@@ -93,15 +93,11 @@ export const getLatestProviderModels = <T extends { provider: string; id: string
     .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 };
 
-export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(
-  models: T[],
-  customProviderNames: ReadonlySet<string>
-) => {
+export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(models: T[]) => {
   const openAiModels = getLatestProviderModels('openai', models);
   const googleModels = getLatestProviderModels('google', models);
-  const customModels = models.filter((model) => customProviderNames.has(model.provider));
   const anthropicModels = getLatestProviderModels('anthropic', models);
-  const latestModels = [...openAiModels, ...anthropicModels, ...googleModels, ...customModels];
+  const latestModels = [...openAiModels, ...anthropicModels, ...googleModels];
 
   if (latestModels.length === 0) return models;
   return latestModels;

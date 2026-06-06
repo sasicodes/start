@@ -30,6 +30,12 @@ describe('modelProviderId', () => {
     expect(modelProviderId(model({ id: 'claude-haiku-4-5', name: 'haiku', provider: 'openrouter' }))).toBe('anthropic');
   });
 
+  it('keeps Anthropic provider models even when identifiers contain foreign tokens', () => {
+    expect(modelProviderId(model({ id: 'claude-o4-preview', name: 'Claude O4', provider: 'anthropic' }))).toBe(
+      'anthropic'
+    );
+  });
+
   it('classifies Google by provider name', () => {
     expect(modelProviderId(model({ id: 'gemini-3.1-pro-preview', name: 'Gemini Pro', provider: 'google' }))).toBe(
       'google'
@@ -50,17 +56,8 @@ describe('modelProviderId', () => {
     ).toBe('openai');
   });
 
-  it('classifies unrecognized providers as custom', () => {
-    expect(modelProviderId(model({ id: 'llama3.1:8b', name: 'Llama', provider: 'ollama' }))).toBe('custom');
-    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('custom');
-  });
-
-  it('respects isCustom over any heuristic match', () => {
-    expect(modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'pydantic', isCustom: true }))).toBe(
-      'custom'
-    );
-    expect(
-      modelProviderId(model({ id: 'claude-3-haiku', name: 'Claude Haiku', provider: 'my-proxy', isCustom: true }))
-    ).toBe('custom');
+  it('falls back to Anthropic for unrecognized providers', () => {
+    expect(modelProviderId(model({ id: 'llama3.1:8b', name: 'Llama', provider: 'ollama' }))).toBe('anthropic');
+    expect(modelProviderId(model({ id: 'mystery-1', name: 'Mystery', provider: 'somethingelse' }))).toBe('anthropic');
   });
 });

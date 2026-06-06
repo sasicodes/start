@@ -1,9 +1,15 @@
 import type { WebSocket } from 'ws';
+import type { RelayState } from './state';
 
 export interface RelayConfig {
   port: number;
   token: string;
   pairingTtlMs: number;
+}
+
+export interface RelayContext {
+  state: RelayState;
+  config: RelayConfig;
 }
 
 export interface RelayError {

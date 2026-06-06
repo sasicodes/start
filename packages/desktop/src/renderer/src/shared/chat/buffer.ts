@@ -17,7 +17,7 @@ export const drainStreamBuffer = (events: StreamEvent[], handlers: StreamHandler
       index++;
       while (index < events.length) {
         const next = events[index];
-        if (!next || next.kind !== 'thinking') break;
+        if (next?.kind !== 'thinking') break;
         delta += next.delta;
         index++;
       }
@@ -27,7 +27,7 @@ export const drainStreamBuffer = (events: StreamEvent[], handlers: StreamHandler
       index++;
       while (index < events.length) {
         const next = events[index];
-        if (!next || next.kind !== 'detail') break;
+        if (next?.kind !== 'detail') break;
         batch.push(next.event);
         index++;
       }

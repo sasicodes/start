@@ -25,3 +25,8 @@ export const loadConfig = (environment: NodeJS.ProcessEnv = process.env): RelayC
     pairingTtlMs: parsePositiveInteger(pairingTtlDefaultMs, output[environmentKey.pairingTtlMs])
   };
 };
+
+export const tokenWarning = (token: string) =>
+  token
+    ? ''
+    : 'Warning: START_RELAY_TOKEN is not set. Any client that reaches this URL can connect. Set a token to require authentication.';

@@ -1,7 +1,16 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import { maxPairingSessions, pairingCodeMax, pairingCodeMin } from './constants';
 import type { DesktopConnection, MobileConnection, PairingSession, RelaySnapshot } from './types';
+
+export const pickUnusedCode = (isTaken: (code: string) => boolean, nextCode: () => string, maxAttempts: number) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const code = nextCode();
+    if (!isTaken(code)) return code;
+  }
+
+  throw new Error('Unable to allocate a unique pairing code.');
+};
 
 export class RelayState {
   private readonly mobiles = new Map<string, MobileConnection>();
@@ -102,11 +111,10 @@ export class RelayState {
   }
 
   private unusedPairingCode() {
-    for (let attempt = 0; attempt < maxPairingSessions; attempt += 1) {
-      const code = String(randomInt(pairingCodeMin, pairingCodeMax + 1));
-      if (!this.pairings.has(code)) return code;
-    }
-
-    return randomUUID().replace(/\D/gu, '').slice(0, 6).padEnd(6, '0');
+    return pickUnusedCode(
+      (code) => this.pairings.has(code),
+      () => String(randomInt(pairingCodeMin, pairingCodeMax + 1)),
+      maxPairingSessions
+    );
   }
 }
