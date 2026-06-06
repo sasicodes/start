@@ -7,7 +7,11 @@ struct EdgeFadeOverlay: View {
     var body: some View {
         VStack(spacing: 0) {
             LinearGradient(
-                colors: [.black.opacity(0.92), .black.opacity(0.56), .clear],
+                colors: [
+                    StartTheme.Colors.background.opacity(0.92),
+                    StartTheme.Colors.background.opacity(0.56),
+                    .clear
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -16,7 +20,11 @@ struct EdgeFadeOverlay: View {
             Spacer(minLength: 0)
 
             LinearGradient(
-                colors: [.clear, .black.opacity(0.56), .black.opacity(0.94)],
+                colors: [
+                    .clear,
+                    StartTheme.Colors.background.opacity(0.56),
+                    StartTheme.Colors.background.opacity(0.94)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )

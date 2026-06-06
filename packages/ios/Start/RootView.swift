@@ -9,12 +9,12 @@ struct RootView: View {
 
         NavigationStack(path: $appState.path) {
             ZStack {
-                Color.black.ignoresSafeArea()
+                StartTheme.Colors.background.ignoresSafeArea()
 
                 HomeView(transitionNamespace: transitionNamespace)
                     .navigationDestination(for: AppRoute.self) { route in
                         ZStack {
-                            Color.black.ignoresSafeArea()
+                            StartTheme.Colors.background.ignoresSafeArea()
 
                             switch route {
                             case .home:
@@ -36,8 +36,8 @@ struct RootView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-        .tint(.white)
-        .background(Color.black)
+        .tint(StartTheme.Colors.ink)
+        .background(StartTheme.Colors.background)
     }
 }
 

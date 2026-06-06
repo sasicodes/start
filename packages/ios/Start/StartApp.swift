@@ -8,7 +8,6 @@ struct StartApp: App {
         WindowGroup {
             RootView()
                 .environment(appState)
-                .preferredColorScheme(.dark)
         }
     }
 }

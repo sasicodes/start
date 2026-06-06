@@ -11,9 +11,14 @@ struct GlassIconButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: iconSize, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(StartTheme.Colors.ink)
                 .frame(width: size, height: size)
         }
+        .frame(
+            width: max(size, StartTheme.Metrics.floatingButtonHitSize),
+            height: max(size, StartTheme.Metrics.floatingButtonHitSize)
+        )
+        .contentShape(Circle())
         .accessibilityLabel(accessibilityLabel)
         .buttonStyle(.plain)
         .glassCircle()
@@ -26,11 +31,11 @@ extension View {
     }
 
     func glassProminentCircle(enabled: Bool = true) -> some View {
-        glassEffect(.regular.tint(.white.opacity(enabled ? 0.72 : 0.18)).interactive(), in: .circle)
+        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(enabled ? 0.72 : 0.18)).interactive(), in: .circle)
     }
 
     func glassCapsule(selected: Bool = false) -> some View {
-        glassEffect(.regular.tint(.white.opacity(selected ? 0.32 : 0.08)).interactive(), in: .capsule)
+        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(selected ? 0.32 : 0.08)).interactive(), in: .capsule)
     }
 
     func glassRoundedRectangle(cornerRadius: CGFloat) -> some View {
@@ -38,10 +43,10 @@ extension View {
     }
 
     func glassPanel(cornerRadius: CGFloat) -> some View {
-        glassEffect(.regular.tint(.white.opacity(0.12)), in: .rect(cornerRadius: cornerRadius))
+        glassEffect(.regular.tint(StartTheme.Colors.ink.opacity(0.12)), in: .rect(cornerRadius: cornerRadius))
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(.white.opacity(0.16), lineWidth: 1)
+                    .stroke(StartTheme.Colors.ink.opacity(0.16), lineWidth: 1)
             }
             .shadow(color: .black.opacity(0.24), radius: 24, y: 14)
     }

@@ -16,6 +16,7 @@ struct SessionDetailView: View {
 
         VStack(spacing: 0) {
             header
+                .zIndex(1)
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 18) {
@@ -37,7 +38,6 @@ struct SessionDetailView: View {
         }
         .padding(.leading, 16)
         .padding(.trailing, 10)
-        .ignoresSafeArea(.container, edges: .bottom)
         .contentShape(Rectangle())
         .simultaneousGesture(dismissGesture)
         .accessibilityAction(.escape) {
@@ -75,12 +75,12 @@ struct SessionDetailView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(session.title)
                     .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(StartTheme.Colors.ink)
                     .lineLimit(1)
 
-                Text(session.workspace.rawValue)
+                Text(session.projectName)
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(StartTheme.Colors.softInk)
             }
 
             Spacer()
@@ -116,11 +116,11 @@ private struct MessageRow: View {
         VStack(alignment: .leading, spacing: 7) {
             Text(message.role.rawValue)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(message.role == .agent ? .green.opacity(0.9) : .white.opacity(0.52))
+                .foregroundStyle(message.role == .agent ? StartTheme.Colors.success : StartTheme.Colors.softInk)
 
             Text(message.text)
                 .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(.white.opacity(0.86))
+                .foregroundStyle(StartTheme.Colors.ink)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -138,8 +138,8 @@ private struct DetailPromptBar: View {
             TextField("Reply", text: $text, axis: .vertical)
                 .focused($focused)
                 .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(.white)
-                .tint(.white)
+                .foregroundStyle(StartTheme.Colors.ink)
+                .tint(StartTheme.Colors.ink)
                 .lineLimit(1...4)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 14)
@@ -166,7 +166,7 @@ private struct DetailPromptBar: View {
                 Button {} label: {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(text.isEmpty ? .white.opacity(0.62) : .black)
+                        .foregroundStyle(text.isEmpty ? StartTheme.Colors.softInk : StartTheme.Colors.background)
                         .frame(width: 36, height: 36)
                         .glassProminentCircle(enabled: !text.isEmpty)
                 }
@@ -174,7 +174,7 @@ private struct DetailPromptBar: View {
                 .accessibilityHint(text.isEmpty ? "Enter a reply before sending" : "")
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.white)
+            .foregroundStyle(StartTheme.Colors.ink)
             .frame(maxWidth: .infinity)
             .frame(height: 36)
             .padding(.leading, 14)

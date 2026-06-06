@@ -5,7 +5,7 @@ import Observation
 @MainActor
 final class AppState {
     var activeConnectionID = Connection.samples[0].id
-    var activeWorkspace = Workspace.personal
+    var activeWorkspace = Workspace.start
     var connections = Connection.samples
     var draft = ""
     var composerFocused = false
@@ -14,6 +14,10 @@ final class AppState {
     var relay = RelayClient()
 
     let sessions = ChatSession.samples
+
+    var activeProjectName: String {
+        sessions.first { $0.workspace == activeWorkspace }?.projectName ?? "start"
+    }
 
     var route: AppRoute {
         path.last ?? .home
