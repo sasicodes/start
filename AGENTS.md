@@ -21,7 +21,7 @@
 - Read environment variables only through `packages/desktop/src/main/environment.ts`.
 - Each `useEffect` must synchronize with an external system, subscription, timer, storage, or DOM observer. Do not use effects for derived state.
 - For async renderer state tied to props or ids, store the loaded value with its key and derive stale/loading fallbacks during render instead of resetting state in an effect.
-- Clean up every timer, animation frame, listener, watcher, subscription, and observer. Avoid duplicate polling for the same source. Batch high-frequency UI updates with animation frames.
+- Clean up every timer, animation frame, listener, watcher, subscription, and observer. Avoid duplicate polling for the same source. Batch high-frequency visual updates with animation frames; coalesce non-visual high-frequency updates such as streaming text with a throttled timer so idle frames do no work.
 - Extract effect setup, async data fetching, and subscription logic into named custom hooks (`use*`) when the effect carries its own state, refs, or more than a few lines of setup.
 - Use `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
 - Split component files before they approach 300 lines.
