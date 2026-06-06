@@ -8,7 +8,9 @@ import { FakeAuthStorage, FakeModelRegistry, listFakeSessions, resetAgentRegistr
 const authStorage = new FakeAuthStorage() as unknown as AuthStorage;
 const modelRegistry = new FakeModelRegistry() as unknown as ModelRegistry;
 const settingsManager = {} as unknown as SettingsManager;
-const model = new FakeModelRegistry().getAvailable()[0] as ModelRegistry['getAvailable'] extends () => Array<infer ModelItem>
+const model = new FakeModelRegistry().getAvailable()[0] as ModelRegistry['getAvailable'] extends () => Array<
+  infer ModelItem
+>
   ? ModelItem
   : never;
 

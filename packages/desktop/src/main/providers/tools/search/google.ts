@@ -1,5 +1,5 @@
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
-import { providerHeaders } from '@main/providers/tools/search/auth';
+import { providerHeaders, setMissingHeader } from '@main/providers/tools/search/auth';
 import { postSse } from '@main/providers/tools/search/fetcher';
 import {
   addSource,
@@ -23,7 +23,7 @@ export const searchGoogle = async (
     Accept: 'text/event-stream',
     'Content-Type': 'application/json'
   });
-  if (auth.apiKey && !headers['x-goog-api-key']) headers['x-goog-api-key'] = auth.apiKey;
+  if (auth.apiKey) setMissingHeader(headers, 'x-goog-api-key', auth.apiKey);
 
   const body = {
     tools: [{ google_search: {} }],

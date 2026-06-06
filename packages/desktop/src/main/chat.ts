@@ -122,7 +122,7 @@ type LiveAssistantTurn = {
   text: string;
   thinking: string;
   createdAt: number;
-  details: HistoryTurn['details'];
+  details: NonNullable<HistoryTurn['details']>;
 };
 
 const liveAssistantHistoryTurn = (turn: LiveAssistantTurn): HistoryTurn => ({

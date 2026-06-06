@@ -20,8 +20,8 @@ describe('chat stream errors', () => {
   });
 
   it('keeps non-transport errors fatal even after visible output', () => {
-    expect(shouldCompleteAfterStreamError({ text: 'Partial answer.', thinking: '' }, 'Model context limit exceeded')).toBe(
-      false
-    );
+    expect(
+      shouldCompleteAfterStreamError({ text: 'Partial answer.', thinking: '' }, 'Model context limit exceeded')
+    ).toBe(false);
   });
 });

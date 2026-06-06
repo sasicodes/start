@@ -35,6 +35,7 @@ interface TestTool {
   label: string;
   description: string;
   promptSnippet: string;
+  promptGuidelines: string[];
   execute: (toolCallId: string, args: Record<string, unknown>) => Promise<TestToolResult>;
 }
 
@@ -100,13 +101,16 @@ describe('browser tools', () => {
       expect(tool.label).toBe('browser');
       expect(tool.description.length).toBeGreaterThan(30);
       expect(tool.description.length).toBeLessThan(90);
+      expect(tool.promptGuidelines).toEqual([
+        'Use browser tools only when the user includes @Browser, or while continuing that active @Browser task.'
+      ]);
       expect(tool.promptSnippet.length).toBeGreaterThan(30);
-      expect(tool.promptSnippet.length).toBeLessThan(90);
+      expect(tool.promptSnippet.length).toBeLessThan(80);
     }
 
     expect(toolByName('browser_open').description).toContain('browser panel');
-    expect(toolByName('browser_open').promptSnippet).toContain('test a local app');
-    expect(toolByName('browser_snapshot').promptSnippet).toContain('current browser page');
+    expect(toolByName('browser_open').promptSnippet).toContain('local app');
+    expect(toolByName('browser_snapshot').promptSnippet).toContain('browser_click/browser_type');
   });
 
   it('opens normalized URLs in the app browser', async () => {
