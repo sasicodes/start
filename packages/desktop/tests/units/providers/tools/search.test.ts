@@ -91,6 +91,7 @@ afterEach(() => {
 describe('web search helpers', () => {
   it('detects built-in providers and rejects custom providers', () => {
     expect(searchProvider(model({ provider: 'openai', api: 'openai-responses' }))).toBe('openai');
+    expect(searchProvider(model({ provider: 'openai-codex', api: 'openai-responses' }))).toBe('openai');
     expect(searchProvider(model({ provider: 'anthropic', api: 'anthropic-messages' }))).toBe('anthropic');
     expect(searchProvider(model({ provider: 'google', api: 'google-generative-ai' }))).toBe('google');
     expect(searchProvider(model({ provider: 'google-generative-ai', api: 'google-generative-ai' }))).toBe('google');
