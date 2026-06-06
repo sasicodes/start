@@ -38,7 +38,6 @@ const mergeWork = (turn: HistoryTurn, details: HistoryTurnDetail[], thinking: st
 export const combineHistoryTurns = (turns: HistoryTurn[]) => {
   let pendingThinking = '';
   let pendingCreatedAt = 0;
-  let lastAssistantIndex = -1;
   const result: HistoryTurn[] = [];
   let pendingDetails: HistoryTurnDetail[] = [];
 
@@ -60,44 +59,33 @@ export const combineHistoryTurns = (turns: HistoryTurn[]) => {
     if (!pendingCreatedAt) pendingCreatedAt = turn.createdAt;
   };
 
-  const appendToLastAssistant = (turn: HistoryTurn) => {
-    const assistant = result[lastAssistantIndex];
-    if (!assistant) return false;
-
-    result[lastAssistantIndex] = mergeWork(assistant, turn.details ?? [], turn.thinking ?? '');
-    return true;
-  };
-
   for (const turn of turns) {
     if (turn.role === 'user') {
       if (result.length === 0) clearPending();
       else pushPending();
       result.push(turn);
-      lastAssistantIndex = -1;
       continue;
     }
 
     if (detailOnlyTurn(turn)) {
-      if (!appendToLastAssistant(turn)) appendPending(turn);
+      appendPending(turn);
       continue;
     }
 
     if (turn.role === 'assistant' && !turn.text) {
-      if (!appendToLastAssistant(turn)) appendPending(turn);
+      appendPending(turn);
       continue;
     }
 
     if (turn.role === 'assistant') {
       const assistant = mergeWork(turn, pendingDetails, pendingThinking);
       result.push(assistant);
-      lastAssistantIndex = result.length - 1;
       clearPending();
       continue;
     }
 
     pushPending();
     result.push(turn);
-    lastAssistantIndex = -1;
   }
 
   pushPending();
