@@ -23,23 +23,31 @@ const createDetail = (detail: ChatEvent, createdAt: number): TurnDetail => ({
   updatedAt: createdAt
 });
 
-const upsertTurnDetail = (details: TurnDetail[], detail: ChatEvent, updatedAt: number) => {
-  const index = details.findIndex((item) => item.key === detail.key);
-  if (index === -1) return [...details, createDetail(detail, updatedAt)].slice(-maxTurnDetails);
+const isSubagentEvent = (detail: ChatEvent | TurnDetail) =>
+  detail.title === 'Sub-agents failed' || detail.title.startsWith('Spawning ') || detail.title.startsWith('Finished ');
 
-  return details.map((item, itemIndex) => (itemIndex === index ? mergeDetail(item, detail, updatedAt) : item));
+const isSupersededSubagentFailure = (detail: TurnDetail, next: ChatEvent) =>
+  detail.state === 'error' && detail.title === 'Sub-agents failed' && isSubagentEvent(next) && next.state !== 'error';
+
+const upsertTurnDetail = (details: TurnDetail[], detail: ChatEvent, updatedAt: number) => {
+  const current = details.filter((item) => !isSupersededSubagentFailure(item, detail));
+  const index = current.findIndex((item) => item.key === detail.key);
+  if (index === -1) return [...current, createDetail(detail, updatedAt)].slice(-maxTurnDetails);
+
+  return current.map((item, itemIndex) => (itemIndex === index ? mergeDetail(item, detail, updatedAt) : item));
 };
 
 const updateActivityDetail = (items: TurnActivityItem[], detail: ChatEvent, updatedAt: number): TurnActivityItem[] => {
-  const index = items.findLastIndex(
+  const current = items.filter((item) => item.type !== 'detail' || !isSupersededSubagentFailure(item.detail, detail));
+  const index = current.findLastIndex(
     (item) => item.type === 'detail' && item.detail.key === detail.key && item.detail.state !== 'done'
   );
   if (index === -1) {
     const item: TurnActivityItem = { id: createId(), type: 'detail', detail: createDetail(detail, updatedAt) };
-    return [...items, item].slice(-maxTurnDetails);
+    return [...current, item].slice(-maxTurnDetails);
   }
 
-  return items.map((item, itemIndex) =>
+  return current.map((item, itemIndex) =>
     itemIndex === index && item.type === 'detail'
       ? { ...item, detail: mergeDetail(item.detail, detail, updatedAt) }
       : item

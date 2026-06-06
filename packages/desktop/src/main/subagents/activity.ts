@@ -1,4 +1,5 @@
 import { isRecord } from '@main/details';
+import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import type { SubagentActivity } from '@main/types';
 import * as v from 'valibot';
 
@@ -14,7 +15,7 @@ const subagentActivitySchema = v.object({
   status: subagentStatusSchema
 });
 
-export const subagentTaskCount = (args: Record<string, unknown>) => (Array.isArray(args.tasks) ? args.tasks.length : 0);
+export const subagentTaskCount = (args: unknown) => normalizeSubagentTasks(args).length;
 
 const parseSubagentActivity = (value: unknown): SubagentActivity | null => {
   const result = v.safeParse(subagentActivitySchema, value);

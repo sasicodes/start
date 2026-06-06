@@ -1,4 +1,4 @@
-import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
+import type { Turn, TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 import type { Transition } from 'motion/react';
 
 const diffMetricPattern = /^(.*?)(\+\d+)\s+(-\d+)$/;
@@ -86,4 +86,21 @@ export const splitDiffMetric = (value: string) => {
   if (!match) return null;
 
   return { label: match[1], added: match[2], removed: match[3] };
+};
+
+export const turnActionText = (turns: Turn[], index: number) => {
+  const turn = turns[index];
+  if (!turn) return '';
+  if (turn.role !== 'assistant') return turn.text;
+
+  let text = '';
+  for (let i = index; i >= 0; i--) {
+    const item = turns[i];
+    if (item?.role !== 'assistant') break;
+    if (item.text) text = text ? `${item.text}\n\n${text}` : item.text;
+  }
+
+  if (turns[index + 1]?.role === 'assistant') return '';
+
+  return text;
 };

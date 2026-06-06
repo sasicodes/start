@@ -7,7 +7,8 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
-import type { SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
+import type { SubagentRunSnapshot } from '@main/subagents/types';
+import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import type { EffortLevel } from '@main/types';
 
 const spawnToolParameters = {
@@ -45,9 +46,6 @@ interface CreateSubagentToolsOptions {
   model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
 }
 
-const validTasks = (tasks: SubagentTaskInput[]) =>
-  tasks.map((task) => ({ prompt: task.prompt.trim() })).filter((task) => task.prompt);
-
 const toolResult = (text: string, details: SubagentRunSnapshot) => ({
   content: [{ text, type: 'text' as const }],
   details
@@ -66,25 +64,24 @@ export const createSubagentTools = ({
   defineTool({
     label: 'sub-agents',
     name: 'subagent_spawn',
-    parameters: spawnToolParameters,
     executionMode: 'sequential',
+    parameters: spawnToolParameters,
     description: 'Run focused sub-agents in parallel.',
     promptSnippet: 'Use for independent research, review, or mapping work.',
+    prepareArguments: (args) => ({ tasks: normalizeSubagentTasks(args) }),
     async execute(_toolCallId, { tasks }, signal, onUpdate) {
       const selectedModel = model();
       if (!selectedModel) throw new Error('No configured model is available for sub-agents.');
-
-      const runnableTasks = validTasks(tasks);
-      if (runnableTasks.length === 0) throw new Error('Enter at least one sub-agent task.');
+      if (tasks.length === 0) throw new Error('Enter at least one sub-agent task.');
 
       const result = await runSubagents({
+        tasks,
         cwd: cwd(),
         authStorage,
         customTools,
         modelRegistry,
         settingsManager,
         model: selectedModel,
-        tasks: runnableTasks,
         ...(signal ? { signal } : {}),
         nameAllocator: nameAllocator(),
         thinkingLevel: thinkingLevel(),

@@ -1,6 +1,6 @@
 import type { ChatEvent } from '@preload/index';
 import { activityLabelParts } from '@renderer/shared/turn/label';
-import { detailMetric } from '@renderer/shared/turn/sequence';
+import { detailMetric, turnActionText } from '@renderer/shared/turn/sequence';
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
@@ -33,6 +33,11 @@ const detailKey = (item: TurnActivityItem | undefined) => {
 const detailState = (item: TurnActivityItem | undefined) => {
   if (item?.type !== 'detail') throw new Error('expected detail item');
   return item.detail.state;
+};
+
+const detailTitle = (item: TurnActivityItem | undefined) => {
+  if (item?.type !== 'detail') throw new Error('expected detail item');
+  return item.detail.title;
 };
 
 const detailItem = (item: TurnActivityItem | undefined) => {
@@ -83,6 +88,30 @@ describe('turn activity sequence', () => {
       duration: '45s',
       verb: 'Working'
     });
+  });
+
+  it('shows one action footer for split assistant text turns', () => {
+    const turns: Turn[] = [
+      { id: 'user', text: 'review this', role: 'user', createdAt: 0 },
+      { id: 'a1', text: 'First response.', role: 'assistant', createdAt: 1 },
+      { id: 'a2', text: '', role: 'assistant', createdAt: 2, details: [detailWithCount(1)] },
+      { id: 'a3', text: 'Final response.', role: 'assistant', createdAt: 3 },
+      { id: 'next', text: 'thanks', role: 'user', createdAt: 4 }
+    ];
+
+    expect(turnActionText(turns, 1)).toBe('');
+    expect(turnActionText(turns, 2)).toBe('');
+    expect(turnActionText(turns, 3)).toBe('First response.\n\nFinal response.');
+    expect(turnActionText(turns, 4)).toBe('thanks');
+
+    const activeTurns: Turn[] = [
+      { id: 'user', text: 'review this', role: 'user', createdAt: 0 },
+      { id: 'a1', text: 'First response.', role: 'assistant', createdAt: 1 },
+      { id: 'a2', text: '', role: 'assistant', createdAt: 2, details: [detailWithCount(1)], streaming: true }
+    ];
+
+    expect(turnActionText(activeTurns, 1)).toBe('');
+    expect(turnActionText(activeTurns, 2)).toBe('First response.');
   });
 
   it('interleaves thinking and detail items in arrival order', () => {
@@ -149,6 +178,22 @@ describe('turn activity sequence', () => {
     expect(items.map((item) => item.type)).toEqual(['detail', 'detail']);
     expect(detailState(items[0])).toBe('done');
     expect(detailState(items[1])).toBe('active');
+  });
+
+  it('hides superseded sub-agent failures when a retry starts', () => {
+    let turns: Turn[] = [baseTurn()];
+    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
+      turns = fn(turns);
+    };
+
+    appendTurnDetails(setTurns, 't1', [toolEvent('tool:first-subagent', 'Sub-agents failed', 'error')]);
+    appendTurnDetails(setTurns, 't1', [toolEvent('tool:second-subagent', 'Spawning 1 agent', 'active')]);
+
+    const items = turns[0]?.activityItems ?? [];
+    expect(items).toHaveLength(1);
+    expect(detailTitle(items[0])).toBe('Spawning 1 agent');
+    expect(turns[0]?.details).toHaveLength(1);
+    expect(turns[0]?.details?.[0]?.title).toBe('Spawning 1 agent');
   });
 
   it('keeps repeated browser event titles clean while preserving count metadata', () => {

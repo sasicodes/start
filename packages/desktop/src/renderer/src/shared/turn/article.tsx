@@ -56,10 +56,11 @@ const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   );
 });
 
-const TurnActions = memo(({ turn }: { turn: Turn }) => {
+const TurnActions = memo(({ turn, actionText = '' }: { turn: Turn; actionText?: string }) => {
+  const text = turn.role === 'assistant' ? actionText : turn.text;
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
   if (turn.role === 'assistant' && turn.streaming) return null;
-  if (!turn.text) return null;
+  if (!text) return null;
 
   return (
     <div
@@ -71,7 +72,7 @@ const TurnActions = memo(({ turn }: { turn: Turn }) => {
     >
       <CopyButton
         ariaLabel="Copy turn"
-        text={turn.text}
+        text={text}
         class="grid size-5 place-items-center rounded-md border-0 bg-transparent text-soft transition-colors ease-in hover:bg-line hover:text-hover"
       />
       <time dateTime={new Date(turn.createdAt).toISOString()} class="px-0.5 text-xs leading-none whitespace-nowrap">
@@ -110,13 +111,15 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
 interface TurnArticleProps {
   turn: Turn;
+  actionText?: string;
 }
 
 interface TurnArticleByIdProps {
   turnId: string;
+  actionText?: string;
 }
 
-export const TurnArticle = memo(({ turn }: TurnArticleProps) => {
+export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) => {
   const details = turn.details ?? [];
   const items = turn.activityItems ?? [];
   const thinking = turn.thinking ?? '';
@@ -145,16 +148,16 @@ export const TurnArticle = memo(({ turn }: TurnArticleProps) => {
         working={activityWorking}
       />
       <TurnBody turn={turn} />
-      <TurnActions turn={turn} />
+      <TurnActions turn={turn} actionText={actionText} />
     </article>
   );
 });
 
-export const TurnArticleById = memo(({ turnId }: TurnArticleByIdProps) => {
+export const TurnArticleById = memo(({ turnId, actionText = '' }: TurnArticleByIdProps) => {
   const signal = turnSignal(turnId);
   const turn = signal?.value;
 
   if (!turn) return null;
 
-  return <TurnArticle turn={turn} />;
+  return <TurnArticle turn={turn} actionText={actionText} />;
 });
