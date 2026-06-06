@@ -1,6 +1,6 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
 import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
-import { QrIcon, TrashIcon } from '@renderer/ui/icons';
+import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -14,6 +14,7 @@ interface MobileInputProps {
   value: string;
   placeholder: string;
   type: 'text' | 'password';
+  trailing?: ComponentChildren;
   onInput: (value: string) => void;
 }
 
@@ -25,6 +26,73 @@ const normalizedRelayUrl = (value: string) =>
     .trim()
     .replace(/^http:/u, 'ws:')
     .replace(/^https:/u, 'wss:');
+
+type RelayProbeStatus = 'idle' | 'checking' | 'ok' | 'fail';
+
+const probeReadyUrl = (value: string) => {
+  const normalized = normalizedRelayUrl(value);
+  try {
+    const { protocol } = new URL(normalized);
+    return protocol === 'ws:' || protocol === 'wss:' ? normalized : '';
+  } catch {
+    return '';
+  }
+};
+
+const useRelayProbe = (relayUrl: string, relayToken: string): RelayProbeStatus => {
+  const [status, setStatus] = useState<RelayProbeStatus>('idle');
+  const url = probeReadyUrl(relayUrl);
+  const token = relayToken.trim();
+
+  useEffect(() => {
+    if (!url) {
+      setStatus('idle');
+      return;
+    }
+
+    let active = true;
+    setStatus('checking');
+    const timer = setTimeout(() => {
+      window.pi.app
+        .probeMobileRelay({ relayUrl: url, relayToken: token })
+        .then((result) => {
+          if (active) setStatus(result.ok ? 'ok' : 'fail');
+        })
+        .catch(() => {
+          if (active) setStatus('fail');
+        });
+    }, 500);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [url, token]);
+
+  return status;
+};
+
+const RelayStatus = ({ status }: { status: RelayProbeStatus }) => {
+  if (status === 'checking')
+    return (
+      <span role="status" aria-label="Checking relay connection" class="text-soft">
+        <SpinnerIcon class="block size-4 animate-spin" />
+      </span>
+    );
+  if (status === 'ok')
+    return (
+      <span role="img" aria-label="Relay reachable" class="text-success">
+        <CheckIcon class="block size-4" />
+      </span>
+    );
+  if (status === 'fail')
+    return (
+      <span role="img" aria-label="Relay unreachable" class="text-danger">
+        <XIcon class="block size-4" />
+      </span>
+    );
+  return null;
+};
 
 const useMobileRelayCode = (enabled: boolean) => {
   const [code, setCode] = useState('');
@@ -80,14 +148,20 @@ const IconAction = ({ label, danger, onClick, children }: IconActionProps) => (
   </button>
 );
 
-const MobileInput = ({ type, value, onInput, placeholder }: MobileInputProps) => (
-  <input
-    type={type}
-    value={value}
-    placeholder={placeholder}
-    onInput={(event) => onInput(event.currentTarget.value)}
-    class="h-10 w-full rounded-full border border-line bg-composer px-4 text-sm text-ink outline-none placeholder:text-soft"
-  />
+const MobileInput = ({ type, value, onInput, placeholder, trailing }: MobileInputProps) => (
+  <div class="relative">
+    <input
+      type={type}
+      value={value}
+      placeholder={placeholder}
+      onInput={(event) => onInput(event.currentTarget.value)}
+      class={tw(
+        'h-10 w-full rounded-full border border-line bg-composer px-4 text-sm text-ink outline-none placeholder:text-soft',
+        trailing ? 'pr-11' : ''
+      )}
+    />
+    {trailing ? <div class="absolute inset-y-0 right-3.5 flex items-center">{trailing}</div> : null}
+  </div>
 );
 
 interface PairingQrDialogProps {
@@ -144,6 +218,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
   const canSave = Boolean(draft.desktopId && draft.relayUrl.trim());
   const qrAvailable = Boolean(settings.enabled && settings.relayUrl.trim());
   const relayCode = useMobileRelayCode(qrAvailable);
+  const probeStatus = useRelayProbe(draft.relayUrl, draft.relayToken);
 
   return (
     <div class="grid gap-4">
@@ -174,6 +249,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
               value={draft.relayUrl}
               placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
               onInput={(relayUrl) => updateDraft({ relayUrl })}
+              trailing={<RelayStatus status={probeStatus} />}
             />
             <MobileInput
               type="password"

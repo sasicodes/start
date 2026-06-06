@@ -9,6 +9,10 @@ export interface MobileRelaySettings {
   relayToken: string;
 }
 
+export interface MobileRelayProbe {
+  ok: boolean;
+}
+
 export interface AppSettings {
   composerShortcut: string;
   solidWindowBackground: boolean;
@@ -218,6 +222,13 @@ export interface GitPatch {
   sections: GitPatchSection[];
 }
 
+export interface GitChangesPayload {
+  workspacePath: string;
+  patchUnavailable?: true;
+  patch?: GitPatch;
+  summary?: GitChangeSummary;
+}
+
 export type GitFileRef = 'head' | 'working';
 
 export interface GitFileBlob {
@@ -371,6 +382,8 @@ const api = {
     gitPatch: (path?: string): Promise<GitPatch | undefined> => ipcRenderer.invoke('app:git-patch', path),
     gitFileBlob: (workspacePath: string, filePath: string, ref: GitFileRef): Promise<GitFileBlob | undefined> =>
       ipcRenderer.invoke('app:git-file-blob', workspacePath, filePath, ref),
+    onGitChangesChanged: (listener: (payload: GitChangesPayload) => void): IpcDisposer =>
+      onIpc<[GitChangesPayload]>('app:git-changes-changed', listener),
     workspace: (path?: string): Promise<WorkspaceInfo> => ipcRenderer.invoke('app:workspace', path),
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
@@ -378,6 +391,8 @@ const api = {
     mobileRelayCode: (): Promise<string> => ipcRenderer.invoke('app:mobile-relay-code'),
     onMobileRelayCode: (listener: (code: string) => void): IpcDisposer =>
       onIpc<[string]>('app:mobile-relay-code', listener),
+    probeMobileRelay: (settings: Pick<MobileRelaySettings, 'relayToken' | 'relayUrl'>): Promise<MobileRelayProbe> =>
+      ipcRenderer.invoke('app:probe-mobile-relay', settings),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),

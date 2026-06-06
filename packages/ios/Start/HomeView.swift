@@ -67,12 +67,21 @@ struct HomeView: View {
         Group {
             if appState.connections.isEmpty {
                 ConnectionEmptyState(minHeight: minHeight)
-                .transition(.opacity)
+                    .transition(.opacity)
+            } else if appState.relay.status.isAttempting {
+                ConnectionProgressState(status: appState.relay.status, minHeight: minHeight)
+                    .transition(.opacity)
+            } else if appState.relay.status == .offline && appState.relay.canRetry {
+                ConnectionRetryState(minHeight: minHeight, onRetry: appState.retryConnection)
+                    .transition(.opacity)
             } else if appState.chatsLoaded {
                 let sections = workspaceChatSections(from: visibleChats, sort: sort)
 
                 if sections.isEmpty {
-                    ChatListEmptyState(searching: !appState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    ChatListEmptyState(
+                        searching: !appState.searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                        minHeight: minHeight
+                    )
                         .transition(.opacity)
                 } else {
                     WorkspaceChatList(
@@ -146,14 +155,16 @@ struct HomeView: View {
                     .foregroundStyle(StartTheme.Colors.ink)
 
                 if !appState.connections.isEmpty {
-                    Text(appState.connectionStatusLabel)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(StartTheme.Colors.softInk.opacity(0.48))
-                        .contentTransition(.opacity)
-                        .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
+                    ConnectionStatusLabel(status: appState.relay.status, label: appState.connectionStatusLabel)
                 }
             }
             .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if appState.relay.status == .offline && appState.relay.canRetry {
+                    appState.retryConnection()
+                }
+            }
 
             Spacer()
 
@@ -169,6 +180,29 @@ struct HomeView: View {
             )
         }
         .frame(height: StartTheme.Metrics.floatingButtonSize)
+    }
+}
+
+private struct ConnectionStatusLabel: View {
+    let status: RelayConnectionStatus
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if status.isAttempting {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(StartTheme.Colors.softInk.opacity(0.62))
+            }
+
+            Text(label)
+                .contentTransition(.opacity)
+        }
+        .font(.system(size: 11, weight: .regular))
+        .foregroundStyle(StartTheme.Colors.softInk.opacity(0.58))
+        .animation(.easeInOut(duration: 0.16), value: label)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
     }
 }
 
@@ -203,8 +237,47 @@ private struct ConnectionEmptyState: View {
     }
 }
 
+private struct ConnectionProgressState: View {
+    let status: RelayConnectionStatus
+    let minHeight: CGFloat
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+                .tint(StartTheme.Colors.softInk)
+
+            Text(status.rawValue)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: minHeight)
+    }
+}
+
+private struct ConnectionRetryState: View {
+    let minHeight: CGFloat
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack {
+            Button(action: onRetry) {
+                Label("Retry", systemImage: "arrow.clockwise")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(StartTheme.Colors.ink)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Retry connection")
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: minHeight)
+    }
+}
+
 private struct ChatListEmptyState: View {
     let searching: Bool
+    let minHeight: CGFloat
 
     private var message: String {
         searching ? "No chats match your search." : "No chats yet."
@@ -223,7 +296,7 @@ private struct ChatListEmptyState: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(minHeight: 320)
+        .frame(minHeight: minHeight)
     }
 }
 

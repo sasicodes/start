@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import { pairingRequestMessage, relayError } from '../messages';
 import type { HelloMobile } from '../protocol';
-import { sendJson } from '../socket';
+import { guardedHandler, sendJson } from '../socket';
 import type { RelayContext } from '../types';
 import { parseMobileMessage } from './parse';
 
@@ -13,49 +13,52 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
   });
   sendJson(socket, { type: 'relay.ready', role: 'mobile' });
 
-  socket.on('message', (data) => {
-    const message = parseMobileMessage(socket, data);
-    if (!message) return;
+  socket.on(
+    'message',
+    guardedHandler(socket, 'mobile', (data) => {
+      const message = parseMobileMessage(socket, data);
+      if (!message) return;
 
-    if (message.type === 'pairing.join') {
-      const pairing = context.state.peekPairing(message.code);
-      if (!pairing) {
-        sendJson(socket, relayError('Pairing code is invalid or expired.'));
+      if (message.type === 'pairing.join') {
+        const pairing = context.state.peekPairing(message.code);
+        if (!pairing) {
+          sendJson(socket, relayError('Pairing code is invalid or expired.'));
+          return;
+        }
+
+        const desktop = context.state.desktopSocket(pairing.desktopId);
+        if (!desktop) {
+          sendJson(socket, relayError('Desktop is offline.'));
+          return;
+        }
+
+        context.state.consumePairing(message.code);
+        sendJson(
+          desktop,
+          pairingRequestMessage({
+            code: pairing.code,
+            mobileId: hello.mobileId,
+            ...(message.name ? { name: message.name } : {}),
+            ...(message.publicKey ? { publicKey: message.publicKey } : {})
+          })
+        );
         return;
       }
 
-      const desktop = context.state.desktopSocket(pairing.desktopId);
+      if (!context.state.isRouteApproved(message.desktopId, hello.mobileId)) {
+        sendJson(socket, relayError('Mobile is not paired with this desktop.'));
+        return;
+      }
+
+      const desktop = context.state.desktopSocket(message.desktopId);
       if (!desktop) {
         sendJson(socket, relayError('Desktop is offline.'));
         return;
       }
 
-      context.state.consumePairing(message.code);
-      sendJson(
-        desktop,
-        pairingRequestMessage({
-          code: pairing.code,
-          mobileId: hello.mobileId,
-          ...(message.name ? { name: message.name } : {}),
-          ...(message.publicKey ? { publicKey: message.publicKey } : {})
-        })
-      );
-      return;
-    }
-
-    if (!context.state.isRouteApproved(message.desktopId, hello.mobileId)) {
-      sendJson(socket, relayError('Mobile is not paired with this desktop.'));
-      return;
-    }
-
-    const desktop = context.state.desktopSocket(message.desktopId);
-    if (!desktop) {
-      sendJson(socket, relayError('Desktop is offline.'));
-      return;
-    }
-
-    sendJson(desktop, { type: 'mobile.command', mobileId: hello.mobileId, payload: message.payload });
-  });
+      sendJson(desktop, { type: 'mobile.command', mobileId: hello.mobileId, payload: message.payload });
+    })
+  );
 
   socket.on('close', () => context.state.deleteMobile(hello.mobileId, socket));
 };

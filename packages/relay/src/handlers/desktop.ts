@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import { relayError } from '../messages';
 import type { DesktopMessage, HelloDesktop } from '../protocol';
-import { sendJson } from '../socket';
+import { guardedHandler, sendJson } from '../socket';
 import type { RelayContext } from '../types';
 import { parseDesktopMessage } from './parse';
 
@@ -35,27 +35,30 @@ export const handleDesktop = (context: RelayContext, socket: WebSocket, hello: H
   });
   sendJson(socket, { type: 'relay.ready', role: 'desktop' });
 
-  socket.on('message', (data) => {
-    const message = parseDesktopMessage(socket, data);
-    if (!message) return;
+  socket.on(
+    'message',
+    guardedHandler(socket, 'desktop', (data) => {
+      const message = parseDesktopMessage(socket, data);
+      if (!message) return;
 
-    if (message.type === 'pairing.create') {
-      sendJson(socket, {
-        type: 'pairing.created',
-        ...context.state.createPairing(hello.desktopId, context.config.pairingTtlMs)
-      });
-      return;
-    }
+      if (message.type === 'pairing.create') {
+        sendJson(socket, {
+          type: 'pairing.created',
+          ...context.state.createPairing(hello.desktopId, context.config.pairingTtlMs)
+        });
+        return;
+      }
 
-    if (message.type === 'pairing.approve') {
-      context.state.approveRoute(hello.desktopId, message.mobileId);
-      const mobile = context.state.mobileSocket(message.mobileId);
-      if (mobile) sendJson(mobile, { type: 'pairing.approved', desktopId: hello.desktopId });
-      return;
-    }
+      if (message.type === 'pairing.approve') {
+        context.state.approveRoute(hello.desktopId, message.mobileId);
+        const mobile = context.state.mobileSocket(message.mobileId);
+        if (mobile) sendJson(mobile, { type: 'pairing.approved', desktopId: hello.desktopId });
+        return;
+      }
 
-    handleDesktopEvent(context, socket, hello, message);
-  });
+      handleDesktopEvent(context, socket, hello, message);
+    })
+  );
 
   socket.on('close', () => context.state.deleteDesktop(hello.desktopId, socket));
 };

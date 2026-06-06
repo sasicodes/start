@@ -1,5 +1,6 @@
 import * as v from 'valibot';
 import type { RawData, WebSocket } from 'ws';
+import { logIncoming } from '../log';
 import { helloDesktopSchema, helloMobileSchema, parseJsonMessage } from '../protocol';
 import { closeWithError } from '../socket';
 import type { RelayConfig, RelayContext } from '../types';
@@ -15,6 +16,8 @@ export const handleHello = (context: RelayContext, socket: WebSocket, data: RawD
     closeWithError(socket, parsed.error);
     return;
   }
+
+  logIncoming(parsed.value);
 
   const desktop = v.safeParse(helloDesktopSchema, parsed.value);
   if (desktop.success) {

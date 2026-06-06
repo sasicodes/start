@@ -1,17 +1,22 @@
-import type { GitChangeSummary, GitPatch, GitPatchSection, GitPatchSectionKind } from '@preload/index';
+import type { GitChangeSummary, GitPatchSection, GitPatchSectionKind } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 import {
   type LoadedGitPatchState,
   type LoadedGitSummaryState,
+  patchStateAfterPayload,
+  patchStateAfterResult,
+  patchStateFromResult,
   resolvedGitPatchState,
-  resolvedGitSummaryState
+  resolvedGitSummaryState,
+  summaryStateAfterPayload,
+  summaryStateAfterResult,
+  summaryStateFromResult
 } from '@renderer/shared/workspace/changes/utils/resolve';
 import { useEffect, useState } from 'preact/hooks';
 
 export type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 
-const gitRefreshIntervalMs = 3500;
 const gitSectionOrder: GitPatchSectionKind[] = ['unstaged', 'untracked'];
 
 export const emptyGitSummary: GitChangeSummary = { deletions: 0, filesChanged: 0, insertions: 0 };
@@ -31,45 +36,6 @@ const gitSectionLabel = (kind: GitPatchSectionKind) => {
     case 'untracked':
       return 'untracked';
   }
-};
-
-const sameGitChangeSummary = (first: GitChangeSummary, second: GitChangeSummary) => {
-  return (
-    first.filesChanged === second.filesChanged &&
-    first.insertions === second.insertions &&
-    first.deletions === second.deletions
-  );
-};
-
-const sameGitSummaryState = (first: GitSummaryState, second: GitSummaryState) => {
-  if (first.kind !== second.kind) return false;
-  if (first.kind !== 'ready' || second.kind !== 'ready') return true;
-  return sameGitChangeSummary(first.summary, second.summary);
-};
-
-const sameGitPatchSection = (first: GitPatchSection, second: GitPatchSection) => {
-  return (
-    first.kind === second.kind &&
-    first.patch === second.patch &&
-    first.filesChanged === second.filesChanged &&
-    first.insertions === second.insertions &&
-    first.deletions === second.deletions &&
-    first.limited === second.limited
-  );
-};
-
-const sameGitPatch = (first: GitPatch, second: GitPatch) => {
-  if (first.sections.length !== second.sections.length) return false;
-  return first.sections.every((section, index) => {
-    const nextSection = second.sections[index];
-    return nextSection ? sameGitPatchSection(section, nextSection) : false;
-  });
-};
-
-const sameGitPatchState = (first: GitPatchState, second: GitPatchState) => {
-  if (first.kind !== second.kind) return false;
-  if (first.kind !== 'ready' || second.kind !== 'ready') return true;
-  return sameGitPatch(first.patch, second.patch);
 };
 
 const sectionByKind = (sections: GitPatchSection[], kind: GitPatchSectionKind) =>
@@ -123,34 +89,28 @@ export const useGitChanges = (workspacePath: string): GitSummaryState => {
     }
 
     const refreshGitChanges = () => {
-      void window.pi.app
+      window.pi.app
         .gitChanges(workspacePath)
         .then((summary) => {
-          const nextGit: GitSummaryState = summary ? { kind: 'ready', summary } : { kind: 'unavailable' };
+          const nextState = summaryStateFromResult(summary);
           if (active) {
-            setGit((current) =>
-              current.workspacePath === workspacePath && sameGitSummaryState(current.state, nextGit)
-                ? current
-                : { state: nextGit, workspacePath }
-            );
+            setGit((current) => summaryStateAfterResult(current, workspacePath, nextState));
           }
         })
         .catch(() => {
           if (active) {
-            setGit((current) =>
-              current.workspacePath === workspacePath && current.state.kind === 'unavailable'
-                ? current
-                : { state: { kind: 'unavailable' }, workspacePath }
-            );
+            setGit((current) => summaryStateAfterResult(current, workspacePath, { kind: 'unavailable' }));
           }
         });
     };
 
     refreshGitChanges();
-    const interval = window.setInterval(refreshGitChanges, gitRefreshIntervalMs);
+    const stopGitChanges = window.pi.app.onGitChangesChanged((payload) => {
+      setGit((current) => summaryStateAfterPayload(current, workspacePath, payload));
+    });
     return () => {
       active = false;
-      window.clearInterval(interval);
+      stopGitChanges();
     };
   }, [appFocused, workspacePath]);
 
@@ -177,38 +137,28 @@ export const useGitPatch = (workspacePath: string, enabled: boolean): GitPatchSt
     }
 
     const refreshGitPatch = () => {
-      void window.pi.app
+      window.pi.app
         .gitPatch(workspacePath)
         .then((nextPatch) => {
-          const nextState: GitPatchState = nextPatch ? { kind: 'ready', patch: nextPatch } : { kind: 'unavailable' };
+          const nextState = patchStateFromResult(nextPatch);
           if (active) {
-            setPatch((current) =>
-              current.enabled === enabled &&
-              current.workspacePath === workspacePath &&
-              sameGitPatchState(current.state, nextState)
-                ? current
-                : { enabled, state: nextState, workspacePath }
-            );
+            setPatch((current) => patchStateAfterResult(current, workspacePath, enabled, nextState));
           }
         })
         .catch(() => {
           if (active) {
-            setPatch((current) =>
-              current.enabled === enabled &&
-              current.workspacePath === workspacePath &&
-              current.state.kind === 'unavailable'
-                ? current
-                : { enabled, state: { kind: 'unavailable' }, workspacePath }
-            );
+            setPatch((current) => patchStateAfterResult(current, workspacePath, enabled, { kind: 'unavailable' }));
           }
         });
     };
 
     refreshGitPatch();
-    const interval = window.setInterval(refreshGitPatch, gitRefreshIntervalMs);
+    const stopGitChanges = window.pi.app.onGitChangesChanged((payload) => {
+      setPatch((current) => patchStateAfterPayload(current, workspacePath, enabled, payload));
+    });
     return () => {
       active = false;
-      window.clearInterval(interval);
+      stopGitChanges();
     };
   }, [appFocused, enabled, workspacePath]);
 

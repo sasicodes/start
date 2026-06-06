@@ -5,6 +5,8 @@ import { relayBanner } from './banner';
 import { loadConfig, tokenWarning } from './config';
 import { messageMaxBytes, relaySocketPath } from './constants';
 import { handleHello } from './handlers';
+import { logError } from './log';
+import { guardedHandler, guardSocket } from './socket';
 import { RelayState } from './state';
 
 const app = new Hono();
@@ -26,8 +28,17 @@ const sockets = new WebSocketServer({
 });
 
 sockets.on('connection', (socket) => {
-  socket.once('message', (data) => handleHello({ config, state }, socket, data));
+  guardSocket(socket, 'connection');
+  socket.once(
+    'message',
+    guardedHandler(socket, 'hello', (data) => handleHello({ config, state }, socket, data))
+  );
 });
+
+sockets.on('error', (error) => logError('socket-server', error));
+server.on('error', (error) => logError('http-server', error));
+process.on('uncaughtException', (error) => logError('uncaught', error));
+process.on('unhandledRejection', (error) => logError('unhandled', error));
 
 server.on('upgrade', (request, socket, head) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
