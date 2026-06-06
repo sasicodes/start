@@ -1,4 +1,4 @@
-import type { GitChangesPayload, GitPatch, GitPatchSection } from '@preload/index';
+import type { GitChangesPayload, GitChangeSummary, GitPatch, GitPatchSection } from '@preload/index';
 import type { GitPatchState, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 
 export interface LoadedGitSummaryState {
@@ -26,6 +26,20 @@ export const resolvedGitPatchState = (
   return patch.enabled === enabled && patch.workspacePath === workspacePath ? patch.state : { kind: 'loading' };
 };
 
+const sameGitChangeSummary = (first: GitChangeSummary, second: GitChangeSummary) => {
+  return (
+    first.filesChanged === second.filesChanged &&
+    first.insertions === second.insertions &&
+    first.deletions === second.deletions
+  );
+};
+
+export const sameGitSummaryState = (first: GitSummaryState, second: GitSummaryState) => {
+  if (first.kind !== second.kind) return false;
+  if (first.kind !== 'ready' || second.kind !== 'ready') return true;
+  return sameGitChangeSummary(first.summary, second.summary);
+};
+
 const sameGitPatchSection = (first: GitPatchSection, second: GitPatchSection) => {
   return (
     first.kind === second.kind &&
@@ -51,9 +65,41 @@ export const sameGitPatchState = (first: GitPatchState, second: GitPatchState) =
   return sameGitPatch(first.patch, second.patch);
 };
 
+export const summaryStateFromResult = (summary?: GitChangeSummary | null): GitSummaryState =>
+  summary ? { kind: 'ready', summary } : { kind: 'unavailable' };
+
+export const patchStateFromResult = (patch?: GitPatch | null): GitPatchState =>
+  patch ? { kind: 'ready', patch } : { kind: 'unavailable' };
+
 const patchStateFromPayload = (payload: GitChangesPayload): GitPatchState | null => {
   if (payload.patch) return { kind: 'ready', patch: payload.patch };
   return payload.patchUnavailable ? { kind: 'unavailable' } : null;
+};
+
+export const summaryStateFromPayload = (payload: GitChangesPayload): GitSummaryState =>
+  payload.summary ? { kind: 'ready', summary: payload.summary } : { kind: 'unavailable' };
+
+export const summaryStateAfterPayload = (
+  current: LoadedGitSummaryState,
+  workspacePath: string,
+  payload: GitChangesPayload
+): LoadedGitSummaryState => {
+  if (payload.workspacePath !== workspacePath) return current;
+
+  const nextState = summaryStateFromPayload(payload);
+  const sameWorkspace = current.workspacePath === workspacePath;
+  const sameState = sameGitSummaryState(current.state, nextState);
+  return sameWorkspace && sameState ? current : { state: nextState, workspacePath };
+};
+
+export const summaryStateAfterResult = (
+  current: LoadedGitSummaryState,
+  workspacePath: string,
+  nextState: GitSummaryState
+): LoadedGitSummaryState => {
+  const sameWorkspace = current.workspacePath === workspacePath;
+  const sameState = sameGitSummaryState(current.state, nextState);
+  return sameWorkspace && sameState ? current : { state: nextState, workspacePath };
 };
 
 export const patchStateAfterPayload = (
@@ -67,9 +113,20 @@ export const patchStateAfterPayload = (
   const nextState = patchStateFromPayload(payload);
   if (!nextState) return current;
 
-  return current.enabled === enabled &&
-    current.workspacePath === workspacePath &&
-    sameGitPatchState(current.state, nextState)
-    ? current
-    : { enabled, state: nextState, workspacePath };
+  const sameEnabled = current.enabled === enabled;
+  const sameWorkspace = current.workspacePath === workspacePath;
+  const sameState = sameGitPatchState(current.state, nextState);
+  return sameEnabled && sameWorkspace && sameState ? current : { enabled, state: nextState, workspacePath };
+};
+
+export const patchStateAfterResult = (
+  current: LoadedGitPatchState,
+  workspacePath: string,
+  enabled: boolean,
+  nextState: GitPatchState
+): LoadedGitPatchState => {
+  const sameEnabled = current.enabled === enabled;
+  const sameWorkspace = current.workspacePath === workspacePath;
+  const sameState = sameGitPatchState(current.state, nextState);
+  return sameEnabled && sameWorkspace && sameState ? current : { enabled, state: nextState, workspacePath };
 };

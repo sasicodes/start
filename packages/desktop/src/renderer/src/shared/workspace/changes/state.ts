@@ -1,13 +1,17 @@
-import type { GitChangesPayload, GitChangeSummary, GitPatchSection, GitPatchSectionKind } from '@preload/index';
+import type { GitChangeSummary, GitPatchSection, GitPatchSectionKind } from '@preload/index';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import type { GitPatchState, GitPatchViewMode, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 import {
   type LoadedGitPatchState,
   type LoadedGitSummaryState,
   patchStateAfterPayload,
+  patchStateAfterResult,
+  patchStateFromResult,
   resolvedGitPatchState,
   resolvedGitSummaryState,
-  sameGitPatchState
+  summaryStateAfterPayload,
+  summaryStateAfterResult,
+  summaryStateFromResult
 } from '@renderer/shared/workspace/changes/utils/resolve';
 import { useEffect, useState } from 'preact/hooks';
 
@@ -34,25 +38,8 @@ const gitSectionLabel = (kind: GitPatchSectionKind) => {
   }
 };
 
-const sameGitChangeSummary = (first: GitChangeSummary, second: GitChangeSummary) => {
-  return (
-    first.filesChanged === second.filesChanged &&
-    first.insertions === second.insertions &&
-    first.deletions === second.deletions
-  );
-};
-
-const sameGitSummaryState = (first: GitSummaryState, second: GitSummaryState) => {
-  if (first.kind !== second.kind) return false;
-  if (first.kind !== 'ready' || second.kind !== 'ready') return true;
-  return sameGitChangeSummary(first.summary, second.summary);
-};
-
 const sectionByKind = (sections: GitPatchSection[], kind: GitPatchSectionKind) =>
   sections.find((section) => section.kind === kind);
-
-const summaryStateFromPayload = (payload: GitChangesPayload): GitSummaryState =>
-  payload.summary ? { kind: 'ready', summary: payload.summary } : { kind: 'unavailable' };
 
 export const gitChangesLabel = (filesChanged: number) => `${gitFilesLabel(filesChanged)} changed`;
 
@@ -105,35 +92,21 @@ export const useGitChanges = (workspacePath: string): GitSummaryState => {
       window.pi.app
         .gitChanges(workspacePath)
         .then((summary) => {
-          const nextGit: GitSummaryState = summary ? { kind: 'ready', summary } : { kind: 'unavailable' };
+          const nextState = summaryStateFromResult(summary);
           if (active) {
-            setGit((current) =>
-              current.workspacePath === workspacePath && sameGitSummaryState(current.state, nextGit)
-                ? current
-                : { state: nextGit, workspacePath }
-            );
+            setGit((current) => summaryStateAfterResult(current, workspacePath, nextState));
           }
         })
         .catch(() => {
           if (active) {
-            setGit((current) =>
-              current.workspacePath === workspacePath && current.state.kind === 'unavailable'
-                ? current
-                : { state: { kind: 'unavailable' }, workspacePath }
-            );
+            setGit((current) => summaryStateAfterResult(current, workspacePath, { kind: 'unavailable' }));
           }
         });
     };
 
     refreshGitChanges();
     const stopGitChanges = window.pi.app.onGitChangesChanged((payload) => {
-      if (payload.workspacePath !== workspacePath) return;
-      const nextGit = summaryStateFromPayload(payload);
-      setGit((current) =>
-        current.workspacePath === workspacePath && sameGitSummaryState(current.state, nextGit)
-          ? current
-          : { state: nextGit, workspacePath }
-      );
+      setGit((current) => summaryStateAfterPayload(current, workspacePath, payload));
     });
     return () => {
       active = false;
@@ -167,26 +140,14 @@ export const useGitPatch = (workspacePath: string, enabled: boolean): GitPatchSt
       window.pi.app
         .gitPatch(workspacePath)
         .then((nextPatch) => {
-          const nextState: GitPatchState = nextPatch ? { kind: 'ready', patch: nextPatch } : { kind: 'unavailable' };
+          const nextState = patchStateFromResult(nextPatch);
           if (active) {
-            setPatch((current) =>
-              current.enabled === enabled &&
-              current.workspacePath === workspacePath &&
-              sameGitPatchState(current.state, nextState)
-                ? current
-                : { enabled, state: nextState, workspacePath }
-            );
+            setPatch((current) => patchStateAfterResult(current, workspacePath, enabled, nextState));
           }
         })
         .catch(() => {
           if (active) {
-            setPatch((current) =>
-              current.enabled === enabled &&
-              current.workspacePath === workspacePath &&
-              current.state.kind === 'unavailable'
-                ? current
-                : { enabled, state: { kind: 'unavailable' }, workspacePath }
-            );
+            setPatch((current) => patchStateAfterResult(current, workspacePath, enabled, { kind: 'unavailable' }));
           }
         });
     };

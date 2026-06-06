@@ -108,12 +108,7 @@ export class GitChangesService {
     let request: Promise<MaybeGitChangeSummary>;
     request = getGitChangeSummary(entry.workspacePath)
       .then((summary) => {
-        entry.summaryLoaded = true;
-        if (summary) {
-          entry.summary = summary;
-        } else {
-          delete entry.summary;
-        }
+        this.storeSummary(entry, summary);
         return summary;
       })
       .finally(() => {
@@ -130,12 +125,7 @@ export class GitChangesService {
     let request: Promise<MaybeGitPatch>;
     request = getGitPatch(entry.workspacePath)
       .then((patch) => {
-        entry.patchLoaded = true;
-        if (patch) {
-          entry.patch = patch;
-        } else {
-          delete entry.patch;
-        }
+        this.storePatch(entry, patch);
         return patch;
       })
       .finally(() => {
@@ -155,35 +145,22 @@ export class GitChangesService {
 
   private async refresh(entry: GitChangesEntry): Promise<void> {
     const refreshPatch = entry.patchLoaded;
-    const [summary, patch] = await Promise.all([
-      getGitChangeSummary(entry.workspacePath),
-      refreshPatch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch)
-    ]);
+    const patchRequest = refreshPatch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch);
+    const [summary, patch] = await Promise.all([getGitChangeSummary(entry.workspacePath), patchRequest]);
     const previousSummary = entry.summary ?? null;
     const previousPatch = entry.patch ?? null;
     const nextSummary = summary ?? null;
     const nextPatch = patch ?? null;
 
-    entry.summaryLoaded = true;
-    if (summary) {
-      entry.summary = summary;
-    } else {
-      delete entry.summary;
-    }
-    if (refreshPatch) {
-      entry.patchLoaded = true;
-      if (patch) {
-        entry.patch = patch;
-      } else {
-        delete entry.patch;
-      }
-    }
+    this.storeSummary(entry, summary);
+    if (refreshPatch) this.storePatch(entry, patch);
 
     if (sameSummary(previousSummary, nextSummary) && samePatch(previousPatch, nextPatch)) return;
 
+    const patchUnavailable = entry.patchLoaded && !entry.patch;
     this.notify({
       workspacePath: entry.workspacePath,
-      ...(entry.patchLoaded && !entry.patch ? { patchUnavailable: true } : {}),
+      ...(patchUnavailable ? { patchUnavailable: true } : {}),
       ...(entry.patch ? { patch: entry.patch } : {}),
       ...(entry.summary ? { summary: entry.summary } : {})
     });
@@ -212,5 +189,25 @@ export class GitChangesService {
   private closeWatchers(entry: GitChangesEntry): void {
     for (const watcher of entry.watchers) watcher.close();
     entry.watchers = [];
+  }
+
+  private storePatch(entry: GitChangesEntry, patch: MaybeGitPatch): void {
+    entry.patchLoaded = true;
+    if (patch) {
+      entry.patch = patch;
+      return;
+    }
+
+    delete entry.patch;
+  }
+
+  private storeSummary(entry: GitChangesEntry, summary: MaybeGitChangeSummary): void {
+    entry.summaryLoaded = true;
+    if (summary) {
+      entry.summary = summary;
+      return;
+    }
+
+    delete entry.summary;
   }
 }
