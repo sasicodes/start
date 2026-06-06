@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { WebSocketServer } from 'ws';
+import { relayBanner } from './banner';
 import { loadConfig } from './config';
 import { messageMaxBytes, relaySocketPath } from './constants';
 import { handleHello } from './handlers';
@@ -13,9 +14,8 @@ const state = new RelayState();
 app.get('/health', (context) => context.json({ ok: true }));
 app.get('/ready', (context) => context.json({ ok: true, ...state.snapshot() }));
 
-const server = serve({
-  fetch: app.fetch,
-  port: config.port
+const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
+  process.stdout.write(`${relayBanner(`ws://localhost:${info.port}${relaySocketPath}`, config.token)}\n`);
 });
 
 const sockets = new WebSocketServer({
