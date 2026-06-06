@@ -59,11 +59,6 @@ export const ProviderIconTicker = () => {
   );
 };
 
-const ModelCheck = ({ selected }: { selected: boolean }) => {
-  if (!selected) return <span class="size-2.5" />;
-  return <CheckIcon class="size-2.5 text-hover" />;
-};
-
 const ModelOptionItem = ({
   model,
   selected,
@@ -86,7 +81,7 @@ const ModelOptionItem = ({
     >
       <span class="block truncate">{model.name}</span>
       <span class="grid size-2.5 place-items-center text-ink">
-        <ModelCheck selected={selected} />
+        {selected && <CheckIcon class="size-2.5 text-hover" />}
       </span>
     </AppMenu.Item>
   );

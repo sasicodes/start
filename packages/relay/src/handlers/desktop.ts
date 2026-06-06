@@ -5,26 +5,24 @@ import { guardedHandler, sendJson } from '../socket';
 import type { RelayContext } from '../types';
 import { parseDesktopMessage } from './parse';
 
-const handleDesktopEvent = (context: RelayContext, socket: WebSocket, hello: HelloDesktop, message: DesktopMessage) => {
-  if (message.type !== 'desktop.event') return false;
+type DesktopEvent = Extract<DesktopMessage, { type: 'desktop.event' }>;
 
+const handleDesktopEvent = (context: RelayContext, socket: WebSocket, hello: HelloDesktop, message: DesktopEvent) => {
   if (message.mobileId) {
     if (!context.state.isRouteApproved(hello.desktopId, message.mobileId)) {
       sendJson(socket, relayError('Mobile is not paired with this desktop.'));
-      return true;
+      return;
     }
 
     const mobile = context.state.mobileSocket(message.mobileId);
     if (mobile) sendJson(mobile, { type: 'desktop.event', desktopId: hello.desktopId, payload: message.payload });
-    return true;
+    return;
   }
 
   for (const mobileId of context.state.mobileIds(hello.desktopId)) {
     const mobile = context.state.mobileSocket(mobileId);
     if (mobile) sendJson(mobile, { type: 'desktop.event', desktopId: hello.desktopId, payload: message.payload });
   }
-
-  return true;
 };
 
 export const handleDesktop = (context: RelayContext, socket: WebSocket, hello: HelloDesktop) => {

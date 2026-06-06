@@ -3,7 +3,7 @@ import { appIconPath, appName, isDev, isMac } from '@main/application';
 import { confirmClose } from '@main/confirm';
 import { environment } from '@main/environment';
 import { isCloseWindowInput } from '@main/utils/keyboard';
-import type { BrowserWindowConstructorOptions, BrowserWindow as ElectronBrowserWindow } from 'electron';
+import type { BrowserWindowConstructorOptions, BrowserWindow as ElectronBrowserWindow, WebContents } from 'electron';
 import electron from 'electron';
 
 const { app, BrowserWindow, screen, shell } = electron;
@@ -233,29 +233,26 @@ export const showMainWindow = () => {
   window.focus();
 };
 
-export const sendToMainWindow = (channel: string, ...args: unknown[]) => {
-  const window = createMainWindow();
-  const send = () => window.webContents.send(channel, ...args);
-
-  showMainWindow();
-  if (window.webContents.isLoading()) {
-    window.webContents.once('did-finish-load', send);
+const runWhenReady = (webContents: WebContents, run: () => void) => {
+  if (webContents.isLoading()) {
+    webContents.once('did-finish-load', run);
     return;
   }
 
-  send();
+  run();
+};
+
+export const sendToMainWindow = (channel: string, ...args: unknown[]) => {
+  const window = createMainWindow();
+  showMainWindow();
+  runWhenReady(window.webContents, () => window.webContents.send(channel, ...args));
 };
 
 export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
   for (const window of [mainWindow, composerWindow]) {
     if (!window || window.isDestroyed()) continue;
 
-    const send = () => window.webContents.send(channel, ...args);
-    if (window.webContents.isLoading()) {
-      window.webContents.once('did-finish-load', send);
-    } else {
-      send();
-    }
+    runWhenReady(window.webContents, () => window.webContents.send(channel, ...args));
   }
 };
 
@@ -311,12 +308,7 @@ export const showComposerWindow = () => {
   window.focus();
   window.webContents.focus();
   window.setOpacity(1);
-  if (window.webContents.isLoading()) {
-    window.webContents.once('did-finish-load', sendShowComposer);
-    return;
-  }
-
-  sendShowComposer();
+  runWhenReady(window.webContents, sendShowComposer);
 };
 
 export const toggleComposerWindow = () => {

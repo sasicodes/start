@@ -13,7 +13,7 @@ import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
-import { useCallback, useRef, useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 
 export const Workspace = memo(
   ({
@@ -38,10 +38,6 @@ export const Workspace = memo(
     const visibleAttentionCount = attentionStatusCount(attentionStatuses);
     const visibleAttentionCountLabel = attentionCountLabel(visibleAttentionCount);
 
-    const updateOpen = useCallback((nextOpen: boolean) => {
-      setOpen(nextOpen);
-    }, []);
-
     if (!workspace) return null;
 
     const tooltipLabel = workspace.branchName
@@ -56,7 +52,7 @@ export const Workspace = memo(
           collapsed ? 'w-11.5' : 'w-64 max-w-[calc(100vw-2.25rem)] @max-workspace-dock/chat:size-11.5'
         )}
       >
-        <AppMenu.Root open={open} onOpenChange={updateOpen}>
+        <AppMenu.Root open={open} onOpenChange={setOpen}>
           <Tooltip label={tooltipLabel} disabled={open}>
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger

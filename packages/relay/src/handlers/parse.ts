@@ -17,7 +17,12 @@ export const sourceFromRawData = (data: RawData) => {
   return Buffer.from(data).toString('utf8');
 };
 
-export const parseDesktopMessage = (socket: WebSocket, data: RawData): DesktopMessage | null => {
+const parseMessage = <S extends v.GenericSchema>(
+  socket: WebSocket,
+  data: RawData,
+  schema: S,
+  label: string
+): v.InferOutput<S> | null => {
   const parsed = parseJsonMessage(sourceFromRawData(data));
   if (!parsed.ok) {
     sendJson(socket, relayError(parsed.error));
@@ -26,29 +31,17 @@ export const parseDesktopMessage = (socket: WebSocket, data: RawData): DesktopMe
 
   logIncoming(parsed.value);
 
-  const result = v.safeParse(desktopMessageSchema, parsed.value);
+  const result = v.safeParse(schema, parsed.value);
   if (!result.success) {
-    sendJson(socket, relayError('Desktop message shape is invalid.'));
+    sendJson(socket, relayError(`${label} message shape is invalid.`));
     return null;
   }
 
   return result.output;
 };
 
-export const parseMobileMessage = (socket: WebSocket, data: RawData): MobileMessage | null => {
-  const parsed = parseJsonMessage(sourceFromRawData(data));
-  if (!parsed.ok) {
-    sendJson(socket, relayError(parsed.error));
-    return null;
-  }
+export const parseDesktopMessage = (socket: WebSocket, data: RawData): DesktopMessage | null =>
+  parseMessage(socket, data, desktopMessageSchema, 'Desktop');
 
-  logIncoming(parsed.value);
-
-  const result = v.safeParse(mobileMessageSchema, parsed.value);
-  if (!result.success) {
-    sendJson(socket, relayError('Mobile message shape is invalid.'));
-    return null;
-  }
-
-  return result.output;
-};
+export const parseMobileMessage = (socket: WebSocket, data: RawData): MobileMessage | null =>
+  parseMessage(socket, data, mobileMessageSchema, 'Mobile');

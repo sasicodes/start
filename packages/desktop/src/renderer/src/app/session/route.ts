@@ -47,19 +47,17 @@ export const useSessionRoute = ({
     openingRouteSessionRef.current = sessionId;
     closeSidePanel();
 
-    void openSessionId(sessionId)
-      .then((opened) => {
-        if (!active) return;
-
-        openingRouteSessionRef.current = '';
-        if (opened) return;
-        if (sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
-      })
-      .catch(() => {
-        if (!active) return;
-        openingRouteSessionRef.current = '';
-        if (sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
-      });
+    const open = async () => {
+      try {
+        const opened = await openSessionId(sessionId);
+        if (active && !opened && sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
+      } catch {
+        if (active && sameRoute(currentRoute(), route)) navigate({ name: 'chat' }, true);
+      } finally {
+        if (active) openingRouteSessionRef.current = '';
+      }
+    };
+    open().catch(() => {});
 
     return () => {
       active = false;

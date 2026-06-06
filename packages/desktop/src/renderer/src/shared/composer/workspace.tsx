@@ -5,7 +5,7 @@ import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { useCallback, useState } from 'preact/hooks';
+import { useState } from 'preact/hooks';
 
 interface WorkspaceProps {
   workspacePath: string;
@@ -23,15 +23,11 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
       .map((folder) => attentionStatus(folder.status, folder.noticeKind))
   );
 
-  const updateOpen = useCallback((nextOpen: boolean) => {
-    setOpen(nextOpen);
-  }, []);
-
   if (!workspace) return null;
 
   return (
     <div class="absolute bottom-0 left-5 z-40 h-11.5 -translate-x-[calc(100%+0.5rem)] [-webkit-app-region:no-drag]">
-      <AppMenu.Root modal={false} open={open} onOpenChange={updateOpen}>
+      <AppMenu.Root modal={false} open={open} onOpenChange={setOpen}>
         <Tooltip label={workspace.folderName}>
           <AppMenu.Trigger
             aria-label="Workspace folders"

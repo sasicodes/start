@@ -37,24 +37,15 @@ const startsWithAscii = (buffer: Buffer, offset: number, text: string) => {
   return true;
 };
 
-const readUint32BE = (buffer: Buffer, offset: number) => {
-  return (
-    (buffer[offset] ?? 0) * 0x1000000 +
-    ((buffer[offset + 1] ?? 0) << 16) +
-    ((buffer[offset + 2] ?? 0) << 8) +
-    (buffer[offset + 3] ?? 0)
-  );
-};
-
 const isPng = (buffer: Buffer) => {
-  return buffer.length >= 16 && readUint32BE(buffer, pngSignature.length) === 13 && startsWithAscii(buffer, 12, 'IHDR');
+  return buffer.length >= 16 && buffer.readUInt32BE(pngSignature.length) === 13 && startsWithAscii(buffer, 12, 'IHDR');
 };
 
 const isAnimatedPng = (buffer: Buffer) => {
   let offset = pngSignature.length;
 
   while (offset + 8 <= buffer.length) {
-    const chunkLength = readUint32BE(buffer, offset);
+    const chunkLength = buffer.readUInt32BE(offset);
     const chunkTypeOffset = offset + 4;
     if (startsWithAscii(buffer, chunkTypeOffset, 'acTL')) return true;
     if (startsWithAscii(buffer, chunkTypeOffset, 'IDAT')) return false;
@@ -171,8 +162,7 @@ const prepareImageBuffer = async (filePath: string, buffer: Buffer, mimeType: st
     path: filePath,
     type: 'image' as const,
     name: path.basename(filePath),
-    previewUrl: previewUrl(buffer, image),
-    mimeType: image.mimeType
+    previewUrl: previewUrl(buffer, image)
   };
 };
 

@@ -51,6 +51,7 @@ import {
   writeAppSettings
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
+import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
   createMainWindow,
@@ -328,9 +329,8 @@ if (!singleInstanceLock) {
     });
     ipcMain.handle('app:open-path', (_event, path: string) => shell.openPath(path));
     ipcMain.handle('app:reveal-path', (_event, workspacePath: string, filePath: string) => {
-      const cwdResolved = nodePath.resolve(workspacePath);
-      const absolutePath = nodePath.resolve(cwdResolved, filePath);
-      if (!absolutePath.startsWith(cwdResolved + nodePath.sep) && absolutePath !== cwdResolved) return;
+      const absolutePath = resolveInside(workspacePath, filePath);
+      if (!absolutePath) return;
       shell.showItemInFolder(absolutePath);
     });
     ipcMain.handle('app:submit-composer', (_event, prompt: string, attachments = []) => {
