@@ -34,6 +34,7 @@ import {
   upsertSessionOnStart
 } from '@main/sessions';
 import { contextPercent } from '@main/chat/context';
+import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
 import { recentSessionsPage } from '@main/chat/recents';
 import { sessionSlashCommandItems, type SlashCommandItem } from '@main/chat/commands';
@@ -891,6 +892,18 @@ export class ChatService {
       }
 
       if (endError) {
+        if (shouldCompleteAfterStreamError(state.liveAssistantTurn ?? null, endError)) {
+          delete state.liveAssistantTurn;
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            this.setActiveSession(session.sessionManager);
+            this.emit(webContents, 'done', '');
+          } else {
+            this.setNotice(sessionId, workspacePath, 'completed', webContents);
+          }
+          this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+          return { ok: true, sessionId };
+        }
+
         delete state.liveAssistantTurn;
         if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {

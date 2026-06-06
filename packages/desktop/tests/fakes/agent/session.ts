@@ -4,6 +4,10 @@ import type { FakeSessionManager } from './session-manager.js';
 import { sessionRegistry } from './state.js';
 import type { FakeModel } from './state.js';
 
+interface FakeTool {
+  name: string;
+}
+
 export type FakeAgentSessionEvent =
   | { type: 'message_start'; message: { role: 'user' | 'assistant'; content: unknown } }
   | { type: 'queue_update'; steering: readonly string[]; followUp: readonly string[] }
@@ -23,6 +27,7 @@ export interface CreateAgentSessionOptions {
   model: FakeModel;
   thinkingLevel: string;
   authStorage: FakeAuthStorage;
+  customTools?: FakeTool[];
   modelRegistry: FakeModelRegistry;
   sessionManager: FakeSessionManager;
 }
@@ -47,7 +52,7 @@ export class FakeAgentSession {
   steerQueue: string[] = [];
 
   private readonly listeners = new Set<Listener>();
-  private readonly tools = [{ name: 'fake-tool' }];
+  private readonly tools: FakeTool[];
   private activeToolNames: string[] = [];
 
   private promptResolve: (() => void) | null = null;
@@ -58,6 +63,7 @@ export class FakeAgentSession {
   constructor(options: CreateAgentSessionOptions) {
     this.sessionManager = options.sessionManager;
     this.thinkingLevel = options.thinkingLevel;
+    this.tools = [{ name: 'fake-tool' }, ...(options.customTools ?? [])];
     sessionRegistry.set(options.sessionManager.getSessionId(), this);
   }
 
