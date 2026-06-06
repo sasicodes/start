@@ -14,14 +14,14 @@ describe('resolveInside', () => {
   });
 
   it('rejects a path that escapes the workspace via ..', () => {
-    expect(resolveInside('/workspace/project', '../secret.txt')).toBeUndefined();
+    expect(resolveInside('/workspace/project', '../secret.txt')).toBe('');
   });
 
   it('rejects an absolute path outside the workspace', () => {
-    expect(resolveInside('/workspace/project', '/etc/passwd')).toBeUndefined();
+    expect(resolveInside('/workspace/project', '/etc/passwd')).toBe('');
   });
 
   it('rejects a sibling directory sharing the workspace name prefix', () => {
-    expect(resolveInside('/workspace/project', '../project-secrets/key')).toBeUndefined();
+    expect(resolveInside('/workspace/project', '../project-secrets/key')).toBe('');
   });
 });
