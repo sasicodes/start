@@ -12,4 +12,4 @@ export const mobilePairingPayload = (settings: MobileRelaySettings, code = '') =
   });
 
 export const mobilePairingQrSvg = (settings: MobileRelaySettings, code = '') =>
-  qrSvg(mobilePairingPayload(settings, code), { ecc: 'high', margin: 3 });
+  qrSvg(mobilePairingPayload(settings, code), { ecc: 'quartile', margin: 3 });

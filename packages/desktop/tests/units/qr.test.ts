@@ -90,7 +90,8 @@ describe('qr generator', () => {
     const svg = qrSvg(payload, { ecc: 'medium', margin: 4 });
     expect(svg).toContain('viewBox="0 0 53 53"');
     expect(svg).toContain('<rect');
-    expect(svg).toContain('rx="0.4"');
-    expect(svg).toContain('rx="0.28"');
+    expect(svg).toContain('width="7" height="7" rx="1.2"');
+    expect(svg).toContain('width="0.82" height="0.82" rx="0.3"');
+    expect(svg).toContain('width="3" height="3" rx="0.72"');
   });
 });

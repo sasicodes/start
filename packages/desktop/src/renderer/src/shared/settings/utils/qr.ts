@@ -447,6 +447,25 @@ const inFinder = (size: number, x: number, y: number) => {
   return within(0, 0) || within(size - 7, 0) || within(0, size - 7);
 };
 
+type FinderOrigin = [number, number];
+
+const finderSvgs = (size: number, margin: number) => {
+  const origins: FinderOrigin[] = [
+    [margin, margin],
+    [size - 7 + margin, margin],
+    [margin, size - 7 + margin]
+  ];
+  return origins
+    .map(([x, y]) =>
+      [
+        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.2" />`,
+        `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="0.9" fill="white" />`,
+        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.72" />`
+      ].join('')
+    )
+    .join('');
+};
+
 export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
   const modules = qrMatrix(text, ecc);
   const size = modules.length;
@@ -457,9 +476,9 @@ export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
     if (!row) continue;
     for (let x = 0; x < size; x += 1) {
       if (!row[x]) continue;
-      const radius = inFinder(size, x, y) ? 0.28 : 0.4;
-      cells += `<rect x="${x + margin}" y="${y + margin}" width="1" height="1" rx="${radius}" />`;
+      if (inFinder(size, x, y)) continue;
+      cells += `<rect x="${x + margin + 0.09}" y="${y + margin + 0.09}" width="0.82" height="0.82" rx="0.3" />`;
     }
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" fill="currentColor">${cells}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" fill="currentColor">${finderSvgs(size, margin)}${cells}</svg>`;
 };
