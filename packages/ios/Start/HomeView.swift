@@ -329,16 +329,16 @@ private struct HomeSearchBar: View {
                         .foregroundStyle(StartTheme.Colors.ink.opacity(0.62))
                 )
                 .focused($focused)
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.ink)
-                    .tint(StartTheme.Colors.ink)
-                    .submitLabel(.search)
-                    .textInputAutocapitalization(.never)
-                    .disableAutocorrection(true)
-                    .accessibilityLabel("Search chats")
-                    .onSubmit {
-                        focused = false
-                    }
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .tint(StartTheme.Colors.ink)
+                .submitLabel(.search)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .accessibilityLabel("Search chats")
+                .onSubmit {
+                    focused = false
+                }
             }
             .frame(maxWidth: .infinity, minHeight: StartTheme.Metrics.floatingButtonHitSize)
             .padding(.leading, 16)
@@ -437,8 +437,8 @@ private struct ScannerReticle: View {
             .stroke(.white.opacity(0.82), lineWidth: 2)
             .frame(width: 220, height: 220)
             .shadow(color: .black.opacity(0.24), radius: 18)
-        .padding(18)
-        .allowsHitTesting(false)
+            .padding(18)
+            .allowsHitTesting(false)
     }
 }
 

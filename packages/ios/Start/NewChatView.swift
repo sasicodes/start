@@ -106,7 +106,6 @@ struct NewChatView: View {
     }
 }
 
-
 #Preview {
     NewChatView()
         .environment(AppState())

@@ -147,8 +147,8 @@ private struct SessionStatusIndicator: View {
         Circle()
             .fill(status.indicatorColor)
             .frame(width: 7, height: 7)
-        .frame(width: 14, height: 14)
-        .accessibilityHidden(true)
+            .frame(width: 14, height: 14)
+            .accessibilityHidden(true)
     }
 }
 
