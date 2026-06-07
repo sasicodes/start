@@ -16,15 +16,9 @@ export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
 
     setError('');
     setSaving(true);
-
-    try {
-      const result = await onChange(next);
-      setError(result.error ?? '');
-    } catch {
-      setError('Translucent background could not be saved.');
-    } finally {
-      setSaving(false);
-    }
+    const result = await onChange(next);
+    setError(result.error ?? '');
+    setSaving(false);
   };
 
   return (
@@ -34,14 +28,7 @@ export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Translucent background</h2>
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Let the desktop show through the app window.</p>
         </div>
-        <Toggle
-          checked={enabled}
-          disabled={saving}
-          label="Translucent background"
-          onChange={(next) => {
-            save(next).catch(() => {});
-          }}
-        />
+        <Toggle onChange={save} checked={enabled} disabled={saving} label="Translucent background" />
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
     </div>

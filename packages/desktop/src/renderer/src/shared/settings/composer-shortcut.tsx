@@ -37,11 +37,7 @@ export const ComposerShortcut = () => {
     }
 
     const shortcut = [...modifiers, key].join('+');
-    const result = await updateComposerShortcut(shortcut).catch(() => ({
-      ok: false,
-      settings: null,
-      error: 'That shortcut could not be saved.'
-    }));
+    const result = await updateComposerShortcut(shortcut);
     setError(result.error ?? '');
     setRecording(false);
   };

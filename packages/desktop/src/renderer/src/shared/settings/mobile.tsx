@@ -77,19 +77,19 @@ const useRelayProbe = (relayUrl: string, relayToken: string): RelayProbeStatus =
 const RelayStatus = ({ status }: { status: RelayProbeStatus }) => {
   if (status === 'checking')
     return (
-      <span role="status" aria-label="Checking relay connection" class="text-soft">
+      <span role="status" class="text-soft" aria-label="Checking relay connection">
         <SpinnerIcon class="block size-4 animate-spin" />
       </span>
     );
   if (status === 'ok')
     return (
-      <span role="img" aria-label="Relay reachable" class="text-success">
+      <span role="img" class="text-success" aria-label="Relay reachable">
         <CheckIcon class="block size-4" />
       </span>
     );
   if (status === 'fail')
     return (
-      <span role="img" aria-label="Relay unreachable" class="text-danger">
+      <span role="img" class="text-danger" aria-label="Relay unreachable">
         <XIcon class="block size-4" />
       </span>
     );
@@ -210,7 +210,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
             <IconAction label="Show pairing QR" onClick={() => setQrOpen(true)}>
               <QrIcon />
             </IconAction>
-            <IconAction label="Delete mobile relay settings" danger onClick={() => remove().catch(() => {})}>
+            <IconAction danger onClick={remove} label="Delete mobile relay settings">
               <TrashIcon />
             </IconAction>
           </div>
@@ -223,9 +223,9 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
             <MobileInput
               type="text"
               value={draft.relayUrl}
-              placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
-              onInput={(relayUrl) => updateDraft({ relayUrl })}
               trailing={<RelayStatus status={probeStatus} />}
+              onInput={(relayUrl) => updateDraft({ relayUrl })}
+              placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
             />
             <MobileInput
               type="password"
@@ -238,8 +238,8 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           <div class="mt-1 flex justify-end">
             <button
               type="button"
+              onClick={save}
               disabled={!canSave}
-              onClick={() => save().catch(() => {})}
               class="h-8 rounded-full border-0 bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
             >
               Save
@@ -247,18 +247,12 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           </div>
         </>
       )}
-      <div class="flex items-center justify-between gap-4 border-line border-t pt-4">
+      <div class="flex items-center justify-between gap-4">
         <div class="grid gap-1">
-          <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this desktop awake</h3>
+          <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h3>
           <p class="m-0 text-xs leading-5 text-soft">Prevent sleep when plugged in and remote access is enabled.</p>
         </div>
-        <Toggle
-          checked={keepAwake.value}
-          label="Keep this desktop awake"
-          onChange={(next) => {
-            updateKeepAwake(next).catch(() => {});
-          }}
-        />
+        <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
       </div>
       {qrOpen && <PairingQrDialog code={relayCode} settings={settings} onClose={() => setQrOpen(false)} />}
     </div>

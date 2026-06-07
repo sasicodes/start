@@ -1,4 +1,4 @@
-import type { MobileRelaySettings } from '@preload/index';
+import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
 import { composerShortcut, keepAwake } from '@renderer/shared/settings/state';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
@@ -37,16 +37,24 @@ export const useRendererRuntime = () => {
     document.documentElement.dataset.solidWindowBackground = solidWindowBackground ? 'true' : 'false';
   }, [solidWindowBackground]);
 
-  const updateMobileRelay = useCallback(async (settings: MobileRelaySettings) => {
-    const result = await window.pi.app.setMobileRelaySettings(settings);
-    if (result.settings) setMobileRelay(result.settings.mobileRelay);
-    return result;
+  const updateMobileRelay = useCallback(async (settings: MobileRelaySettings): Promise<AppSettingsResult> => {
+    try {
+      const result = await window.pi.app.setMobileRelaySettings(settings);
+      if (result.settings) setMobileRelay(result.settings.mobileRelay);
+      return result;
+    } catch {
+      return { ok: false, settings: null, error: 'Mobile relay settings could not be saved.' };
+    }
   }, []);
 
-  const updateSolidWindowBackground = useCallback(async (enabled: boolean) => {
-    const result = await window.pi.app.setSolidWindowBackground(enabled);
-    if (result.settings) setSolidWindowBackground(result.settings.solidWindowBackground);
-    return result;
+  const updateSolidWindowBackground = useCallback(async (enabled: boolean): Promise<AppSettingsResult> => {
+    try {
+      const result = await window.pi.app.setSolidWindowBackground(enabled);
+      if (result.settings) setSolidWindowBackground(result.settings.solidWindowBackground);
+      return result;
+    } catch {
+      return { ok: false, settings: null, error: 'Translucent background could not be saved.' };
+    }
   }, []);
 
   return { mobileRelay, solidWindowBackground, updateMobileRelay, updateSolidWindowBackground };
