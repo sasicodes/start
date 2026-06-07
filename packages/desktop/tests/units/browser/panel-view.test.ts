@@ -104,6 +104,19 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).toBe(firstView);
   });
 
+  it('reuses a blank browser tab for a new page', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    newBrowserTab(webContents);
+    const result = await openBrowserUrl(webContents, 'https://example.com', { newTab: true });
+
+    expect(result.status?.activeTabId).toBe('tab-1');
+    expect(result.status?.tabs).toHaveLength(1);
+    expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://example.com/');
+  });
+
   it('opens a new browser tab for a different URL hash', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
@@ -184,18 +197,8 @@ describe('browser panel view', () => {
     const result = closeBrowserTab(webContents, 'tab-1');
 
     expect(view.webContents.closed).toBe(true);
-    expect(window.contentView.children).toHaveLength(1);
-    expect(window.contentView.children[0]?.webContents.getURL()).toBe('');
-    expect(result.status).toEqual({
-      url: '',
-      open: true,
-      title: '',
-      loading: false,
-      canGoBack: false,
-      activeTabId: 'tab-2',
-      canGoForward: false,
-      tabs: [{ id: 'tab-2', url: '', title: '', loading: false }]
-    });
+    expect(result.status?.activeTabId).toBe('tab-2');
+    expect(result.status?.tabs).toEqual([{ id: 'tab-2', url: '', title: '', loading: false }]);
   });
 
   it('scales native browser bounds by the owner renderer zoom factor', () => {

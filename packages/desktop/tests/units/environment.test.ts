@@ -31,6 +31,11 @@ describe('main environment', () => {
     );
   });
 
+  it('ignores shell output when the marker is missing', () => {
+    expect(shellEnvironmentPayload('PATH=/unexpected/bin\0')).toBe('');
+    expect(parseShellEnvironment('PATH=/unexpected/bin\0')).toEqual(new Map());
+  });
+
   it('keeps shell PATH entries before launchd fallbacks without duplicates', () => {
     expect(
       mergePathValues(['/opt/homebrew/bin', '/usr/bin'].join(delimiter), ['/usr/bin', '/bin'].join(delimiter))

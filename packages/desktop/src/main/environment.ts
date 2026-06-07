@@ -21,7 +21,7 @@ const readEnvironmentValue = (name: string) => {
 export const shellEnvironmentPayload = (value: string) => {
   const marker = `${shellEnvironmentMarker}\0`;
   const markerIndex = value.indexOf(marker);
-  if (markerIndex < 0) return value;
+  if (markerIndex < 0) return '';
   return value.slice(markerIndex + marker.length);
 };
 

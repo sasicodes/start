@@ -422,9 +422,9 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   closeBrowserTabById(tabId);
 
   const window = windowFromSender(sender);
-  if (!activeTabId && window && !window.isDestroyed()) createBrowserTab();
+  if (!activeTabId && window) createBrowserTab();
 
-  if (activeTabId && window && !window.isDestroyed() && (wasAttached || ownerWindow === window)) {
+  if (activeTabId && window && (wasAttached || ownerWindow === window)) {
     attachActiveBrowserView(window);
     activeTab()?.view.webContents.focus();
   }
