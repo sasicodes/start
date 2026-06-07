@@ -7,17 +7,20 @@ struct ConnectionFormSheet: View {
     let state: ConnectionState
     let onDelete: () -> Void
     let onRename: (String) -> Void
+    let onSetEnabled: (Bool) -> Void
 
     init(
         connection: Connection,
         state: ConnectionState,
         onDelete: @escaping () -> Void,
-        onRename: @escaping (String) -> Void
+        onRename: @escaping (String) -> Void,
+        onSetEnabled: @escaping (Bool) -> Void
     ) {
         self.connection = connection
         self.state = state
         self.onDelete = onDelete
         self.onRename = onRename
+        self.onSetEnabled = onSetEnabled
         _name = State(initialValue: connection.name)
     }
 
@@ -31,6 +34,20 @@ struct ConnectionFormSheet: View {
                         .multilineTextAlignment(.trailing)
                         .foregroundStyle(StartTheme.Colors.ink)
                         .submitLabel(.done)
+                }
+
+                Divider()
+
+                formRow(title: "Enabled") {
+                    Toggle("", isOn: Binding(
+                        get: { connection.enabled },
+                        set: { enabled in
+                            StartHaptics.selection()
+                            onSetEnabled(enabled)
+                        }
+                    ))
+                    .labelsHidden()
+                    .tint(StartTheme.Colors.ink)
                 }
 
                 Divider()
@@ -80,7 +97,7 @@ struct ConnectionFormSheet: View {
         .padding(.horizontal, 22)
         .padding(.top, 18)
         .padding(.bottom, 24)
-        .presentationDetents([.height(372), .medium])
+        .presentationDetents([.height(430), .medium])
         .connectionSheetChrome(cornerRadius: 42)
     }
 
@@ -181,6 +198,7 @@ struct ConnectionFormSheet: View {
         ),
         state: .online,
         onDelete: {},
-        onRename: { _ in }
+        onRename: { _ in },
+        onSetEnabled: { _ in }
     )
 }
