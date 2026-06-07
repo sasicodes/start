@@ -27,14 +27,7 @@ export const App = () => {
     textareaRef
   });
   const { attachments, setAttachments, removeAttachment, clearPendingAttachments } = usePendingAttachments();
-  const {
-    mobileRelay,
-    composerShortcut,
-    solidWindowBackground,
-    updateMobileRelay,
-    updateComposerShortcut,
-    updateSolidWindowBackground
-  } = useRendererRuntime();
+  const { mobileRelay, solidWindowBackground, updateMobileRelay, updateSolidWindowBackground } = useRendererRuntime();
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const {
     sidePanelMode,
@@ -274,7 +267,6 @@ export const App = () => {
       browserNavigation={browserPanel.navigation}
       workspacePath={workspacePath}
       onSaveApiKey={saveApiKey}
-      composerShortcut={composerShortcut}
       settingsTab={settingsTab}
       solidWindowBackground={solidWindowBackground}
       onSettingsTabChange={setSettingsTab}
@@ -284,7 +276,6 @@ export const App = () => {
       onLoginSubscription={loginSubscription}
       onDisconnectProvider={disconnectProvider}
       onMobileRelayChange={updateMobileRelay}
-      onComposerShortcutChange={updateComposerShortcut}
       onSolidWindowBackgroundChange={updateSolidWindowBackground}
     />
   );

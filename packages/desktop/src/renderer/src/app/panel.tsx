@@ -14,7 +14,6 @@ interface AppSidePanelProps {
   workspacePath: string;
   mobileRelay: MobileRelaySettings;
   providers: ProviderAuthStatus[];
-  composerShortcut: string;
   browserNavigation: BrowserNavigation;
   solidWindowBackground: boolean;
   onBrowserUrlOpened: () => void;
@@ -24,7 +23,6 @@ interface AppSidePanelProps {
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onMobileRelayChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
-  onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
@@ -38,7 +36,6 @@ export const AppSidePanel = memo(
     onSaveApiKey,
     workspacePath,
     browserNavigation,
-    composerShortcut,
     onBrowserUrlOpened,
     solidWindowBackground,
     onLoginSubscription,
@@ -46,7 +43,6 @@ export const AppSidePanel = memo(
     onMobileRelayChange,
     onSettingsTabChange,
     onDisconnectProvider,
-    onComposerShortcutChange,
     onSolidWindowBackgroundChange
   }: AppSidePanelProps) => {
     if (mode === 'git') return <GitChangesPanel path={workspacePath} onClose={onClose} />;
@@ -67,14 +63,12 @@ export const AppSidePanel = memo(
           onClose={onClose}
           providers={providers}
           mobileRelay={mobileRelay}
-          composerShortcut={composerShortcut}
           onSaveApiKey={onSaveApiKey}
           onTabChange={onSettingsTabChange}
           solidWindowBackground={solidWindowBackground}
           onLoginSubscription={onLoginSubscription}
           onMobileRelayChange={onMobileRelayChange}
           onDisconnectProvider={onDisconnectProvider}
-          onComposerShortcutChange={onComposerShortcutChange}
           onSolidWindowBackgroundChange={onSolidWindowBackgroundChange}
         />
       );

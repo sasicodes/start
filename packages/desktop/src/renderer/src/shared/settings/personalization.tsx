@@ -4,21 +4,14 @@ import { ComposerShortcut } from '@renderer/shared/settings/composer-shortcut';
 import { Translucency } from '@renderer/shared/settings/translucency';
 
 interface PersonalizationProps {
-  composerShortcut: string;
   translucentBackground: boolean;
-  onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
   onTranslucentBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
-export const Personalization = ({
-  composerShortcut,
-  translucentBackground,
-  onComposerShortcutChange,
-  onTranslucentBackgroundChange
-}: PersonalizationProps) => (
+export const Personalization = ({ translucentBackground, onTranslucentBackgroundChange }: PersonalizationProps) => (
   <>
-    <ComposerShortcut composerShortcut={composerShortcut} onChange={onComposerShortcutChange} />
-    <Translucency enabled={translucentBackground} onChange={onTranslucentBackgroundChange} />
     <CliInstall />
+    <Translucency enabled={translucentBackground} onChange={onTranslucentBackgroundChange} />
+    <ComposerShortcut />
   </>
 );

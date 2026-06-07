@@ -1,10 +1,5 @@
-import type { AppSettingsResult } from '@preload/index';
+import { composerShortcut, updateComposerShortcut } from '@renderer/shared/settings/state';
 import { useState } from 'preact/hooks';
-
-interface ComposerShortcutProps {
-  composerShortcut: string;
-  onChange: (shortcut: string) => Promise<AppSettingsResult>;
-}
 
 const modifierKeys = new Set(['Control', 'Meta', 'Alt', 'Shift']);
 
@@ -24,7 +19,7 @@ const keyLabel = (key: string) => {
   return key;
 };
 
-export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcutProps) => {
+export const ComposerShortcut = () => {
   const [error, setError] = useState('');
   const [recording, setRecording] = useState(false);
 
@@ -42,7 +37,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
     }
 
     const shortcut = [...modifiers, key].join('+');
-    const result = await onChange(shortcut).catch(() => ({
+    const result = await updateComposerShortcut(shortcut).catch(() => ({
       ok: false,
       settings: null,
       error: 'That shortcut could not be saved.'
@@ -52,7 +47,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
   };
 
   return (
-    <div>
+    <div class="mt-5">
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Composer shortcut</h2>
@@ -69,7 +64,7 @@ export const ComposerShortcut = ({ composerShortcut, onChange }: ComposerShortcu
           }}
           class="h-9 min-w-36 rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
         >
-          {recording ? 'Recording shortcut' : composerShortcut.replaceAll('+', ' + ')}
+          {recording ? 'Recording shortcut' : composerShortcut.value.replaceAll('+', ' + ')}
         </button>
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}

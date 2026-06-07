@@ -1,4 +1,5 @@
 import type { MobileRelaySettings } from '@preload/index';
+import { composerShortcut } from '@renderer/shared/settings/state';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 const emptyMobileRelaySettings = {
@@ -9,7 +10,6 @@ const emptyMobileRelaySettings = {
 } satisfies MobileRelaySettings;
 
 export const useRendererRuntime = () => {
-  const [composerShortcut, setComposerShortcut] = useState('Control+Space');
   const [mobileRelay, setMobileRelay] = useState<MobileRelaySettings>(emptyMobileRelaySettings);
   const [solidWindowBackground, setSolidWindowBackground] = useState(false);
 
@@ -20,8 +20,8 @@ export const useRendererRuntime = () => {
       .settings()
       .then((settings) => {
         if (active) {
+          composerShortcut.value = settings.composerShortcut;
           setMobileRelay(settings.mobileRelay);
-          setComposerShortcut(settings.composerShortcut);
           setSolidWindowBackground(settings.solidWindowBackground);
         }
       })
@@ -36,12 +36,6 @@ export const useRendererRuntime = () => {
     document.documentElement.dataset.solidWindowBackground = solidWindowBackground ? 'true' : 'false';
   }, [solidWindowBackground]);
 
-  const updateComposerShortcut = useCallback(async (shortcut: string) => {
-    const result = await window.pi.app.setComposerShortcut(shortcut);
-    if (result.settings) setComposerShortcut(result.settings.composerShortcut);
-    return result;
-  }, []);
-
   const updateMobileRelay = useCallback(async (settings: MobileRelaySettings) => {
     const result = await window.pi.app.setMobileRelaySettings(settings);
     if (result.settings) setMobileRelay(result.settings.mobileRelay);
@@ -54,12 +48,5 @@ export const useRendererRuntime = () => {
     return result;
   }, []);
 
-  return {
-    mobileRelay,
-    composerShortcut,
-    solidWindowBackground,
-    updateMobileRelay,
-    updateComposerShortcut,
-    updateSolidWindowBackground
-  };
+  return { mobileRelay, solidWindowBackground, updateMobileRelay, updateSolidWindowBackground };
 };

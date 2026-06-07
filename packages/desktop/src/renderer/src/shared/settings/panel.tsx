@@ -12,7 +12,6 @@ interface SettingsProps {
   tab: SettingsTab;
   onClose: () => void;
   mobileRelay: MobileRelaySettings;
-  composerShortcut: string;
   providers: ProviderAuthStatus[];
   solidWindowBackground: boolean;
   onTabChange: (tab: SettingsTab) => void;
@@ -20,7 +19,6 @@ interface SettingsProps {
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
   onMobileRelayChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
-  onComposerShortcutChange: (shortcut: string) => Promise<AppSettingsResult>;
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
@@ -32,12 +30,10 @@ export const Settings = memo(
     mobileRelay,
     onTabChange,
     onSaveApiKey,
-    composerShortcut,
     solidWindowBackground,
     onLoginSubscription,
     onMobileRelayChange,
     onDisconnectProvider,
-    onComposerShortcutChange,
     onSolidWindowBackgroundChange
   }: SettingsProps) => {
     const updateTranslucency = (enabled: boolean) => onSolidWindowBackgroundChange(!enabled);
@@ -51,9 +47,7 @@ export const Settings = memo(
         <div>
           {tab === 'personalization' ? (
             <Personalization
-              composerShortcut={composerShortcut}
               translucentBackground={!solidWindowBackground}
-              onComposerShortcutChange={onComposerShortcutChange}
               onTranslucentBackgroundChange={updateTranslucency}
             />
           ) : tab === 'providers' ? (
@@ -66,7 +60,7 @@ export const Settings = memo(
           ) : tab === 'mobile' ? (
             <Mobile settings={mobileRelay} onChange={onMobileRelayChange} />
           ) : (
-            <Shortcuts composerShortcut={composerShortcut} />
+            <Shortcuts />
           )}
         </div>
       </section>
