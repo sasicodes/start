@@ -10,11 +10,21 @@ struct HomeTopMenu: View {
     let onSelectConnection: (Connection) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        Menu {
             sortMenu
 
-            connectionMenu
+            connectionsMenu
+        } label: {
+            Label("More", systemImage: "ellipsis")
+                .labelStyle(.iconOnly)
+                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
+                .accessibilityHidden(true)
         }
+        .accessibilityLabel("More")
+        .buttonStyle(.plain)
+        .glassCircle()
     }
 
     private var sortMenu: some View {
@@ -29,27 +39,13 @@ struct HomeTopMenu: View {
             }
         } label: {
             Label("Sort", systemImage: sort.icon)
-                .labelStyle(.iconOnly)
-                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
-                .accessibilityHidden(true)
         }
-        .accessibilityLabel("Sort")
-        .buttonStyle(.plain)
-        .glassCircle()
     }
 
-    private var connectionMenu: some View {
+    private var connectionsMenu: some View {
         Menu {
-            if !connections.isEmpty {
-                Menu {
-                    ForEach(connections) { connection in
-                        connectionButton(connection)
-                    }
-                } label: {
-                    Label("Connections", systemImage: "laptopcomputer")
-                }
+            ForEach(connections) { connection in
+                connectionButton(connection)
             }
 
             Button {
@@ -60,22 +56,7 @@ struct HomeTopMenu: View {
             }
         } label: {
             Label("Connections", systemImage: "laptopcomputer")
-                .labelStyle(.iconOnly)
-                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
-                .foregroundStyle(activeConnectionColor)
-                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
-                .accessibilityHidden(true)
         }
-        .accessibilityLabel("Connections")
-        .buttonStyle(.plain)
-        .glassCircle()
-    }
-
-    private var activeConnectionColor: Color {
-        guard let connection = connections.first(where: { $0.id == activeConnectionID }) else {
-            return StartTheme.Colors.ink
-        }
-        return connectionState(connection).symbolColor
     }
 
     private func connectionButton(_ connection: Connection) -> some View {
