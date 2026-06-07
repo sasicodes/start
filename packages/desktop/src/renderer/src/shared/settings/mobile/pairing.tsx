@@ -12,26 +12,15 @@ interface PairingQrDialogProps {
 
 export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => {
   const frameRef = useRef(0);
-  const timerRef = useRef(0);
-  const [pulse, setPulse] = useState(false);
+  const [bursting, setBursting] = useState(true);
   const qrMarkup = useMemo(() => mobilePairingQrSvg(settings, code), [settings, code]);
 
-  useEffect(
-    () => () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    },
-    []
-  );
+  useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
 
-  const startPulse = () => {
-    if (frameRef.current) cancelAnimationFrame(frameRef.current);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPulse(false);
-    frameRef.current = requestAnimationFrame(() => {
-      setPulse(true);
-      timerRef.current = window.setTimeout(() => setPulse(false), 2200);
-    });
+  const replay = () => {
+    cancelAnimationFrame(frameRef.current);
+    setBursting(false);
+    frameRef.current = requestAnimationFrame(() => setBursting(true));
   };
 
   return (
@@ -45,16 +34,16 @@ export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProp
       <section role="dialog" aria-modal="true" aria-label="Pairing QR" class="relative grid justify-items-center gap-2">
         <div class="relative grid size-56 place-items-center overflow-hidden rounded-3xl border border-line bg-white p-2 text-zinc-950 shadow-shell [&_svg]:block [&_svg]:size-full">
           <span
-            class={tw('relative z-10 block size-full', pulse ? 'pairing-qr-pulse' : '')}
+            class={tw('relative z-10 block size-full', bursting && 'pairing-qr-burst')}
             dangerouslySetInnerHTML={{ __html: qrMarkup }}
           />
           <button
             type="button"
+            onClick={replay}
             aria-label="Pairing logo"
-            onClick={startPulse}
             class="absolute z-20 grid size-10 place-items-center overflow-hidden rounded-2xl border-0 bg-transparent p-0 outline-0 transition-transform duration-150 ease-out active:scale-95"
           >
-            <img src={appIconHref} alt="" class="block size-full rounded-2xl" />
+            <img alt="" src={appIconHref} draggable={false} class="block size-full rounded-2xl" />
           </button>
         </div>
         <p class="m-0 max-w-56 text-center text-xs leading-4 font-medium text-soft">Open Start mobile and scan</p>
