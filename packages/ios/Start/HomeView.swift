@@ -5,6 +5,7 @@ struct HomeView: View {
     @FocusState private var searchFocused: Bool
     @State private var scannerOpen = false
     @State private var expandedWorkspaces = Set<String>()
+    @State private var workspaceExpansionInitialized = false
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
 
@@ -43,8 +44,9 @@ struct HomeView: View {
             appState.requestHomeData()
         }
         .onChange(of: appState.chats.map(\.workspacePath)) { _, paths in
-            guard expandedWorkspaces.isEmpty else { return }
-            expandedWorkspaces = Set(paths)
+            guard !workspaceExpansionInitialized, let first = paths.first else { return }
+            workspaceExpansionInitialized = true
+            expandedWorkspaces = [first]
         }
     }
 
