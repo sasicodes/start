@@ -48,6 +48,7 @@ struct ConnectionFormSheet: View {
                         .foregroundStyle(StartTheme.Colors.softInk)
                     }
                 }
+                .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 .listRowBackground(Color.clear.background(.thinMaterial))
 
                 Section {
@@ -60,24 +61,22 @@ struct ConnectionFormSheet: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
+                .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 .listRowBackground(Color.clear.background(.thinMaterial))
             }
             .background(.clear)
+            .contentMargins(.top, 12, for: .scrollContent)
+            .contentMargins(.horizontal, 12, for: .scrollContent)
             .navigationTitle(connection.name)
             .scrollContentBackground(.hidden)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        StartHaptics.lightImpact()
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Save") {
                         save()
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
                     .disabled(!nameValid)
                 }
             }
@@ -85,7 +84,7 @@ struct ConnectionFormSheet: View {
         .presentationCornerRadius(42)
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
-        .presentationDetents([.height(430), .medium, .large])
+        .presentationDetents([.height(360)])
     }
 
     private var nameValid: Bool {

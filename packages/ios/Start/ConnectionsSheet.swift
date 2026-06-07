@@ -46,7 +46,7 @@ struct ConnectionsSheet: View {
             .listStyle(.plain)
             .navigationTitle("Connections")
             .scrollContentBackground(.hidden)
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
