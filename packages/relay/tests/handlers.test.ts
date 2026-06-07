@@ -199,6 +199,33 @@ describe('handleHello', () => {
         JSON.stringify({ type: 'mobile.command', desktopId: 'desktop-1', payload: { action: 'ping', value: '2' } })
       )
     );
+    expect(reconnectedMobile.sent).toContainEqual({
+      type: 'relay.error',
+      message: 'Mobile is not paired with this desktop.'
+    });
+    expect(mobileCommands()).toHaveLength(1);
+
+    reconnectedMobile.emit(
+      'message',
+      Buffer.from(
+        JSON.stringify({ type: 'pairing.resume', desktopId: 'desktop-1', nonce: 'nonce-1', proof: 'proof-1' })
+      )
+    );
+    expect(desktop.sent).toContainEqual({
+      type: 'pairing.resume',
+      proof: 'proof-1',
+      nonce: 'nonce-1',
+      mobileId: 'mobile-1'
+    });
+    desktop.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.approve', mobileId: 'mobile-1' })));
+    expect(reconnectedMobile.sent).toContainEqual({ type: 'pairing.approved', desktopId: 'desktop-1' });
+
+    reconnectedMobile.emit(
+      'message',
+      Buffer.from(
+        JSON.stringify({ type: 'mobile.command', desktopId: 'desktop-1', payload: { action: 'ping', value: '2' } })
+      )
+    );
 
     expect(mobileCommands()).toHaveLength(2);
   });

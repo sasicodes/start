@@ -69,7 +69,10 @@ export class RelayState {
 
     const desktopIds: string[] = [];
     for (const [desktopId, routes] of this.routes) {
-      if (routes.has(mobileId)) desktopIds.push(desktopId);
+      if (!routes.delete(mobileId)) continue;
+
+      desktopIds.push(desktopId);
+      if (routes.size === 0) this.routes.delete(desktopId);
     }
 
     this.mobiles.delete(mobileId);
