@@ -8,7 +8,6 @@ struct HomeView: View {
     @State private var connectionToDelete: Connection?
     @State private var connectionToRename: Connection?
     @State private var connectionRenameDraft = ""
-    @State private var deleteConfirmationOpen = false
     @State private var renameConnectionOpen = false
     @State private var workspaceExpansionInitialized = false
     @State private var sort = WorkspaceSort.recent
@@ -46,6 +45,13 @@ struct HomeView: View {
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
+        .sheet(item: $connectionToDelete) { connection in
+            ConnectionDeleteSheet(connection: connection) {
+                appState.deleteConnection(connection)
+                connectionToDelete = nil
+                StartHaptics.success()
+            }
+        }
         .alert("Rename connection", isPresented: $renameConnectionOpen) {
             TextField("Name", text: $connectionRenameDraft)
 
@@ -61,24 +67,6 @@ struct HomeView: View {
                 connectionRenameDraft = ""
                 StartHaptics.success()
             }
-        }
-        .confirmationDialog(
-            "Delete connection?",
-            isPresented: $deleteConfirmationOpen,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                guard let connection = connectionToDelete else { return }
-                appState.deleteConnection(connection)
-                connectionToDelete = nil
-                StartHaptics.success()
-            }
-
-            Button("Cancel", role: .cancel) {
-                connectionToDelete = nil
-            }
-        } message: {
-            Text("This removes it from this iPhone.")
         }
         .task {
             appState.connectActiveConnectionIfNeeded()
@@ -232,7 +220,6 @@ struct HomeView: View {
                 onSelectSort: { sort = $0 },
                 onDeleteConnection: { connection in
                     connectionToDelete = connection
-                    deleteConfirmationOpen = true
                 },
                 onRenameConnection: { connection in
                     connectionToRename = connection
