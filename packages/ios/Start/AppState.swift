@@ -446,7 +446,7 @@ final class AppState {
     }
 
     private func scheduleReconnect() {
-        guard connectionAttemptCount > 0,
+        guard activeConnection != nil,
               connectionAttemptCount < maxConnectionAttempts,
               reconnectTask == nil
         else { return }
