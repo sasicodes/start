@@ -237,7 +237,7 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
                       event.stopPropagation();
                       closeTab(tab.id);
                     }}
-                    class="absolute top-1/2 left-2.5 grid size-5 -translate-y-1/2 place-items-center rounded-full border-0 bg-control/70 p-0 text-soft opacity-0 outline-0 transition-[background-color,color,opacity] group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-control hover:text-ink focus-visible:bg-control focus-visible:text-ink [&_svg]:size-4"
+                    class="absolute top-1/2 left-3 grid size-4 -translate-y-1/2 place-items-center rounded-full border-0 bg-control/70 p-0 text-soft opacity-0 outline-0 transition-[background-color,color,opacity] group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-control hover:text-ink focus-visible:bg-control focus-visible:text-ink [&_svg]:size-3"
                   >
                     <XIcon strokeWidth={1.5} />
                   </button>
