@@ -22,6 +22,7 @@
   --color-success: oklch(52% 0.14 145);
   --color-progress: oklch(54% 0.19 255);
   --color-link: oklch(54% 0.16 255);
+  --color-pairing-accent: oklch(66% 0.17 39);
   --color-brand-ink: oklch(100% 0 0);
   --color-composer: oklch(98.8% 0.001 264);
   --color-control: oklch(94.8% 0.004 264);
@@ -42,6 +43,7 @@
   --animate-composer-overlay-shell-out: composer-floating-shell-out 120ms linear both;
   --animate-drop-overlay-corner-drift: drop-corner-drift 3.8s ease-in-out infinite;
   --animate-drop-overlay-edge-breathe: drop-edge-breathe 4.6s ease-in-out infinite;
+  --animate-pairing-qr-ripple: pairing-qr-ripple 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   --shadow-composer-overlay:
     0 0 0 1px var(--overlay-field-ring),
     0 26px 72px -30px var(--overlay-field-shadow),
@@ -99,6 +101,7 @@
     --color-success: oklch(72% 0.15 145);
     --color-progress: oklch(72% 0.13 255);
     --color-link: oklch(72% 0.13 255);
+    --color-pairing-accent: oklch(76% 0.15 44);
     --color-composer: oklch(18% 0.005 285);
     --color-brand-ink: oklch(0% 0 0);
     --color-control: oklch(27% 0.006 285);
@@ -156,6 +159,18 @@ body {
 @keyframes activity-text-shimmer {
   100% {
     background-position: -240% 0;
+  }
+}
+
+@keyframes pairing-qr-ripple {
+  0% {
+    opacity: 0.34;
+    transform: scale(0.36);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
   }
 }
 

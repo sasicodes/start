@@ -457,7 +457,7 @@ export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
     if (!row) continue;
     for (let x = 0; x < size; x += 1) {
       if (!row[x]) continue;
-      const radius = inFinder(size, x, y) ? 0 : 0.4;
+      const radius = inFinder(size, x, y) ? 0.28 : 0.4;
       cells += `<rect x="${x + margin}" y="${y + margin}" width="1" height="1" rx="${radius}" />`;
     }
   }

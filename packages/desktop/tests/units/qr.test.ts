@@ -86,11 +86,11 @@ describe('qr generator', () => {
     expect(qrMatrix('start', 'medium').length).toBeLessThan(qrMatrix('start'.repeat(40), 'medium').length);
   });
 
-  it('renders an svg with a quiet-zone viewBox, rounded data, and crisp finders', () => {
+  it('renders an svg with a quiet-zone viewBox and rounded modules', () => {
     const svg = qrSvg(payload, { ecc: 'medium', margin: 4 });
     expect(svg).toContain('viewBox="0 0 53 53"');
     expect(svg).toContain('<rect');
     expect(svg).toContain('rx="0.4"');
-    expect(svg).toContain('rx="0"');
+    expect(svg).toContain('rx="0.28"');
   });
 });

@@ -1,5 +1,5 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
-import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
+import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing-qr';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
@@ -161,30 +161,6 @@ const MobileInput = ({ type, value, onInput, placeholder, trailing }: MobileInpu
       )}
     />
     {trailing ? <div class="absolute inset-y-0 right-3.5 flex items-center">{trailing}</div> : null}
-  </div>
-);
-
-interface PairingQrDialogProps {
-  code: string;
-  onClose: () => void;
-  settings: MobileRelaySettings;
-}
-
-const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => (
-  <div class="fixed inset-0 z-50 grid place-items-center p-4" role="presentation">
-    <button
-      type="button"
-      aria-label="Close pairing QR"
-      class="absolute inset-0 border-0 bg-black/20 p-0"
-      onClick={onClose}
-    />
-    <section role="dialog" aria-modal="true" aria-label="Pairing QR" class="relative grid justify-items-center gap-3">
-      <div
-        class="grid size-44 place-items-center rounded-2xl bg-white p-3 text-zinc-950 shadow-shell [&_svg]:block [&_svg]:size-full"
-        dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings, code) }}
-      />
-      <p class="m-0 text-center text-xs leading-4 font-medium text-soft">Scan to pair</p>
-    </section>
   </div>
 );
 
