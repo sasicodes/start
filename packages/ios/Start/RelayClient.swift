@@ -128,7 +128,7 @@ final class RelayClient {
                 pendingPairingCode = ""
             } else {
                 pairedDesktopId = lastRequest?.desktopId ?? pairedDesktopId
-                updateStatus(.connected)
+                updateStatus(.connecting)
             }
         case .error(let text):
             connected = false
@@ -138,7 +138,11 @@ final class RelayClient {
         case .pairingApproved(let desktopId):
             pairedDesktopId = desktopId
             updateStatus(.connected)
-        case .desktopEvent(_, let payload):
+        case .desktopEvent(let desktopId, let payload):
+            pairedDesktopId = desktopId
+            if status != .connected {
+                updateStatus(.connected)
+            }
             lastEvent = payload
             onEvent?(payload)
         }

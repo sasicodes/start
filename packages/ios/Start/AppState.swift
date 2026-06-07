@@ -81,7 +81,14 @@ final class AppState {
     }
 
     var connectionStatusLabel: String {
-        relay.statusLabel
+        switch relay.status {
+        case .connected:
+            "Connected"
+        case .offline:
+            "Not connected"
+        case .connecting, .reconnecting:
+            "Connecting"
+        }
     }
 
     var route: AppRoute {
@@ -202,12 +209,20 @@ final class AppState {
     }
 
     func requestHomeData() {
-        requestSessions()
-        requestModels()
+        requestHomeData(requiresVerifiedDesktop: true)
     }
 
     func requestSessions() {
-        guard let desktopId = commandDesktopId else { return }
+        requestSessions(requiresVerifiedDesktop: true)
+    }
+
+    private func requestHomeData(requiresVerifiedDesktop: Bool) {
+        requestSessions(requiresVerifiedDesktop: requiresVerifiedDesktop)
+        requestModels(requiresVerifiedDesktop: requiresVerifiedDesktop)
+    }
+
+    private func requestSessions(requiresVerifiedDesktop: Bool) {
+        guard let desktopId = desktopId(requiresVerified: requiresVerifiedDesktop) else { return }
         guard sessionRequestId.isEmpty else {
             sessionRefreshPending = true
             return
@@ -308,7 +323,14 @@ final class AppState {
     }
 
     private var commandDesktopId: String? {
-        guard relay.status == .connected else { return nil }
+        desktopId(requiresVerified: true)
+    }
+
+    private func desktopId(requiresVerified: Bool) -> String? {
+        guard relay.connected else { return nil }
+        if requiresVerified {
+            guard relay.status == .connected else { return nil }
+        }
         guard !relay.pairedDesktopId.isEmpty else { return nil }
         guard activeConnection?.desktopId == relay.pairedDesktopId else { return nil }
         return relay.pairedDesktopId
@@ -398,11 +420,13 @@ final class AppState {
             connectionAttemptCount = 0
             reconnectTask?.cancel()
             reconnectTask = nil
-            requestHomeData()
+            if sessionRequestId.isEmpty && modelsRequestId.isEmpty {
+                requestHomeData()
+            }
         case .offline:
             scheduleReconnect()
         case .connecting, .reconnecting:
-            break
+            requestHomeData(requiresVerifiedDesktop: false)
         }
     }
 
@@ -459,8 +483,8 @@ final class AppState {
         }
     }
 
-    private func requestModels() {
-        guard let desktopId = commandDesktopId else { return }
+    private func requestModels(requiresVerifiedDesktop: Bool = true) {
+        guard let desktopId = desktopId(requiresVerified: requiresVerifiedDesktop) else { return }
         guard modelsRequestId.isEmpty else { return }
 
         let requestId = UUID().uuidString
