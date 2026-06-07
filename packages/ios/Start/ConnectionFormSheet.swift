@@ -2,139 +2,103 @@ import SwiftUI
 
 struct ConnectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var deleteConfirmationOpen = false
     @State private var name: String
     let connection: Connection
     let state: ConnectionState
     let onDelete: () -> Void
     let onRename: (String) -> Void
-    let onSetEnabled: (Bool) -> Void
 
     init(
         connection: Connection,
         state: ConnectionState,
         onDelete: @escaping () -> Void,
-        onRename: @escaping (String) -> Void,
-        onSetEnabled: @escaping (Bool) -> Void
+        onRename: @escaping (String) -> Void
     ) {
         self.connection = connection
         self.state = state
         self.onDelete = onDelete
         self.onRename = onRename
-        self.onSetEnabled = onSetEnabled
         _name = State(initialValue: connection.name)
     }
 
     var body: some View {
-        VStack(spacing: 18) {
-            header
-
-            VStack(spacing: 0) {
-                formRow(title: "Display name") {
-                    TextField("Name", text: $name)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(StartTheme.Colors.ink)
-                        .submitLabel(.done)
-                }
-
-                Divider()
-
-                formRow(title: "Enabled") {
-                    Toggle("", isOn: Binding(
-                        get: { connection.enabled },
-                        set: { enabled in
-                            StartHaptics.selection()
-                            onSetEnabled(enabled)
-                        }
-                    ))
-                    .labelsHidden()
-                    .tint(StartTheme.Colors.ink)
-                }
-
-                Divider()
-
-                formRow(title: "Host name") {
-                    Text(relayHost)
-                        .lineLimit(1)
-                        .foregroundStyle(StartTheme.Colors.softInk)
-                }
-
-                Divider()
-
-                formRow(title: "Type") {
-                    Text("Codex Desktop")
-                        .foregroundStyle(StartTheme.Colors.softInk)
-                }
-
-                Divider()
-
-                formRow(title: "Status") {
-                    HStack(spacing: 7) {
-                        Circle()
-                            .fill(statusColor)
-                            .frame(width: 7, height: 7)
-
-                        Text(statusLabel)
+        NavigationStack {
+            Form {
+                Section {
+                    LabeledContent("Name") {
+                        TextField("Name", text: $name)
+                            .multilineTextAlignment(.trailing)
+                            .submitLabel(.done)
                     }
-                    .foregroundStyle(StartTheme.Colors.softInk)
+
+                    LabeledContent("Host") {
+                        Text(relayHost)
+                            .foregroundStyle(StartTheme.Colors.softInk)
+                            .lineLimit(1)
+                    }
+
+                    LabeledContent("Status") {
+                        HStack(spacing: 7) {
+                            Circle()
+                                .fill(statusColor)
+                                .frame(width: 7, height: 7)
+
+                            Text(statusLabel)
+                        }
+                        .foregroundStyle(StartTheme.Colors.softInk)
+                    }
+                }
+                .listRowBackground(Color.clear.background(.thinMaterial))
+
+                Section {
+                    Button(role: .destructive) {
+                        StartHaptics.lightImpact()
+                        deleteConfirmationOpen = true
+                    } label: {
+                        Text("Delete connection")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+                .listRowBackground(Color.clear.background(.thinMaterial))
+            }
+            .background(.clear)
+            .navigationTitle(connection.name)
+            .scrollContentBackground(.hidden)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        StartHaptics.lightImpact()
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(!nameValid)
                 }
             }
-            .glassRoundedRectangle(cornerRadius: 24)
-
-            Button {
-                StartHaptics.lightImpact()
+        }
+        .presentationCornerRadius(42)
+        .presentationDragIndicator(.visible)
+        .presentationBackground(.ultraThinMaterial)
+        .presentationDetents([.height(430), .medium, .large])
+        .confirmationDialog(
+            "Delete connection?",
+            isPresented: $deleteConfirmationOpen,
+            titleVisibility: .visible
+        ) {
+            Button("Delete connection", role: .destructive) {
                 onDelete()
                 dismiss()
-            } label: {
-                Text("Delete connection")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color(.systemRed))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
             }
-            .buttonStyle(.plain)
-            .glassCapsule()
-        }
-        .padding(.horizontal, 22)
-        .padding(.top, 18)
-        .padding(.bottom, 24)
-        .presentationDetents([.height(430), .medium])
-        .connectionSheetChrome(cornerRadius: 42)
-    }
 
-    private var header: some View {
-        HStack {
-            Button {
-                StartHaptics.lightImpact()
-                dismiss()
-            } label: {
-                Text("Cancel")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink)
-                    .frame(width: 82, height: 44)
-            }
-            .buttonStyle(.plain)
-            .glassCapsule()
-
-            Spacer()
-
-            Text(connection.name)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button {
-                save()
-            } label: {
-                Text("Save")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(nameValid ? StartTheme.Colors.ink : StartTheme.Colors.softInk)
-                    .frame(width: 82, height: 44)
-            }
-            .buttonStyle(.plain)
-            .disabled(!nameValid)
-            .glassCapsule()
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the saved connection from this iPhone.")
         }
     }
 
@@ -161,24 +125,6 @@ struct ConnectionFormSheet: View {
         }
     }
 
-    private func formRow<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.ink)
-
-            Spacer()
-
-            content()
-                .font(.system(size: 16, weight: .regular))
-        }
-        .padding(.horizontal, 18)
-        .frame(height: 52)
-    }
-
     private func save() {
         guard nameValid else { return }
 
@@ -198,7 +144,6 @@ struct ConnectionFormSheet: View {
         ),
         state: .online,
         onDelete: {},
-        onRename: { _ in },
-        onSetEnabled: { _ in }
+        onRename: { _ in }
     )
 }

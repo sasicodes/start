@@ -46,7 +46,7 @@ struct HomeView: View {
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
-        .fullScreenCover(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
+        .sheet(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
             ConnectionsSheet(
                 connections: appState.connections,
                 activeConnectionID: appState.activeConnectionID,
@@ -57,9 +57,11 @@ struct HomeView: View {
                 onDeleteConnection: appState.deleteConnection,
                 onRenameConnection: appState.renameConnection,
                 connectionState: { appState.connectionState(for: $0) },
-                onSelectConnection: appState.selectConnection,
-                onSetConnectionEnabled: appState.setConnectionEnabled
+                onSelectConnection: appState.selectConnection
             )
+            .presentationBackground(.ultraThinMaterial)
+            .presentationDragIndicator(.hidden)
+            .presentationDetents([.large])
         }
         .task {
             appState.connectActiveConnectionIfNeeded()

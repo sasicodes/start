@@ -16,7 +16,6 @@
 		30CE4B7F7A5089FB3FD25141 /* ChatMessageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5711A0E4161E76A5BB17036A /* ChatMessageRow.swift */; };
 		3FBB9D66E4F306E7F77ED905 /* Glass.swift in Sources */ = {isa = PBXBuildFile; fileRef = B655A1FCA4212EC83855D8DD /* Glass.swift */; };
 		422735E5C4E687BD31B4E092 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4381B4DC75D82DCC7A5712ED /* AppState.swift */; };
-		555750B327C11CE4E1F99780 /* ConnectionDeleteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555750B327C11CE4E1F99781 /* ConnectionDeleteSheet.swift */; };
 		555750B327C11CE4E1F99782 /* ConnectionsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555750B327C11CE4E1F99783 /* ConnectionsSheet.swift */; };
 		555750B327C11CE4E1F99784 /* ConnectionScannerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555750B327C11CE4E1F99785 /* ConnectionScannerSheet.swift */; };
 		555750B327C11CE4E1F99786 /* HomeSearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555750B327C11CE4E1F99787 /* HomeSearchBar.swift */; };
@@ -41,7 +40,6 @@
 		33F063459BC340CD341D5DE4 /* RelayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelayClient.swift; sourceTree = "<group>"; };
 		39AC0D40B42F8727E9FD26EF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4381B4DC75D82DCC7A5712ED /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		555750B327C11CE4E1F99781 /* ConnectionDeleteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionDeleteSheet.swift; sourceTree = "<group>"; };
 		555750B327C11CE4E1F99783 /* ConnectionsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsSheet.swift; sourceTree = "<group>"; };
 		555750B327C11CE4E1F99785 /* ConnectionScannerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionScannerSheet.swift; sourceTree = "<group>"; };
 		555750B327C11CE4E1F99787 /* HomeSearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeSearchBar.swift; sourceTree = "<group>"; };
@@ -92,7 +90,6 @@
 				5711A0E4161E76A5BB17036A /* ChatMessageRow.swift */,
 				61B00F4DF2AAE23DC91EC2B0 /* ChatHeaderMetadata.swift */,
 				C94CCD6A841205646DA67DF3 /* ChatPromptBar.swift */,
-				555750B327C11CE4E1F99781 /* ConnectionDeleteSheet.swift */,
 				555750B327C11CE4E1F99793 /* ConnectionFormSheet.swift */,
 				555750B327C11CE4E1F99785 /* ConnectionScannerSheet.swift */,
 				555750B327C11CE4E1F99783 /* ConnectionsSheet.swift */,
@@ -191,7 +188,6 @@
 				30CE4B7F7A5089FB3FD25141 /* ChatMessageRow.swift in Sources */,
 				0AB333722093F229ED2BF472 /* ChatHeaderMetadata.swift in Sources */,
 				2D859EBA857957A49A8AFED9 /* ChatPromptBar.swift in Sources */,
-				555750B327C11CE4E1F99780 /* ConnectionDeleteSheet.swift in Sources */,
 				555750B327C11CE4E1F99792 /* ConnectionFormSheet.swift in Sources */,
 				555750B327C11CE4E1F99784 /* ConnectionScannerSheet.swift in Sources */,
 				555750B327C11CE4E1F99782 /* ConnectionsSheet.swift in Sources */,
