@@ -78,8 +78,8 @@ describe('tool details', () => {
   });
 
   it('renders web search labels and query detail', () => {
-    expect(toolResultTitle('web_search', false)).toBe('Searched Web');
-    expect(toolResultTitle('web_search', true)).toBe('Web search failed');
+    expect(toolResultTitle('web_search', false)).toBe('Searched the web');
+    expect(toolResultTitle('web_search', true)).toBe('Searched the web');
     expect(
       toolEventDetail({
         key: 'tool:1',
@@ -89,7 +89,7 @@ describe('tool details', () => {
       })
     ).toMatchObject({
       detail: 'package release notes',
-      title: 'Searching Web for package release notes'
+      title: 'Searching the web for package release notes'
     });
     expect(
       toolEventDetail({
@@ -101,7 +101,64 @@ describe('tool details', () => {
       })
     ).toMatchObject({
       metric: '2 results',
-      title: 'Searched Web for package release notes'
+      title: 'Searched the web for package release notes'
+    });
+  });
+
+  it('keeps failed file and shell tools neutral instead of red errors', () => {
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        state: 'error',
+        toolName: 'bash',
+        args: { command: 'pnpm test' },
+        result: { content: [{ type: 'text', text: 'boom\n\n[Command exited with code 1]' }] }
+      })
+    ).toMatchObject({
+      kind: 'tool',
+      state: 'done',
+      title: 'Ran command pnpm test'
+    });
+
+    expect(
+      toolEventDetail({
+        key: 'tool:2',
+        state: 'error',
+        toolName: 'edit',
+        args: { path: 'src/app.ts' }
+      })
+    ).toMatchObject({
+      kind: 'tool',
+      state: 'done',
+      title: 'Edited src/app.ts'
+    });
+  });
+
+  it('keeps sub-agent and browser failures as errors', () => {
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        state: 'error',
+        toolName: 'subagent_spawn',
+        args: { tasks: [{ prompt: 'a' }] }
+      })
+    ).toMatchObject({
+      kind: 'error',
+      state: 'error',
+      title: 'Sub-agents failed'
+    });
+
+    expect(
+      toolEventDetail({
+        key: 'tool:2',
+        args: {},
+        state: 'error',
+        toolName: 'browser_click'
+      })
+    ).toMatchObject({
+      kind: 'error',
+      state: 'error',
+      title: 'Click failed'
     });
   });
 

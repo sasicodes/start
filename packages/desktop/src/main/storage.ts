@@ -3,6 +3,7 @@ import { baseDir } from '@main/application';
 import { openStartDb, runStartTransaction, type StartStatement } from '@main/db';
 import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
+import { logger } from '@main/utils/logger';
 import * as v from 'valibot';
 
 export interface MobileRelaySettings {
@@ -13,6 +14,7 @@ export interface MobileRelaySettings {
 }
 
 export type StartState = {
+  keepAwake: boolean;
   lastWorkspace?: string;
   mobileRelay: MobileRelaySettings;
   composerShortcut: string;
@@ -32,6 +34,7 @@ const defaultMobileRelay = {
 } satisfies MobileRelaySettings;
 
 const defaultStartState = {
+  keepAwake: true,
   mobileRelay: defaultMobileRelay,
   solidWindowBackground: false,
   selectedThinkingLevel: 'high',
@@ -142,6 +145,7 @@ export const parseStartState = (value: unknown): StartState => {
   const workspaceHistory = parseWorkspaceHistory(state.workspaceHistory);
   const workspaceBookmarks = parseStringRecord(state.workspaceBookmarks);
   return {
+    keepAwake: state.keepAwake !== false,
     mobileRelay: parseMobileRelay(state.mobileRelay),
     composerShortcut: parseTrimmedString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     solidWindowBackground: state.solidWindowBackground === true,
@@ -155,6 +159,7 @@ export const parseStartState = (value: unknown): StartState => {
 };
 
 const stateKey = {
+  keepAwake: 'keep_awake',
   lastWorkspace: 'last_workspace',
   mobileRelay: 'mobile_relay',
   composerShortcut: 'composer_shortcut',
@@ -213,7 +218,9 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
   for (const row of rows) {
     try {
       raw[row.key] = JSON.parse(row.value_json);
-    } catch {}
+    } catch (error) {
+      logger.error('storage parse', error);
+    }
   }
   return raw;
 };

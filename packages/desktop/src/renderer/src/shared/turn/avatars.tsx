@@ -13,7 +13,13 @@ export const SubagentAvatars = ({ agents }: SubagentAvatarsProps) => {
   return (
     <span class="-space-x-1.5 inline-flex shrink-0 items-center" aria-hidden="true">
       {visible.map((agent) => (
-        <img alt="" key={agent.id} src={agent.avatar} class="size-4 rounded-full border border-canvas bg-canvas" />
+        <img
+          alt=""
+          key={agent.id}
+          draggable={false}
+          src={agent.avatar}
+          class="size-4 rounded-full border border-canvas bg-canvas"
+        />
       ))}
     </span>
   );

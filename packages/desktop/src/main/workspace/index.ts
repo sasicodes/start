@@ -2,6 +2,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type GitChangeSummary, getGitBranch, getGitChangeSummary, isGitRepository } from '@main/git';
 import { startCacheDir } from '@main/storage';
+import { logger } from '@main/utils/logger';
 import { workspaceDisplayName } from '@main/utils/workspace';
 import { generatedWorkspaceIconDataUrl, workspaceIconDataUrl } from '@main/workspace/icons';
 
@@ -144,7 +145,9 @@ const loadWorkspaceCache = async () => {
     });
 
     for (const [key, workspace] of entries.slice(-maxWorkspaceCacheSize)) workspaceCache.set(key, workspace);
-  } catch {}
+  } catch (error) {
+    logger.error('workspace cache parse', error);
+  }
 };
 
 const storeWorkspace = (workspace: WorkspaceInfo) => {

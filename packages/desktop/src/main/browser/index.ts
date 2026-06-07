@@ -2,6 +2,7 @@ import { isDev } from '@main/application';
 import { attachInspectListener, startInspect, stopInspect } from '@main/browser/inspect/index';
 import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
 import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
+import { pickReusableTab } from '@main/browser/tabs';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { sendToRendererWindows } from '@main/window';
 import {
@@ -65,6 +66,7 @@ type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace:
 
 interface BrowserTab {
   id: string;
+  loaded: boolean;
   lastUsedOrder: number;
   view: ElectronWebContentsView;
 }
@@ -130,12 +132,20 @@ const touchBrowserTab = (tab: BrowserTab) => {
   tab.lastUsedOrder = browserTabUseOrder;
 };
 
-const tabWithUrl = (url: string): BrowserTab | null => {
+const blankTab = (): BrowserTab | null => {
   for (const tab of browserTabs.values()) {
-    if (tab.view.webContents.getURL() === url) return tab;
+    if (!tab.loaded) return tab;
   }
 
   return null;
+};
+
+const tabForNewPage = (url: string): BrowserTab => {
+  const reusable = pickReusableTab(
+    [...browserTabs.values()].map((tab) => ({ tab, blank: !tab.loaded, url: tab.view.webContents.getURL() })),
+    url
+  );
+  return reusable?.tab ?? createBrowserTab();
 };
 
 const statusFromView = (): BrowserStatus => {
@@ -198,6 +208,7 @@ const createBrowserView = () => {
 
 const createBrowserTab = (): BrowserTab => {
   const tab = {
+    loaded: false,
     lastUsedOrder: 0,
     view: createBrowserView(),
     id: `tab-${nextBrowserTabId}`
@@ -286,7 +297,7 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
   const tab = ensureActiveTab();
   if (ownerWindow === window && attachedTabId === tab.id) {
     touchBrowserTab(tab);
-    return tab.view;
+    return tab;
   }
 
   if (ownerWindow !== window) {
@@ -315,7 +326,7 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
   attachedTabId = tab.id;
   if (lastBounds) tab.view.setBounds(lastBounds);
 
-  return tab.view;
+  return tab;
 };
 
 const windowFromSender = (sender: WebContents): ElectronBrowserWindow | null => {
@@ -335,7 +346,7 @@ export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | nu
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  const view = attachActiveBrowserView(window);
+  const { view } = attachActiveBrowserView(window);
   const scaledBounds = scaleBrowserBounds(bounds, sender.getZoomFactor());
   lastBounds = scaledBounds;
   view.setBounds(scaledBounds);
@@ -356,18 +367,19 @@ export const openBrowserUrl = async (
   if (options.tabId && browserTabs.has(options.tabId)) {
     activeTabId = options.tabId;
   } else if (options.newTab) {
-    activeTabId = tabWithUrl(url)?.id ?? createBrowserTab().id;
+    activeTabId = tabForNewPage(url).id;
   }
   closeInactiveBrowserTabsOverLimit();
 
-  const view = attachActiveBrowserView(window);
-  view.webContents.focus();
-  if (view.webContents.getURL() === url) {
+  const tab = attachActiveBrowserView(window);
+  tab.view.webContents.focus();
+  if (tab.view.webContents.getURL() === url) {
     sendStatus();
     return { ok: true, status: statusFromView() };
   }
 
-  const loadError = await view.webContents
+  tab.loaded = true;
+  const loadError = await tab.view.webContents
     .loadURL(url)
     .then(() => null)
     .catch((error: unknown) => error);
@@ -382,7 +394,7 @@ export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  createBrowserTab();
+  activeTabId = (blankTab() ?? createBrowserTab()).id;
   closeInactiveBrowserTabsOverLimit();
   attachActiveBrowserView(window);
   sendStatus();
@@ -409,12 +421,12 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
 
   closeBrowserTabById(tabId);
 
-  if (activeTabId) {
-    const window = windowFromSender(sender);
-    if (window && !window.isDestroyed() && (wasAttached || ownerWindow === window)) {
-      attachActiveBrowserView(window);
-      activeTab()?.view.webContents.focus();
-    }
+  const window = windowFromSender(sender);
+  if (!activeTabId && window) createBrowserTab();
+
+  if (activeTabId && window && (wasAttached || ownerWindow === window)) {
+    attachActiveBrowserView(window);
+    activeTab()?.view.webContents.focus();
   }
 
   sendStatus();

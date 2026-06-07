@@ -18,7 +18,14 @@ interface ImagePaneProps {
 
 const ImagePane = ({ alt, src, label }: ImagePaneProps) => (
   <figure class="m-0 flex min-w-0 flex-1 flex-col items-center gap-2">
-    <img alt={alt} src={src} loading="lazy" decoding="async" class="max-h-80 max-w-full rounded-lg object-contain" />
+    <img
+      alt={alt}
+      src={src}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      class="max-h-80 max-w-full rounded-lg object-contain"
+    />
     {label && <figcaption class="font-sans text-xs leading-4 text-soft">{label}</figcaption>}
   </figure>
 );

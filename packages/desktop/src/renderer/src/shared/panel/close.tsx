@@ -12,7 +12,6 @@ export const PanelCloseButton = ({ onClick, variant = 'compact' }: PanelCloseBut
   <button
     type="button"
     aria-label="Close sidebar"
-    title="Close sidebar"
     onClick={onClick}
     class={tw(
       variant === 'toolbar'

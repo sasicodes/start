@@ -10,14 +10,6 @@ describe('browser bounds', () => {
     expect(readBrowserBounds(element)).toEqual({ x: 12, y: 5, width: 321, height: 240 });
   });
 
-  it('insets the native browser view from the resize edge', () => {
-    const element = {
-      getBoundingClientRect: () => ({ left: 12.4, top: 4.6, width: 320.5, height: 240.2 })
-    } as HTMLElement;
-
-    expect(readBrowserBounds(element, 4)).toEqual({ x: 16, y: 5, width: 317, height: 240 });
-  });
-
   it('compares bounds before sending resize updates', () => {
     const bounds = { x: 1, y: 2, width: 3, height: 4 };
 

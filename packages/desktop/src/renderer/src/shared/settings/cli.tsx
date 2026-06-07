@@ -1,4 +1,5 @@
 import type { CliInstallStatus } from '@preload/index';
+import { Toggle } from '@renderer/ui/toggle';
 import { useEffect, useState } from 'preact/hooks';
 
 const statusText = (status: CliInstallStatus | null) => {
@@ -7,16 +8,8 @@ const statusText = (status: CliInstallStatus | null) => {
   return status.reason;
 };
 
-const buttonLabel = (status: CliInstallStatus | null, installing: boolean) => {
-  if (installing) return 'Installing';
-  if (!status) return 'Checking';
-  if (status.status === 'installed') return 'Installed';
-  if (status.status === 'outdated') return 'Update';
-  return 'Install';
-};
-
-const installable = (status: CliInstallStatus | null) =>
-  Boolean(status && (status.status === 'not-installed' || status.status === 'outdated'));
+const actionable = (status: CliInstallStatus | null) =>
+  Boolean(status && status.status !== 'unavailable' && status.status !== 'conflict');
 
 let cachedCliInstallStatus: CliInstallStatus | null = null;
 
@@ -31,9 +24,7 @@ export const CliInstall = () => {
       .cliInstallStatus()
       .then((result) => {
         cachedCliInstallStatus = result;
-        if (active) {
-          setStatus(result);
-        }
+        if (active) setStatus(result);
       })
       .catch(() => {
         if (active) setError('Command line install status could not be checked.');
@@ -44,26 +35,25 @@ export const CliInstall = () => {
     };
   }, []);
 
-  const install = async () => {
-    if (!installable(status) || busy) return;
+  const installed = status?.status === 'installed';
+
+  const apply = async () => {
+    if (busy || !actionable(status)) return;
 
     setError('');
     setBusy(true);
 
     try {
-      const result = await window.pi.app.installCli();
+      const result = installed ? await window.pi.app.uninstallCli() : await window.pi.app.installCli();
       cachedCliInstallStatus = result.status;
       setStatus(result.status);
       setError(result.error ?? '');
     } catch {
-      setError('Command line tool could not be installed.');
+      setError(installed ? 'Command line tool could not be removed.' : 'Command line tool could not be installed.');
     } finally {
       setBusy(false);
     }
   };
-
-  const canInstall = installable(status);
-  const disabled = busy || !canInstall;
 
   return (
     <div class="mt-5">
@@ -72,16 +62,7 @@ export const CliInstall = () => {
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Command line</h2>
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Use start . to open folders in Start.</p>
         </div>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            install().catch(() => {});
-          }}
-          class="h-9 min-w-24 flex-none rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
-        >
-          {buttonLabel(status, busy)}
-        </button>
+        <Toggle onChange={apply} checked={installed} label="Command line" disabled={busy || !actionable(status)} />
       </div>
       {(error || statusText(status)) && (
         <p class="m-0 mt-2 text-xs leading-4 text-danger">{error || statusText(status)}</p>

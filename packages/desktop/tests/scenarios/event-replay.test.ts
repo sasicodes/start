@@ -34,8 +34,8 @@ describe('event replay', () => {
 
     const events = eventsByChannel(webContents, 'chat:event');
     const titles = events.map((event) => event.args[0] as { title: string; state: string });
-    expect(titles.some((event) => event.title.startsWith('Explor') && event.state === 'active')).toBe(true);
-    expect(titles.some((event) => event.title.startsWith('Explor') && event.state === 'done')).toBe(true);
+    expect(titles.some((event) => event.title.startsWith('Reading') && event.state === 'active')).toBe(true);
+    expect(titles.some((event) => event.title.startsWith('Read') && event.state === 'done')).toBe(true);
 
     const done = eventsByChannel(webContents, 'chat:done');
     expect(done.length).toBe(1);

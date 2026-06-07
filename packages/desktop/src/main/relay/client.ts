@@ -71,6 +71,10 @@ export class DesktopRelay {
     return this.code;
   }
 
+  get isActive() {
+    return this.active;
+  }
+
   sync(settings: MobileRelaySettings) {
     if (!settings.enabled || !settings.desktopId || !isRelayUrl(settings.relayUrl)) {
       this.stop();

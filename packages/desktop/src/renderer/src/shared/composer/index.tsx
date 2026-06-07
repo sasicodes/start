@@ -1,5 +1,6 @@
 import { Attachments } from '@renderer/shared/composer/attachments';
 import { Generate } from '@renderer/shared/composer/generate';
+import { composerIsLayered } from '@renderer/shared/composer/layout';
 import { Model } from '@renderer/shared/composer/model';
 import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
@@ -105,7 +106,7 @@ export const Composer = memo(
     const selectedFinderItem = finderItems[activeFinderIndex] ?? finderItems[0];
     const selectedFinderKey = selectedFinderItem ? finderItemKey(selectedFinderItem) : '';
     const centered = overlay || !hasTurns;
-    const layered = hasAttachments || (!singleLine && isMultiline);
+    const layered = composerIsLayered({ singleLine, hasAttachments, multiline: isMultiline });
     const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
 
     const moveFinderSelection = useCallback(

@@ -32,7 +32,7 @@ import {
   parseCliLaunchArgv,
   resolveCliWorkspacePath
 } from '@main/cli/args';
-import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
+import { getCliInstallStatus, installCliCommand, uninstallCliCommand } from '@main/cli/install';
 import { confirmClose } from '@main/confirm';
 import { clearAppFocusTimer, getAppFocusState, onAppFocusChanged, scheduleAppFocusStateChanged } from '@main/focus';
 import { type GitFileRef, getGitFileBlob } from '@main/git';
@@ -51,6 +51,8 @@ import {
   writeAppSettings
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
+import { logger } from '@main/utils/logger';
+import { setStayAwake } from '@main/utils/power';
 import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
@@ -69,7 +71,7 @@ import { GitChangesService } from '@main/workspace/changes';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
 import electron from 'electron';
 
-const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
+const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, shell } = electron;
 
 app.setName(appMenuName);
 if (isDev) app.setPath('userData', nodePath.join(app.getPath('appData'), appMenuName));
@@ -99,6 +101,11 @@ const desktopRelay = new DesktopRelay({
   onCommand: runMobileCommand
 });
 let stopWorkspaceChanged: (() => void) | null = null;
+
+const refreshStayAwake = () => {
+  const keepAwake = appSettings?.keepAwake ?? defaultAppSettings.keepAwake;
+  setStayAwake(keepAwake && desktopRelay.isActive && !powerMonitor.isOnBatteryPower());
+};
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -257,6 +264,9 @@ if (!singleInstanceLock) {
 
     appSettings = await readAppSettings();
     desktopRelay.sync(appSettings.mobileRelay);
+    powerMonitor.on('on-ac', refreshStayAwake);
+    powerMonitor.on('on-battery', refreshStayAwake);
+    refreshStayAwake();
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -296,6 +306,7 @@ if (!singleInstanceLock) {
     );
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
+    ipcMain.handle('app:uninstall-cli', uninstallCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);
     ipcMain.handle('app:browser-forward', goForwardInBrowser);
     ipcMain.handle('app:browser-reload', reloadBrowser);
@@ -311,6 +322,7 @@ if (!singleInstanceLock) {
       openBrowserUrl(event.sender, url, options)
     );
     ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
+    ipcMain.handle('app:browser-close', () => destroyBrowser());
     registerUpdateIpc();
     ipcMain.handle('app:hide-composer', () => {
       hideComposerWindow();
@@ -373,6 +385,15 @@ if (!singleInstanceLock) {
       });
       appSettings = nextSettings;
       desktopRelay.sync(nextSettings.mobileRelay);
+      refreshStayAwake();
+      return { ok: true, settings: nextSettings };
+    });
+    ipcMain.handle('app:set-keep-awake', async (_event, keepAwake: boolean) => {
+      if (appSettings?.keepAwake === keepAwake) return { ok: true, settings: appSettings };
+
+      const nextSettings = await writeAppSettings({ ...(appSettings ?? defaultAppSettings), keepAwake });
+      appSettings = nextSettings;
+      refreshStayAwake();
       return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
@@ -411,7 +432,9 @@ if (!singleInstanceLock) {
 const shutdownAnalyticsAndQuit = async () => {
   try {
     await shutdownAnalytics();
-  } catch {}
+  } catch (error) {
+    logger.error('analytics shutdown', error);
+  }
 
   app.quit();
 };
@@ -419,13 +442,17 @@ const shutdownAnalyticsAndQuit = async () => {
 const shutdownAnalyticsSilently = async () => {
   try {
     await shutdownAnalytics();
-  } catch {}
+  } catch (error) {
+    logger.error('analytics shutdown', error);
+  }
 };
 
 const destroyBrowserSilently = async () => {
   try {
     await destroyBrowser();
-  } catch {}
+  } catch (error) {
+    logger.error('browser teardown', error);
+  }
 };
 
 app.on('before-quit', (event) => {

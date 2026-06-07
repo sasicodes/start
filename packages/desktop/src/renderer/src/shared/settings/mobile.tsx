@@ -1,6 +1,8 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
-import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
+import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
+import { keepAwake, updateKeepAwake } from '@renderer/shared/settings/state';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
+import { Toggle } from '@renderer/ui/toggle';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -75,19 +77,19 @@ const useRelayProbe = (relayUrl: string, relayToken: string): RelayProbeStatus =
 const RelayStatus = ({ status }: { status: RelayProbeStatus }) => {
   if (status === 'checking')
     return (
-      <span role="status" aria-label="Checking relay connection" class="text-soft">
+      <span role="status" class="text-soft" aria-label="Checking relay connection">
         <SpinnerIcon class="block size-4 animate-spin" />
       </span>
     );
   if (status === 'ok')
     return (
-      <span role="img" aria-label="Relay reachable" class="text-success">
+      <span role="img" class="text-success" aria-label="Relay reachable">
         <CheckIcon class="block size-4" />
       </span>
     );
   if (status === 'fail')
     return (
-      <span role="img" aria-label="Relay unreachable" class="text-danger">
+      <span role="img" class="text-danger" aria-label="Relay unreachable">
         <XIcon class="block size-4" />
       </span>
     );
@@ -164,30 +166,6 @@ const MobileInput = ({ type, value, onInput, placeholder, trailing }: MobileInpu
   </div>
 );
 
-interface PairingQrDialogProps {
-  code: string;
-  onClose: () => void;
-  settings: MobileRelaySettings;
-}
-
-const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => (
-  <div class="fixed inset-0 z-50 grid place-items-center p-4" role="presentation">
-    <button
-      type="button"
-      aria-label="Close pairing QR"
-      class="absolute inset-0 border-0 bg-black/20 p-0"
-      onClick={onClose}
-    />
-    <section role="dialog" aria-modal="true" aria-label="Pairing QR" class="relative grid justify-items-center gap-3">
-      <div
-        class="grid size-44 place-items-center rounded-2xl bg-white p-3 text-zinc-950 shadow-shell [&_svg]:block [&_svg]:size-full"
-        dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings, code) }}
-      />
-      <p class="m-0 text-center text-xs leading-4 font-medium text-soft">Scan to pair</p>
-    </section>
-  </div>
-);
-
 export const Mobile = ({ settings, onChange }: MobileProps) => {
   const settingsKey = mobileRelaySettingsKey(settings);
   const [qrOpen, setQrOpen] = useState(false);
@@ -225,16 +203,14 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
       <div class="flex items-center justify-between gap-4">
         <div class="grid gap-1">
           <h3 class="m-0 text-sm leading-5 font-medium text-ink">Remote access</h3>
-          <p class="m-0 text-xs leading-5 text-soft">
-            Connect this desktop to your hosted relay so trusted phones can start and resume work.
-          </p>
+          <p class="m-0 text-xs leading-5 text-soft">Connect trusted phones to this desktop.</p>
         </div>
         {qrAvailable && (
           <div class="flex flex-none items-center gap-4">
             <IconAction label="Show pairing QR" onClick={() => setQrOpen(true)}>
               <QrIcon />
             </IconAction>
-            <IconAction label="Delete mobile relay settings" danger onClick={() => remove().catch(() => {})}>
+            <IconAction danger onClick={remove} label="Delete mobile relay settings">
               <TrashIcon />
             </IconAction>
           </div>
@@ -247,9 +223,9 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
             <MobileInput
               type="text"
               value={draft.relayUrl}
-              placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
-              onInput={(relayUrl) => updateDraft({ relayUrl })}
               trailing={<RelayStatus status={probeStatus} />}
+              onInput={(relayUrl) => updateDraft({ relayUrl })}
+              placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
             />
             <MobileInput
               type="password"
@@ -262,8 +238,8 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           <div class="mt-1 flex justify-end">
             <button
               type="button"
+              onClick={save}
               disabled={!canSave}
-              onClick={() => save().catch(() => {})}
               class="h-8 rounded-full border-0 bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
             >
               Save
@@ -271,6 +247,13 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           </div>
         </>
       )}
+      <div class="flex items-center justify-between gap-4">
+        <div class="grid gap-1">
+          <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h3>
+          <p class="m-0 text-xs leading-5 text-soft">Prevent sleep when plugged in and remote access is enabled.</p>
+        </div>
+        <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
+      </div>
       {qrOpen && <PairingQrDialog code={relayCode} settings={settings} onClose={() => setQrOpen(false)} />}
     </div>
   );

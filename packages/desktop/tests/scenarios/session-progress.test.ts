@@ -61,7 +61,7 @@ describe('session progress', () => {
     const events = eventsByChannel(webContents, 'chat:event');
     const titles = events.map((event) => (event.args[0] as { title: string }).title);
     expect(titles.length).toBeGreaterThan(0);
-    expect(titles.some((title) => title.startsWith('Explor'))).toBe(true);
+    expect(titles.some((title) => title.startsWith('Read'))).toBe(true);
   });
 
   it('reports isGenerating in status while a prompt is in flight', async () => {

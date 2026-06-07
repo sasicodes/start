@@ -25,6 +25,7 @@ interface MainSessionSurfaceProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
+  sidePanelResizable: boolean;
   workspaceCollapsed: boolean;
   onOpenSettings: () => void;
   sidePanel: ComponentChildren;
@@ -47,6 +48,7 @@ interface AppShellProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
+  sidePanelResizable: boolean;
   workspaceCollapsed: boolean;
   sessionViewActive: boolean;
   onOpenSettings: () => void;
@@ -75,6 +77,7 @@ const MainSessionSurface = memo(
     isGenerating,
     activeSessionId,
     sidePanelVisible,
+    sidePanelResizable,
     sidePanelMaxRatio,
     onOpenSettings,
     workspaceCollapsed,
@@ -90,6 +93,7 @@ const MainSessionSurface = memo(
       sidePanel={sidePanel}
       sidePanelLabel={sidePanelLabel}
       sidePanelVisible={sidePanelVisible}
+      sidePanelResizable={sidePanelResizable}
       onSidePanelCollapse={onSidePanelCollapse}
       {...(sidePanelMaxRatio !== undefined ? { maxSidePanelWidthRatio: sidePanelMaxRatio } : {})}
     >
@@ -126,6 +130,7 @@ export const AppShell = memo(
     isGenerating,
     activeSessionId,
     sidePanelVisible,
+    sidePanelResizable,
     sidePanelMaxRatio,
     onOpenSession,
     workspaceCollapsed,
@@ -167,6 +172,7 @@ export const AppShell = memo(
           settingsPanelVisible={settingsPanelVisible}
           onToggleGitPanel={onToggleGitPanel}
           sidePanelVisible={sidePanelVisible}
+          sidePanelResizable={sidePanelResizable}
           onChooseDirectory={onChooseDirectory}
           workspaceCollapsed={workspaceCollapsed}
           {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}

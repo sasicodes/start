@@ -14,6 +14,7 @@ export interface MobileRelayProbe {
 }
 
 export interface AppSettings {
+  keepAwake: boolean;
   composerShortcut: string;
   solidWindowBackground: boolean;
   mobileRelay: MobileRelaySettings;
@@ -395,6 +396,7 @@ const api = {
       ipcRenderer.invoke('app:probe-mobile-relay', settings),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
+    uninstallCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:uninstall-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
     browserBack: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-back'),
     browserForward: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-forward'),
@@ -411,6 +413,7 @@ const api = {
       ipcRenderer.invoke('app:browser-open', url, options),
     browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
       ipcRenderer.invoke('app:browser-bounds', bounds),
+    browserClose: (): Promise<void> => ipcRenderer.invoke('app:browser-close'),
     browserInspectStart: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-start'),
     browserInspectStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-stop'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),
@@ -418,6 +421,7 @@ const api = {
     revealPath: (workspacePath: string, filePath: string): Promise<void> =>
       ipcRenderer.invoke('app:reveal-path', workspacePath, filePath),
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
+    setKeepAwake: (enabled: boolean): Promise<AppSettingsResult> => ipcRenderer.invoke('app:set-keep-awake', enabled),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
     setMobileRelaySettings: (settings: MobileRelaySettings): Promise<AppSettingsResult> =>

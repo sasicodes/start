@@ -28,7 +28,7 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
   const expandable = subagentExpandable(agent);
   const content = (
     <>
-      <img alt="" src={agent.avatar} class="size-4 flex-none rounded-full" />
+      <img alt="" draggable={false} src={agent.avatar} class="size-4 flex-none rounded-full" />
       <span class="flex min-w-0 flex-1 items-center gap-1.5 leading-4 text-soft">
         <AgentName agent={agent} />
         <span class="shrink-0 text-soft">-</span>

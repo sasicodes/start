@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { logger } from '@main/utils/logger';
 
 export type RootItem = {
   name: string;
@@ -296,7 +297,9 @@ const readDirectoryItems = async (relativePath: string, basePath: string) => {
       if (entry.isSymbolicLink()) {
         try {
           entryStat = await stat(entryPath);
-        } catch {}
+        } catch (error) {
+          logger.error('stat entry', error);
+        }
       }
       const isDirectory = entry.isDirectory() || entryStat?.isDirectory();
       const isFile = entry.isFile() || entryStat?.isFile();

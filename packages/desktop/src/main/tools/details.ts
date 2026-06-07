@@ -203,10 +203,7 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
   return '';
 };
 
-const nonErrorResult = (toolName: string, result: unknown) => {
-  if (!isRecord(result)) return false;
-  return toolName === 'find' && textContent(result.content).trim() === 'No files found matching pattern';
-};
+export const keepsErrorState = (toolName: string) => toolName === 'subagent_spawn' || toolName.startsWith('browser_');
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
@@ -214,43 +211,15 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
 
-  if (error) {
-    if (toolName === 'web_search') return 'Web search failed';
-    if (toolName === 'bash') return 'Command failed';
-    if (toolName === 'edit') return 'File modification failed';
-    if (toolName === 'find') return 'File lookup failed';
-    if (toolName === 'grep') return 'Search failed';
-    if (toolName === 'ls') return 'Folder exploration failed';
-    if (toolName === 'read') return 'File exploration failed';
-    if (toolName === 'write') return 'File write failed';
-    return `${toolName} failed`;
-  }
-
   if (toolName === 'bash') return 'Ran command';
-  if (toolName === 'web_search') return 'Searched Web';
-  if (toolName === 'edit') return 'Modified file';
+  if (toolName === 'web_search') return 'Searched the web';
+  if (toolName === 'edit') return 'Edited file';
   if (toolName === 'find') return 'Found files';
-  if (toolName === 'grep') return 'Searched files';
+  if (toolName === 'grep') return 'Searched code';
   if (toolName === 'ls') return 'Explored folder';
-  if (toolName === 'read') return 'Explored file';
-  if (toolName === 'write') return 'Wrote file';
+  if (toolName === 'read') return 'Read file';
+  if (toolName === 'write') return 'Created file';
   return `Used ${toolName}`;
-};
-
-const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
-  const path = recordPath(args);
-  const command = toolDetail(toolName, args);
-  const pattern = stringValue(args.pattern);
-
-  if (toolName === 'bash') return command ? `Command failed ${command}` : 'Command failed';
-  if (toolName === 'edit') return `Could not modify file ${path}`;
-  if (toolName === 'find') return `Could not find files${pattern ? ` matching ${pattern}` : ''}`;
-  if (toolName === 'grep') return `Could not search files${pattern ? ` for ${pattern}` : ''}`;
-  if (toolName === 'web_search') return `Could not search Web${command ? ` for ${command}` : ''}`;
-  if (toolName === 'ls') return `Could not explore folder ${path}`;
-  if (toolName === 'read') return `Could not explore file ${path}`;
-  if (toolName === 'write') return `Could not write file ${path}`;
-  return toolResultTitle(toolName, true);
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
@@ -270,21 +239,20 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
   const command = toolDetail(toolName, args);
   const pattern = stringValue(args.pattern);
 
-  if (state === 'error') return failedToolTitle(toolName, args);
   if (toolName === 'bash')
     return command
       ? `${state === 'active' ? 'Running' : 'Ran'} command ${command}`
       : `${state === 'active' ? 'Running' : 'Ran'} command`;
-  if (toolName === 'edit') return `${state === 'active' ? 'Modifying' : 'Modified'} file ${path}`;
+  if (toolName === 'edit') return `${state === 'active' ? 'Editing' : 'Edited'} ${path}`;
   if (toolName === 'find')
     return `${state === 'active' ? 'Finding' : 'Found'} files${pattern ? ` matching ${pattern}` : ''}`;
   if (toolName === 'grep')
-    return `${state === 'active' ? 'Searching' : 'Searched'} files${pattern ? ` for ${pattern}` : ''}`;
+    return `${state === 'active' ? 'Searching' : 'Searched'} code${pattern ? ` for ${pattern}` : ''}`;
   if (toolName === 'web_search')
-    return `${state === 'active' ? 'Searching' : 'Searched'} Web${command ? ` for ${command}` : ''}`;
+    return `${state === 'active' ? 'Searching' : 'Searched'} the web${command ? ` for ${command}` : ''}`;
   if (toolName === 'ls') return `${state === 'active' ? 'Exploring' : 'Explored'} folder ${path}`;
-  if (toolName === 'read') return `${state === 'active' ? 'Exploring' : 'Explored'} file ${path}`;
-  if (toolName === 'write') return `${state === 'active' ? 'Writing' : 'Wrote'} file ${path}`;
+  if (toolName === 'read') return `${state === 'active' ? 'Reading' : 'Read'} ${path}`;
+  if (toolName === 'write') return `${state === 'active' ? 'Creating' : 'Created'} ${path}`;
   return `${state === 'active' ? 'Using' : 'Used'} ${toolName}`;
 };
 
@@ -305,7 +273,7 @@ export const toolEventDetail = ({
   const detail = toolDetail(toolName, safeArgs);
   const metric = toolMetric(toolName, safeArgs, result);
   const body = toolBody(toolName, safeArgs, result);
-  const nextState = state === 'error' && nonErrorResult(toolName, result) ? 'done' : state;
+  const nextState = state === 'error' && !keepsErrorState(toolName) ? 'done' : state;
   const event: ChatEvent = {
     key,
     state: nextState,

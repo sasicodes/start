@@ -8,6 +8,7 @@ interface PanelFrameProps {
   visible: boolean;
   resizing: boolean;
   settling: boolean;
+  resizable: boolean;
   initialWidth: number;
   children: ComponentChildren;
   onResizePointerDown: (event: JSX.TargetedPointerEvent<HTMLDivElement>) => void;
@@ -19,6 +20,7 @@ export const PanelFrame = ({
   children,
   settling,
   resizing,
+  resizable,
   initialWidth,
   onResizePointerDown
 }: PanelFrameProps) => {
@@ -39,7 +41,7 @@ export const PanelFrame = ({
         style={{ transform: 'translate3d(var(--panel-offset, 0px), 0, 0)' }}
         class={tw('absolute inset-0 transform-gpu border-l border-line', settling && 'transition-transform ease-out')}
       >
-        <ResizeHandle resizing={resizing} onPointerDown={onResizePointerDown} />
+        {resizable && <ResizeHandle resizing={resizing} onPointerDown={onResizePointerDown} />}
         <div class="absolute inset-0 min-h-0 overflow-x-hidden overflow-y-auto outline-0 [&::-webkit-scrollbar]:hidden">
           <PanelMotionProvider value={motion}>{children}</PanelMotionProvider>
         </div>

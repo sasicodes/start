@@ -6,6 +6,7 @@ import * as v from 'valibot';
 const { globalShortcut } = electron;
 
 export interface AppSettings {
+  keepAwake: boolean;
   composerShortcut: string;
   solidWindowBackground: boolean;
   mobileRelay: MobileRelaySettings;
@@ -19,6 +20,7 @@ export const defaultMobileRelaySettings = {
 } satisfies MobileRelaySettings;
 
 export const defaultAppSettings = {
+  keepAwake: true,
   solidWindowBackground: false,
   composerShortcut: 'Control+Space',
   mobileRelay: defaultMobileRelaySettings
@@ -39,6 +41,7 @@ const mobileRelaySettingsSchema = v.fallback(
 
 const appSettingsSchema = v.fallback(
   v.object({
+    keepAwake: v.fallback(v.boolean(), true),
     mobileRelay: mobileRelaySettingsSchema,
     solidWindowBackground: booleanSchema,
     composerShortcut: v.fallback(v.pipe(v.string(), v.trim(), v.minLength(1)), defaultAppSettings.composerShortcut)
@@ -72,6 +75,7 @@ export const readAppSettings = async (): Promise<AppSettings> => {
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
   const nextSettings = settingsWithDesktopId(parseSettings(settings));
   updateStartState({
+    keepAwake: nextSettings.keepAwake,
     mobileRelay: nextSettings.mobileRelay,
     composerShortcut: nextSettings.composerShortcut,
     solidWindowBackground: nextSettings.solidWindowBackground

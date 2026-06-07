@@ -7,6 +7,7 @@ import {
 } from '@main/providers/tools/search/auth';
 import { trimTrailingSlash } from '@main/providers/tools/search/helpers';
 import type { SearchModel } from '@main/providers/tools/search/types';
+import { logger } from '@main/utils/logger';
 import * as v from 'valibot';
 
 const defaultCodexBaseUrl = 'https://chatgpt.com/backend-api';
@@ -50,7 +51,9 @@ const accountIdFromToken = (token: string) => {
       const result = v.safeParse(codexAuthSchema, parsed);
       if (result.success) return result.output[jwtClaimPath].chatgpt_account_id;
     }
-  } catch {}
+  } catch (error) {
+    logger.error('codex account id', error);
+  }
 
   throw new Error('Failed to extract accountId from token.');
 };

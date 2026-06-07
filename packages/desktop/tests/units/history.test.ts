@@ -29,7 +29,7 @@ describe('historyTurns', () => {
     ]);
     expect(turns[0]?.role).toBe('assistant');
     expect(turns[0]?.text).toBe('reply');
-    expect(turns[0]?.details?.[0]?.title).toContain('Explor');
+    expect(turns[0]?.details?.[0]?.title).toContain('Read');
   });
 
   it('represents thinking-level changes as event-kind turns', () => {

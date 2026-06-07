@@ -159,6 +159,30 @@ body {
   }
 }
 
+.pairing-qr-ripple {
+  opacity: 0;
+  mask-image: radial-gradient(circle, transparent 26%, #000 44%, transparent 62%);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  animation: pairing-qr-ripple 1300ms cubic-bezier(0.24, 0.65, 0.27, 1) both;
+}
+
+@keyframes pairing-qr-ripple {
+  0% {
+    opacity: 0;
+    mask-size: 24% 24%;
+  }
+
+  22% {
+    opacity: 0.85;
+  }
+
+  100% {
+    opacity: 0;
+    mask-size: 340% 340%;
+  }
+}
+
 .composer-floating-shell::before,
 .composer-floating-shell::after {
   @apply pointer-events-none absolute rounded-full;

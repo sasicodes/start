@@ -3,15 +3,12 @@ import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
-import {
-  AppSidePanel,
-  sidePanelLabel as getSidePanelLabel,
-  sidePanelMaxRatio as getSidePanelMaxRatio
-} from '@renderer/app/panel';
+import { AppSidePanel } from '@renderer/app/panel';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
+import { sidePanelModeLabel, sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
@@ -30,14 +27,7 @@ export const App = () => {
     textareaRef
   });
   const { attachments, setAttachments, removeAttachment, clearPendingAttachments } = usePendingAttachments();
-  const {
-    mobileRelay,
-    composerShortcut,
-    solidWindowBackground,
-    updateMobileRelay,
-    updateComposerShortcut,
-    updateSolidWindowBackground
-  } = useRendererRuntime();
+  const { mobileRelay, solidWindowBackground, updateMobileRelay, updateSolidWindowBackground } = useRendererRuntime();
   const sessionViewActive = route.name === 'chat' || route.name === 'session';
   const {
     sidePanelMode,
@@ -266,30 +256,10 @@ export const App = () => {
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const hasTurns = turnCount > 0 || sessionRoutePending;
   const noProvidersConfigured = modelsLoaded && models.length === 0;
-  const sidePanelLabel = getSidePanelLabel(sidePanelMode);
-  const sidePanelMaxRatio = getSidePanelMaxRatio(sidePanelMode);
-  const sidePanel = (
-    <AppSidePanel
-      mode={sidePanelMode}
-      providers={authProviders}
-      mobileRelay={mobileRelay}
-      browserNavigation={browserPanel.navigation}
-      workspacePath={workspacePath}
-      onSaveApiKey={saveApiKey}
-      composerShortcut={composerShortcut}
-      settingsTab={settingsTab}
-      solidWindowBackground={solidWindowBackground}
-      onSettingsTabChange={setSettingsTab}
-      onBrowserUrlOpened={browserPanel.clear}
-      onBrowserInspectText={appendInspectToComposer}
-      onClose={closeSidePanel}
-      onLoginSubscription={loginSubscription}
-      onDisconnectProvider={disconnectProvider}
-      onMobileRelayChange={updateMobileRelay}
-      onComposerShortcutChange={updateComposerShortcut}
-      onSolidWindowBackgroundChange={updateSolidWindowBackground}
-    />
-  );
+
+  const sidePanelLabel = sidePanelModeLabel(sidePanelMode);
+  const sidePanelMaxRatio = sidePanelModeMaxRatio(sidePanelMode);
+  const sidePanelResizable = sidePanelModeResizable(sidePanelMode);
 
   const fileHandlers = useFileAttachments({
     enabled: sessionViewActive,
@@ -310,64 +280,84 @@ export const App = () => {
     <Composer
       draft={draft}
       models={models}
-      attachments={attachments}
-      modelsLoaded={modelsLoaded}
-      onPaste={fileHandlers.onPaste}
-      onStop={stopResponse}
-      onSubmit={submitDraft}
-      onCancel={discardComposerOverlay}
-      onDraftChange={setDraft}
-      textareaRef={textareaRef}
-      isGenerating={isGenerating}
-      thinkingLevel={thinkingLevel}
-      queuedMessages={queuedMessages}
-      workspacePath={workspacePath}
       overlay={overlay}
       hasTurns={hasTurns}
-      exiting={overlay && composerExiting}
-      revealKey={overlay ? composerRevealKey : 0}
-      onRefillPrevious={refillPrevious}
-      selectedModelKey={selectedModelKey}
-      previousTurn={previousUserTurn}
-      onOpenAttachment={openAttachment}
-      onRemoveAttachment={removeAttachment}
-      onSteerQueuedMessage={steerQueuedMessage}
-      onDeleteQueuedMessage={deleteQueuedMessage}
-      onSelectModel={selectModelFromComposer}
+      onStop={stopResponse}
+      onSubmit={submitDraft}
+      onDraftChange={setDraft}
+      attachments={attachments}
+      textareaRef={textareaRef}
+      modelsLoaded={modelsLoaded}
+      isGenerating={isGenerating}
+      thinkingLevel={thinkingLevel}
+      workspacePath={workspacePath}
       onOpenSettings={showSettings}
+      onPaste={fileHandlers.onPaste}
+      queuedMessages={queuedMessages}
+      previousTurn={previousUserTurn}
+      onCancel={discardComposerOverlay}
+      onRefillPrevious={refillPrevious}
+      onOpenAttachment={openAttachment}
+      selectedModelKey={selectedModelKey}
+      exiting={overlay && composerExiting}
+      onRemoveAttachment={removeAttachment}
       onExitComplete={completeComposerExit}
-      onSelectWorkspace={selectWorkspaceFromComposer}
-      onChooseWorkspaceDirectory={chooseWorkspaceFromComposer}
-      onSelectThinkingLevel={selectThinkingFromComposer}
+      onSelectModel={selectModelFromComposer}
+      onSteerQueuedMessage={steerQueuedMessage}
+      revealKey={overlay ? composerRevealKey : 0}
+      onDeleteQueuedMessage={deleteQueuedMessage}
       noProvidersConfigured={noProvidersConfigured}
+      onSelectWorkspace={selectWorkspaceFromComposer}
+      onSelectThinkingLevel={selectThinkingFromComposer}
+      onChooseWorkspaceDirectory={chooseWorkspaceFromComposer}
     />
   );
 
   return (
     <AppShell
       surface={surface}
-      sidePanel={sidePanel}
+      isGenerating={isGenerating}
       fileHandlers={fileHandlers}
       workspacePath={workspacePath}
-      sidePanelLabel={sidePanelLabel}
-      {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
-      onOpenSession={openRecentSession}
-      gitPanelVisible={gitPanelVisible}
-      isGenerating={isGenerating}
-      activeSessionId={activeSessionId}
-      onOpenSettings={toggleSettings}
       workspaceCollapsed={hasTurns}
-      sessionRoutePending={sessionRoutePending}
-      settingsPanelVisible={settingsPanelVisible}
-      onToggleGitPanel={toggleGitChangesPanel}
+      sidePanelLabel={sidePanelLabel}
+      onOpenSettings={toggleSettings}
+      gitPanelVisible={gitPanelVisible}
+      onOpenSession={openRecentSession}
+      activeSessionId={activeSessionId}
       sidePanelVisible={sidePanelVisible}
-      onChooseDirectory={chooseWorkspaceFromDock}
-      onDiscardComposer={discardComposerOverlay}
-      sessionViewActive={sessionViewActive}
-      onSelectWorkspace={selectWorkspaceFromDock}
       onSidePanelCollapse={closeSidePanel}
-      mainComposer={renderComposer(false, hasTurns)}
+      sessionViewActive={sessionViewActive}
+      sidePanelResizable={sidePanelResizable}
+      onToggleGitPanel={toggleGitChangesPanel}
+      sessionRoutePending={sessionRoutePending}
+      onDiscardComposer={discardComposerOverlay}
+      onChooseDirectory={chooseWorkspaceFromDock}
+      onSelectWorkspace={selectWorkspaceFromDock}
+      settingsPanelVisible={settingsPanelVisible}
       overlayComposer={renderComposer(true, false)}
+      mainComposer={renderComposer(false, hasTurns)}
+      {...(sidePanelMaxRatio ? { sidePanelMaxRatio } : {})}
+      sidePanel={
+        <AppSidePanel
+          mode={sidePanelMode}
+          onClose={closeSidePanel}
+          providers={authProviders}
+          mobileRelay={mobileRelay}
+          onSaveApiKey={saveApiKey}
+          settingsTab={settingsTab}
+          workspacePath={workspacePath}
+          onSettingsTabChange={setSettingsTab}
+          onBrowserUrlOpened={browserPanel.clear}
+          onLoginSubscription={loginSubscription}
+          onMobileRelayChange={updateMobileRelay}
+          onDisconnectProvider={disconnectProvider}
+          browserNavigation={browserPanel.navigation}
+          solidWindowBackground={solidWindowBackground}
+          onBrowserInspectText={appendInspectToComposer}
+          onSolidWindowBackgroundChange={updateSolidWindowBackground}
+        />
+      }
     />
   );
 };
