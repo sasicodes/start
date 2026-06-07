@@ -5,6 +5,7 @@ struct ChatDetailView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
     @State private var focusTask: Task<Void, Never>?
+    @State private var initialScrollDone = false
     @State private var olderPagingEnabled = false
 
     let chat: Chat
@@ -12,6 +13,7 @@ struct ChatDetailView: View {
     var body: some View {
         @Bindable var appState = appState
         let messages = appState.messages(for: chat)
+        let lastMessageId = messages.last?.id ?? ""
 
         ZStack(alignment: .top) {
             ScrollViewReader { proxy in
@@ -35,18 +37,16 @@ struct ChatDetailView: View {
                     .padding(.leading, 16)
                     .padding(.trailing, 10)
                 }
-                .onChange(of: messages.count) { _, _ in
-                    guard let last = messages.last else { return }
-
-                    if messages.count <= 10 {
-                        withAnimation(.smooth(duration: 0.18)) {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
-                    }
-                    olderPagingEnabled = true
+                .onAppear {
+                    scrollToInitialBottom(proxy: proxy, messages: messages)
+                }
+                .onChange(of: lastMessageId) { _, _ in
+                    scrollToInitialBottom(proxy: proxy, messages: messages)
                 }
                 .task(id: chat.id) {
-                    olderPagingEnabled = false
+                    if !initialScrollDone {
+                        olderPagingEnabled = false
+                    }
                     appState.refreshMessages(for: chat)
                 }
             }
@@ -155,13 +155,21 @@ struct ChatDetailView: View {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
+    private func scrollToInitialBottom(proxy: ScrollViewProxy, messages: [ChatMessage]) {
+        guard !initialScrollDone, let last = messages.last else { return }
+
+        proxy.scrollTo(last.id, anchor: .bottom)
+        initialScrollDone = true
+        olderPagingEnabled = true
+    }
+
     private func messageGap(messages: [ChatMessage], index: Int) -> CGFloat {
         guard index > 0 else { return 0 }
 
         let previous = messages[index - 1]
         let current = messages[index]
-        if previous.role == .user && current.role == .agent { return 8 }
-        if previous.role == .agent && current.role == .user { return 20 }
+        if previous.role == .user && current.role == .agent { return 16 }
+        if previous.role == .agent && current.role == .user { return 22 }
         return 12
     }
 }

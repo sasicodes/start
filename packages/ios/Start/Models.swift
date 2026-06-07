@@ -15,8 +15,28 @@ struct Chat: Identifiable, Codable {
     let id: String
     let title: String
     let modified: Int
+    let status: ChatSessionStatus?
+    let noticeKind: SessionNoticeKind?
     let workspaceName: String
     let workspacePath: String
+
+    init(
+        id: String,
+        title: String,
+        modified: Int,
+        status: ChatSessionStatus? = nil,
+        noticeKind: SessionNoticeKind? = nil,
+        workspaceName: String,
+        workspacePath: String
+    ) {
+        self.id = id
+        self.title = title
+        self.status = status
+        self.modified = modified
+        self.noticeKind = noticeKind
+        self.workspaceName = workspaceName
+        self.workspacePath = workspacePath
+    }
 
     var branchName: String {
         workspaceLeafName(for: workspacePath)
@@ -136,6 +156,18 @@ struct ChatMessage: Identifiable, Codable {
     }
 }
 
+enum ChatSessionStatus: String, Codable {
+    case idle
+    case failed
+    case completed
+    case generating
+}
+
+enum SessionNoticeKind: String, Codable {
+    case failed
+    case completed
+}
+
 struct RemoteWorkspace: Codable {
     let name: String
     let path: String
@@ -145,6 +177,8 @@ struct RemoteSession: Codable {
     let id: String
     let title: String
     let modified: Int
+    let status: String?
+    let noticeKind: String?
     let workspaceName: String
     let workspacePath: String
 }

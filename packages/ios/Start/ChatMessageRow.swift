@@ -74,28 +74,44 @@ private struct ThinkingDisclosure: View {
     let thinking: String
 
     var body: some View {
-        DisclosureGroup(isExpanded: $expanded) {
-            Text(thinking)
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.softInk)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 8)
-        } label: {
-            Text(thinkingTitle)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(StartTheme.Colors.softInk)
+        VStack(alignment: .leading, spacing: expanded ? 6 : 0) {
+            Button {
+                withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
+                    expanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    if message.streaming {
+                        ProgressView()
+                            .controlSize(.mini)
+                            .tint(StartTheme.Colors.softInk)
+                    }
+
+                    Text(thinkingTitle)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(StartTheme.Colors.softInk)
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(thinkingTitle)
+
+            if expanded {
+                Text(thinking)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(StartTheme.Colors.softInk)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipped()
     }
 
     private var thinkingTitle: String {
         guard let duration = durationLabel(for: message.durationMs) else {
-            return message.streaming ? "Thinking" : "Thought"
+            return message.streaming ? "Working" : "Worked"
         }
-        return message.streaming ? "Thinking for \(duration)" : "Thought for \(duration)"
+        return message.streaming ? "Working \(duration)" : "Worked \(duration)"
     }
 }
 
@@ -132,9 +148,10 @@ private struct AgentMessageFooter: View {
 }
 
 private func durationLabel(for durationMs: Int?) -> String? {
-    guard let durationMs, durationMs > 0 else { return nil }
+    guard let durationMs else { return nil }
 
-    let seconds = max(1, Int((Double(durationMs) / 1000).rounded()))
+    let seconds = max(0, Int((Double(durationMs) / 1000).rounded()))
+    if seconds < 1 { return "<1s" }
     if seconds < 60 { return "\(seconds)s" }
 
     let minutes = seconds / 60

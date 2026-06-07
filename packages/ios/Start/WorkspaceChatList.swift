@@ -93,16 +93,24 @@ private struct ChatRow: View {
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        Button {
+        let status = visibleStatus
+
+        return Button {
             withAnimation(.smooth(duration: 0.18)) {
                 appState.openChat(chat)
             }
         } label: {
-            HStack(alignment: .top) {
+            HStack(alignment: .center, spacing: 8) {
                 Text(chat.title)
                     .font(WorkspaceChatListMetrics.titleFont)
                     .foregroundStyle(StartTheme.Colors.ink)
                     .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                if let status {
+                    SessionStatusIndicator(status: status)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(minHeight: WorkspaceChatListMetrics.rowMinHeight, alignment: .leading)
@@ -112,7 +120,54 @@ private struct ChatRow: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(chat.title)
+        .accessibilityValue(status?.accessibilityLabel ?? "")
         .accessibilityHint("Opens chat")
+    }
+
+    private var visibleStatus: ChatSessionStatus? {
+        if case let .chat(sessionId) = appState.route, sessionId == chat.id {
+            return nil
+        }
+        if chat.status == .generating {
+            return .generating
+        }
+        if chat.status == .completed || chat.noticeKind == .completed {
+            return .completed
+        }
+        return nil
+    }
+}
+
+private struct SessionStatusIndicator: View {
+    let status: ChatSessionStatus
+
+    var body: some View {
+        Group {
+            if status == .generating {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(StartTheme.Colors.softInk.opacity(0.72))
+            } else {
+                Circle()
+                    .fill(StartTheme.Colors.success.opacity(0.78))
+                    .frame(width: 7, height: 7)
+            }
+        }
+        .frame(width: 14, height: 14)
+        .accessibilityHidden(true)
+    }
+}
+
+private extension ChatSessionStatus {
+    var accessibilityLabel: String {
+        switch self {
+        case .generating:
+            "Working"
+        case .completed:
+            "Completed"
+        case .idle, .failed:
+            ""
+        }
     }
 }
 

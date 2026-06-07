@@ -330,6 +330,8 @@ final class AppState {
                 id: session.id,
                 title: session.title,
                 modified: session.modified,
+                status: ChatSessionStatus(rawValue: session.status ?? ""),
+                noticeKind: SessionNoticeKind(rawValue: session.noticeKind ?? ""),
                 workspaceName: session.workspaceName,
                 workspacePath: session.workspacePath
             )
