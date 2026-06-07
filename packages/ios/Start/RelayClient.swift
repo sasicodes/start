@@ -79,6 +79,7 @@ final class RelayClient {
         socketTask = nil
         connected = false
         status = .offline
+        pairedDesktopId = ""
         pendingPairingCode = ""
     }
 
@@ -94,17 +95,16 @@ final class RelayClient {
         do {
             while !Task.isCancelled {
                 let message = try await socketTask.receive()
+                guard self.socketTask === socketTask else { return }
+
                 if let decoded = decode(message) {
                     handle(decoded)
                 }
             }
         } catch is CancellationError {
-            connected = false
-            status = .offline
+            markDisconnected(from: socketTask)
         } catch {
-            connected = false
-            status = .offline
-            lastError = error.localizedDescription
+            markDisconnected(from: socketTask, error: error)
         }
     }
 
@@ -153,10 +153,19 @@ final class RelayClient {
                 let text = String(decoding: data, as: UTF8.self)
                 try await socketTask.send(.string(text))
             } catch {
-                connected = false
-                status = .offline
-                lastError = error.localizedDescription
+                markDisconnected(from: socketTask, error: error)
             }
+        }
+    }
+
+    private func markDisconnected(from socketTask: URLSessionWebSocketTask, error: Error? = nil) {
+        guard self.socketTask === socketTask else { return }
+
+        connected = false
+        status = .offline
+        pairedDesktopId = ""
+        if let error {
+            lastError = error.localizedDescription
         }
     }
 }

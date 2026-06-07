@@ -19,7 +19,7 @@ struct Chat: Identifiable, Codable {
     let workspacePath: String
 
     var branchName: String {
-        URL(fileURLWithPath: workspacePath).lastPathComponent.isEmpty ? "workspace" : URL(fileURLWithPath: workspacePath).lastPathComponent
+        workspaceLeafName(for: workspacePath)
     }
 
     var projectName: String { workspaceName }
@@ -27,6 +27,11 @@ struct Chat: Identifiable, Codable {
     var updatedAt: String {
         relativeTimeLabel(for: modified)
     }
+}
+
+func workspaceLeafName(for path: String) -> String {
+    let name = URL(fileURLWithPath: path).lastPathComponent
+    return name.isEmpty ? "workspace" : name
 }
 
 enum WorkspaceSort: String, CaseIterable, Identifiable {

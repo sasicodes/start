@@ -114,7 +114,6 @@ const serverMessageSchema = v.union([
   mobileCommandSchema
 ]);
 
-export type RelayCommand = v.InferOutput<typeof relayCommandSchema>;
 export type MobileRelayCommand = v.InferOutput<typeof mobileRelayCommandSchema>;
 export type RelayServerMessage = v.InferOutput<typeof serverMessageSchema>;
 export type DesktopRelayEventPayload = Record<string, unknown>;

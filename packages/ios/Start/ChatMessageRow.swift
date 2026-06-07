@@ -8,6 +8,10 @@ struct ChatMessageRow: View {
         message.role == .user ? .trailing : .leading
     }
 
+    private var hasText: Bool {
+        !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
             if message.role == .user {
@@ -49,7 +53,7 @@ struct ChatMessageRow: View {
                 ThinkingDisclosure(message: message, thinking: thinking)
             }
 
-            if !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if hasText {
                 Text(message.text)
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(StartTheme.Colors.ink)
@@ -57,7 +61,7 @@ struct ChatMessageRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if !message.streaming && !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if !message.streaming && hasText {
                 AgentMessageFooter(message: message, onCopy: { onCopy(message) })
             }
         }

@@ -1,6 +1,9 @@
 import Foundation
 import Observation
 
+private let messagePageLimit = 10
+private let sessionPageLimit = 40
+
 @Observable
 @MainActor
 final class AppState {
@@ -20,7 +23,11 @@ final class AppState {
     var messagePageStates: [String: MessagePageState] = [:]
     var activeRemoteWorkspace: RemoteWorkspace?
 
+    private var modelsRequestId = ""
+    private var sessionRequestId = ""
+    private var sessionRefreshPending = false
     private var messageRequestOffsets: [String: Int] = [:]
+    private var messageRequestSessions: [String: String] = [:]
     private var pendingDrafts: [String: String] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
 
@@ -40,8 +47,7 @@ final class AppState {
 
     var activeBranchName: String {
         guard let path = activeRemoteWorkspace?.path else { return "Workspace" }
-        let name = URL(fileURLWithPath: path).lastPathComponent
-        return name.isEmpty ? "Workspace" : name
+        return workspaceLeafName(for: path)
     }
 
     var activeConnection: Connection? {
@@ -121,6 +127,7 @@ final class AppState {
         else { return false }
 
         upsertConnection(with: pairing)
+        resetRemoteRequestState()
 
         relay.connect(
             url: url,
@@ -132,6 +139,7 @@ final class AppState {
     }
 
     func retryConnection() {
+        resetRemoteRequestState()
         relay.retry()
     }
 
@@ -154,7 +162,13 @@ final class AppState {
 
     func requestSessions() {
         guard let desktopId = commandDesktopId else { return }
+        guard sessionRequestId.isEmpty else {
+            sessionRefreshPending = true
+            return
+        }
 
+        let requestId = UUID().uuidString
+        sessionRequestId = requestId
         if chats.isEmpty {
             sessionLoadState = .loading
         }
@@ -162,8 +176,8 @@ final class AppState {
             desktopId: desktopId,
             payload: RelayPayload(
                 action: "sessions.list",
-                requestId: UUID().uuidString,
-                limit: 40,
+                requestId: requestId,
+                limit: sessionPageLimit,
                 offset: 0
             )
         )
@@ -211,16 +225,19 @@ final class AppState {
 
     private var commandDesktopId: String? {
         guard relay.status == .connected else { return nil }
-        if !relay.pairedDesktopId.isEmpty { return relay.pairedDesktopId }
-        return activeConnection?.desktopId
+        guard !relay.pairedDesktopId.isEmpty else { return nil }
+        return relay.pairedDesktopId
     }
 
     private func requestModels() {
         guard let desktopId = commandDesktopId else { return }
+        guard modelsRequestId.isEmpty else { return }
 
+        let requestId = UUID().uuidString
+        modelsRequestId = requestId
         relay.sendCommand(
             desktopId: desktopId,
-            payload: RelayPayload(action: "models.list", requestId: UUID().uuidString)
+            payload: RelayPayload(action: "models.list", requestId: requestId)
         )
     }
 
@@ -237,12 +254,13 @@ final class AppState {
 
         let requestId = UUID().uuidString
         messageRequestOffsets[requestId] = offset
+        messageRequestSessions[requestId] = sessionId
         relay.sendCommand(
             desktopId: desktopId,
             payload: RelayPayload(
                 action: "messages.page",
                 requestId: requestId,
-                limit: 10,
+                limit: messagePageLimit,
                 offset: offset,
                 sessionId: sessionId
             )
@@ -292,6 +310,9 @@ final class AppState {
     }
 
     private func handleSessionsResult(_ payload: RelayPayload) {
+        guard let requestId = payload.requestId, requestId == sessionRequestId else { return }
+        defer { finishSessionRequest() }
+
         guard payload.ok != false else {
             sessionLoadState = .failed(payload.error ?? "Sessions could not be loaded.")
             return
@@ -311,12 +332,21 @@ final class AppState {
     }
 
     private func handleMessagesResult(_ payload: RelayPayload) {
-        guard let sessionId = payload.sessionId else { return }
-        let offset = messageRequestOffsets[payload.requestId ?? ""] ?? 0
-        messageRequestOffsets[payload.requestId ?? ""] = nil
+        guard let requestId = payload.requestId,
+              let offset = messageRequestOffsets[requestId],
+              let sessionId = messageRequestSessions[requestId]
+        else { return }
+
+        messageRequestOffsets[requestId] = nil
+        messageRequestSessions[requestId] = nil
 
         guard payload.ok != false else {
-            messagePageStates[sessionId] = MessagePageState(loading: false, hasMoreOlder: true, nextOffset: offset)
+            let state = messagePageStates[sessionId] ?? MessagePageState()
+            messagePageStates[sessionId] = MessagePageState(
+                loading: false,
+                hasMoreOlder: state.hasMoreOlder,
+                nextOffset: offset
+            )
             return
         }
 
@@ -343,12 +373,13 @@ final class AppState {
         messagePageStates[sessionId] = MessagePageState(
             loading: false,
             hasMoreOlder: payload.hasMoreOlder ?? false,
-            nextOffset: payload.nextOffset ?? messages.count
+            nextOffset: payload.nextOffset ?? offset + messages.count
         )
     }
 
     private func handleSendResult(_ payload: RelayPayload) {
-        let requestId = payload.requestId ?? ""
+        guard let requestId = payload.requestId else { return }
+
         let pendingDraft = pendingDrafts[requestId]
         pendingDrafts[requestId] = nil
 
@@ -388,6 +419,11 @@ final class AppState {
     }
 
     private func handleModelsResult(_ payload: RelayPayload) {
+        if payload.action == "models.list.result" {
+            guard let requestId = payload.requestId, requestId == modelsRequestId else { return }
+            modelsRequestId = ""
+        }
+
         guard payload.ok != false else {
             if payload.action != "models.list.result" {
                 requestModels()
@@ -403,6 +439,29 @@ final class AppState {
         }
         if let thinkingLevel = payload.thinkingLevel {
             self.thinkingLevel = thinkingLevel
+        }
+    }
+
+    private func finishSessionRequest() {
+        sessionRequestId = ""
+        guard sessionRefreshPending else { return }
+
+        sessionRefreshPending = false
+        requestSessions()
+    }
+
+    private func resetRemoteRequestState() {
+        modelsRequestId = ""
+        sessionRequestId = ""
+        sessionRefreshPending = false
+        messageRequestOffsets.removeAll()
+        messageRequestSessions.removeAll()
+        for (sessionId, state) in messagePageStates where state.loading {
+            messagePageStates[sessionId] = MessagePageState(
+                loading: false,
+                hasMoreOlder: state.hasMoreOlder,
+                nextOffset: state.nextOffset
+            )
         }
     }
 

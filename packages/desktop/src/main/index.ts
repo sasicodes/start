@@ -103,16 +103,6 @@ const mobileResult = (
   action: `${command.action}.result`
 });
 
-const mobileError = (
-  command: Extract<MobileRelayCommand, { requestId: string }>,
-  error: unknown
-): DesktopRelayEventPayload => ({
-  ok: false,
-  requestId: command.requestId,
-  action: `${command.action}.result`,
-  error: error instanceof Error ? error.message : 'Mobile request failed.'
-});
-
 const mobileStatusResult = (
   command: Extract<MobileRelayCommand, { requestId: string }>,
   status: ChatStatus
@@ -127,71 +117,67 @@ const runMobileSyncCommand = async (
   command: Extract<MobileRelayCommand, { requestId: string }>,
   context: DesktopRelayCommandContext
 ) => {
-  try {
-    if (command.action === 'sessions.list') {
-      context.reply(
-        mobileResult(
-          command,
-          await chat.getMobileSessionIndex({
-            ...(command.archived === true ? { archived: true } : {}),
-            ...(command.limit ? { limit: command.limit } : {}),
-            ...(command.offset ? { offset: command.offset } : {}),
-            ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
-          })
-        )
-      );
-      return;
-    }
+  if (command.action === 'sessions.list') {
+    context.reply(
+      mobileResult(
+        command,
+        await chat.getMobileSessionIndex({
+          ...(command.archived === true ? { archived: true } : {}),
+          ...(command.limit ? { limit: command.limit } : {}),
+          ...(command.offset ? { offset: command.offset } : {}),
+          ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
+        })
+      )
+    );
+    return;
+  }
 
-    if (command.action === 'messages.page') {
-      context.reply(
-        mobileResult(
-          command,
-          await chat.getMobileSessionMessages(command.sessionId, {
-            ...(command.limit ? { limit: command.limit } : {}),
-            ...(command.offset ? { offset: command.offset } : {})
-          })
-        )
-      );
-      return;
-    }
+  if (command.action === 'messages.page') {
+    context.reply(
+      mobileResult(
+        command,
+        await chat.getMobileSessionMessages(command.sessionId, {
+          ...(command.limit ? { limit: command.limit } : {}),
+          ...(command.offset ? { offset: command.offset } : {})
+        })
+      )
+    );
+    return;
+  }
 
-    if (command.action === 'message.send') {
-      const result = await chat.sendMobileMessage({
-        text: command.text,
-        ...(command.sessionId ? { sessionId: command.sessionId } : {}),
-        ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
-      });
-      context.reply({
-        ok: result.ok,
-        requestId: command.requestId,
-        action: 'message.send.result',
-        ...(result.error ? { error: result.error } : {}),
-        ...(result.sessionId ? { sessionId: result.sessionId } : {})
-      });
-      if (result.ok) notifyRecentSessionsChanged();
-      return;
-    }
+  if (command.action === 'message.send') {
+    const result = await chat.sendMobileMessage({
+      text: command.text,
+      ...(command.sessionId ? { sessionId: command.sessionId } : {}),
+      ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
+    });
+    context.reply({
+      ok: result.ok,
+      requestId: command.requestId,
+      action: 'message.send.result',
+      ...(result.error ? { error: result.error } : {}),
+      ...(result.sessionId ? { sessionId: result.sessionId } : {})
+    });
+    if (result.ok) notifyRecentSessionsChanged();
+    return;
+  }
 
-    if (command.action === 'models.list') {
-      context.reply(mobileResult(command, await chat.getMobileModelsState()));
-      return;
-    }
+  if (command.action === 'models.list') {
+    context.reply(mobileResult(command, await chat.getMobileModelsState()));
+    return;
+  }
 
-    if (command.action === 'model.select') {
-      const status = await chat.selectModel(command.modelKey);
-      context.reply(mobileStatusResult(command, status));
-      notifyStatusChanged();
-      return;
-    }
+  if (command.action === 'model.select') {
+    const status = await chat.selectModel(command.modelKey);
+    context.reply(mobileStatusResult(command, status));
+    notifyStatusChanged();
+    return;
+  }
 
-    if (command.action === 'thinking.select') {
-      const status = await chat.selectThinkingLevel(command.level);
-      context.reply(mobileStatusResult(command, status));
-      notifyStatusChanged();
-    }
-  } catch (error) {
-    context.reply(mobileError(command, error));
+  if (command.action === 'thinking.select') {
+    const status = await chat.selectThinkingLevel(command.level);
+    context.reply(mobileStatusResult(command, status));
+    notifyStatusChanged();
   }
 };
 
@@ -202,8 +188,10 @@ const runMobileCommand = (command: MobileRelayCommand, context: DesktopRelayComm
   }
 
   if ('requestId' in command) {
-    runMobileSyncCommand(command, context).catch((error) => context.reply(mobileError(command, error)));
+    return runMobileSyncCommand(command, context);
   }
+
+  return;
 };
 
 const desktopRelay = new DesktopRelay({

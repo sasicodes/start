@@ -23,8 +23,8 @@ export interface DesktopRelayCallbacks {
 
 export interface DesktopRelayCommandContext {
   mobileId: string;
-  broadcast: (payload: DesktopRelayEventPayload) => void;
   reply: (payload: DesktopRelayEventPayload) => void;
+  broadcast: (payload: DesktopRelayEventPayload) => void;
 }
 
 export interface RelaySocketHandlers {
@@ -150,7 +150,7 @@ export class DesktopRelay {
     if (reply) this.send(reply);
   }
 
-  private handleCommand(mobileId: string, command: MobileRelayCommand) {
+  private async handleCommand(mobileId: string, command: MobileRelayCommand) {
     const context: DesktopRelayCommandContext = {
       mobileId,
       reply: (payload) => this.send(desktopEventMessage(mobileId, payload)),
@@ -159,8 +159,8 @@ export class DesktopRelay {
 
     try {
       const result = this.callbacks.onCommand(command, context);
-      if (command.action === 'prompt') context.reply({ value: command.action, action: 'ack' });
-      if (result instanceof Promise) result.catch((error) => context.reply(this.errorPayload(command, error)));
+      if (command.action === 'prompt') context.reply({ action: 'ack', value: command.action });
+      await result;
     } catch (error) {
       context.reply(this.errorPayload(command, error));
     }
@@ -171,12 +171,12 @@ export class DesktopRelay {
     if ('requestId' in command) {
       return {
         ok: false,
-        error: message,
         requestId: command.requestId,
-        action: `${command.action}.result`
+        action: `${command.action}.result`,
+        error: message
       };
     }
-    return { value: command.action, action: 'error', error: message };
+    return { action: 'error', error: message, value: command.action };
   }
 
   private setCode(code: string) {
