@@ -31,16 +31,6 @@ struct ConnectionsSheet: View {
                     .listRowSeparator(.hidden)
                 }
 
-                Button {
-                    StartHaptics.lightImpact()
-                    scannerOpen = true
-                } label: {
-                    Label("Add connection", systemImage: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .accessibilityLabel("Add connection")
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
             }
             .background(StartTheme.Colors.background)
             .listStyle(.plain)
@@ -48,7 +38,7 @@ struct ConnectionsSheet: View {
             .scrollContentBackground(.hidden)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button {
                         StartHaptics.lightImpact()
                         dismiss()
@@ -56,6 +46,16 @@ struct ConnectionsSheet: View {
                         Image(systemName: "xmark")
                     }
                     .accessibilityLabel("Close")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        StartHaptics.lightImpact()
+                        scannerOpen = true
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                    }
+                    .accessibilityLabel("Add connection")
                 }
             }
         }

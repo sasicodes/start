@@ -68,7 +68,7 @@ struct ConnectionFormSheet: View {
                 .listRowBackground(Color.clear.background(.thinMaterial))
             }
             .background(.clear)
-            .contentMargins(.top, 12, for: .scrollContent)
+            .contentMargins(.top, 28, for: .scrollContent)
             .contentMargins(.horizontal, 12, for: .scrollContent)
             .navigationTitle("")
             .scrollContentBackground(.hidden)
