@@ -8,6 +8,7 @@ enum StartTheme {
         static let ink = Color.primary
         static let softInk = Color.secondary
         static let success = Color.green
+        static let working = Color(.systemYellow)
     }
 
     enum Metrics {

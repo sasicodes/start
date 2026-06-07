@@ -144,23 +144,26 @@ private struct SessionStatusIndicator: View {
     let status: ChatSessionStatus
 
     var body: some View {
-        Group {
-            if status == .generating {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(StartTheme.Colors.softInk.opacity(0.72))
-            } else {
-                Circle()
-                    .fill(StartTheme.Colors.success.opacity(0.78))
-                    .frame(width: 7, height: 7)
-            }
-        }
+        Circle()
+            .fill(status.indicatorColor)
+            .frame(width: 7, height: 7)
         .frame(width: 14, height: 14)
         .accessibilityHidden(true)
     }
 }
 
 private extension ChatSessionStatus {
+    var indicatorColor: Color {
+        switch self {
+        case .generating:
+            StartTheme.Colors.working.opacity(0.84)
+        case .completed:
+            StartTheme.Colors.success.opacity(0.78)
+        case .idle, .failed:
+            Color.clear
+        }
+    }
+
     var accessibilityLabel: String {
         switch self {
         case .generating:
