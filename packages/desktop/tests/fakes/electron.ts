@@ -67,6 +67,22 @@ export const app = {
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
 };
 
+const activeBlockers = new Set<number>();
+let nextBlockerId = 0;
+
+export const powerSaveBlocker = {
+  isStarted: (id: number) => activeBlockers.has(id),
+  stop: (id: number) => {
+    activeBlockers.delete(id);
+  },
+  start: (_type: string) => {
+    const id = nextBlockerId;
+    nextBlockerId += 1;
+    activeBlockers.add(id);
+    return id;
+  }
+};
+
 interface FakeBrowserBounds {
   x: number;
   y: number;
@@ -236,6 +252,7 @@ const fakeElectronModule = {
   dialog,
   clipboard,
   nativeImage,
+  powerSaveBlocker,
   BrowserWindow: {
     fromWebContents: (webContents: FakeBrowserWebContents) => windowsByWebContents.get(webContents) ?? null
   },

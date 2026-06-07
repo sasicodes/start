@@ -52,6 +52,7 @@ import {
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import { logger } from '@main/utils/logger';
+import { setStayAwake } from '@main/utils/power';
 import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
@@ -258,6 +259,7 @@ if (!singleInstanceLock) {
 
     appSettings = await readAppSettings();
     desktopRelay.sync(appSettings.mobileRelay);
+    setStayAwake(desktopRelay.isActive);
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -374,6 +376,7 @@ if (!singleInstanceLock) {
       });
       appSettings = nextSettings;
       desktopRelay.sync(nextSettings.mobileRelay);
+      setStayAwake(desktopRelay.isActive);
       return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {
