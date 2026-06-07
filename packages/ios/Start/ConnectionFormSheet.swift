@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ConnectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var deleteConfirmationOpen = false
     @State private var name: String
     let connection: Connection
     let state: ConnectionState
@@ -54,7 +53,8 @@ struct ConnectionFormSheet: View {
                 Section {
                     Button(role: .destructive) {
                         StartHaptics.lightImpact()
-                        deleteConfirmationOpen = true
+                        onDelete()
+                        dismiss()
                     } label: {
                         Text("Delete connection")
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -86,20 +86,6 @@ struct ConnectionFormSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
         .presentationDetents([.height(430), .medium, .large])
-        .confirmationDialog(
-            "Delete connection?",
-            isPresented: $deleteConfirmationOpen,
-            titleVisibility: .visible
-        ) {
-            Button("Delete connection", role: .destructive) {
-                onDelete()
-                dismiss()
-            }
-
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This removes the saved connection from this iPhone.")
-        }
     }
 
     private var nameValid: Bool {

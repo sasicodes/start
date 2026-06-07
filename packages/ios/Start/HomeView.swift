@@ -6,7 +6,6 @@ struct HomeView: View {
     @State private var scannerOpen = false
     @State private var connectionsOpen = false
     @State private var expandedWorkspaces = Set<String>()
-    @State private var scannerPendingAfterConnections = false
     @State private var workspaceExpansionInitialized = false
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
@@ -46,22 +45,15 @@ struct HomeView: View {
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
-        .sheet(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
+        .fullScreenCover(isPresented: $connectionsOpen) {
             ConnectionsSheet(
                 connections: appState.connections,
                 activeConnectionID: appState.activeConnectionID,
-                onAddConnection: {
-                    scannerPendingAfterConnections = true
-                    connectionsOpen = false
-                },
                 onDeleteConnection: appState.deleteConnection,
                 onRenameConnection: appState.renameConnection,
                 connectionState: { appState.connectionState(for: $0) },
                 onSelectConnection: appState.selectConnection
             )
-            .presentationBackground(.ultraThinMaterial)
-            .presentationDragIndicator(.hidden)
-            .presentationDetents([.large])
         }
         .task {
             appState.connectActiveConnectionIfNeeded()
@@ -214,13 +206,6 @@ struct HomeView: View {
             .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
         }
         .ignoresSafeArea(.container, edges: .bottom)
-    }
-
-    private func openPendingScanner() {
-        guard scannerPendingAfterConnections else { return }
-
-        scannerPendingAfterConnections = false
-        scannerOpen = true
     }
 
     private var titleRow: some View {

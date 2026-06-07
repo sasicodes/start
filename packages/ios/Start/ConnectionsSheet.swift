@@ -2,10 +2,10 @@ import SwiftUI
 
 struct ConnectionsSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var scannerOpen = false
     @State private var selectedConnection: Connection?
     let connections: [Connection]
     let activeConnectionID: UUID?
-    let onAddConnection: () -> Void
     let onDeleteConnection: (Connection) -> Void
     let onRenameConnection: (Connection, String) -> Void
     let connectionState: (Connection) -> ConnectionState
@@ -33,7 +33,7 @@ struct ConnectionsSheet: View {
 
                 Button {
                     StartHaptics.lightImpact()
-                    onAddConnection()
+                    scannerOpen = true
                 } label: {
                     Label("Add connection", systemImage: "plus")
                         .font(.system(size: 16, weight: .semibold))
@@ -42,7 +42,7 @@ struct ConnectionsSheet: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
             }
-            .background(Color.clear)
+            .background(StartTheme.Colors.background)
             .listStyle(.plain)
             .navigationTitle("Connections")
             .scrollContentBackground(.hidden)
@@ -59,7 +59,10 @@ struct ConnectionsSheet: View {
                 }
             }
         }
-        .background(Color.clear.ignoresSafeArea())
+        .background(StartTheme.Colors.background.ignoresSafeArea())
+        .sheet(isPresented: $scannerOpen) {
+            ConnectionScannerSheet()
+        }
         .sheet(item: $selectedConnection) { connection in
             let currentConnection = connections.first { $0.id == connection.id } ?? connection
 
@@ -147,7 +150,6 @@ private struct ConnectionListRow: View {
             )
         ],
         activeConnectionID: UUID(),
-        onAddConnection: {},
         onDeleteConnection: { _ in },
         onRenameConnection: { _, _ in },
         connectionState: { _ in .online },
