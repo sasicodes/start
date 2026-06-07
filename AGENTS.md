@@ -48,6 +48,8 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 - For async renderer state tied to props or ids, store the loaded value with its key and derive stale/loading fallbacks during render instead of resetting state in an effect.
 - Clean up every timer, animation frame, listener, watcher, subscription, and observer. Avoid duplicate polling for the same source. Batch high-frequency visual updates with animation frames; coalesce non-visual high-frequency updates such as streaming text with a throttled timer so idle frames do no work.
 - Extract effect setup, async data fetching, and subscription logic into named custom hooks (`use*`) when the effect carries its own state, refs, or more than a few lines of setup.
+- Never assign rendered JSX (an element) to a constant or variable; render it inline, pass it inline as a slot prop, or extract a named component. Components are functions, not element-valued constants.
+- Handle a promise's rejection once, inside the worker function that owns it, then pass that function directly as the handler. Do not inline `.catch`/`.then`/`try-catch` in a JSX handler prop, and never wrap a function that already handles its own errors in another `.catch`.
 
 ## Styling
 
@@ -100,3 +102,4 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 ## Formatting
 
 - Sort sortable code by total line length when it doesn't hurt readability or break framework conventions: interface and type members, object keys and values, JSX props, variables, hooks, hook dependencies, destructured constants, CSS variables, and written statement objects.
+- Group related declarations — hooks, derived constants, handlers — and separate the groups with a blank line.
