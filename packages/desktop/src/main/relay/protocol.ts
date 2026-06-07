@@ -21,7 +21,15 @@ const pairingRequestSchema = v.object({
   code: v.string(),
   mobileId: v.string(),
   name: v.optional(v.string()),
+  trustKey: v.optional(v.string()),
   publicKey: v.optional(v.string())
+});
+
+const pairingResumeSchema = v.object({
+  type: v.literal('pairing.resume'),
+  proof: v.string(),
+  nonce: v.string(),
+  mobileId: v.string()
 });
 
 const mobileDisconnectedSchema = v.object({
@@ -127,6 +135,7 @@ const serverMessageSchema = v.union([
   relayErrorSchema,
   pairingCreatedSchema,
   pairingRequestSchema,
+  pairingResumeSchema,
   mobileDisconnectedSchema,
   mobileCommandSchema
 ]);
@@ -158,6 +167,12 @@ export const helloDesktopMessage = (desktopId: string, token: string, name = '')
 export const pairingCreateMessage = () => ({ type: 'pairing.create' as const });
 
 export const pairingApproveMessage = (mobileId: string) => ({ type: 'pairing.approve' as const, mobileId });
+
+export const pairingRejectMessage = (mobileId: string, message: string) => ({
+  type: 'pairing.reject' as const,
+  mobileId,
+  message
+});
 
 export const desktopEventMessage = (mobileId: string, payload: DesktopRelayEventPayload) => ({
   type: 'desktop.event' as const,

@@ -9,6 +9,7 @@ private let sessionTitleMaxLength = 120
 private let maxConnectionAttempts = 3
 private let reconnectRetryDelay = Duration.milliseconds(900)
 private let relayTokenKeychainService = "one.intelligence.start.mobile-relay"
+private let trustKeyKeychainService = "one.intelligence.start.mobile-trust"
 private let connectionsStorageKey = "start:mobile-connections"
 private let activeConnectionStorageKey = "start:active-mobile-connection-id"
 
@@ -170,6 +171,7 @@ final class AppState {
         let wasActive = activeConnectionID == connection.id
         connections.removeAll { $0.id == connection.id }
         Self.deleteRelayToken(for: connection.id)
+        Self.deleteTrustKey(for: connection.id)
 
         if wasActive {
             relay.disconnect()
@@ -419,15 +421,24 @@ final class AppState {
                 enabled: connection.enabled,
                 relayUrl: connection.relayUrl,
                 desktopId: connection.desktopId,
-                relayToken: loadRelayToken(for: connection.id)
+                relayToken: loadRelayToken(for: connection.id),
+                trustKey: loadTrustKey(for: connection.id)
             )
         }
     }
 
     private static func loadRelayToken(for id: UUID) -> String {
+        loadSecret(service: relayTokenKeychainService, for: id)
+    }
+
+    private static func loadTrustKey(for id: UUID) -> String {
+        loadSecret(service: trustKeyKeychainService, for: id)
+    }
+
+    private static func loadSecret(service: String, for id: UUID) -> String {
         var item: CFTypeRef?
         let status = SecItemCopyMatching(
-            relayTokenQuery(for: id, returningData: true) as CFDictionary,
+            secretQuery(service: service, for: id, returningData: true) as CFDictionary,
             &item
         )
         guard status == errSecSuccess,
@@ -439,13 +450,21 @@ final class AppState {
     }
 
     private static func deleteRelayToken(for id: UUID) {
-        _ = SecItemDelete(relayTokenQuery(for: id) as CFDictionary)
+        deleteSecret(service: relayTokenKeychainService, for: id)
     }
 
-    private static func relayTokenQuery(for id: UUID, returningData: Bool = false) -> [String: Any] {
+    private static func deleteTrustKey(for id: UUID) {
+        deleteSecret(service: trustKeyKeychainService, for: id)
+    }
+
+    private static func deleteSecret(service: String, for id: UUID) {
+        _ = SecItemDelete(secretQuery(service: service, for: id) as CFDictionary)
+    }
+
+    private static func secretQuery(service: String, for id: UUID, returningData: Bool = false) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: relayTokenKeychainService,
+            kSecAttrService as String: service,
             kSecAttrAccount as String: id.uuidString
         ]
 
@@ -476,6 +495,7 @@ final class AppState {
             url: url,
             token: connection.relayToken,
             mobileId: DeviceIdentity.mobileId,
+            trustKey: connection.trustKey,
             desktopId: connection.desktopId,
             pairingCode: pairingCode
         )
@@ -514,6 +534,7 @@ final class AppState {
 
         for connection in connections {
             saveRelayToken(connection.relayToken, for: connection.id)
+            saveTrustKey(connection.trustKey, for: connection.id)
         }
 
         guard let data = try? JSONEncoder().encode(connections) else { return }
@@ -521,14 +542,22 @@ final class AppState {
     }
 
     private func saveRelayToken(_ token: String, for id: UUID) {
-        let query = Self.relayTokenQuery(for: id)
+        saveSecret(token, service: relayTokenKeychainService, for: id)
+    }
 
-        guard !token.isEmpty else {
+    private func saveTrustKey(_ key: String, for id: UUID) {
+        saveSecret(key, service: trustKeyKeychainService, for: id)
+    }
+
+    private func saveSecret(_ value: String, service: String, for id: UUID) {
+        let query = Self.secretQuery(service: service, for: id)
+
+        guard !value.isEmpty else {
             _ = SecItemDelete(query as CFDictionary)
             return
         }
 
-        let data = Data(token.utf8)
+        let data = Data(value.utf8)
         let attributes: [String: Any] = [
             kSecValueData as String: data
         ]
@@ -991,16 +1020,18 @@ final class AppState {
     }
 
     private func upsertConnection(with pairing: PairingPayload) {
-        let nextConnection = Connection(pairing: pairing)
-
         if let index = connections.firstIndex(where: { $0.desktopId == pairing.desktopId }) {
+            let trustKey = connections[index].trustKey.isEmpty ? MobileTrust.key() : connections[index].trustKey
+            let nextConnection = Connection(pairing: pairing, trustKey: trustKey)
+
             connections[index] = Connection(
                 id: connections[index].id,
                 name: nextConnection.name,
                 enabled: true,
                 relayUrl: nextConnection.relayUrl,
                 desktopId: nextConnection.desktopId,
-                relayToken: nextConnection.relayToken
+                relayToken: nextConnection.relayToken,
+                trustKey: nextConnection.trustKey
             )
             activeConnectionID = connections[index].id
             persistConnections()
@@ -1008,6 +1039,7 @@ final class AppState {
             return
         }
 
+        let nextConnection = Connection(pairing: pairing, trustKey: MobileTrust.key())
         connections.insert(nextConnection, at: 0)
         activeConnectionID = nextConnection.id
         persistConnections()

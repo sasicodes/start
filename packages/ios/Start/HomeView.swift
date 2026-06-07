@@ -46,7 +46,7 @@ struct HomeView: View {
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
-        .sheet(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
+        .fullScreenCover(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
             ConnectionsSheet(
                 connections: appState.connections,
                 activeConnectionID: appState.activeConnectionID,

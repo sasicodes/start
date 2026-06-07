@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct ConnectionsSheet: View {
-    @State private var connectionToDelete: Connection?
-    @State private var connectionToRename: Connection?
-    @State private var renameDraft = ""
-    @State private var renameOpen = false
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedConnection: Connection?
     let connections: [Connection]
     let activeConnectionID: UUID?
     let onAddConnection: () -> Void
@@ -15,201 +13,167 @@ struct ConnectionsSheet: View {
     let onSetConnectionEnabled: (Connection, Bool) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sheetHeader
+        ZStack {
+            StartTheme.Colors.background.ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 10) {
-                    newConnectionButton
+            VStack(spacing: 0) {
+                header
 
-                    ForEach(connections) { connection in
-                        ConnectionSheetRow(
-                            active: activeConnectionID == connection.id,
-                            connection: connection,
-                            state: connectionState(connection),
-                            onDelete: {
-                                StartHaptics.lightImpact()
-                                connectionToDelete = connection
-                            },
-                            onRename: {
-                                StartHaptics.selection()
-                                connectionToRename = connection
-                                renameDraft = connection.name
-                                renameOpen = true
-                            },
-                            onSelect: {
-                                StartHaptics.selection()
-                                withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
-                                    onSelectConnection(connection)
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Connections")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(StartTheme.Colors.softInk)
+
+                        VStack(spacing: 0) {
+                            ForEach(Array(connections.enumerated()), id: \.element.id) { index, connection in
+                                ConnectionListRow(
+                                    connection: connection,
+                                    state: connectionState(connection)
+                                ) {
+                                    StartHaptics.selection()
+                                    if activeConnectionID != connection.id {
+                                        onSelectConnection(connection)
+                                    }
+                                    selectedConnection = connection
                                 }
-                            },
-                            onToggleEnabled: { enabled in
-                                StartHaptics.selection()
-                                onSetConnectionEnabled(connection, enabled)
+
+                                if index < connections.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 64)
+                                }
                             }
-                        )
+
+                            if !connections.isEmpty {
+                                Divider()
+                                    .padding(.leading, 64)
+                            }
+
+                            addConnectionButton
+                        }
+                        .glassPanel(cornerRadius: 30)
                     }
+                    .padding(.horizontal, StartTheme.Metrics.pagePadding)
+                    .padding(.top, 20)
+                    .padding(.bottom, 32)
                 }
-                .padding(.bottom, 18)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 20)
-        .sheet(item: $connectionToDelete) { connection in
-            ConnectionDeleteSheet(connection: connection) {
-                onDeleteConnection(connection)
-                connectionToDelete = nil
-                StartHaptics.success()
-            }
-        }
-        .alert("Rename connection", isPresented: $renameOpen) {
-            TextField("Name", text: $renameDraft)
+        .sheet(item: $selectedConnection) { connection in
+            let currentConnection = connections.first { $0.id == connection.id } ?? connection
 
-            Button("Cancel", role: .cancel) {
-                connectionToRename = nil
-                renameDraft = ""
-            }
-
-            Button("Save") {
-                guard let connection = connectionToRename else { return }
-                onRenameConnection(connection, renameDraft)
-                connectionToRename = nil
-                renameDraft = ""
-                StartHaptics.success()
-            }
+            ConnectionFormSheet(
+                connection: currentConnection,
+                state: connectionState(currentConnection),
+                onDelete: {
+                    onDeleteConnection(currentConnection)
+                    selectedConnection = nil
+                },
+                onRename: { name in
+                    onRenameConnection(currentConnection, name)
+                },
+                onSetEnabled: { enabled in
+                    onSetConnectionEnabled(currentConnection, enabled)
+                }
+            )
         }
-        .presentationDetents([.fraction(0.68), .large])
-        .connectionSheetChrome()
     }
 
-    private var sheetHeader: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "globe")
-                .font(.system(size: 18, weight: .semibold))
+    private var header: some View {
+        ZStack {
+            Text("Connections")
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(StartTheme.Colors.ink)
-                .frame(width: 38, height: 38)
-                .glassCircle()
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Connections")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink)
+            HStack {
+                Spacer()
 
-                Text("Choose one desktop at a time.")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.softInk)
+                Button {
+                    StartHaptics.lightImpact()
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(StartTheme.Colors.ink)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Circle())
+                .accessibilityLabel("Close")
             }
         }
-        .padding(.horizontal, 4)
+        .frame(height: 44)
+        .padding(.horizontal, StartTheme.Metrics.pagePadding)
+        .padding(.top, 18)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
     }
 
-    private var newConnectionButton: some View {
+    private var addConnectionButton: some View {
         Button {
             StartHaptics.lightImpact()
             onAddConnection()
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Image(systemName: "plus")
+                    .font(.system(size: 19, weight: .semibold))
+
+                Text("Add connection")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink)
-                    .frame(width: 36, height: 36)
-                    .glassCircle()
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("New connection")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(StartTheme.Colors.ink)
-
-                    Text("Scan a desktop pairing code.")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(StartTheme.Colors.softInk)
-                }
 
                 Spacer()
             }
-            .padding(14)
+            .padding(.horizontal, 20)
             .frame(maxWidth: .infinity)
-            .glassRoundedRectangle(cornerRadius: 22)
+            .frame(height: 56)
+            .foregroundStyle(Color(.systemBlue))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Add connection")
     }
 }
 
-private struct ConnectionSheetRow: View {
-    let active: Bool
+private struct ConnectionListRow: View {
     let connection: Connection
     let state: ConnectionState
-    let onDelete: () -> Void
-    let onRename: () -> Void
-    let onSelect: () -> Void
-    let onToggleEnabled: (Bool) -> Void
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            Button(action: onSelect) {
-                HStack(spacing: 12) {
-                    connectionIcon
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: "laptopcomputer")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 30)
 
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(connection.name)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(connection.enabled ? StartTheme.Colors.ink : StartTheme.Colors.softInk)
-                            .lineLimit(1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(connection.name)
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(connection.enabled ? StartTheme.Colors.ink : StartTheme.Colors.softInk)
+                        .lineLimit(1)
+
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(statusColor)
+                            .frame(width: 6, height: 6)
 
                         Text(statusLabel)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundStyle(statusColor)
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(StartTheme.Colors.softInk)
                     }
-
-                    Spacer(minLength: 0)
                 }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(StartTheme.Colors.softInk.opacity(0.72))
             }
-            .buttonStyle(.plain)
-
-            Toggle("", isOn: Binding(
-                get: { connection.enabled },
-                set: { enabled in
-                    onToggleEnabled(enabled)
-                }
-            ))
-            .labelsHidden()
-            .tint(StartTheme.Colors.ink)
-
-            IconRowButton(
-                systemName: "pencil",
-                tint: StartTheme.Colors.ink,
-                action: onRename
-            )
-            .accessibilityLabel("Rename connection")
-
-            IconRowButton(
-                systemName: "trash",
-                tint: Color(.systemRed),
-                action: onDelete
-            )
-            .accessibilityLabel("Delete connection")
+            .padding(.horizontal, 20)
+            .frame(maxWidth: .infinity)
+            .frame(height: 76)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .glassRoundedRectangle(cornerRadius: 22)
-    }
-
-    private var connectionIcon: some View {
-        ZStack(alignment: .bottomTrailing) {
-            Image(systemName: "laptopcomputer")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 36, height: 36)
-                .glassCircle()
-
-            if active {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(iconColor)
-                    .background(StartTheme.Colors.background, in: Circle())
-                    .offset(x: 1, y: 1)
-            }
-        }
+        .buttonStyle(.plain)
     }
 
     private var iconColor: Color {
@@ -219,35 +183,17 @@ private struct ConnectionSheetRow: View {
 
     private var statusColor: Color {
         guard connection.enabled else { return StartTheme.Colors.softInk.opacity(0.72) }
-        return active ? state.symbolColor : StartTheme.Colors.softInk
+        return state.symbolColor
     }
 
     private var statusLabel: String {
         guard connection.enabled else { return "Disabled" }
-        guard active else { return "Available" }
         switch state {
         case .online:
             return "Connected"
         case .offline:
             return "Not connected"
         }
-    }
-}
-
-private struct IconRowButton: View {
-    let systemName: String
-    let tint: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: 36, height: 36)
-        }
-        .buttonStyle(.plain)
-        .contentShape(Circle())
     }
 }
 

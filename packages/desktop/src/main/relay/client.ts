@@ -5,6 +5,8 @@ import {
   helloDesktopMessage,
   type MobileRelayCommand,
   pairingCreateMessage,
+  pairingApproveMessage,
+  pairingRejectMessage,
   parseRelayServerMessage,
   relayReply
 } from '@main/relay/protocol';
@@ -19,12 +21,27 @@ export interface RelaySocket {
 export interface DesktopRelayCallbacks {
   onCode: (code: string) => void;
   onCommand: (command: MobileRelayCommand, context: DesktopRelayCommandContext) => Promise<void> | void;
+  onPairingRequest?: (request: DesktopRelayPairingRequest) => void;
+  onPairingResume?: (request: DesktopRelayPairingResumeRequest) => boolean;
 }
 
 export interface DesktopRelayCommandContext {
   mobileId: string;
   reply: (payload: DesktopRelayEventPayload) => void;
   broadcast: (payload: DesktopRelayEventPayload) => void;
+}
+
+export interface DesktopRelayPairingRequest {
+  name?: string;
+  mobileId: string;
+  trustKey?: string;
+}
+
+export interface DesktopRelayPairingResumeRequest {
+  proof: string;
+  nonce: string;
+  mobileId: string;
+  desktopId: string;
 }
 
 export interface RelaySocketHandlers {
@@ -140,7 +157,13 @@ export class DesktopRelay {
     }
     if (message.type === 'pairing.request') {
       this.pairedMobileIds.add(message.mobileId);
+      this.callbacks.onPairingRequest?.({
+        mobileId: message.mobileId,
+        ...(message.name ? { name: message.name } : {}),
+        ...(message.trustKey ? { trustKey: message.trustKey } : {})
+      });
     }
+    if (message.type === 'pairing.resume') this.handlePairingResume(message);
     if (message.type === 'mobile.disconnected') {
       this.pairedMobileIds.delete(message.mobileId);
     }
@@ -151,6 +174,24 @@ export class DesktopRelay {
 
     const reply = relayReply(message);
     if (reply) this.send(reply);
+  }
+
+  private handlePairingResume(request: Omit<DesktopRelayPairingResumeRequest, 'desktopId'>) {
+    const approved =
+      this.callbacks.onPairingResume?.({
+        proof: request.proof,
+        nonce: request.nonce,
+        mobileId: request.mobileId,
+        desktopId: this.desktopId
+      }) ?? false;
+
+    if (!approved) {
+      this.send(pairingRejectMessage(request.mobileId, 'Mobile is not paired with this desktop.'));
+      return;
+    }
+
+    this.pairedMobileIds.add(request.mobileId);
+    this.send(pairingApproveMessage(request.mobileId));
   }
 
   private async handleCommand(mobileId: string, command: MobileRelayCommand) {

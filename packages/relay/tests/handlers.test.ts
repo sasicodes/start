@@ -82,6 +82,70 @@ describe('handleHello', () => {
     expect(state.peekPairing(pairing.code)?.desktopId).toBe('desktop-1');
   });
 
+  it('forwards pairing resume requests and approvals', () => {
+    const state = new RelayState();
+    const context = { config: { port: 8787, token: 'secret', pairingTtlMs: 300000 }, state };
+    const desktop = socket();
+    const mobile = socket();
+
+    handleHello(
+      context,
+      desktop.socket,
+      Buffer.from(
+        JSON.stringify({ type: 'hello.desktop', protocolVersion: 1, desktopId: 'desktop-1', token: 'secret' })
+      )
+    );
+    handleHello(
+      context,
+      mobile.socket,
+      Buffer.from(JSON.stringify({ type: 'hello.mobile', protocolVersion: 1, mobileId: 'mobile-1', token: 'secret' }))
+    );
+
+    mobile.emit(
+      'message',
+      Buffer.from(
+        JSON.stringify({ type: 'pairing.resume', desktopId: 'desktop-1', nonce: 'nonce-1', proof: 'proof-1' })
+      )
+    );
+    expect(desktop.sent).toContainEqual({
+      type: 'pairing.resume',
+      proof: 'proof-1',
+      nonce: 'nonce-1',
+      mobileId: 'mobile-1'
+    });
+
+    desktop.emit('message', Buffer.from(JSON.stringify({ type: 'pairing.approve', mobileId: 'mobile-1' })));
+    expect(mobile.sent).toContainEqual({ type: 'pairing.approved', desktopId: 'desktop-1' });
+    expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(true);
+  });
+
+  it('forwards pairing resume rejections to mobile', () => {
+    const state = new RelayState();
+    const context = { config: { port: 8787, token: 'secret', pairingTtlMs: 300000 }, state };
+    const desktop = socket();
+    const mobile = socket();
+
+    handleHello(
+      context,
+      desktop.socket,
+      Buffer.from(
+        JSON.stringify({ type: 'hello.desktop', protocolVersion: 1, desktopId: 'desktop-1', token: 'secret' })
+      )
+    );
+    handleHello(
+      context,
+      mobile.socket,
+      Buffer.from(JSON.stringify({ type: 'hello.mobile', protocolVersion: 1, mobileId: 'mobile-1', token: 'secret' }))
+    );
+
+    desktop.emit(
+      'message',
+      Buffer.from(JSON.stringify({ type: 'pairing.reject', mobileId: 'mobile-1', message: 'Mobile is not paired.' }))
+    );
+
+    expect(mobile.sent).toContainEqual({ type: 'relay.error', message: 'Mobile is not paired.' });
+  });
+
   it('completes a full desktop-mobile pairing handshake', () => {
     const state = new RelayState();
     const context = { config: { port: 8787, token: 'secret', pairingTtlMs: 300000 }, state };

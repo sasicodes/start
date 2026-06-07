@@ -336,6 +336,7 @@ struct Connection: Identifiable, Codable {
     let relayUrl: String
     let desktopId: String
     let relayToken: String
+    let trustKey: String
 
     init(
         id: UUID = UUID(),
@@ -343,7 +344,8 @@ struct Connection: Identifiable, Codable {
         enabled: Bool,
         relayUrl: String,
         desktopId: String,
-        relayToken: String = ""
+        relayToken: String = "",
+        trustKey: String = ""
     ) {
         self.id = id
         self.name = name
@@ -351,9 +353,10 @@ struct Connection: Identifiable, Codable {
         self.relayUrl = relayUrl
         self.desktopId = desktopId
         self.relayToken = relayToken
+        self.trustKey = trustKey
     }
 
-    init(pairing: PairingPayload) {
+    init(pairing: PairingPayload, trustKey: String) {
         let fallbackName = String(pairing.desktopId.prefix(8))
         let trimmedName = pairing.desktopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -362,7 +365,8 @@ struct Connection: Identifiable, Codable {
             enabled: true,
             relayUrl: pairing.relayUrl,
             desktopId: pairing.desktopId,
-            relayToken: pairing.relayToken ?? ""
+            relayToken: pairing.relayToken ?? "",
+            trustKey: trustKey
         )
     }
 
@@ -375,6 +379,7 @@ struct Connection: Identifiable, Codable {
         relayUrl = try container.decode(String.self, forKey: .relayUrl)
         desktopId = try container.decode(String.self, forKey: .desktopId)
         relayToken = ""
+        trustKey = ""
     }
 
     func encode(to encoder: Encoder) throws {

@@ -87,6 +87,24 @@ describe('parseStartState', () => {
     expect(state.sessionNotices?.ok?.seenAt).toBe(2);
   });
 
+  it('keeps only valid trusted mobile devices', () => {
+    const state = parseStartState({
+      trustedMobileDevices: {
+        bad: { mobileId: 'bad', pairedAt: 1 },
+        ' mobile-1 ': { name: ' iPhone ', trustKey: ' secret ', pairedAt: 1, lastSeenAt: 2 }
+      }
+    });
+
+    expect(state.trustedMobileDevices?.bad).toBeUndefined();
+    expect(state.trustedMobileDevices?.['mobile-1']).toEqual({
+      name: 'iPhone',
+      pairedAt: 1,
+      mobileId: 'mobile-1',
+      trustKey: 'secret',
+      lastSeenAt: 2
+    });
+  });
+
   it('keeps only valid workspace history entries', () => {
     const state = parseStartState({
       workspaceHistory: {

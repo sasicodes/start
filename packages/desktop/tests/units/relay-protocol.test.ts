@@ -22,6 +22,11 @@ describe('parseRelayServerMessage', () => {
       type: 'mobile.disconnected',
       mobileId: 'mobile-1'
     });
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' })
+      )
+    ).toEqual({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' });
   });
 
   it('parses a mobile command with a well-formed payload', () => {
@@ -138,6 +143,9 @@ describe('relayReply', () => {
 
   it('does not reply to created or error messages', () => {
     expect(relayReply({ type: 'pairing.created', code: '123456', expiresAt: 10 })).toBeUndefined();
+    expect(
+      relayReply({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' })
+    ).toBeUndefined();
     expect(relayReply({ type: 'relay.error', message: 'nope' })).toBeUndefined();
   });
 });

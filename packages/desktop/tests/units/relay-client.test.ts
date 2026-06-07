@@ -39,8 +39,9 @@ describe('DesktopRelay', () => {
 
   it('drives the full pairing handshake and surfaces the code', () => {
     const onCode = vi.fn();
+    const onPairingRequest = vi.fn();
     const socket = fakeSocket();
-    const relay = new DesktopRelay({ onCode, onCommand: vi.fn() }, socket.factory);
+    const relay = new DesktopRelay({ onCode, onCommand: vi.fn(), onPairingRequest }, socket.factory);
 
     relay.sync(enabledSettings);
     socket.open();
@@ -59,8 +60,21 @@ describe('DesktopRelay', () => {
     expect(onCode).toHaveBeenCalledWith('482913');
     expect(relay.currentCode).toBe('482913');
 
-    socket.emit(JSON.stringify({ type: 'pairing.request', code: '482913', mobileId: 'mobile-1' }));
+    socket.emit(
+      JSON.stringify({
+        type: 'pairing.request',
+        code: '482913',
+        name: 'iPhone',
+        mobileId: 'mobile-1',
+        trustKey: 'secret-key'
+      })
+    );
     expect(socket.sent).toContainEqual({ type: 'pairing.approve', mobileId: 'mobile-1' });
+    expect(onPairingRequest).toHaveBeenCalledWith({
+      name: 'iPhone',
+      mobileId: 'mobile-1',
+      trustKey: 'secret-key'
+    });
   });
 
   it('runs an incoming mobile command and acks it back', () => {
@@ -168,6 +182,42 @@ describe('DesktopRelay', () => {
     });
 
     socket.emit(JSON.stringify({ type: 'mobile.disconnected', mobileId: 'mobile-1' }));
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
+  });
+
+  it('approves a valid pairing resume request', () => {
+    const socket = fakeSocket();
+    const onPairingResume = vi.fn(() => true);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn(), onPairingResume }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' }));
+
+    expect(onPairingResume).toHaveBeenCalledWith({
+      proof: 'proof-1',
+      nonce: 'nonce-1',
+      mobileId: 'mobile-1',
+      desktopId: 'desktop-1'
+    });
+    expect(socket.sent).toContainEqual({ type: 'pairing.approve', mobileId: 'mobile-1' });
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(true);
+  });
+
+  it('rejects an invalid pairing resume request', () => {
+    const socket = fakeSocket();
+    const onPairingResume = vi.fn(() => false);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn(), onPairingResume }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' }));
+
+    expect(socket.sent).toContainEqual({
+      type: 'pairing.reject',
+      mobileId: 'mobile-1',
+      message: 'Mobile is not paired with this desktop.'
+    });
     expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
   });
 

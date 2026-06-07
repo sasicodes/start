@@ -38,6 +38,7 @@ final class RelayClient {
         url: URL,
         token: String = "",
         mobileId: String,
+        trustKey: String = "",
         desktopId: String = "",
         pairingCode: String = ""
     ) {
@@ -45,6 +46,7 @@ final class RelayClient {
             url: url,
             token: token,
             mobileId: mobileId,
+            trustKey: trustKey,
             desktopId: desktopId,
             pairingCode: pairingCode
         )
@@ -78,8 +80,8 @@ final class RelayClient {
         updateStatus(.offline)
     }
 
-    func joinPairing(code: String, name: String = "iPhone") {
-        send(MobileMessage.pairingJoin(PairingJoin(code: code, name: name)))
+    func joinPairing(code: String, trustKey: String, name: String = "iPhone") {
+        send(MobileMessage.pairingJoin(PairingJoin(code: code, name: name, trustKey: trustKey.isEmpty ? nil : trustKey)))
     }
 
     func sendCommand(desktopId: String, payload: RelayPayload) {
@@ -120,8 +122,18 @@ final class RelayClient {
             connected = true
             if !pendingPairingCode.isEmpty {
                 updateStatus(.connecting)
-                joinPairing(code: pendingPairingCode)
+                joinPairing(code: pendingPairingCode, trustKey: lastRequest?.trustKey ?? "")
                 pendingPairingCode = ""
+            } else if let request = lastRequest,
+                      !request.desktopId.isEmpty,
+                      let resume = PairingResume.resume(
+                        desktopId: request.desktopId,
+                        mobileId: request.mobileId,
+                        trustKey: request.trustKey
+                      )
+            {
+                updateStatus(.connecting)
+                send(MobileMessage.pairingResume(resume))
             } else {
                 pairedDesktopId = lastRequest?.desktopId ?? pairedDesktopId
                 updateStatus(.connecting)
@@ -187,6 +199,7 @@ private struct RelayConnectionRequest {
     let url: URL
     let token: String
     let mobileId: String
+    let trustKey: String
     let desktopId: String
     let pairingCode: String
 }
@@ -240,11 +253,14 @@ enum ServerMessage: Decodable {
 
 enum MobileMessage: Encodable {
     case pairingJoin(PairingJoin)
+    case pairingResume(PairingResume)
     case command(MobileCommand)
 
     func encode(to encoder: Encoder) throws {
         switch self {
         case .pairingJoin(let message):
+            try message.encode(to: encoder)
+        case .pairingResume(let message):
             try message.encode(to: encoder)
         case .command(let message):
             try message.encode(to: encoder)
@@ -256,6 +272,27 @@ struct PairingJoin: Encodable {
     let type = "pairing.join"
     let code: String
     let name: String
+    let trustKey: String?
+}
+
+struct PairingResume: Encodable {
+    let type = "pairing.resume"
+    let desktopId: String
+    let nonce: String
+    let proof: String
+
+    static func resume(desktopId: String, mobileId: String, trustKey: String) -> PairingResume? {
+        let nonce = MobileTrust.nonce()
+        guard let proof = MobileTrust.proof(
+            key: trustKey,
+            nonce: nonce,
+            mobileId: mobileId,
+            desktopId: desktopId
+        )
+        else { return nil }
+
+        return PairingResume(desktopId: desktopId, nonce: nonce, proof: proof)
+    }
 }
 
 struct MobileCommand: Encodable {

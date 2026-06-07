@@ -42,6 +42,13 @@ export interface PairingRequest {
   name?: string;
   mobileId: string;
   publicKey?: string;
+  trustKey?: string;
+}
+
+export interface PairingResumeRequest {
+  proof: string;
+  nonce: string;
+  mobileId: string;
 }
 
 export interface PairingSession {

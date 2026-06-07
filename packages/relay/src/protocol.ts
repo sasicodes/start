@@ -23,12 +23,26 @@ const pairingJoinSchema = v.object({
   type: v.literal('pairing.join'),
   code: pairingCodeSchema,
   name: v.optional(clientNameSchema),
+  trustKey: v.optional(tokenSchema),
   publicKey: v.optional(tokenSchema)
+});
+
+const pairingResumeSchema = v.object({
+  type: v.literal('pairing.resume'),
+  desktopId: idSchema,
+  nonce: tokenSchema,
+  proof: tokenSchema
 });
 
 const pairingApproveSchema = v.object({
   type: v.literal('pairing.approve'),
   mobileId: idSchema
+});
+
+const pairingRejectSchema = v.object({
+  type: v.literal('pairing.reject'),
+  mobileId: idSchema,
+  message: v.optional(clientNameSchema)
 });
 
 const desktopEventSchema = v.object({
@@ -59,8 +73,13 @@ export const helloMobileSchema = v.object({
   protocolVersion: v.literal(protocolVersion)
 });
 
-export const desktopMessageSchema = v.union([pairingCreateSchema, pairingApproveSchema, desktopEventSchema]);
-export const mobileMessageSchema = v.union([pairingJoinSchema, mobileCommandSchema]);
+export const desktopMessageSchema = v.union([
+  pairingCreateSchema,
+  pairingApproveSchema,
+  pairingRejectSchema,
+  desktopEventSchema
+]);
+export const mobileMessageSchema = v.union([pairingJoinSchema, pairingResumeSchema, mobileCommandSchema]);
 
 export type HelloMobile = v.InferOutput<typeof helloMobileSchema>;
 export type HelloDesktop = v.InferOutput<typeof helloDesktopSchema>;

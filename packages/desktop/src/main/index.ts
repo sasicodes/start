@@ -42,6 +42,7 @@ import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { DesktopRelay, type DesktopRelayCommandContext } from '@main/relay/client';
 import { probeRelay } from '@main/relay/probe';
 import type { DesktopRelayEventPayload, MobileRelayCommand } from '@main/relay/protocol';
+import { trustMobileDevice, verifyMobileResume } from '@main/relay/trust';
 import { listRootItems, type RootItemsScope } from '@main/root/items';
 import {
   type AppSettings,
@@ -221,7 +222,9 @@ const runMobileCommand = (command: MobileRelayCommand, context: DesktopRelayComm
 
 const desktopRelay = new DesktopRelay({
   onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
-  onCommand: runMobileCommand
+  onCommand: runMobileCommand,
+  onPairingRequest: trustMobileDevice,
+  onPairingResume: verifyMobileResume
 });
 chat.setMobileSessionChangeHandler(({ sessionId, workspacePath }) => {
   desktopRelay.broadcast({ action: 'sessions.changed', sessionId, workspacePath });
