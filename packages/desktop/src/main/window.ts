@@ -3,6 +3,7 @@ import { appIconPath, appName, isDev, isMac } from '@main/application';
 import { confirmClose } from '@main/confirm';
 import { environment } from '@main/environment';
 import { isCloseWindowInput } from '@main/utils/keyboard';
+import { logger } from '@main/utils/logger';
 import type { BrowserWindowConstructorOptions, BrowserWindow as ElectronBrowserWindow, WebContents } from 'electron';
 import electron from 'electron';
 
@@ -133,7 +134,9 @@ export const createMainWindow = (): ElectronBrowserWindow => {
 
       mainWindowCloseConfirmed = true;
       window.close();
-    } catch {}
+    } catch (error) {
+      logger.error('window close', error);
+    }
   });
 
   window.on('closed', () => {

@@ -3,6 +3,7 @@ import { baseDir } from '@main/application';
 import { openStartDb, runStartTransaction, type StartStatement } from '@main/db';
 import { readRequiredString, type SqliteRow } from '@main/sqlite/row';
 import type { EffortLevel, SessionNotice } from '@main/types';
+import { logger } from '@main/utils/logger';
 import * as v from 'valibot';
 
 export interface MobileRelaySettings {
@@ -213,7 +214,9 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
   for (const row of rows) {
     try {
       raw[row.key] = JSON.parse(row.value_json);
-    } catch {}
+    } catch (error) {
+      logger.error('storage parse', error);
+    }
   }
   return raw;
 };

@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { delimiter, join } from 'node:path';
 import { baseDir, isMac } from '@main/application';
+import { logger } from '@main/utils/logger';
 
 const shellEnvironmentMarker = '__START_SHELL_ENV__';
 const shellEnvironmentCommand = `printf '${shellEnvironmentMarker}\\0'; command env -0`;
@@ -75,7 +76,9 @@ const installShellEnvironment = () => {
       timeout: shellEnvironmentTimeoutMs
     });
     applyShellEnvironment(parseShellEnvironment(output));
-  } catch {}
+  } catch (error) {
+    logger.error('shell environment', error);
+  }
 };
 
 installShellEnvironment();

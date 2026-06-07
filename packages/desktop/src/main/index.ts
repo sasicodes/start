@@ -51,6 +51,7 @@ import {
   writeAppSettings
 } from '@main/settings';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
+import { logger } from '@main/utils/logger';
 import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
@@ -411,7 +412,9 @@ if (!singleInstanceLock) {
 const shutdownAnalyticsAndQuit = async () => {
   try {
     await shutdownAnalytics();
-  } catch {}
+  } catch (error) {
+    logger.error('analytics shutdown', error);
+  }
 
   app.quit();
 };
@@ -419,13 +422,17 @@ const shutdownAnalyticsAndQuit = async () => {
 const shutdownAnalyticsSilently = async () => {
   try {
     await shutdownAnalytics();
-  } catch {}
+  } catch (error) {
+    logger.error('analytics shutdown', error);
+  }
 };
 
 const destroyBrowserSilently = async () => {
   try {
     await destroyBrowser();
-  } catch {}
+  } catch (error) {
+    logger.error('browser teardown', error);
+  }
 };
 
 app.on('before-quit', (event) => {

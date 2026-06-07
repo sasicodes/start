@@ -1,0 +1,26 @@
+import { logger } from '@main/utils/logger';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+describe('logger', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('writes the scope and an error stack to stderr', () => {
+    const write = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    const error = new Error('boom');
+    logger.error('shell environment', error);
+
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('[start] shell environment:'));
+    expect(write).toHaveBeenCalledWith(expect.stringContaining(error.stack ?? 'boom'));
+    expect(write).toHaveBeenCalledWith(expect.stringMatching(/\n$/));
+  });
+
+  it('stringifies non-error values', () => {
+    const write = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+    logger.error('storage parse', 'corrupt row');
+
+    expect(write).toHaveBeenCalledWith('[start] storage parse: corrupt row\n');
+  });
+});
