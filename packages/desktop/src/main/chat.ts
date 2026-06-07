@@ -98,9 +98,10 @@ import electron from 'electron';
 const { shell } = electron;
 
 const attachmentMaxAgeMs = 15 * 60 * 1000;
+const mobileMaxPageLimit = 50;
 const mobileDefaultMessageLimit = 10;
 const mobileDefaultSessionLimit = 40;
-const mobileMaxPageLimit = 50;
+const mobileStreamNotifyMinIntervalMs = 750;
 
 const enableRegisteredTools = (session: AgentSession) => {
   session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
@@ -183,6 +184,13 @@ interface MobileSendInput {
   workspacePath?: string;
 }
 
+interface MobileSessionChange {
+  sessionId: string;
+  workspacePath: string;
+}
+
+type MobileSessionChangeHandler = (change: MobileSessionChange) => void;
+
 const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => ({
   id: message.id,
   kind: message.kind,
@@ -231,10 +239,15 @@ export class ChatService {
   private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
   private readonly subagentNameAllocators = new Map<string, SubagentNameAllocator>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
+  private mobileSessionChangeHandler: MobileSessionChangeHandler = () => {};
 
   constructor() {
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
+  }
+
+  setMobileSessionChangeHandler(handler: MobileSessionChangeHandler): void {
+    this.mobileSessionChangeHandler = handler;
   }
 
   async getStatus(): Promise<ChatStatus> {
@@ -979,6 +992,14 @@ export class ChatService {
     let startedGeneration = false;
     let sessionId = '';
     let workspacePath = this.workspaceCwd;
+    let lastMobileChangeNotifiedAt = 0;
+    const notifyMobileSessionChange = (force = false) => {
+      const now = Date.now();
+      if (!force && now - lastMobileChangeNotifiedAt < mobileStreamNotifyMinIntervalMs) return;
+
+      lastMobileChangeNotifiedAt = now;
+      this.notifyMobileSessionChanged(sessionId, workspacePath);
+    };
 
     try {
       activeSession = await this.getSession();
@@ -996,6 +1017,7 @@ export class ChatService {
       const images = await this.resolveAttachments(attachments);
       workspacePath = this.workspaceCwd;
       this.resetLiveAssistantTurn(session, state);
+      notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
@@ -1030,6 +1052,7 @@ export class ChatService {
         if (thought) this.appendLiveAssistantThinking(state, thought);
         if (active && thought) this.emit('thinking-delta', thought, webContents);
         if (thought) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, thought);
+        if (renderedEvent || delta || thought) notifyMobileSessionChange();
 
         const error = agentEndError(event);
         if (error) endError = error;
@@ -1109,7 +1132,10 @@ export class ChatService {
       if (sessionId) this.emitScoped('chat:scoped-error', sessionId, workspacePath, message);
       return { ok: false, error: message };
     } finally {
-      if (runtimeState && startedGeneration) runtimeState.isGenerating = false;
+      if (runtimeState && startedGeneration) {
+        runtimeState.isGenerating = false;
+        notifyMobileSessionChange(true);
+      }
     }
   }
 
@@ -1444,6 +1470,11 @@ export class ChatService {
     this.activeSessionByWorkspace.set(this.workspaceCwd, this.activeSessionId);
   }
 
+  private notifyMobileSessionChanged(sessionId: string, workspacePath: string): void {
+    if (!sessionId || !workspacePath) return;
+    this.mobileSessionChangeHandler({ sessionId, workspacePath });
+  }
+
   private subscribeIndexSync(session: AgentSession, modelProvider: string, modelId: string): void {
     const sessionManager = session.sessionManager;
     if (!sessionManager.isPersisted()) return;
@@ -1471,6 +1502,7 @@ export class ChatService {
 
     const notifyChanged = () => {
       sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: cwd });
+      this.notifyMobileSessionChanged(sessionId, cwd);
     };
 
     session.subscribe((event) => {

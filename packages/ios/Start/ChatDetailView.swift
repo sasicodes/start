@@ -51,7 +51,7 @@ struct ChatDetailView: View {
                 }
             }
 
-            EdgeFadeOverlay(topHeight: 20, topSolidHeight: 62, bottomHeight: 160)
+            EdgeFadeOverlay(topHeight: 20, topOpacity: 0.5, topSolidHeight: 62, bottomHeight: 160)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {

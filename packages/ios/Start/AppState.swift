@@ -38,6 +38,7 @@ final class AppState {
     private var messageRequestSessions: [String: String] = [:]
     private var pendingDrafts: [String: String] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
+    private var pendingMessageRefreshSessions = Set<String>()
     @ObservationIgnored private var reconnectTask: Task<Void, Never>?
     @ObservationIgnored private var connectionAttemptCount = 0
 
@@ -220,9 +221,7 @@ final class AppState {
     }
 
     func refreshMessages(for chat: Chat) {
-        let state = messagePageStates[chat.id] ?? MessagePageState()
-        guard !state.loading else { return }
-        requestMessages(sessionId: chat.id, reset: true)
+        requestLatestMessages(sessionId: chat.id)
     }
 
     func loadOlderMessages(for chat: Chat) {
@@ -489,10 +488,27 @@ final class AppState {
         case "models.list.result", "model.select.result", "thinking.select.result":
             handleModelsResult(payload)
         case "sessions.changed":
-            requestSessions()
+            handleSessionsChanged(payload)
         default:
             break
         }
+    }
+
+    private func handleSessionsChanged(_ payload: RelayPayload) {
+        requestSessions()
+
+        guard case .chat(let id) = route,
+              let chat = chat(for: id)
+        else { return }
+        if let sessionId = payload.sessionId, sessionId != id { return }
+        if let workspacePath = payload.workspacePath,
+           !workspacePath.isEmpty,
+           workspacePath != chat.workspacePath
+        {
+            return
+        }
+
+        requestLatestMessages(sessionId: id)
     }
 
     private func handleSessionsResult(_ payload: RelayPayload) {
@@ -535,6 +551,7 @@ final class AppState {
                 hasMoreOlder: state.hasMoreOlder,
                 nextOffset: offset
             )
+            requestPendingLatestMessages(sessionId: sessionId)
             return
         }
 
@@ -563,6 +580,7 @@ final class AppState {
             hasMoreOlder: payload.hasMoreOlder ?? false,
             nextOffset: payload.nextOffset ?? offset + messages.count
         )
+        requestPendingLatestMessages(sessionId: sessionId)
     }
 
     private func handleSendResult(_ payload: RelayPayload) {
@@ -653,6 +671,7 @@ final class AppState {
         modelSelectRequestId = ""
         sessionRefreshPending = false
         thinkingSelectRequestId = ""
+        pendingMessageRefreshSessions.removeAll()
         messageRequestOffsets.removeAll()
         messageRequestSessions.removeAll()
         for (sessionId, state) in messagePageStates where state.loading {
@@ -675,6 +694,21 @@ final class AppState {
         sessionLoadState = .idle
         sessionMessages.removeAll()
         messagePageStates.removeAll()
+    }
+
+    private func requestLatestMessages(sessionId: String) {
+        let state = messagePageStates[sessionId] ?? MessagePageState()
+        guard !state.loading else {
+            pendingMessageRefreshSessions.insert(sessionId)
+            return
+        }
+
+        requestMessages(sessionId: sessionId, reset: true)
+    }
+
+    private func requestPendingLatestMessages(sessionId: String) {
+        guard pendingMessageRefreshSessions.remove(sessionId) != nil else { return }
+        requestLatestMessages(sessionId: sessionId)
     }
 
     private func upsertConnection(with pairing: PairingPayload) {

@@ -198,6 +198,9 @@ const desktopRelay = new DesktopRelay({
   onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
   onCommand: runMobileCommand
 });
+chat.setMobileSessionChangeHandler(({ sessionId, workspacePath }) => {
+  desktopRelay.broadcast({ action: 'sessions.changed', sessionId, workspacePath });
+});
 let stopWorkspaceChanged: (() => void) | null = null;
 
 const refreshStayAwake = () => {
