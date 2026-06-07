@@ -10,7 +10,7 @@ interface PanelCloseButtonProps {
 }
 
 export const PanelCloseButton = ({ onClick, variant = 'compact' }: PanelCloseButtonProps) => (
-  <Tooltip label="Close sidebar" side="left">
+  <Tooltip label="Close sidebar" side="bottom" align="end">
     <button
       type="button"
       aria-label="Close sidebar"
