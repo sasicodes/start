@@ -10,6 +10,10 @@ describe('composer layout', () => {
     expect(composerIsLayered({ multiline: true, singleLine: false, hasAttachments: false })).toBe(true);
   });
 
+  it('keeps the docked composer flat when empty and single-line', () => {
+    expect(composerIsLayered({ multiline: false, singleLine: false, hasAttachments: false })).toBe(false);
+  });
+
   it('never layers single-line composer variants', () => {
     expect(composerIsLayered({ multiline: true, singleLine: true, hasAttachments: true })).toBe(false);
   });
