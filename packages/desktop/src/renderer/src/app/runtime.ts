@@ -1,5 +1,5 @@
 import type { MobileRelaySettings } from '@preload/index';
-import { composerShortcut } from '@renderer/shared/settings/state';
+import { composerShortcut, keepAwake } from '@renderer/shared/settings/state';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 const emptyMobileRelaySettings = {
@@ -20,6 +20,7 @@ export const useRendererRuntime = () => {
       .settings()
       .then((settings) => {
         if (active) {
+          keepAwake.value = settings.keepAwake;
           composerShortcut.value = settings.composerShortcut;
           setMobileRelay(settings.mobileRelay);
           setSolidWindowBackground(settings.solidWindowBackground);

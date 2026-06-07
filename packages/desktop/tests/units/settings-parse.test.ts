@@ -7,6 +7,12 @@ describe('parseSettings', () => {
     expect(settings.mobileRelay).toEqual({ desktopId: '', enabled: false, relayToken: '', relayUrl: '' });
     expect(settings.composerShortcut).toBe('Control+Space');
     expect(settings.solidWindowBackground).toBe(false);
+    expect(settings.keepAwake).toBe(true);
+  });
+
+  it('keeps awake on by default and respects an explicit opt-out', () => {
+    expect(parseSettings({ keepAwake: false }).keepAwake).toBe(false);
+    expect(parseSettings({ keepAwake: 'nope' }).keepAwake).toBe(true);
   });
 
   it('keeps mobile relay settings trimmed', () => {

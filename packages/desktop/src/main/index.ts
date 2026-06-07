@@ -71,7 +71,7 @@ import { GitChangesService } from '@main/workspace/changes';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
 import electron from 'electron';
 
-const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, shell } = electron;
+const { app, dialog, globalShortcut, ipcMain, nativeImage, nativeTheme, powerMonitor, shell } = electron;
 
 app.setName(appMenuName);
 if (isDev) app.setPath('userData', nodePath.join(app.getPath('appData'), appMenuName));
@@ -101,6 +101,11 @@ const desktopRelay = new DesktopRelay({
   onCommand: runMobileCommand
 });
 let stopWorkspaceChanged: (() => void) | null = null;
+
+const refreshStayAwake = () => {
+  const keepAwake = appSettings?.keepAwake ?? defaultAppSettings.keepAwake;
+  setStayAwake(keepAwake && desktopRelay.isActive && !powerMonitor.isOnBatteryPower());
+};
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
@@ -259,7 +264,9 @@ if (!singleInstanceLock) {
 
     appSettings = await readAppSettings();
     desktopRelay.sync(appSettings.mobileRelay);
-    setStayAwake(desktopRelay.isActive);
+    powerMonitor.on('on-ac', refreshStayAwake);
+    powerMonitor.on('on-battery', refreshStayAwake);
+    refreshStayAwake();
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -378,7 +385,15 @@ if (!singleInstanceLock) {
       });
       appSettings = nextSettings;
       desktopRelay.sync(nextSettings.mobileRelay);
-      setStayAwake(desktopRelay.isActive);
+      refreshStayAwake();
+      return { ok: true, settings: nextSettings };
+    });
+    ipcMain.handle('app:set-keep-awake', async (_event, keepAwake: boolean) => {
+      if (appSettings?.keepAwake === keepAwake) return { ok: true, settings: appSettings };
+
+      const nextSettings = await writeAppSettings({ ...(appSettings ?? defaultAppSettings), keepAwake });
+      appSettings = nextSettings;
+      refreshStayAwake();
       return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-solid-window-background', async (_event, solidWindowBackground: boolean) => {

@@ -14,6 +14,7 @@ export interface MobileRelayProbe {
 }
 
 export interface AppSettings {
+  keepAwake: boolean;
   composerShortcut: string;
   solidWindowBackground: boolean;
   mobileRelay: MobileRelaySettings;
@@ -420,6 +421,7 @@ const api = {
     revealPath: (workspacePath: string, filePath: string): Promise<void> =>
       ipcRenderer.invoke('app:reveal-path', workspacePath, filePath),
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
+    setKeepAwake: (enabled: boolean): Promise<AppSettingsResult> => ipcRenderer.invoke('app:set-keep-awake', enabled),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>
       ipcRenderer.invoke('app:set-composer-shortcut', shortcut),
     setMobileRelaySettings: (settings: MobileRelaySettings): Promise<AppSettingsResult> =>
