@@ -87,8 +87,8 @@ const gitChanges = new GitChangesService({
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
 let appQuitConfirmed = false;
-let appQuitConfirmationOpen = false;
 let quitCleanupStarted = false;
+let appQuitConfirmationOpen = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
 

@@ -18,8 +18,7 @@ export type UpdateState =
   | { status: 'checking' }
   | { status: 'available' }
   | { status: 'downloaded' }
-  | { status: 'downloading' }
-  | { error: string; status: 'error' };
+  | { status: 'downloading' };
 
 let checking = false;
 let downloadPending = false;
@@ -45,11 +44,8 @@ const stopUpdateCheckSchedule = () => {
   updateCheckTimer = undefined;
 };
 
-const updateErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error && error.message ? error.message : fallback;
-
 const updateInProgress = () =>
-  state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded';
+  state.status === 'available' || state.status === 'downloaded' || state.status === 'downloading';
 
 const canRequestUpdateCheck = () => isProd && !downloadPending && !updateInProgress();
 
@@ -84,8 +80,8 @@ const checkForUpdates = async (requireFocus = true) => {
   try {
     setUpdateState({ status: 'checking' });
     await autoUpdater.checkForUpdates();
-  } catch (error) {
-    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update check failed.') });
+  } catch {
+    setUpdateState({ status: 'idle' });
   } finally {
     checking = false;
     scheduleNextUpdateCheck();
@@ -93,10 +89,7 @@ const checkForUpdates = async (requireFocus = true) => {
 };
 
 const checkForUpdatesInBackground = () => {
-  checkForUpdates().catch((error: unknown) => {
-    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update check failed.') });
-    scheduleNextUpdateCheck();
-  });
+  checkForUpdates().catch(() => {});
 };
 
 export const checkForUpdatesNow = () => checkForUpdates(false);
@@ -115,10 +108,7 @@ const downloadUpdate = () => {
 
   downloadPending = true;
   setUpdateState({ status: 'downloading' });
-  autoUpdater.downloadUpdate().catch((error: unknown) => {
-    downloadPending = false;
-    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update download failed.') });
-  });
+  autoUpdater.downloadUpdate().catch(() => {});
   return { ok: true };
 };
 
@@ -160,9 +150,14 @@ export const startAutoUpdateChecks = () => {
     downloadPending = false;
     setUpdateState({ status: 'idle' });
   };
-  const onError = (error: Error) => {
+  const onError = () => {
     downloadPending = false;
-    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update failed.') });
+    if (state.status === 'downloading') {
+      setUpdateState({ status: 'available' });
+      return;
+    }
+
+    setUpdateState({ status: 'idle' });
     scheduleNextUpdateCheck();
   };
 

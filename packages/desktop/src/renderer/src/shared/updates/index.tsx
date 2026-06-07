@@ -22,7 +22,7 @@ export const Update = memo(() => {
   const appFocused = useAppFocusState();
   const status = state.status;
 
-  if (status !== 'available' && status !== 'downloading' && status !== 'downloaded') return null;
+  if (status !== 'available' && status !== 'downloaded' && status !== 'downloading') return null;
 
   const downloading = status === 'downloading';
   const downloaded = status === 'downloaded';

@@ -360,8 +360,7 @@ export type UpdateState =
   | { status: 'checking' }
   | { status: 'available' }
   | { status: 'downloaded' }
-  | { status: 'downloading' }
-  | { error: string; status: 'error' };
+  | { status: 'downloading' };
 
 export interface InstallUpdateResult {
   ok: boolean;
