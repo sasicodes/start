@@ -28,6 +28,9 @@ struct ConnectionFormSheet: View {
                     LabeledContent("Name") {
                         TextField("Name", text: $name)
                             .multilineTextAlignment(.trailing)
+                            .onChange(of: name) {
+                                saveName()
+                            }
                             .submitLabel(.done)
                     }
 
@@ -67,28 +70,14 @@ struct ConnectionFormSheet: View {
             .background(.clear)
             .contentMargins(.top, 12, for: .scrollContent)
             .contentMargins(.horizontal, 12, for: .scrollContent)
-            .navigationTitle(connection.name)
+            .navigationTitle("")
             .scrollContentBackground(.hidden)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Save") {
-                        save()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.regular)
-                    .disabled(!nameValid)
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
         }
         .presentationCornerRadius(42)
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
         .presentationDetents([.height(360)])
-    }
-
-    private var nameValid: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var relayHost: String {
@@ -110,12 +99,11 @@ struct ConnectionFormSheet: View {
         }
     }
 
-    private func save() {
-        guard nameValid else { return }
+    private func saveName() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
 
         onRename(name)
-        StartHaptics.success()
-        dismiss()
     }
 }
 
