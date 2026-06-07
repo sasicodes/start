@@ -168,6 +168,7 @@ export type RecentSessionsPage = {
 export interface MobileWorkspace {
   name: string;
   path: string;
+  branchName?: string;
 }
 
 export interface MobileSession {

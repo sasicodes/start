@@ -67,10 +67,12 @@ struct NewChatView: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(StartTheme.Colors.ink)
 
-                ChatHeaderMetadata(
-                    branchName: appState.activeBranchName,
-                    workspaceName: appState.activeProjectName
-                )
+                if let workspace = appState.activeWorkspaceHeader {
+                    ChatHeaderMetadata(
+                        branchName: workspace.branchName,
+                        workspaceName: workspace.name
+                    )
+                }
             }
 
             Spacer()

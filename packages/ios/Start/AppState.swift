@@ -63,17 +63,21 @@ final class AppState {
         connectActiveConnection(resetAttempts: true)
     }
 
-    var activeBranchName: String {
-        guard let path = activeRemoteWorkspace?.path else { return "Workspace" }
-        return workspaceLeafName(for: path)
-    }
-
     var activeConnection: Connection? {
         connections.first { $0.id == activeConnectionID }
     }
 
-    var activeProjectName: String {
-        activeRemoteWorkspace?.name ?? activeConnection?.name ?? "Desktop"
+    var activeWorkspaceHeader: (name: String, branchName: String)? {
+        guard let workspace = activeRemoteWorkspace else { return nil }
+
+        let name = workspace.name.isEmpty ? workspaceLeafName(for: workspace.path) : workspace.name
+        let branchName: String
+        if let value = workspace.branchName, !value.isEmpty {
+            branchName = value
+        } else {
+            branchName = "No branch"
+        }
+        return (name, branchName)
     }
 
     var remoteCommandsAvailable: Bool {
@@ -692,7 +696,7 @@ final class AppState {
                     id: sessionId,
                     title: pendingNewChatTitles[requestId] ?? "New chat",
                     modified: Int(Date().timeIntervalSince1970 * 1000),
-                    workspaceName: workspace?.name ?? activeProjectName,
+                    workspaceName: workspace?.name ?? "Workspace",
                     workspacePath: workspace?.path ?? ""
                 ),
                 at: 0

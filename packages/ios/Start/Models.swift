@@ -171,6 +171,7 @@ enum SessionNoticeKind: String, Codable {
 struct RemoteWorkspace: Codable {
     let name: String
     let path: String
+    let branchName: String?
 }
 
 struct RemoteSession: Codable {

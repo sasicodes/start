@@ -27,6 +27,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
+import { getGitBranch } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -370,9 +371,11 @@ export class ChatService {
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const limit = mobilePageLimit(options.limit, mobileDefaultSessionLimit);
     const offset = mobilePageOffset(options.offset);
+    const branchName = await getGitBranch(workspacePath);
     const workspace = {
       path: workspacePath,
-      name: workspaceDisplayName(workspacePath)
+      name: workspaceDisplayName(workspacePath),
+      ...(branchName ? { branchName } : {})
     };
 
     if (!options.workspacePath) {
@@ -432,6 +435,7 @@ export class ChatService {
     const limit = mobilePageLimit(options.limit, mobileDefaultMessageLimit);
     const offset = mobilePageOffset(options.offset);
     const turns = this.mobileSessionTurns(id, record.path).filter(mobileVisibleTurn);
+    const branchName = await getGitBranch(record.cwd);
     const end = Math.max(0, turns.length - offset);
     const start = Math.max(0, end - limit);
     const messages = turns.slice(start, end).map((turn): MobileSessionMessage => {
@@ -456,7 +460,8 @@ export class ChatService {
       hasMoreOlder: start > 0,
       workspace: {
         path: record.cwd,
-        name: workspaceDisplayName(record.cwd)
+        name: workspaceDisplayName(record.cwd),
+        ...(branchName ? { branchName } : {})
       }
     };
   }
