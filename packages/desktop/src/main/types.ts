@@ -208,6 +208,7 @@ export interface MobileSessionMessagesPage {
 export interface MobileModelOption {
   key: string;
   name: string;
+  provider: string;
   reasoning: boolean;
   effortLevels: EffortLevel[];
 }

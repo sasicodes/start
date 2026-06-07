@@ -26,25 +26,23 @@ struct ChatMessageRow: View {
     }
 
     private var userBubble: some View {
-        VStack(alignment: .trailing, spacing: 4) {
-            Text(message.text)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .onLongPressGesture {
+        Text(message.text)
+            .font(.system(size: 16, weight: .regular))
+            .foregroundStyle(StartTheme.Colors.ink)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contextMenu {
+                Button {
                     onCopy(message)
+                } label: {
+                    Label("Copy", systemImage: "square.on.square")
                 }
-
-            Text(messageTimeLabel(for: message.createdAt))
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.softInk.opacity(0.72))
-        }
-        .frame(maxWidth: 310, alignment: .trailing)
+            }
+            .frame(maxWidth: 310, alignment: .trailing)
     }
 
     private var agentMessage: some View {
@@ -106,23 +104,23 @@ private struct AgentMessageFooter: View {
     let onCopy: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
+            Text(messageFooterLabel)
+                .font(.system(size: 11, weight: .regular))
+                .foregroundStyle(StartTheme.Colors.softInk.opacity(0.72))
+
             Button(action: onCopy) {
-                Label("Copy", systemImage: "doc.on.doc")
-                    .font(.system(size: 12, weight: .medium))
-                    .labelStyle(.titleAndIcon)
+                Image(systemName: "square.on.square")
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
             .foregroundStyle(StartTheme.Colors.softInk)
             .accessibilityLabel("Copy response")
 
-            Text(messageFooterLabel)
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.softInk.opacity(0.72))
-
             Spacer(minLength: 0)
         }
-        .padding(.top, 2)
+        .padding(.top, 1)
     }
 
     private var messageFooterLabel: String {

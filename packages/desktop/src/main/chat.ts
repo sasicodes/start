@@ -339,6 +339,7 @@ export class ChatService {
       models: result.models.map((model) => ({
         key: model.key,
         name: model.name,
+        provider: model.provider,
         reasoning: model.reasoning,
         effortLevels: model.effortLevels
       })),

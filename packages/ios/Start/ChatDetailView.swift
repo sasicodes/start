@@ -4,8 +4,6 @@ import UIKit
 struct ChatDetailView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
-    @State private var copyTask: Task<Void, Never>?
-    @State private var copiedMessageId = ""
     @State private var focusTask: Task<Void, Never>?
     @State private var olderPagingEnabled = false
 
@@ -53,7 +51,7 @@ struct ChatDetailView: View {
                 }
             }
 
-            EdgeFadeOverlay(topHeight: 96, topSolidHeight: 82, bottomHeight: 160)
+            EdgeFadeOverlay(topHeight: 20, topSolidHeight: 62, bottomHeight: 160)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -75,11 +73,6 @@ struct ChatDetailView: View {
                 .padding(.leading, 16)
                 .padding(.trailing, 10)
                 .padding(.bottom, 6)
-            }
-
-            if !copiedMessageId.isEmpty {
-                copiedToast
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .contentShape(Rectangle())
@@ -103,9 +96,7 @@ struct ChatDetailView: View {
             appState.promptFocused = value
         }
         .onDisappear {
-            copyTask?.cancel()
             focusTask?.cancel()
-            copyTask = nil
             focusTask = nil
         }
     }
@@ -148,7 +139,6 @@ struct ChatDetailView: View {
     }
 
     private func close() {
-        copyTask?.cancel()
         focusTask?.cancel()
         focused = false
 
@@ -157,37 +147,12 @@ struct ChatDetailView: View {
         }
     }
 
-    private var copiedToast: some View {
-        VStack {
-            Spacer()
-
-            Text("Copied")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .padding(.horizontal, 14)
-                .frame(height: 34)
-                .glassCapsule()
-                .padding(.bottom, 112)
-        }
-        .allowsHitTesting(false)
-    }
-
     private func copy(_ message: ChatMessage) {
         let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
         UIPasteboard.general.string = text
-        copyTask?.cancel()
-        withAnimation(.smooth(duration: 0.16)) {
-            copiedMessageId = message.id
-        }
-        copyTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1200))
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.18)) {
-                copiedMessageId = ""
-            }
-        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     private func messageGap(messages: [ChatMessage], index: Int) -> CGFloat {
@@ -232,7 +197,6 @@ private func previewAppState(chat: Chat) -> AppState {
     ]
     return appState
 }
-
 
 #Preview {
     let chat = previewChat()

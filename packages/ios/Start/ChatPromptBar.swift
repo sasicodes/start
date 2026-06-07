@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct ChatPromptFooter: View {
     @Environment(AppState.self) private var appState
@@ -37,8 +36,6 @@ struct ChatPromptBar: View {
     @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var focused: Bool
-    @State private var filePickerOpen = false
-    @State private var selectedFileURLs: [URL] = []
 
     let onSend: () -> Void
     let accessibilityHint: String
@@ -64,19 +61,10 @@ struct ChatPromptBar: View {
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityHint(accessibilityHint)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 modelMenu
 
                 thinkingMenu
-
-                Button {
-                    filePickerOpen = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 19, weight: .regular))
-                        .frame(width: 32, height: 32)
-                }
-                .accessibilityLabel("Add attachment")
 
                 Spacer()
 
@@ -102,36 +90,43 @@ struct ChatPromptBar: View {
         .frame(maxWidth: .infinity)
         .frame(minHeight: 96)
         .glassRoundedRectangle(cornerRadius: 24)
-        .fileImporter(
-            isPresented: $filePickerOpen,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: true
-        ) { result in
-            switch result {
-            case let .success(urls):
-                selectedFileURLs = urls
-            case .failure:
-                selectedFileURLs = []
-            }
-        }
     }
 
     private var modelMenu: some View {
         Menu {
-            ForEach(appState.models) { model in
-                Button {
-                    appState.selectModel(model.key)
+            ForEach(modelGroups) { group in
+                Menu {
+                    ForEach(group.models) { model in
+                        Button {
+                            appState.selectModel(model.key)
+                        } label: {
+                            modelRow(model)
+                        }
+                    }
                 } label: {
-                    Label(model.name, systemImage: model.key == appState.selectedModelKey ? "checkmark" : "cpu")
+                    Label {
+                        Text(group.name)
+                    } icon: {
+                        ProviderAssetIcon(providerID: group.id, size: 15)
+                    }
                 }
             }
         } label: {
-            Image(systemName: "cpu")
-                .font(.system(size: 17, weight: .regular))
+            ProviderAssetIcon(providerID: selectedProviderID, size: 17)
                 .frame(width: 32, height: 32)
         }
         .disabled(appState.models.isEmpty)
         .accessibilityLabel("Model")
+        .opacity(appState.models.isEmpty ? 0.44 : 1)
+    }
+
+    @ViewBuilder
+    private func modelRow(_ model: RemoteModel) -> some View {
+        if model.key == appState.selectedModelKey {
+            Label(model.name, systemImage: "checkmark")
+        } else {
+            Text(model.name)
+        }
     }
 
     private var thinkingMenu: some View {
@@ -140,7 +135,7 @@ struct ChatPromptBar: View {
                 Button {
                     appState.selectThinkingLevel(level)
                 } label: {
-                    Label(level.capitalized, systemImage: level == appState.thinkingLevel ? "checkmark" : "speedometer")
+                    thinkingRow(level)
                 }
             }
         } label: {
@@ -152,8 +147,42 @@ struct ChatPromptBar: View {
         .accessibilityLabel("Effort")
     }
 
+    @ViewBuilder
+    private func thinkingRow(_ level: String) -> some View {
+        if level == appState.thinkingLevel {
+            Label(level.capitalized, systemImage: "checkmark")
+        } else {
+            Text(level.capitalized)
+        }
+    }
+
     private var currentEffortLevels: [String] {
-        let selected = appState.models.first { $0.key == appState.selectedModelKey }
-        return selected?.effortLevels ?? []
+        selectedModel?.effortLevels ?? []
+    }
+
+    private var modelGroups: [ModelProviderGroup] {
+        modelProviderGroups(from: appState.models)
+    }
+
+    private var selectedModel: RemoteModel? {
+        appState.models.first { $0.key == appState.selectedModelKey } ?? appState.models.first
+    }
+
+    private var selectedProviderID: ModelProviderID {
+        selectedModel?.providerID ?? .openai
+    }
+}
+
+private struct ProviderAssetIcon: View {
+    let providerID: ModelProviderID
+    let size: CGFloat
+
+    var body: some View {
+        Image(providerID.iconName)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(StartTheme.Colors.ink)
+            .frame(width: size, height: size)
     }
 }

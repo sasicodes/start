@@ -159,13 +159,108 @@ struct RemoteMessage: Codable {
     let thinking: String?
 }
 
+enum ModelProviderID: String, CaseIterable, Identifiable {
+    case openai
+    case anthropic
+    case google
+
+    var id: String { rawValue }
+
+    var iconName: String {
+        switch self {
+        case .openai:
+            "provider-openai"
+        case .anthropic:
+            "provider-anthropic"
+        case .google:
+            "provider-gemini"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .openai:
+            "OpenAI"
+        case .anthropic:
+            "Anthropic"
+        case .google:
+            "Google"
+        }
+    }
+}
+
 struct RemoteModel: Codable, Identifiable {
     let key: String
     let name: String
+    let provider: String
     let reasoning: Bool
     let effortLevels: [String]
 
     var id: String { key }
+    var providerID: ModelProviderID { modelProviderID(for: self) }
+
+    init(
+        key: String,
+        name: String,
+        provider: String = "",
+        reasoning: Bool,
+        effortLevels: [String]
+    ) {
+        self.key = key
+        self.name = name
+        self.provider = provider
+        self.reasoning = reasoning
+        self.effortLevels = effortLevels
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        key = try container.decode(String.self, forKey: .key)
+        name = try container.decode(String.self, forKey: .name)
+        provider = try container.decodeIfPresent(String.self, forKey: .provider) ?? ""
+        reasoning = try container.decode(Bool.self, forKey: .reasoning)
+        effortLevels = try container.decode([String].self, forKey: .effortLevels)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case key
+        case name
+        case provider
+        case reasoning
+        case effortLevels
+    }
+}
+
+struct ModelProviderGroup: Identifiable {
+    let id: ModelProviderID
+    let models: [RemoteModel]
+
+    var name: String { id.label }
+}
+
+func modelProviderGroups(from models: [RemoteModel]) -> [ModelProviderGroup] {
+    let grouped = Dictionary(grouping: models, by: \.providerID)
+
+    return ModelProviderID.allCases.compactMap { providerID in
+        guard let models = grouped[providerID], !models.isEmpty else { return nil }
+        return ModelProviderGroup(id: providerID, models: models)
+    }
+}
+
+func modelProviderID(for model: RemoteModel) -> ModelProviderID {
+    if let providerID = ModelProviderID(rawValue: model.provider.lowercased()) {
+        return providerID
+    }
+
+    let haystack = "\(model.provider) \(model.key) \(model.name)".lowercased()
+    if ["gemini", "google"].contains(where: { haystack.contains($0) }) {
+        return .google
+    }
+    if ["gpt", "openai", "o3", "o4"].contains(where: { haystack.contains($0) }) {
+        return .openai
+    }
+    return .anthropic
 }
 
 enum SessionLoadState: Equatable {
