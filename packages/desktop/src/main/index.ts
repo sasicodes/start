@@ -445,12 +445,10 @@ const destroyBrowserSilently = async () => {
   }
 };
 
-const startQuitCleanup = () => {
+const startQuitCleanup = async () => {
   if (quitCleanupStarted) return;
 
   quitCleanupStarted = true;
-  shutdownAnalyticsSilently();
-  destroyBrowserSilently();
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
   stopWorkspaceChanged?.();
@@ -462,6 +460,9 @@ const startQuitCleanup = () => {
   gitChanges.dispose();
   chat.dispose();
   deactivateWorkspaceAccess();
+
+  await Promise.all([shutdownAnalyticsSilently(), destroyBrowserSilently()]);
+  app.quit();
 };
 
 app.on('before-quit', (event) => {
@@ -471,6 +472,9 @@ app.on('before-quit', (event) => {
     return;
   }
 
+  if (quitCleanupStarted) return;
+
+  event.preventDefault();
   startQuitCleanup();
 });
 
