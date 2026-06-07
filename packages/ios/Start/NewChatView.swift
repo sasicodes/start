@@ -26,6 +26,7 @@ struct NewChatView: View {
                 ChatPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
+                    onSend: appState.sendNewDraft,
                     accessibilityHint: "Type what you want to work on",
                     accessibilityLabel: "Prompt",
                     placeholder: "Ask anything"

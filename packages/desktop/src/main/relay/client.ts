@@ -1,9 +1,11 @@
 import {
+  desktopBroadcastMessage,
   desktopEventMessage,
+  type DesktopRelayEventPayload,
   helloDesktopMessage,
+  type MobileRelayCommand,
   pairingCreateMessage,
   parseRelayServerMessage,
-  type RelayCommand,
   relayReply
 } from '@main/relay/protocol';
 import type { MobileRelaySettings } from '@main/storage';
@@ -16,7 +18,13 @@ export interface RelaySocket {
 
 export interface DesktopRelayCallbacks {
   onCode: (code: string) => void;
-  onCommand: (command: RelayCommand) => void;
+  onCommand: (command: MobileRelayCommand, context: DesktopRelayCommandContext) => Promise<void> | void;
+}
+
+export interface DesktopRelayCommandContext {
+  mobileId: string;
+  broadcast: (payload: DesktopRelayEventPayload) => void;
+  reply: (payload: DesktopRelayEventPayload) => void;
 }
 
 export interface RelaySocketHandlers {
@@ -61,6 +69,7 @@ export class DesktopRelay {
   private socket: RelaySocket | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly pairedMobileIds = new Set<string>();
 
   constructor(
     private readonly callbacks: DesktopRelayCallbacks,
@@ -98,10 +107,17 @@ export class DesktopRelay {
 
   stop() {
     this.active = false;
+    this.pairedMobileIds.clear();
     this.clearTimers();
     this.socket?.close();
     this.socket = null;
     this.setCode('');
+  }
+
+  broadcast(payload: DesktopRelayEventPayload): boolean {
+    if (this.pairedMobileIds.size === 0) return false;
+    this.send(desktopBroadcastMessage(payload));
+    return true;
   }
 
   private open() {
@@ -119,13 +135,48 @@ export class DesktopRelay {
       this.setCode(message.code);
       this.scheduleRefresh(message.expiresAt);
     }
+    if (message.type === 'pairing.request') {
+      this.pairedMobileIds.add(message.mobileId);
+    }
+    if (message.type === 'mobile.disconnected') {
+      this.pairedMobileIds.delete(message.mobileId);
+    }
     if (message.type === 'mobile.command') {
-      this.callbacks.onCommand(message.payload);
-      this.send(desktopEventMessage(message.mobileId, { value: message.payload.action, action: 'ack' }));
+      this.pairedMobileIds.add(message.mobileId);
+      this.handleCommand(message.mobileId, message.payload);
     }
 
     const reply = relayReply(message);
     if (reply) this.send(reply);
+  }
+
+  private handleCommand(mobileId: string, command: MobileRelayCommand) {
+    const context: DesktopRelayCommandContext = {
+      mobileId,
+      reply: (payload) => this.send(desktopEventMessage(mobileId, payload)),
+      broadcast: (payload) => this.broadcast(payload)
+    };
+
+    try {
+      const result = this.callbacks.onCommand(command, context);
+      if (command.action === 'prompt') context.reply({ value: command.action, action: 'ack' });
+      if (result instanceof Promise) result.catch((error) => context.reply(this.errorPayload(command, error)));
+    } catch (error) {
+      context.reply(this.errorPayload(command, error));
+    }
+  }
+
+  private errorPayload(command: MobileRelayCommand, error: unknown): DesktopRelayEventPayload {
+    const message = error instanceof Error ? error.message : 'Mobile command failed.';
+    if ('requestId' in command) {
+      return {
+        ok: false,
+        error: message,
+        requestId: command.requestId,
+        action: `${command.action}.result`
+      };
+    }
+    return { value: command.action, action: 'error', error: message };
   }
 
   private setCode(code: string) {
@@ -147,6 +198,7 @@ export class DesktopRelay {
   private scheduleReconnect() {
     this.socket = null;
     this.setCode('');
+    this.pairedMobileIds.clear();
     if (!this.active || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;

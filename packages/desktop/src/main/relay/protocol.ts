@@ -24,15 +24,85 @@ const pairingRequestSchema = v.object({
   publicKey: v.optional(v.string())
 });
 
+const mobileDisconnectedSchema = v.object({
+  type: v.literal('mobile.disconnected'),
+  mobileId: v.string()
+});
+
 const relayCommandSchema = v.object({
   value: v.string(),
   action: v.string()
 });
 
+const requestIdSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
+const relayTextSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(20000));
+const relayPathSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(4096));
+const relaySessionIdSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(512));
+const relayPageLimitSchema = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50));
+const relayPageOffsetSchema = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10000));
+
+const sessionsListCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('sessions.list'),
+  limit: v.optional(relayPageLimitSchema),
+  offset: v.optional(relayPageOffsetSchema),
+  archived: v.optional(v.boolean()),
+  workspacePath: v.optional(relayPathSchema)
+});
+
+const messagesPageCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('messages.page'),
+  sessionId: relaySessionIdSchema,
+  limit: v.optional(relayPageLimitSchema),
+  offset: v.optional(relayPageOffsetSchema)
+});
+
+const messageSendCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('message.send'),
+  text: relayTextSchema,
+  sessionId: v.optional(relaySessionIdSchema),
+  workspacePath: v.optional(relayPathSchema)
+});
+
+const modelsListCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('models.list')
+});
+
+const modelSelectCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('model.select'),
+  modelKey: relaySessionIdSchema
+});
+
+const thinkingSelectCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('thinking.select'),
+  level: relaySessionIdSchema
+});
+
+const mobileRelayCommandSchema = v.union([
+  relayCommandSchema,
+  sessionsListCommandSchema,
+  messagesPageCommandSchema,
+  messageSendCommandSchema,
+  modelsListCommandSchema,
+  modelSelectCommandSchema,
+  thinkingSelectCommandSchema
+]);
+
 const mobileCommandSchema = v.object({
   type: v.literal('mobile.command'),
   mobileId: v.string(),
-  payload: relayCommandSchema
+  payload: mobileRelayCommandSchema
 });
 
 const serverMessageSchema = v.union([
@@ -40,11 +110,14 @@ const serverMessageSchema = v.union([
   relayErrorSchema,
   pairingCreatedSchema,
   pairingRequestSchema,
+  mobileDisconnectedSchema,
   mobileCommandSchema
 ]);
 
 export type RelayCommand = v.InferOutput<typeof relayCommandSchema>;
+export type MobileRelayCommand = v.InferOutput<typeof mobileRelayCommandSchema>;
 export type RelayServerMessage = v.InferOutput<typeof serverMessageSchema>;
+export type DesktopRelayEventPayload = Record<string, unknown>;
 
 export const parseRelayServerMessage = (raw: string): RelayServerMessage | undefined => {
   let value: unknown;
@@ -69,9 +142,14 @@ export const pairingCreateMessage = () => ({ type: 'pairing.create' as const });
 
 export const pairingApproveMessage = (mobileId: string) => ({ type: 'pairing.approve' as const, mobileId });
 
-export const desktopEventMessage = (mobileId: string, payload: RelayCommand) => ({
+export const desktopEventMessage = (mobileId: string, payload: DesktopRelayEventPayload) => ({
   type: 'desktop.event' as const,
   mobileId,
+  payload
+});
+
+export const desktopBroadcastMessage = (payload: DesktopRelayEventPayload) => ({
+  type: 'desktop.event' as const,
   payload
 });
 

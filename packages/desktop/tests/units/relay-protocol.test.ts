@@ -1,4 +1,5 @@
 import {
+  desktopBroadcastMessage,
   desktopEventMessage,
   helloDesktopMessage,
   pairingApproveMessage,
@@ -17,6 +18,10 @@ describe('parseRelayServerMessage', () => {
     expect(parseRelayServerMessage(JSON.stringify({ type: 'pairing.created', code: '123456', expiresAt: 10 }))).toEqual(
       { type: 'pairing.created', code: '123456', expiresAt: 10 }
     );
+    expect(parseRelayServerMessage(JSON.stringify({ type: 'mobile.disconnected', mobileId: 'mobile-1' }))).toEqual({
+      type: 'mobile.disconnected',
+      mobileId: 'mobile-1'
+    });
   });
 
   it('parses a mobile command with a well-formed payload', () => {
@@ -27,12 +32,46 @@ describe('parseRelayServerMessage', () => {
     ).toEqual({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt', value: 'hi' } });
   });
 
+  it('parses a mobile session index request', () => {
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({
+          type: 'mobile.command',
+          mobileId: 'mobile-1',
+          payload: { action: 'sessions.list', requestId: 'request-1', limit: 10, offset: 0 }
+        })
+      )
+    ).toEqual({
+      type: 'mobile.command',
+      mobileId: 'mobile-1',
+      payload: { action: 'sessions.list', requestId: 'request-1', limit: 10, offset: 0 }
+    });
+  });
+
   it('rejects malformed or unknown payloads', () => {
     expect(parseRelayServerMessage('not json')).toBeUndefined();
     expect(parseRelayServerMessage(JSON.stringify({ type: 'unknown' }))).toBeUndefined();
     expect(parseRelayServerMessage(JSON.stringify({ type: 'pairing.created', code: 5 }))).toBeUndefined();
     expect(
       parseRelayServerMessage(JSON.stringify({ type: 'mobile.command', mobileId: 'm1', payload: { action: 'prompt' } }))
+    ).toBeUndefined();
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({
+          type: 'mobile.command',
+          mobileId: 'm1',
+          payload: { action: 'sessions.list', requestId: '', limit: 10 }
+        })
+      )
+    ).toBeUndefined();
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({
+          type: 'mobile.command',
+          mobileId: 'm1',
+          payload: { action: 'messages.page', requestId: 'request-1', sessionId: 'session-1', limit: 51 }
+        })
+      )
     ).toBeUndefined();
   });
 });
@@ -43,6 +82,13 @@ describe('desktopEventMessage', () => {
       type: 'desktop.event',
       mobileId: 'mobile-1',
       payload: { action: 'ack', value: 'prompt' }
+    });
+  });
+
+  it('builds a desktop event broadcast', () => {
+    expect(desktopBroadcastMessage({ action: 'sessions.changed', workspacePath: '/work/start' })).toEqual({
+      type: 'desktop.event',
+      payload: { action: 'sessions.changed', workspacePath: '/work/start' }
     });
   });
 });

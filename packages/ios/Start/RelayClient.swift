@@ -27,6 +27,8 @@ final class RelayClient {
     var pairedDesktopId = ""
     var lastEvent: RelayPayload?
     var status = RelayConnectionStatus.offline
+    @ObservationIgnored var onEvent: ((RelayPayload) -> Void)?
+    @ObservationIgnored var onPaired: (() -> Void)?
 
     var statusLabel: String {
         status.rawValue
@@ -135,8 +137,10 @@ final class RelayClient {
         case .pairingApproved(let desktopId):
             pairedDesktopId = desktopId
             status = .connected
+            onPaired?()
         case .desktopEvent(_, let payload):
             lastEvent = payload
+            onEvent?(payload)
         }
     }
 
@@ -239,7 +243,78 @@ struct MobileCommand: Encodable {
 
 struct RelayPayload: Codable {
     let action: String
-    let value: String
+    let requestId: String?
+    let ok: Bool?
+    let error: String?
+    let value: String?
+    let text: String?
+    let level: String?
+    let limit: Int?
+    let offset: Int?
+    let sessionId: String?
+    let modelKey: String?
+    let workspace: RemoteWorkspace?
+    let workspacePath: String?
+    let workspaceName: String?
+    let hasMore: Bool?
+    let hasMoreOlder: Bool?
+    let nextOffset: Int?
+    let title: String?
+    let thinkingLevel: String?
+    let selectedModelKey: String?
+    let sessions: [RemoteSession]?
+    let messages: [RemoteMessage]?
+    let models: [RemoteModel]?
+
+    init(
+        action: String,
+        requestId: String? = nil,
+        ok: Bool? = nil,
+        error: String? = nil,
+        value: String? = nil,
+        text: String? = nil,
+        level: String? = nil,
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sessionId: String? = nil,
+        modelKey: String? = nil,
+        workspace: RemoteWorkspace? = nil,
+        workspacePath: String? = nil,
+        workspaceName: String? = nil,
+        hasMore: Bool? = nil,
+        hasMoreOlder: Bool? = nil,
+        nextOffset: Int? = nil,
+        title: String? = nil,
+        thinkingLevel: String? = nil,
+        selectedModelKey: String? = nil,
+        sessions: [RemoteSession]? = nil,
+        messages: [RemoteMessage]? = nil,
+        models: [RemoteModel]? = nil
+    ) {
+        self.ok = ok
+        self.text = text
+        self.level = level
+        self.limit = limit
+        self.value = value
+        self.error = error
+        self.title = title
+        self.models = models
+        self.offset = offset
+        self.action = action
+        self.messages = messages
+        self.modelKey = modelKey
+        self.sessions = sessions
+        self.requestId = requestId
+        self.sessionId = sessionId
+        self.workspace = workspace
+        self.hasMore = hasMore
+        self.nextOffset = nextOffset
+        self.workspacePath = workspacePath
+        self.workspaceName = workspaceName
+        self.hasMoreOlder = hasMoreOlder
+        self.thinkingLevel = thinkingLevel
+        self.selectedModelKey = selectedModelKey
+    }
 }
 
 struct PairingPayload: Decodable {

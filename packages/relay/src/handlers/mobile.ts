@@ -60,5 +60,10 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
     })
   );
 
-  socket.on('close', () => context.state.deleteMobile(hello.mobileId, socket));
+  socket.on('close', () => {
+    for (const desktopId of context.state.deleteMobile(hello.mobileId, socket)) {
+      const desktop = context.state.desktopSocket(desktopId);
+      if (desktop) sendJson(desktop, { type: 'mobile.disconnected', mobileId: hello.mobileId });
+    }
+  });
 };

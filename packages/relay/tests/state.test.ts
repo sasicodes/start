@@ -87,7 +87,7 @@ describe('RelayState', () => {
     state.approveRoute('desktop-1', 'mobile-1');
     state.approveRoute('desktop-2', 'mobile-1');
 
-    state.deleteMobile('mobile-1', mobile);
+    expect(state.deleteMobile('mobile-1', mobile)).toEqual(['desktop-1', 'desktop-2']);
 
     expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(false);
     expect(state.isRouteApproved('desktop-2', 'mobile-1')).toBe(false);

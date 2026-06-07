@@ -81,10 +81,12 @@ struct HomeTopMenu: View {
 }
 
 #Preview {
+    let connection = Connection(desktopId: "preview", name: "Preview", enabled: true)
+
     HomeTopMenu(
         sort: .recent,
-        activeConnectionID: Connection.samples[0].id,
-        connections: Connection.samples,
+        activeConnectionID: connection.id,
+        connections: [connection],
         onAddConnection: {},
         onSelectSort: { _ in },
         onSelectConnection: { _ in }

@@ -12,7 +12,7 @@ struct WorkspaceChatList: View {
     @Environment(AppState.self) private var appState
 
     let sections: [WorkspaceChatSection]
-    @Binding var expandedWorkspaces: Set<Workspace>
+    @Binding var expandedWorkspaces: Set<String>
     let transitionNamespace: Namespace.ID
 
     var body: some View {
@@ -20,9 +20,9 @@ struct WorkspaceChatList: View {
             ForEach(sections) { section in
                 WorkspaceChatAccordion(
                     section: section,
-                    expanded: expandedWorkspaces.contains(section.workspace),
+                    expanded: expandedWorkspaces.contains(section.workspacePath),
                     transitionNamespace: transitionNamespace,
-                    onToggle: { toggle(section.workspace) }
+                    onToggle: { toggle(section.workspacePath) }
                 )
             }
         }
@@ -30,12 +30,12 @@ struct WorkspaceChatList: View {
         .padding(.top, StartTheme.Metrics.chatListTopPadding)
     }
 
-    private func toggle(_ workspace: Workspace) {
+    private func toggle(_ workspacePath: String) {
         withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
-            if expandedWorkspaces.contains(workspace) {
-                expandedWorkspaces.remove(workspace)
+            if expandedWorkspaces.contains(workspacePath) {
+                expandedWorkspaces.remove(workspacePath)
             } else {
-                expandedWorkspaces.insert(workspace)
+                expandedWorkspaces.insert(workspacePath)
             }
         }
     }
@@ -58,8 +58,9 @@ private struct WorkspaceChatAccordion: View {
                         .rotationEffect(.degrees(expanded ? 0 : -90))
                         .animation(.snappy(duration: 0.08, extraBounce: 0), value: expanded)
 
-                    Text(section.workspace.rawValue)
+                    Text(section.workspaceName)
                         .font(WorkspaceChatListMetrics.headingFont)
+                        .lineLimit(1)
 
                     Spacer()
                 }
@@ -68,7 +69,7 @@ private struct WorkspaceChatAccordion: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(section.workspace.rawValue) workspace")
+            .accessibilityLabel("\(section.workspaceName) workspace")
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
 
             if expanded {

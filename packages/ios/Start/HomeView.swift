@@ -4,7 +4,7 @@ struct HomeView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var scannerOpen = false
-    @State private var expandedWorkspaces = Set(Workspace.allCases)
+    @State private var expandedWorkspaces = Set<String>()
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
 
@@ -35,13 +35,16 @@ struct HomeView: View {
         .refreshable {
             await appState.refreshChats()
         }
-        .animation(.easeOut(duration: 0.16), value: appState.chatsLoaded)
+        .animation(.easeOut(duration: 0.16), value: appState.sessionLoadStateKey)
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
         .task {
-            guard !appState.chatsLoaded else { return }
-            appState.chatsLoaded = true
+            appState.requestHomeData()
+        }
+        .onChange(of: appState.chats.map(\.workspacePath)) { _, paths in
+            guard expandedWorkspaces.isEmpty else { return }
+            expandedWorkspaces = Set(paths)
         }
     }
 
@@ -74,7 +77,7 @@ struct HomeView: View {
             } else if appState.relay.status == .offline && appState.relay.canRetry {
                 ConnectionRetryState(minHeight: minHeight, onRetry: appState.retryConnection)
                     .transition(.opacity)
-            } else if appState.chatsLoaded {
+            } else if appState.sessionLoadState == .loaded {
                 let sections = workspaceChatSections(from: visibleChats, sort: sort)
 
                 if sections.isEmpty {
@@ -91,8 +94,11 @@ struct HomeView: View {
                     )
                     .transition(.opacity)
                 }
-            } else {
+            } else if appState.sessionLoadState == .loading {
                 SkeletonList()
+                    .transition(.opacity)
+            } else {
+                ChatListEmptyState(searching: false, minHeight: minHeight)
                     .transition(.opacity)
             }
         }

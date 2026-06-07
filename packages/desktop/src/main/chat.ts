@@ -68,6 +68,11 @@ import {
   effortLevels,
   type HistoryTurn,
   type ImageAttachment,
+  type MobileModelsState,
+  type MobileSession,
+  type MobileSessionIndex,
+  type MobileSessionMessage,
+  type MobileSessionMessagesPage,
   type ModelOption,
   type OpenSessionResult,
   type PreparedDropFiles,
@@ -93,6 +98,9 @@ import electron from 'electron';
 const { shell } = electron;
 
 const attachmentMaxAgeMs = 15 * 60 * 1000;
+const mobileDefaultMessageLimit = 10;
+const mobileDefaultSessionLimit = 40;
+const mobileMaxPageLimit = 50;
 
 const enableRegisteredTools = (session: AgentSession) => {
   session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
@@ -107,6 +115,30 @@ const firstUserMessageText = (entries: SessionEntries): string => {
     }
   }
   return '';
+};
+
+const mobilePageLimit = (limit: number = 0, fallback: number): number => {
+  if (!limit || !Number.isFinite(limit)) return fallback;
+  return Math.max(1, Math.min(mobileMaxPageLimit, Math.floor(limit)));
+};
+
+const mobilePageOffset = (offset: number = 0): number => {
+  if (!offset || !Number.isFinite(offset)) return 0;
+  return Math.max(0, Math.floor(offset));
+};
+
+const mobileVisibleTurn = (turn: HistoryTurn): turn is HistoryTurn & { role: 'assistant' | 'user' } => {
+  if (turn.role === 'user') return Boolean(turn.text.trim());
+  if (turn.role !== 'assistant') return false;
+  return Boolean(turn.text.trim() || turn.thinking?.trim());
+};
+
+const mobileTurnDurationMs = (turn: HistoryTurn): number => {
+  if (turn.role !== 'assistant') return 0;
+  if (turn.streaming) return Math.max(0, Date.now() - turn.createdAt);
+
+  const completedAt = Math.max(turn.createdAt, ...(turn.details ?? []).map((detail) => detail.updatedAt));
+  return Math.max(0, completedAt - turn.createdAt);
 };
 
 const streamingTurnId = (session: AgentSession) => `streaming:${session.sessionManager.getSessionId()}`;
@@ -144,6 +176,12 @@ type SessionImageAttachment = { type: 'image'; data: string; mimeType: string };
 type PendingQueuedMessage = QueuedMessage & {
   images?: SessionImageAttachment[];
 };
+
+interface MobileSendInput {
+  text: string;
+  sessionId?: string;
+  workspacePath?: string;
+}
 
 const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => ({
   id: message.id,
@@ -292,6 +330,130 @@ export class ChatService {
       ...(error ? { error } : {}),
       ...(selected ? { selectedModelKey: modelKey(selected) } : {})
     };
+  }
+
+  async getMobileModelsState(): Promise<MobileModelsState> {
+    const result = await this.getModels();
+    return {
+      thinkingLevel: this.selectedThinkingLevel,
+      models: result.models.map((model) => ({
+        key: model.key,
+        name: model.name,
+        reasoning: model.reasoning,
+        effortLevels: model.effortLevels
+      })),
+      ...(result.selectedModelKey ? { selectedModelKey: result.selectedModelKey } : {})
+    };
+  }
+
+  async getMobileSessionIndex(options: RecentSessionsOptions = {}): Promise<MobileSessionIndex> {
+    const workspacePath = options.workspacePath ?? this.workspaceCwd;
+    const limit = mobilePageLimit(options.limit, mobileDefaultSessionLimit);
+    const offset = mobilePageOffset(options.offset);
+    const workspace = {
+      path: workspacePath,
+      name: workspaceDisplayName(workspacePath)
+    };
+
+    if (!options.workspacePath) {
+      const rows = listRecentSessions({ limit: limit + offset + 1 });
+      const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
+      const sessions = rows.slice(offset, offset + limit);
+
+      return {
+        workspace,
+        hasMore: rows.length > offset + limit,
+        sessions: sessions.map((session): MobileSession => {
+          const status = statuses.get(session.id);
+          const notice = this.notices.get(session.id);
+          return {
+            id: session.id,
+            title: session.title,
+            modified: session.updatedAt,
+            workspaceName: workspaceDisplayName(session.cwd),
+            workspacePath: session.cwd,
+            ...(status ? { status } : {}),
+            ...(notice ? { noticeKind: notice.kind } : {})
+          };
+        })
+      };
+    }
+
+    const page = await this.getRecentSessionsPage({ ...options, limit, offset, workspacePath });
+    const workspaceName = workspaceDisplayName(workspacePath);
+
+    return {
+      hasMore: page.hasMore,
+      workspace,
+      sessions: page.sessions.map(
+        (session): MobileSession => ({
+          id: session.id,
+          title: session.title,
+          modified: session.modified,
+          workspaceName,
+          workspacePath,
+          ...(session.status ? { status: session.status } : {}),
+          ...(session.noticeKind ? { noticeKind: session.noticeKind } : {})
+        })
+      )
+    };
+  }
+
+  async getMobileSessionMessages(
+    sessionId: string,
+    options: Pick<RecentSessionsOptions, 'limit' | 'offset'> = {}
+  ): Promise<MobileSessionMessagesPage> {
+    const id = sessionId.trim();
+    if (!id) throw new Error('Session id is empty.');
+
+    const record = getSession(id);
+    if (!record) throw new Error('Session could not be found.');
+
+    const limit = mobilePageLimit(options.limit, mobileDefaultMessageLimit);
+    const offset = mobilePageOffset(options.offset);
+    const turns = this.mobileSessionTurns(id, record.path).filter(mobileVisibleTurn);
+    const end = Math.max(0, turns.length - offset);
+    const start = Math.max(0, end - limit);
+    const messages = turns.slice(start, end).map((turn): MobileSessionMessage => {
+      const message: MobileSessionMessage = {
+        id: turn.id,
+        text: turn.text,
+        role: turn.role,
+        createdAt: turn.createdAt
+      };
+      const durationMs = mobileTurnDurationMs(turn);
+      if (durationMs > 0) message.durationMs = durationMs;
+      if (turn.thinking) message.thinking = turn.thinking;
+      if (turn.streaming) message.streaming = true;
+      return message;
+    });
+
+    return {
+      messages,
+      sessionId: id,
+      title: record.title,
+      nextOffset: offset + messages.length,
+      hasMoreOlder: start > 0,
+      workspace: {
+        path: record.cwd,
+        name: workspaceDisplayName(record.cwd)
+      }
+    };
+  }
+
+  async sendMobileMessage(input: MobileSendInput): Promise<SendResult> {
+    const text = input.text.trim();
+    if (!text) return { ok: false, error: 'Prompt is empty.' };
+
+    if (input.sessionId) return this.sendToTab(input.sessionId, text);
+
+    if (input.workspacePath && input.workspacePath !== this.workspaceCwd) {
+      const result = await this.switchWorkspace(input.workspacePath);
+      if (!result.ok) return { ok: false, error: result.error ?? 'Workspace could not be switched.' };
+    }
+
+    await this.newSession();
+    return this.send(text);
   }
 
   async openSession(path: string): Promise<OpenSessionResult> {
@@ -450,7 +612,7 @@ export class ChatService {
     this.markNoticeSeen(id);
   }
 
-  async sendToTab(id: string, prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []) {
+  async sendToTab(id: string, prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []) {
     await this.activateTab(id);
     return this.send(prompt, webContents, attachments);
   }
@@ -806,7 +968,7 @@ export class ChatService {
     };
   }
 
-  async send(prompt: string, webContents: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
+  async send(prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     let endError = '';
@@ -823,7 +985,7 @@ export class ChatService {
       sessionId = session.sessionManager.getSessionId();
       runtimeState = this.runtimeStateForSession(session);
       if (runtimeState.isGenerating || session.isStreaming)
-        return this.queueFollowUp(text, webContents, attachments, session, runtimeState);
+        return this.queueFollowUp(text, attachments, session, runtimeState, webContents);
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
 
       const state = runtimeState;
@@ -854,19 +1016,19 @@ export class ChatService {
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
         const renderedEvent = chatEvent(event, eventContext);
         if (renderedEvent) this.appendLiveAssistantDetail(state, renderedEvent);
-        if (active) this.emitEvent(webContents, renderedEvent);
-        if (renderedEvent) this.emitScoped(webContents, 'chat:scoped-event', sessionId, workspacePath, renderedEvent);
+        if (active) this.emitEvent(renderedEvent, webContents);
+        if (renderedEvent) this.emitScoped('chat:scoped-event', sessionId, workspacePath, renderedEvent);
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
         if (delta) this.appendLiveAssistantText(state, delta);
-        if (active && delta) this.emit(webContents, 'delta', delta);
-        if (delta) this.emitScoped(webContents, 'chat:scoped-delta', sessionId, workspacePath, delta);
+        if (active && delta) this.emit('delta', delta, webContents);
+        if (delta) this.emitScoped('chat:scoped-delta', sessionId, workspacePath, delta);
 
         const thought = thinkingDelta(event);
         if (thought) this.appendLiveAssistantThinking(state, thought);
-        if (active && thought) this.emit(webContents, 'thinking-delta', thought);
-        if (thought) this.emitScoped(webContents, 'chat:scoped-thinking-delta', sessionId, workspacePath, thought);
+        if (active && thought) this.emit('thinking-delta', thought, webContents);
+        if (thought) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, thought);
 
         const error = agentEndError(event);
         if (error) endError = error;
@@ -887,11 +1049,11 @@ export class ChatService {
           delete state.liveAssistantTurn;
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit(webContents, 'done', '');
+            this.emit('done', '', webContents);
           } else {
             this.setNotice(sessionId, workspacePath, 'completed', webContents);
           }
-          this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
           return { ok: true, sessionId };
         }
 
@@ -899,39 +1061,39 @@ export class ChatService {
         if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit(webContents, 'done', '');
+            this.emit('done', '', webContents);
           }
-          this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
           return { ok: true, sessionId };
         }
 
         if (this.isActiveSession(sessionId, workspacePath)) {
           this.clearQueuedMessages(webContents);
-          this.emit(webContents, 'error', endError);
+          this.emit('error', endError, webContents);
         } else {
           this.setNotice(sessionId, workspacePath, 'failed', webContents);
         }
-        this.emitScoped(webContents, 'chat:scoped-error', sessionId, workspacePath, endError);
+        this.emitScoped('chat:scoped-error', sessionId, workspacePath, endError);
         return { ok: false, error: endError };
       }
 
       if (this.isActiveSession(sessionId, workspacePath)) {
         delete state.liveAssistantTurn;
         this.setActiveSession(session.sessionManager);
-        this.emit(webContents, 'done', '');
+        this.emit('done', '', webContents);
       } else {
         delete state.liveAssistantTurn;
         this.setNotice(sessionId, workspacePath, 'completed', webContents);
       }
-      this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+      this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
       return { ok: true, sessionId };
     } catch (error) {
       if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
         if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
-          this.emit(webContents, 'done', '');
+          this.emit('done', '', webContents);
         }
-        if (sessionId) this.emitScoped(webContents, 'chat:scoped-done', sessionId, workspacePath, '');
+        if (sessionId) this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
@@ -939,11 +1101,11 @@ export class ChatService {
       if (runtimeState) delete runtimeState.liveAssistantTurn;
       if (this.isActiveSession(sessionId, workspacePath)) {
         this.clearQueuedMessages(webContents);
-        this.emit(webContents, 'error', message);
+        this.emit('error', message, webContents);
       } else if (sessionId) {
         this.setNotice(sessionId, workspacePath, 'failed', webContents);
       }
-      if (sessionId) this.emitScoped(webContents, 'chat:scoped-error', sessionId, workspacePath, message);
+      if (sessionId) this.emitScoped('chat:scoped-error', sessionId, workspacePath, message);
       return { ok: false, error: message };
     } finally {
       if (runtimeState && startedGeneration) runtimeState.isGenerating = false;
@@ -1030,7 +1192,14 @@ export class ChatService {
     this.sessionOpenSequence += 1;
     const previousSession = this.session;
     if (previousSession) {
-      this.clearQueuedMessages(undefined, this.runtimeStateForSession(previousSession));
+      const runtimeState = this.runtimeStateForSession(previousSession);
+      runtimeState.queueRebuildDepth += 1;
+      try {
+        previousSession.clearQueue();
+      } finally {
+        runtimeState.queueRebuildDepth = Math.max(0, runtimeState.queueRebuildDepth - 1);
+      }
+      this.clearQueuedMessageState(runtimeState);
       this.storeBackgroundSession(this.workspaceCwd, previousSession);
     }
     this.session = null;
@@ -1118,7 +1287,9 @@ export class ChatService {
     return (runtimeState?.queuedMessages ?? []).map(visibleQueuedMessage);
   }
 
-  private emitQueueUpdate(webContents: WebContents): void {
+  private emitQueueUpdate(webContents?: WebContents): void {
+    if (!webContents) return;
+
     const messages = this.visibleQueuedMessages();
     const signature = `${this.activeSessionId}:${JSON.stringify(messages)}`;
     if (this.queueUpdateSignatures.get(webContents) === signature) return;
@@ -1135,7 +1306,11 @@ export class ChatService {
     return true;
   }
 
-  private syncQueuedMessages(steering: readonly string[], followUp: readonly string[], webContents: WebContents): void {
+  private syncQueuedMessages(
+    steering: readonly string[],
+    followUp: readonly string[],
+    webContents?: WebContents
+  ): void {
     const runtimeState = this.activeRuntimeState();
     if (!runtimeState || runtimeState.queueRebuildDepth > 0) return;
 
@@ -1168,10 +1343,10 @@ export class ChatService {
 
   private async queueFollowUp(
     text: string,
-    webContents: WebContents,
     attachments: ImageAttachment[],
     session: AgentSession,
-    runtimeState: SessionRuntimeState
+    runtimeState: SessionRuntimeState,
+    webContents?: WebContents
   ): Promise<SendResult> {
     if (!session.isStreaming) return { ok: false, error: 'The response is still starting.' };
 
@@ -1242,7 +1417,9 @@ export class ChatService {
     return message.text === text || text.startsWith(`${message.text}\n[image`);
   }
 
-  private emitQueuedTurnStart(text: string, runtimeState: SessionRuntimeState, webContents: WebContents): void {
+  private emitQueuedTurnStart(text: string, runtimeState: SessionRuntimeState, webContents?: WebContents): void {
+    if (!webContents) return;
+
     const index = runtimeState.queueDeliveryCandidates.findIndex((message) => this.queuedMessageMatches(message, text));
     if (index === -1) return;
 
@@ -1351,6 +1528,15 @@ export class ChatService {
     const liveTurn = this.runtimeStateForSession(session).liveAssistantTurn;
     if (!liveTurn) return turns;
     return appendLiveAssistantTurn(turns, liveAssistantHistoryTurn(liveTurn));
+  }
+
+  private mobileSessionTurns(sessionId: string, path: string): HistoryTurn[] {
+    if (this.session?.sessionManager.getSessionId() === sessionId) return this.sessionTurns(this.session);
+
+    const session = this.backgroundSessions.get(sessionId);
+    if (session) return this.sessionTurns(session);
+
+    return historyTurns(SessionManager.open(path).getEntries());
   }
 
   private resetLiveAssistantTurn(session: AgentSession, runtimeState = this.runtimeStateForSession(session)): void {
@@ -1619,22 +1805,18 @@ export class ChatService {
     };
   }
 
-  private emit(webContents: WebContents, event: 'delta' | 'done' | 'error' | 'thinking-delta', payload: string): void {
+  private emit(event: 'delta' | 'done' | 'error' | 'thinking-delta', payload: string, webContents?: WebContents): void {
+    if (!webContents) return;
+
     webContents.send(`chat:${event}`, payload);
   }
 
-  private emitEvent(webContents: WebContents, event: ReturnType<typeof chatEvent>): void {
-    if (!event) return;
+  private emitEvent(event: ReturnType<typeof chatEvent>, webContents?: WebContents): void {
+    if (!webContents || !event) return;
     webContents.send('chat:event', event);
   }
 
-  private emitScoped<T>(
-    _webContents: WebContents,
-    channel: string,
-    tabId: string,
-    workspacePath: string,
-    payload: T
-  ): void {
+  private emitScoped<T>(channel: string, tabId: string, workspacePath: string, payload: T): void {
     if (!tabId) return;
     sendToRendererWindows(channel, { tabId, workspacePath, payload });
   }

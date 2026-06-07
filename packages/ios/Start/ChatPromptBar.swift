@@ -6,6 +6,7 @@ struct ChatPromptFooter: View {
     @Binding var text: String
     @FocusState.Binding var focused: Bool
 
+    let onSend: () -> Void
     let accessibilityHint: String
     let accessibilityLabel: String
     let placeholder: String
@@ -14,6 +15,7 @@ struct ChatPromptFooter: View {
         ChatPromptBar(
             text: $text,
             focused: $focused,
+            onSend: onSend,
             accessibilityHint: accessibilityHint,
             accessibilityLabel: accessibilityLabel,
             placeholder: placeholder
@@ -32,17 +34,19 @@ struct ChatPromptFooter: View {
 }
 
 struct ChatPromptBar: View {
+    @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var focused: Bool
     @State private var filePickerOpen = false
     @State private var selectedFileURLs: [URL] = []
 
+    let onSend: () -> Void
     let accessibilityHint: String
     let accessibilityLabel: String
     let placeholder: String
 
     private var sendEnabled: Bool {
-        !text.isEmpty
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -61,6 +65,10 @@ struct ChatPromptBar: View {
                 .accessibilityHint(accessibilityHint)
 
             HStack(spacing: 10) {
+                modelMenu
+
+                thinkingMenu
+
                 Button {
                     filePickerOpen = true
                 } label: {
@@ -72,7 +80,7 @@ struct ChatPromptBar: View {
 
                 Spacer()
 
-                Button {} label: {
+                Button(action: onSend) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(sendEnabled ? Color.white : StartTheme.Colors.softInk)
@@ -106,5 +114,46 @@ struct ChatPromptBar: View {
                 selectedFileURLs = []
             }
         }
+    }
+
+    private var modelMenu: some View {
+        Menu {
+            ForEach(appState.models) { model in
+                Button {
+                    appState.selectModel(model.key)
+                } label: {
+                    Label(model.name, systemImage: model.key == appState.selectedModelKey ? "checkmark" : "cpu")
+                }
+            }
+        } label: {
+            Image(systemName: "cpu")
+                .font(.system(size: 17, weight: .regular))
+                .frame(width: 32, height: 32)
+        }
+        .disabled(appState.models.isEmpty)
+        .accessibilityLabel("Model")
+    }
+
+    private var thinkingMenu: some View {
+        Menu {
+            ForEach(currentEffortLevels, id: \.self) { level in
+                Button {
+                    appState.selectThinkingLevel(level)
+                } label: {
+                    Label(level.capitalized, systemImage: level == appState.thinkingLevel ? "checkmark" : "speedometer")
+                }
+            }
+        } label: {
+            Image(systemName: "speedometer")
+                .font(.system(size: 17, weight: .regular))
+                .frame(width: 32, height: 32)
+        }
+        .disabled(currentEffortLevels.isEmpty)
+        .accessibilityLabel("Effort")
+    }
+
+    private var currentEffortLevels: [String] {
+        let selected = appState.models.first { $0.key == appState.selectedModelKey }
+        return selected?.effortLevels ?? []
     }
 }

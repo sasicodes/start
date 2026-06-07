@@ -1,33 +1,56 @@
 import SwiftUI
+import UIKit
 
 struct ChatDetailView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
+    @State private var copyTask: Task<Void, Never>?
+    @State private var copiedMessageId = ""
     @State private var focusTask: Task<Void, Never>?
+    @State private var olderPagingEnabled = false
 
     let chat: Chat
-    private let messages: [ChatMessage]
-
-    init(chat: Chat) {
-        self.chat = chat
-        messages = ChatMessage.samples(for: chat)
-    }
 
     var body: some View {
         @Bindable var appState = appState
+        let messages = appState.messages(for: chat)
 
         ZStack(alignment: .top) {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 12) {
-                    ForEach(messages) { message in
-                        MessageRow(message: message)
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        Color.clear
+                            .frame(height: 1)
+                            .onAppear {
+                                guard olderPagingEnabled else { return }
+                                appState.loadOlderMessages(for: chat)
+                            }
+
+                        ForEach(Array(messages.enumerated()), id: \.element.id) { index, message in
+                            ChatMessageRow(message: message, onCopy: copy)
+                                .padding(.top, messageGap(messages: messages, index: index))
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 82)
+                    .padding(.bottom, 132)
+                    .padding(.leading, 16)
+                    .padding(.trailing, 10)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 82)
-                .padding(.bottom, 132)
-                .padding(.leading, 16)
-                .padding(.trailing, 10)
+                .onChange(of: messages.count) { _, _ in
+                    guard let last = messages.last else { return }
+
+                    if messages.count <= 10 {
+                        withAnimation(.smooth(duration: 0.18)) {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
+                    olderPagingEnabled = true
+                }
+                .task(id: chat.id) {
+                    olderPagingEnabled = false
+                    appState.refreshMessages(for: chat)
+                }
             }
 
             EdgeFadeOverlay(topHeight: 96, topSolidHeight: 82, bottomHeight: 160)
@@ -43,6 +66,7 @@ struct ChatDetailView: View {
                 ChatPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
+                    onSend: { appState.sendDraft(in: chat) },
                     accessibilityHint: "Type a follow-up for this chat",
                     accessibilityLabel: "Reply",
                     placeholder: "Ask for follow-ups"
@@ -51,6 +75,11 @@ struct ChatDetailView: View {
                 .padding(.leading, 16)
                 .padding(.trailing, 10)
                 .padding(.bottom, 6)
+            }
+
+            if !copiedMessageId.isEmpty {
+                copiedToast
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .contentShape(Rectangle())
@@ -74,7 +103,9 @@ struct ChatDetailView: View {
             appState.promptFocused = value
         }
         .onDisappear {
+            copyTask?.cancel()
             focusTask?.cancel()
+            copyTask = nil
             focusTask = nil
         }
     }
@@ -117,6 +148,7 @@ struct ChatDetailView: View {
     }
 
     private func close() {
+        copyTask?.cancel()
         focusTask?.cancel()
         focused = false
 
@@ -124,39 +156,88 @@ struct ChatDetailView: View {
             appState.closeTop()
         }
     }
-}
 
-private struct MessageRow: View {
-    let message: ChatMessage
+    private var copiedToast: some View {
+        VStack {
+            Spacer()
 
-    private var alignment: Alignment {
-        message.role == .user ? .trailing : .leading
+            Text("Copied")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .padding(.horizontal, 14)
+                .frame(height: 34)
+                .glassCapsule()
+                .padding(.bottom, 112)
+        }
+        .allowsHitTesting(false)
     }
 
-    var body: some View {
-        Group {
-            if message.role == .user {
-                Text(message.text)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            } else {
-                Text(message.text)
+    private func copy(_ message: ChatMessage) {
+        let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        UIPasteboard.general.string = text
+        copyTask?.cancel()
+        withAnimation(.smooth(duration: 0.16)) {
+            copiedMessageId = message.id
+        }
+        copyTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1200))
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.18)) {
+                copiedMessageId = ""
             }
         }
-        .font(.system(size: 16, weight: .regular))
-        .foregroundStyle(StartTheme.Colors.ink)
-        .lineSpacing(3)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: 300, alignment: alignment)
-        .frame(maxWidth: .infinity, alignment: alignment)
-        .accessibilityLabel("\(message.role.rawValue): \(message.text)")
     }
+
+    private func messageGap(messages: [ChatMessage], index: Int) -> CGFloat {
+        guard index > 0 else { return 0 }
+
+        let previous = messages[index - 1]
+        let current = messages[index]
+        if previous.role == .user && current.role == .agent { return 8 }
+        if previous.role == .agent && current.role == .user { return 20 }
+        return 12
+    }
+}
+
+private func previewChat() -> Chat {
+    Chat(
+        id: "preview-session",
+        title: "Preview session",
+        modified: Int(Date().timeIntervalSince1970 * 1000),
+        workspaceName: "start",
+        workspacePath: "/Users/studio/Code/github.com/sasicodes/start"
+    )
+}
+
+@MainActor
+private func previewAppState(chat: Chat) -> AppState {
+    let appState = AppState(chats: [chat])
+    appState.sessionMessages[chat.id] = [
+        ChatMessage(
+            id: "preview-user",
+            role: .user,
+            text: "Summarize the current sync behavior.",
+            createdAt: Int(Date().addingTimeInterval(-28).timeIntervalSince1970 * 1000)
+        ),
+        ChatMessage(
+            id: "preview-agent",
+            role: .agent,
+            text: "Mobile fetches the session index first, then requests the latest page only after a session opens.",
+            createdAt: Int(Date().addingTimeInterval(-24).timeIntervalSince1970 * 1000),
+            durationMs: 6200,
+            thinking: "Checked the relay command shape and verified the session page boundary."
+        )
+    ]
+    return appState
 }
 
 
 #Preview {
-    ChatDetailView(chat: Chat.samples[0])
-        .environment(AppState())
+    let chat = previewChat()
+
+    ChatDetailView(chat: chat)
+        .environment(previewAppState(chat: chat))
         .preferredColorScheme(.dark)
 }

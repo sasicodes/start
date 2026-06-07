@@ -119,5 +119,8 @@ describe('handleHello', () => {
       )
     );
     expect(desktop.sent).toContainEqual(expect.objectContaining({ type: 'mobile.command', mobileId: 'mobile-1' }));
+
+    mobile.emit('close', Buffer.alloc(0));
+    expect(desktop.sent).toContainEqual({ type: 'mobile.disconnected', mobileId: 'mobile-1' });
   });
 });
