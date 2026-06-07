@@ -28,18 +28,6 @@ interface AppSidePanelProps {
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
-export const sidePanelLabel = (mode: SidePanelMode) => {
-  if (mode === 'git') return 'Git changes';
-  if (mode === 'settings') return 'Settings';
-  if (mode === 'browser') return 'Browser';
-  return 'Side panel';
-};
-
-export const sidePanelMaxRatio = (mode: SidePanelMode) => {
-  if (mode === 'settings') return 0.4;
-  return;
-};
-
 export const AppSidePanel = memo(
   ({
     mode,

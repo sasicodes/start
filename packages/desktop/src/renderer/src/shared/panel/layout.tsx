@@ -11,6 +11,7 @@ export const PanelLayout = ({
   sidePanel,
   sidePanelLabel,
   sidePanelVisible,
+  sidePanelResizable,
   onSidePanelCollapse,
   maxSidePanelWidthRatio = defaultMaxPanelWidthRatio,
   minSidePanelWidthRatio = defaultMinPanelWidthRatio,
@@ -35,6 +36,7 @@ export const PanelLayout = ({
         visible={sidePanelVisible}
         resizing={resizing}
         settling={settling}
+        resizable={sidePanelResizable}
         initialWidth={initialWidth}
         onResizePointerDown={startResize}
       >

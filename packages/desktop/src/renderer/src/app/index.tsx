@@ -3,15 +3,12 @@ import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
 import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
-import {
-  AppSidePanel,
-  sidePanelLabel as getSidePanelLabel,
-  sidePanelMaxRatio as getSidePanelMaxRatio
-} from '@renderer/app/panel';
+import { AppSidePanel } from '@renderer/app/panel';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
+import { sidePanelModeLabel, sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/side-panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
@@ -266,8 +263,9 @@ export const App = () => {
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const hasTurns = turnCount > 0 || sessionRoutePending;
   const noProvidersConfigured = modelsLoaded && models.length === 0;
-  const sidePanelLabel = getSidePanelLabel(sidePanelMode);
-  const sidePanelMaxRatio = getSidePanelMaxRatio(sidePanelMode);
+  const sidePanelLabel = sidePanelModeLabel(sidePanelMode);
+  const sidePanelMaxRatio = sidePanelModeMaxRatio(sidePanelMode);
+  const sidePanelResizable = sidePanelModeResizable(sidePanelMode);
   const sidePanel = (
     <AppSidePanel
       mode={sidePanelMode}
@@ -350,6 +348,7 @@ export const App = () => {
       fileHandlers={fileHandlers}
       workspacePath={workspacePath}
       sidePanelLabel={sidePanelLabel}
+      sidePanelResizable={sidePanelResizable}
       {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
       onOpenSession={openRecentSession}
       gitPanelVisible={gitPanelVisible}

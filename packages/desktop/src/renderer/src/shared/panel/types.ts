@@ -5,6 +5,7 @@ export interface PanelLayoutProps {
   sidePanel: ComponentChildren;
   sidePanelLabel: string;
   sidePanelVisible: boolean;
+  sidePanelResizable: boolean;
   defaultSidePanelWidth?: number;
   maxSidePanelWidthRatio?: number;
   minSidePanelWidthRatio?: number;
