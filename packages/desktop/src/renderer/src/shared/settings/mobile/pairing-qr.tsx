@@ -18,7 +18,7 @@ export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProp
       <button
         type="button"
         aria-label="Close pairing QR"
-        class="absolute inset-0 border-0 bg-transparent p-0 backdrop-blur-sm"
+        class="absolute inset-0 border-0 bg-transparent p-0"
         onClick={onClose}
       />
       <section role="dialog" aria-modal="true" aria-label="Pairing QR" class="relative grid justify-items-center gap-2">

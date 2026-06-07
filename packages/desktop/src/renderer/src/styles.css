@@ -162,8 +162,8 @@ body {
 }
 
 .pairing-qr-pulse rect:not([fill="white"]) {
-  animation: pairing-qr-dot-pulse 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--qr-wave) * 12ms);
+  animation: pairing-qr-dot-pulse 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--qr-wave) * 14ms);
 }
 
 @media (prefers-reduced-motion: reduce) {

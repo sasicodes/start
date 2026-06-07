@@ -462,9 +462,9 @@ const finderSvgs = (size: number, margin: number) => {
   return origins
     .map(([x, y]) =>
       [
-        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.2" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`,
-        `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="0.9" fill="white" />`,
-        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.72" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`
+        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.85" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`,
+        `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="1.35" fill="white" />`,
+        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="1" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`
       ].join('')
     )
     .join('');
