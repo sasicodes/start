@@ -26,7 +26,7 @@ export const Attachments = ({
   const overflowCount = attachments.length - visibleAttachments.length;
 
   return (
-    <div class="flex h-9.5 items-center rounded-full bg-control p-0.5">
+    <div class="flex h-9.5 shrink-0 items-center rounded-full bg-control p-0.5">
       <div class="flex items-center -space-x-1.5">
         {visibleAttachments.map((attachment, index) => (
           <div
