@@ -93,5 +93,6 @@ describe('qr generator', () => {
     expect(svg).toContain('width="7" height="7" rx="1.2"');
     expect(svg).toContain('width="0.82" height="0.82" rx="0.3"');
     expect(svg).toContain('width="3" height="3" rx="0.72"');
+    expect(svg).toContain('style="--qr-wave:');
   });
 });

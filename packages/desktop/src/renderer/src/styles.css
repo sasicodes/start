@@ -43,7 +43,6 @@
   --animate-composer-overlay-shell-out: composer-floating-shell-out 120ms linear both;
   --animate-drop-overlay-corner-drift: drop-corner-drift 3.8s ease-in-out infinite;
   --animate-drop-overlay-edge-breathe: drop-edge-breathe 4.6s ease-in-out infinite;
-  --animate-pairing-qr-ripple: pairing-qr-ripple 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   --shadow-composer-overlay:
     0 0 0 1px var(--overlay-field-ring),
     0 26px 72px -30px var(--overlay-field-shadow),
@@ -162,15 +161,28 @@ body {
   }
 }
 
-@keyframes pairing-qr-ripple {
+.pairing-qr-pulse rect:not([fill="white"]) {
+  animation: pairing-qr-dot-pulse 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--qr-wave) * 12ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pairing-qr-pulse rect:not([fill="white"]) {
+    animation-delay: 0ms;
+  }
+}
+
+@keyframes pairing-qr-dot-pulse {
   0% {
-    opacity: 0.34;
-    transform: scale(0.36);
+    fill: currentColor;
+  }
+
+  44% {
+    fill: var(--color-pairing-accent);
   }
 
   100% {
-    opacity: 0;
-    transform: scale(1.08);
+    fill: currentColor;
   }
 }
 

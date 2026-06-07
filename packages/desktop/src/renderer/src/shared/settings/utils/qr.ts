@@ -449,7 +449,11 @@ const inFinder = (size: number, x: number, y: number) => {
 
 type FinderOrigin = [number, number];
 
+const qrWave = (dimension: number, x: number, y: number) =>
+  Math.round(Math.hypot(x - dimension / 2, y - dimension / 2));
+
 const finderSvgs = (size: number, margin: number) => {
+  const dimension = size + margin * 2;
   const origins: FinderOrigin[] = [
     [margin, margin],
     [size - 7 + margin, margin],
@@ -458,9 +462,9 @@ const finderSvgs = (size: number, margin: number) => {
   return origins
     .map(([x, y]) =>
       [
-        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.2" />`,
+        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.2" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`,
         `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="0.9" fill="white" />`,
-        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.72" />`
+        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="0.72" style="--qr-wave:${qrWave(dimension, x + 3.5, y + 3.5)}" />`
       ].join('')
     )
     .join('');
@@ -477,7 +481,7 @@ export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
     for (let x = 0; x < size; x += 1) {
       if (!row[x]) continue;
       if (inFinder(size, x, y)) continue;
-      cells += `<rect x="${x + margin + 0.09}" y="${y + margin + 0.09}" width="0.82" height="0.82" rx="0.3" />`;
+      cells += `<rect x="${x + margin + 0.09}" y="${y + margin + 0.09}" width="0.82" height="0.82" rx="0.3" style="--qr-wave:${qrWave(dimension, x + margin + 0.5, y + margin + 0.5)}" />`;
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" fill="currentColor">${finderSvgs(size, margin)}${cells}</svg>`;
