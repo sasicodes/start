@@ -163,7 +163,7 @@ export const DiffFile = memo(
           type="button"
           aria-expanded={open}
           onClick={() => onToggle(entryKey, open)}
-          class="group/file sticky top-0 z-20 flex w-full min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-line bg-control/45 px-4 py-2.5 text-left outline-0 backdrop-blur-[64px] backdrop-saturate-50 transition-colors hover:text-hover focus-visible:text-hover"
+          class="group/file sticky top-0 z-20 flex w-full min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-line bg-control/45 px-4 py-2.5 text-left outline-0 backdrop-blur-3xl backdrop-saturate-50 transition-colors hover:text-hover focus-visible:text-hover"
         >
           <div class="flex min-w-0 items-center gap-2">
             <StatusMark status={status} />
