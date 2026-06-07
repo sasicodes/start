@@ -138,6 +138,18 @@ const tabWithUrl = (url: string): BrowserTab | null => {
   return null;
 };
 
+const tabIsBlank = (tab: BrowserTab) => !tab.view.webContents.getURL() && !tab.view.webContents.isLoading();
+
+const blankTab = (): BrowserTab | null => {
+  for (const tab of browserTabs.values()) {
+    if (tabIsBlank(tab)) return tab;
+  }
+
+  return null;
+};
+
+const tabForNewPage = (url: string) => tabWithUrl(url) ?? blankTab() ?? createBrowserTab();
+
 const statusFromView = (): BrowserStatus => {
   const tab = activeTab();
   if (!tab) return emptyStatus;
@@ -356,7 +368,7 @@ export const openBrowserUrl = async (
   if (options.tabId && browserTabs.has(options.tabId)) {
     activeTabId = options.tabId;
   } else if (options.newTab) {
-    activeTabId = tabWithUrl(url)?.id ?? createBrowserTab().id;
+    activeTabId = tabForNewPage(url).id;
   }
   closeInactiveBrowserTabsOverLimit();
 
@@ -382,7 +394,7 @@ export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  createBrowserTab();
+  activeTabId = (blankTab() ?? createBrowserTab()).id;
   closeInactiveBrowserTabsOverLimit();
   attachActiveBrowserView(window);
   sendStatus();
@@ -409,12 +421,12 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
 
   closeBrowserTabById(tabId);
 
-  if (activeTabId) {
-    const window = windowFromSender(sender);
-    if (window && !window.isDestroyed() && (wasAttached || ownerWindow === window)) {
-      attachActiveBrowserView(window);
-      activeTab()?.view.webContents.focus();
-    }
+  const window = windowFromSender(sender);
+  if (!activeTabId && window && !window.isDestroyed()) createBrowserTab();
+
+  if (activeTabId && window && !window.isDestroyed() && (wasAttached || ownerWindow === window)) {
+    attachActiveBrowserView(window);
+    activeTab()?.view.webContents.focus();
   }
 
   sendStatus();
