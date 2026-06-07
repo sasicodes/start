@@ -13,6 +13,11 @@ private let trustKeyKeychainService = "one.intelligence.start.mobile-trust"
 private let connectionsStorageKey = "start:mobile-connections"
 private let activeConnectionStorageKey = "start:active-mobile-connection-id"
 
+private struct PendingArchivedChat {
+    let chat: Chat
+    let index: Int
+}
+
 @Observable
 @MainActor
 final class AppState {
@@ -41,8 +46,10 @@ final class AppState {
     private var messageRequestSessions: [String: String] = [:]
     private var optimisticMessages: [String: ChatMessage] = [:]
     private var optimisticMessageSessions: [String: String] = [:]
-    private var pendingArchivedChats: [String: Chat] = [:]
+    private var pendingArchivedChats: [String: PendingArchivedChat] = [:]
+    private var pendingArchiveOrder: [String] = []
     private var pendingDrafts: [String: String] = [:]
+    private var pendingDraftOrder: [String] = []
     private var pendingRenamedChats: [String: Chat] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
     private var pendingMessageRefreshSessions = Set<String>()
@@ -89,6 +96,8 @@ final class AppState {
     var connectionStatusLabel: String {
         if activeConnection?.enabled == false {
             "Disabled"
+        } else if connectionAttempting {
+            "Connecting"
         } else {
             switch relay.status {
             case .connected:
@@ -99,6 +108,14 @@ final class AppState {
                 "Connecting"
             }
         }
+    }
+
+    var connectionAttempting: Bool {
+        relay.status.isAttempting || reconnectTask != nil
+    }
+
+    var connectionRetryAvailable: Bool {
+        relay.status == .offline && activeConnection != nil && reconnectTask == nil
     }
 
     var route: AppRoute {
@@ -243,7 +260,7 @@ final class AppState {
         if let activeConnection {
             setConnection(activeConnection, enabled: true)
         }
-        resetRemoteRequestState()
+        resetRemoteRequestState(restoringPendingChanges: true)
         connectActiveConnection(resetAttempts: true)
     }
 
@@ -328,10 +345,12 @@ final class AppState {
 
     func archive(_ chat: Chat) {
         guard let desktopId = commandDesktopId else { return }
+        guard let index = chats.firstIndex(where: { $0.id == chat.id }) else { return }
 
         let requestId = UUID().uuidString
-        pendingArchivedChats[requestId] = chat
-        chats.removeAll { $0.id == chat.id }
+        pendingArchivedChats[requestId] = PendingArchivedChat(chat: chat, index: index)
+        pendingArchiveOrder.append(requestId)
+        chats.remove(at: index)
         sessionMessages[chat.id] = nil
         messagePageStates[chat.id] = nil
         pendingMessageRefreshSessions.remove(chat.id)
@@ -511,6 +530,7 @@ final class AppState {
                 requestHomeData()
             }
         case .offline:
+            resetRemoteRequestState(restoringPendingChanges: true)
             scheduleReconnect()
         case .connecting, .reconnecting:
             requestHomeData(requiresVerifiedDesktop: false)
@@ -630,6 +650,7 @@ final class AppState {
 
         let requestId = UUID().uuidString
         pendingDrafts[requestId] = text
+        pendingDraftOrder.append(requestId)
         if sessionId.isEmpty {
             pendingNewChatTitles[requestId] = text
         } else {
@@ -770,6 +791,7 @@ final class AppState {
 
         let pendingDraft = pendingDrafts[requestId]
         pendingDrafts[requestId] = nil
+        pendingDraftOrder.removeAll { $0 == requestId }
 
         guard payload.ok != false else {
             removeOptimisticMessage(for: requestId)
@@ -809,11 +831,12 @@ final class AppState {
 
     private func handleArchiveResult(_ payload: RelayPayload) {
         guard let requestId = payload.requestId,
-              let chat = pendingArchivedChats.removeValue(forKey: requestId)
+              let pending = pendingArchivedChats.removeValue(forKey: requestId)
         else { return }
+        pendingArchiveOrder.removeAll { $0 == requestId }
 
         guard payload.ok != false else {
-            chats.insert(chat, at: 0)
+            restoreArchivedChat(pending)
             return
         }
 
@@ -854,6 +877,15 @@ final class AppState {
         }
 
         chats.insert(chat, at: 0)
+    }
+
+    private func restoreArchivedChat(_ pending: PendingArchivedChat) {
+        if let index = chats.firstIndex(where: { $0.id == pending.chat.id }) {
+            chats[index] = pending.chat
+            return
+        }
+
+        chats.insert(pending.chat, at: min(pending.index, chats.count))
     }
 
     private func appendOptimisticMessage(
@@ -959,7 +991,11 @@ final class AppState {
         requestSessions()
     }
 
-    private func resetRemoteRequestState() {
+    private func resetRemoteRequestState(restoringPendingChanges: Bool = false) {
+        if restoringPendingChanges {
+            restorePendingRemoteChanges()
+        }
+
         modelsRequestId = ""
         sessionRequestId = ""
         modelSelectRequestId = ""
@@ -971,7 +1007,9 @@ final class AppState {
         optimisticMessages.removeAll()
         optimisticMessageSessions.removeAll()
         pendingArchivedChats.removeAll()
+        pendingArchiveOrder.removeAll()
         pendingDrafts.removeAll()
+        pendingDraftOrder.removeAll()
         pendingRenamedChats.removeAll()
         pendingNewChatTitles.removeAll()
         for (sessionId, state) in messagePageStates where state.loading {
@@ -980,6 +1018,25 @@ final class AppState {
                 hasMoreOlder: state.hasMoreOlder,
                 nextOffset: state.nextOffset
             )
+        }
+    }
+
+    private func restorePendingRemoteChanges() {
+        for requestId in pendingArchiveOrder.reversed() {
+            guard let pending = pendingArchivedChats[requestId] else { continue }
+            restoreArchivedChat(pending)
+        }
+
+        for chat in pendingRenamedChats.values {
+            restoreChat(chat)
+        }
+
+        for requestId in pendingDraftOrder {
+            removeOptimisticMessage(for: requestId)
+        }
+
+        if draft.isEmpty {
+            draft = pendingDraftOrder.reversed().compactMap { pendingDrafts[$0] }.first ?? ""
         }
     }
 

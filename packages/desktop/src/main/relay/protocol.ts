@@ -45,7 +45,9 @@ const relayCommandSchema = v.object({
 const requestIdSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
 const relayTextSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(20000));
 const relayPathSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(4096));
+const relayModelKeySchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(512));
 const relaySessionIdSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(512));
+const relayThinkingLevelSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(80));
 const relayPageLimitSchema = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50));
 const relayPageOffsetSchema = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(10000));
 
@@ -102,14 +104,14 @@ const modelSelectCommandSchema = v.object({
   type: v.optional(v.string()),
   requestId: requestIdSchema,
   action: v.literal('model.select'),
-  modelKey: relaySessionIdSchema
+  modelKey: relayModelKeySchema
 });
 
 const thinkingSelectCommandSchema = v.object({
   type: v.optional(v.string()),
   requestId: requestIdSchema,
   action: v.literal('thinking.select'),
-  level: relaySessionIdSchema
+  level: relayThinkingLevelSchema
 });
 
 const mobileRelayCommandSchema = v.union([

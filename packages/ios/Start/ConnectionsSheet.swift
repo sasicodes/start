@@ -8,6 +8,7 @@ struct ConnectionsSheet: View {
     let activeConnectionID: UUID?
     let onDeleteConnection: (Connection) -> Void
     let onRenameConnection: (Connection, String) -> Void
+    let onSetConnectionEnabled: (Connection, Bool) -> Void
     let connectionState: (Connection) -> ConnectionState
     let onSelectConnection: (Connection) -> Void
 
@@ -75,6 +76,9 @@ struct ConnectionsSheet: View {
                 },
                 onRename: { name in
                     onRenameConnection(currentConnection, name)
+                },
+                onSetEnabled: { enabled in
+                    onSetConnectionEnabled(currentConnection, enabled)
                 }
             )
         }
@@ -152,6 +156,7 @@ private struct ConnectionListRow: View {
         activeConnectionID: UUID(),
         onDeleteConnection: { _ in },
         onRenameConnection: { _, _ in },
+        onSetConnectionEnabled: { _, _ in },
         connectionState: { _ in .online },
         onSelectConnection: { _ in }
     )

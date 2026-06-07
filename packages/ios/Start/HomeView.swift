@@ -51,6 +51,7 @@ struct HomeView: View {
                 activeConnectionID: appState.activeConnectionID,
                 onDeleteConnection: appState.deleteConnection,
                 onRenameConnection: appState.renameConnection,
+                onSetConnectionEnabled: appState.setConnectionEnabled,
                 connectionState: { appState.connectionState(for: $0) },
                 onSelectConnection: appState.selectConnection
             )
@@ -100,10 +101,10 @@ struct HomeView: View {
                     }
                 )
                 .transition(.opacity)
-            } else if appState.relay.status.isAttempting {
-                ConnectionProgressState(status: appState.relay.status, minHeight: minHeight)
+            } else if appState.connectionAttempting {
+                ConnectionProgressState(label: appState.connectionStatusLabel, minHeight: minHeight)
                     .transition(.opacity)
-            } else if appState.relay.status == .offline && appState.activeConnection != nil {
+            } else if appState.connectionRetryAvailable {
                 ConnectionRetryState(minHeight: minHeight, onRetry: appState.retryConnection)
                     .transition(.opacity)
             } else if appState.sessionLoadState == .loaded {

@@ -185,6 +185,21 @@ describe('DesktopRelay', () => {
     expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
   });
 
+  it('clears pairing code refresh when the relay socket closes', () => {
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.created', code: '482913', expiresAt: 40000 }));
+    const sentCount = socket.sent.length;
+
+    socket.drop();
+    vi.advanceTimersByTime(10000);
+
+    expect(socket.sent).toHaveLength(sentCount);
+  });
+
   it('approves a valid pairing resume request', () => {
     const socket = fakeSocket();
     const onPairingResume = vi.fn(() => true);

@@ -46,7 +46,7 @@ struct ConnectionEmptyState: View {
 }
 
 struct ConnectionProgressState: View {
-    let status: RelayConnectionStatus
+    let label: String
     let minHeight: CGFloat
 
     var body: some View {
@@ -55,7 +55,7 @@ struct ConnectionProgressState: View {
                 .controlSize(.small)
                 .tint(StartTheme.Colors.softInk)
 
-            Text(status.rawValue)
+            Text(label)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(StartTheme.Colors.ink)
         }

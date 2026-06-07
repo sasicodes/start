@@ -243,6 +243,8 @@ export class DesktopRelay {
     this.socket = null;
     this.setCode('');
     this.pairedMobileIds.clear();
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    this.refreshTimer = null;
     if (!this.active || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;

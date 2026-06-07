@@ -2,22 +2,26 @@ import SwiftUI
 
 struct ConnectionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var deleteConfirmationOpen = false
     @State private var name: String
     let connection: Connection
     let state: ConnectionState
     let onDelete: () -> Void
     let onRename: (String) -> Void
+    let onSetEnabled: (Bool) -> Void
 
     init(
         connection: Connection,
         state: ConnectionState,
         onDelete: @escaping () -> Void,
-        onRename: @escaping (String) -> Void
+        onRename: @escaping (String) -> Void,
+        onSetEnabled: @escaping (Bool) -> Void
     ) {
         self.connection = connection
         self.state = state
         self.onDelete = onDelete
         self.onRename = onRename
+        self.onSetEnabled = onSetEnabled
         _name = State(initialValue: connection.name)
     }
 
@@ -50,6 +54,21 @@ struct ConnectionFormSheet: View {
                         }
                         .foregroundStyle(StartTheme.Colors.softInk)
                     }
+
+                    LabeledContent("Enabled") {
+                        Toggle(
+                            "Enabled",
+                            isOn: Binding(
+                                get: { connection.enabled },
+                                set: { enabled in
+                                    StartHaptics.selection()
+                                    onSetEnabled(enabled)
+                                }
+                            )
+                        )
+                        .labelsHidden()
+                        .tint(StartTheme.Colors.ink)
+                    }
                 }
                 .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 .listRowBackground(Color.clear.background(.thinMaterial))
@@ -57,8 +76,7 @@ struct ConnectionFormSheet: View {
                 Section {
                     Button(role: .destructive) {
                         StartHaptics.lightImpact()
-                        onDelete()
-                        dismiss()
+                        deleteConfirmationOpen = true
                     } label: {
                         Text("Delete connection")
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -78,6 +96,15 @@ struct ConnectionFormSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(.ultraThinMaterial)
         .presentationDetents([.height(360)])
+        .confirmationDialog("Delete connection?", isPresented: $deleteConfirmationOpen, titleVisibility: .visible) {
+            Button("Delete connection", role: .destructive) {
+                StartHaptics.lightImpact()
+                onDelete()
+                dismiss()
+            }
+
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private var relayHost: String {
@@ -117,6 +144,7 @@ struct ConnectionFormSheet: View {
         ),
         state: .online,
         onDelete: {},
-        onRename: { _ in }
+        onRename: { _ in },
+        onSetEnabled: { _ in }
     )
 }
