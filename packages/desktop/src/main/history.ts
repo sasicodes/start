@@ -11,7 +11,7 @@ import {
   timestampValue
 } from '@main/details';
 import { combineHistoryTurns } from '@main/history/combine';
-import { codeBlock, toolBody, toolEventDetail, toolResultTitle } from '@main/tools/details';
+import { codeBlock, keepsErrorState, toolBody, toolEventDetail, toolResultTitle } from '@main/tools/details';
 import type { ChatEvent, HistoryTurn, HistoryTurnDetail } from '@main/types';
 
 type HistoryToolCall = {
@@ -150,11 +150,12 @@ const toolResultTurn = (entry: Record<string, unknown>, message: Record<string, 
   }
 
   const body = toolBody(toolName, {}, message);
+  const failed = error && keepsErrorState(toolName);
   const event: ChatEvent = {
     key,
     title: toolResultTitle(toolName, error),
-    kind: error ? 'error' : 'tool',
-    state: error ? 'error' : 'done'
+    kind: failed ? 'error' : 'tool',
+    state: failed ? 'error' : 'done'
   };
 
   if (body) event.body = body;

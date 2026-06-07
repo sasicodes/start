@@ -203,28 +203,13 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
   return '';
 };
 
-const nonErrorResult = (toolName: string, result: unknown) => {
-  if (!isRecord(result)) return false;
-  return toolName === 'find' && textContent(result.content).trim() === 'No files found matching pattern';
-};
+export const keepsErrorState = (toolName: string) => toolName === 'subagent_spawn' || toolName.startsWith('browser_');
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
 
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
-
-  if (error) {
-    if (toolName === 'web_search') return 'Web search failed';
-    if (toolName === 'bash') return 'Command failed';
-    if (toolName === 'edit') return 'Edit failed';
-    if (toolName === 'find') return 'File lookup failed';
-    if (toolName === 'grep') return 'Search failed';
-    if (toolName === 'ls') return 'Folder exploration failed';
-    if (toolName === 'read') return 'Read failed';
-    if (toolName === 'write') return 'Write failed';
-    return `${toolName} failed`;
-  }
 
   if (toolName === 'bash') return 'Ran command';
   if (toolName === 'web_search') return 'Searched the web';
@@ -235,22 +220,6 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'read') return 'Read file';
   if (toolName === 'write') return 'Created file';
   return `Used ${toolName}`;
-};
-
-const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
-  const path = recordPath(args);
-  const command = toolDetail(toolName, args);
-  const pattern = stringValue(args.pattern);
-
-  if (toolName === 'bash') return command ? `Command failed ${command}` : 'Command failed';
-  if (toolName === 'edit') return `Could not edit ${path}`;
-  if (toolName === 'find') return `Could not find files${pattern ? ` matching ${pattern}` : ''}`;
-  if (toolName === 'grep') return `Could not search code${pattern ? ` for ${pattern}` : ''}`;
-  if (toolName === 'web_search') return `Could not search the web${command ? ` for ${command}` : ''}`;
-  if (toolName === 'ls') return `Could not explore folder ${path}`;
-  if (toolName === 'read') return `Could not read ${path}`;
-  if (toolName === 'write') return `Could not create ${path}`;
-  return toolResultTitle(toolName, true);
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
@@ -270,7 +239,6 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
   const command = toolDetail(toolName, args);
   const pattern = stringValue(args.pattern);
 
-  if (state === 'error') return failedToolTitle(toolName, args);
   if (toolName === 'bash')
     return command
       ? `${state === 'active' ? 'Running' : 'Ran'} command ${command}`
@@ -305,7 +273,7 @@ export const toolEventDetail = ({
   const detail = toolDetail(toolName, safeArgs);
   const metric = toolMetric(toolName, safeArgs, result);
   const body = toolBody(toolName, safeArgs, result);
-  const nextState = state === 'error' && nonErrorResult(toolName, result) ? 'done' : state;
+  const nextState = state === 'error' && !keepsErrorState(toolName) ? 'done' : state;
   const event: ChatEvent = {
     key,
     state: nextState,
