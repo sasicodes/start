@@ -5,6 +5,11 @@ struct HomeView: View {
     @FocusState private var searchFocused: Bool
     @State private var scannerOpen = false
     @State private var expandedWorkspaces = Set<String>()
+    @State private var connectionToDelete: Connection?
+    @State private var connectionToRename: Connection?
+    @State private var connectionRenameDraft = ""
+    @State private var deleteConfirmationOpen = false
+    @State private var renameConnectionOpen = false
     @State private var workspaceExpansionInitialized = false
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
@@ -40,6 +45,40 @@ struct HomeView: View {
         .animation(.easeOut(duration: 0.16), value: appState.sessionLoadStateKey)
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
+        }
+        .alert("Rename connection", isPresented: $renameConnectionOpen) {
+            TextField("Name", text: $connectionRenameDraft)
+
+            Button("Cancel", role: .cancel) {
+                connectionToRename = nil
+                connectionRenameDraft = ""
+            }
+
+            Button("Save") {
+                guard let connection = connectionToRename else { return }
+                appState.renameConnection(connection, name: connectionRenameDraft)
+                connectionToRename = nil
+                connectionRenameDraft = ""
+                StartHaptics.success()
+            }
+        }
+        .confirmationDialog(
+            "Delete connection?",
+            isPresented: $deleteConfirmationOpen,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let connection = connectionToDelete else { return }
+                appState.deleteConnection(connection)
+                connectionToDelete = nil
+                StartHaptics.success()
+            }
+
+            Button("Cancel", role: .cancel) {
+                connectionToDelete = nil
+            }
+        } message: {
+            Text("This removes it from this iPhone.")
         }
         .task {
             appState.connectActiveConnectionIfNeeded()
@@ -81,7 +120,7 @@ struct HomeView: View {
             } else if appState.relay.status.isAttempting {
                 ConnectionProgressState(status: appState.relay.status, minHeight: minHeight)
                     .transition(.opacity)
-            } else if appState.relay.status == .offline && appState.relay.canRetry {
+            } else if appState.relay.status == .offline && appState.activeConnection != nil {
                 ConnectionRetryState(minHeight: minHeight, onRetry: appState.retryConnection)
                     .transition(.opacity)
             } else if appState.sessionLoadState == .loaded {
@@ -176,7 +215,7 @@ struct HomeView: View {
             .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture {
-                if appState.relay.status == .offline && appState.relay.canRetry {
+                if appState.relay.status == .offline && appState.activeConnection != nil {
                     appState.retryConnection()
                 }
             }
@@ -191,6 +230,15 @@ struct HomeView: View {
                     scannerOpen = true
                 },
                 onSelectSort: { sort = $0 },
+                onDeleteConnection: { connection in
+                    connectionToDelete = connection
+                    deleteConfirmationOpen = true
+                },
+                onRenameConnection: { connection in
+                    connectionToRename = connection
+                    connectionRenameDraft = connection.name
+                    renameConnectionOpen = true
+                },
                 connectionState: { appState.connectionState(for: $0) },
                 onSelectConnection: appState.selectConnection
             )

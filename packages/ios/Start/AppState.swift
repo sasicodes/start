@@ -4,6 +4,7 @@ import Security
 
 private let messagePageLimit = 10
 private let sessionPageLimit = 40
+private let connectionNameMaxLength = 80
 private let sessionTitleMaxLength = 120
 private let maxConnectionAttempts = 3
 private let reconnectRetryDelay = Duration.milliseconds(900)
@@ -154,10 +155,41 @@ final class AppState {
         }
 
         activeConnectionID = connection.id
+        setConnection(connection, enabled: true)
         persistActiveConnectionID()
         resetRemoteData()
         resetRemoteRequestState()
         connectActiveConnection(resetAttempts: true)
+    }
+
+    func deleteConnection(_ connection: Connection) {
+        let wasActive = activeConnectionID == connection.id
+        connections.removeAll { $0.id == connection.id }
+        Self.deleteRelayToken(for: connection.id)
+
+        if wasActive {
+            relay.disconnect()
+            activeConnectionID = connections.first?.id
+            resetRemoteData()
+            resetRemoteRequestState()
+        }
+
+        persistConnections()
+        persistActiveConnectionID()
+
+        if wasActive {
+            connectActiveConnection(resetAttempts: true)
+        }
+    }
+
+    func renameConnection(_ connection: Connection, name: String) {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let boundedName = String(trimmedName.prefix(connectionNameMaxLength)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !boundedName.isEmpty && boundedName != connection.name else { return }
+        guard let index = connections.firstIndex(where: { $0.id == connection.id }) else { return }
+
+        connections[index].name = boundedName
+        persistConnections()
     }
 
     func connectionState(for connection: Connection) -> ConnectionState {
@@ -184,12 +216,16 @@ final class AppState {
     }
 
     func retryConnection() {
+        if let activeConnection {
+            setConnection(activeConnection, enabled: true)
+        }
         resetRemoteRequestState()
         connectActiveConnection(resetAttempts: true)
     }
 
     func connectActiveConnectionIfNeeded() {
         guard let activeConnection else { return }
+        guard activeConnection.enabled else { return }
         guard connectionState(for: activeConnection) == .offline else {
             requestHomeData()
             return
@@ -380,6 +416,10 @@ final class AppState {
         return token
     }
 
+    private static func deleteRelayToken(for id: UUID) {
+        _ = SecItemDelete(relayTokenQuery(for: id) as CFDictionary)
+    }
+
     private static func relayTokenQuery(for id: UUID, returningData: Bool = false) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -397,6 +437,7 @@ final class AppState {
 
     private func connectActiveConnection(resetAttempts: Bool, pairingCode: String = "") {
         guard let connection = activeConnection,
+              connection.enabled,
               let url = URL(string: connection.relayUrl)
         else { return }
 
@@ -444,6 +485,11 @@ final class AppState {
     }
 
     private func persistConnections() {
+        guard !connections.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: connectionsStorageKey)
+            return
+        }
+
         for connection in connections {
             saveRelayToken(connection.relayToken, for: connection.id)
         }
@@ -474,7 +520,7 @@ final class AppState {
     }
 
     private func scheduleReconnect() {
-        guard activeConnection != nil,
+        guard activeConnection?.enabled == true,
               connectionAttemptCount < maxConnectionAttempts,
               reconnectTask == nil
         else { return }
@@ -912,6 +958,14 @@ final class AppState {
     private func requestPendingLatestMessages(sessionId: String) {
         guard pendingMessageRefreshSessions.remove(sessionId) != nil else { return }
         requestLatestMessages(sessionId: sessionId)
+    }
+
+    private func setConnection(_ connection: Connection, enabled: Bool) {
+        guard let index = connections.firstIndex(where: { $0.id == connection.id }) else { return }
+        guard connections[index].enabled != enabled else { return }
+
+        connections[index].enabled = enabled
+        persistConnections()
     }
 
     private func upsertConnection(with pairing: PairingPayload) {

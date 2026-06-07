@@ -34,10 +34,6 @@ final class RelayClient {
         status.rawValue
     }
 
-    var canRetry: Bool {
-        lastRequest != nil
-    }
-
     func connect(
         url: URL,
         token: String = "",

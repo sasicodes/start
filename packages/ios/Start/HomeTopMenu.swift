@@ -6,6 +6,8 @@ struct HomeTopMenu: View {
     let activeConnectionID: UUID?
     let onAddConnection: () -> Void
     let onSelectSort: (WorkspaceSort) -> Void
+    let onDeleteConnection: (Connection) -> Void
+    let onRenameConnection: (Connection) -> Void
     let connectionState: (Connection) -> ConnectionState
     let onSelectConnection: (Connection) -> Void
 
@@ -44,19 +46,41 @@ struct HomeTopMenu: View {
 
     private var connectionsMenu: some View {
         Menu {
-            ForEach(connections) { connection in
-                connectionButton(connection)
-            }
-
             Button {
                 StartHaptics.lightImpact()
                 onAddConnection()
             } label: {
                 Label("New connection", systemImage: "plus")
             }
+
+            ForEach(connections) { connection in
+                connectionButton(connection)
+            }
+
+            if let activeConnection {
+                Divider()
+
+                Button {
+                    StartHaptics.selection()
+                    onRenameConnection(activeConnection)
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+
+                Button(role: .destructive) {
+                    StartHaptics.lightImpact()
+                    onDeleteConnection(activeConnection)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         } label: {
-            Label("Connections", systemImage: "laptopcomputer")
+            Label("Connections", systemImage: "globe")
         }
+    }
+
+    private var activeConnection: Connection? {
+        connections.first { $0.id == activeConnectionID }
     }
 
     private func connectionButton(_ connection: Connection) -> some View {
@@ -66,24 +90,27 @@ struct HomeTopMenu: View {
                 onSelectConnection(connection)
             }
         } label: {
-            let active = activeConnectionID == connection.id
-            let state = connectionState(connection)
+            connectionLabel(connection)
+        }
+    }
 
-            Label {
-                Text(connection.name)
-                    .foregroundStyle(active ? state.symbolColor : StartTheme.Colors.ink)
-                    .padding(.leading, active ? 4 : 0)
-            } icon: {
-                ZStack(alignment: .bottomTrailing) {
-                    Image(systemName: "laptopcomputer")
+    private func connectionLabel(_ connection: Connection) -> some View {
+        let active = activeConnectionID == connection.id
+        let state = connectionState(connection)
+
+        return Label {
+            Text(connection.name)
+                .foregroundStyle(active ? state.symbolColor : StartTheme.Colors.ink)
+        } icon: {
+            ZStack(alignment: .bottomTrailing) {
+                Image(systemName: "laptopcomputer")
+                    .foregroundStyle(state.symbolColor)
+
+                if active {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(state.symbolColor)
-
-                    if active {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(state.symbolColor)
-                            .background(StartTheme.Colors.background, in: Circle())
-                    }
+                        .background(StartTheme.Colors.background, in: Circle())
                 }
             }
         }
@@ -104,6 +131,8 @@ struct HomeTopMenu: View {
         activeConnectionID: connection.id,
         onAddConnection: {},
         onSelectSort: { _ in },
+        onDeleteConnection: { _ in },
+        onRenameConnection: { _ in },
         connectionState: { _ in .online },
         onSelectConnection: { _ in }
     )
