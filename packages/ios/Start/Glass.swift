@@ -111,4 +111,10 @@ extension View {
             }
             .shadow(color: .black.opacity(0.24), radius: 24, y: 14)
     }
+
+    func connectionSheetChrome(cornerRadius: CGFloat = 58) -> some View {
+        presentationCornerRadius(cornerRadius)
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+    }
 }

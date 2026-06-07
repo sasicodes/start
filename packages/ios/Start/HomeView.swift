@@ -4,11 +4,9 @@ struct HomeView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var scannerOpen = false
+    @State private var connectionsOpen = false
     @State private var expandedWorkspaces = Set<String>()
-    @State private var connectionToDelete: Connection?
-    @State private var connectionToRename: Connection?
-    @State private var connectionRenameDraft = ""
-    @State private var renameConnectionOpen = false
+    @State private var scannerPendingAfterConnections = false
     @State private var workspaceExpansionInitialized = false
     @State private var sort = WorkspaceSort.recent
     let transitionNamespace: Namespace.ID
@@ -16,7 +14,8 @@ struct HomeView: View {
     var body: some View {
         @Bindable var appState = appState
         let searchActive = searchFocused || !appState.searchText.isEmpty
-        let connected = !appState.connections.isEmpty
+        let hasConnections = !appState.connections.isEmpty
+        let connectionEnabled = appState.activeConnection?.enabled == true
 
         return GeometryReader { geometry in
             ScrollView(showsIndicators: false) {
@@ -31,8 +30,10 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay {
-            if connected {
+            if connectionEnabled {
                 connectedBottomControls(searchActive: searchActive, searchText: $appState.searchText)
+            } else if hasConnections {
+                connectionsBottomButton
             } else {
                 addConnectionBottomButton
             }
@@ -45,28 +46,20 @@ struct HomeView: View {
         .sheet(isPresented: $scannerOpen) {
             ConnectionScannerSheet()
         }
-        .sheet(item: $connectionToDelete) { connection in
-            ConnectionDeleteSheet(connection: connection) {
-                appState.deleteConnection(connection)
-                connectionToDelete = nil
-                StartHaptics.success()
-            }
-        }
-        .alert("Rename connection", isPresented: $renameConnectionOpen) {
-            TextField("Name", text: $connectionRenameDraft)
-
-            Button("Cancel", role: .cancel) {
-                connectionToRename = nil
-                connectionRenameDraft = ""
-            }
-
-            Button("Save") {
-                guard let connection = connectionToRename else { return }
-                appState.renameConnection(connection, name: connectionRenameDraft)
-                connectionToRename = nil
-                connectionRenameDraft = ""
-                StartHaptics.success()
-            }
+        .sheet(isPresented: $connectionsOpen, onDismiss: openPendingScanner) {
+            ConnectionsSheet(
+                connections: appState.connections,
+                activeConnectionID: appState.activeConnectionID,
+                onAddConnection: {
+                    scannerPendingAfterConnections = true
+                    connectionsOpen = false
+                },
+                onDeleteConnection: appState.deleteConnection,
+                onRenameConnection: appState.renameConnection,
+                connectionState: { appState.connectionState(for: $0) },
+                onSelectConnection: appState.selectConnection,
+                onSetConnectionEnabled: appState.setConnectionEnabled
+            )
         }
         .task {
             appState.connectActiveConnectionIfNeeded()
@@ -105,6 +98,14 @@ struct HomeView: View {
             if appState.connections.isEmpty {
                 ConnectionEmptyState(minHeight: minHeight)
                     .transition(.opacity)
+            } else if appState.activeConnection?.enabled == false {
+                ConnectionDisabledState(
+                    minHeight: minHeight,
+                    onOpenConnections: {
+                        connectionsOpen = true
+                    }
+                )
+                .transition(.opacity)
             } else if appState.relay.status.isAttempting {
                 ConnectionProgressState(status: appState.relay.status, minHeight: minHeight)
                     .transition(.opacity)
@@ -165,14 +166,38 @@ struct HomeView: View {
     }
 
     private var addConnectionBottomButton: some View {
+        bottomActionButton(
+            title: "Add connection",
+            systemImage: "plus",
+            action: {
+                scannerOpen = true
+            }
+        )
+    }
+
+    private var connectionsBottomButton: some View {
+        bottomActionButton(
+            title: "Connections",
+            systemImage: "globe",
+            action: {
+                connectionsOpen = true
+            }
+        )
+    }
+
+    private func bottomActionButton(
+        title: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
         VStack {
             Spacer()
 
             Button {
                 StartHaptics.lightImpact()
-                scannerOpen = true
+                action()
             } label: {
-                Label("Add connection", systemImage: "plus")
+                Label(title, systemImage: systemImage)
                     .font(.system(size: 16, weight: .semibold))
                     .labelStyle(.titleAndIcon)
                     .foregroundStyle(StartTheme.Colors.ink)
@@ -182,11 +207,18 @@ struct HomeView: View {
             .buttonStyle(.plain)
             .contentShape(Capsule())
             .glassCapsule()
-            .accessibilityLabel("Add connection")
+            .accessibilityLabel(title)
             .padding(.horizontal, StartTheme.Metrics.floatingButtonHorizontalPadding)
             .padding(.bottom, StartTheme.Metrics.floatingButtonBottomPadding)
         }
         .ignoresSafeArea(.container, edges: .bottom)
+    }
+
+    private func openPendingScanner() {
+        guard scannerPendingAfterConnections else { return }
+
+        scannerPendingAfterConnections = false
+        scannerOpen = true
     }
 
     private var titleRow: some View {
@@ -203,7 +235,7 @@ struct HomeView: View {
             .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
             .contentShape(Rectangle())
             .onTapGesture {
-                if appState.relay.status == .offline && appState.activeConnection != nil {
+                if appState.relay.status == .offline && appState.activeConnection?.enabled == true {
                     appState.retryConnection()
                 }
             }
@@ -212,280 +244,13 @@ struct HomeView: View {
 
             HomeTopMenu(
                 sort: sort,
-                connections: appState.connections,
-                activeConnectionID: appState.activeConnectionID,
-                onAddConnection: {
-                    scannerOpen = true
-                },
                 onSelectSort: { sort = $0 },
-                onDeleteConnection: { connection in
-                    connectionToDelete = connection
-                },
-                onRenameConnection: { connection in
-                    connectionToRename = connection
-                    connectionRenameDraft = connection.name
-                    renameConnectionOpen = true
-                },
-                connectionState: { appState.connectionState(for: $0) },
-                onSelectConnection: appState.selectConnection
+                onOpenConnections: {
+                    connectionsOpen = true
+                }
             )
         }
         .frame(height: StartTheme.Metrics.floatingButtonSize)
-    }
-}
-
-private struct ConnectionStatusLabel: View {
-    let label: String
-
-    var body: some View {
-        Text(label)
-            .contentTransition(.opacity)
-            .font(.system(size: 11, weight: .regular))
-            .foregroundStyle(StartTheme.Colors.softInk.opacity(0.58))
-            .animation(.easeInOut(duration: 0.16), value: label)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(label)
-    }
-}
-
-private struct ConnectionEmptyState: View {
-    let minHeight: CGFloat
-
-    var body: some View {
-        VStack(spacing: 7) {
-            Text("No connections")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-
-            VStack(spacing: 4) {
-                Text("Open the desktop app, then go to")
-
-                HStack(spacing: 5) {
-                    Text("Settings")
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-
-                    Text("Mobile")
-                }
-            }
-            .font(.system(size: 14, weight: .regular))
-            .multilineTextAlignment(.center)
-            .foregroundStyle(StartTheme.Colors.softInk)
-            .frame(maxWidth: 260)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: minHeight)
-    }
-}
-
-private struct ConnectionProgressState: View {
-    let status: RelayConnectionStatus
-    let minHeight: CGFloat
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-                .tint(StartTheme.Colors.softInk)
-
-            Text(status.rawValue)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: minHeight)
-    }
-}
-
-private struct ConnectionRetryState: View {
-    let minHeight: CGFloat
-    let onRetry: () -> Void
-
-    var body: some View {
-        VStack {
-            Button(action: onRetry) {
-                Label("Retry", systemImage: "arrow.clockwise")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Retry connection")
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: minHeight)
-    }
-}
-
-private struct ChatListEmptyState: View {
-    let searching: Bool
-    let minHeight: CGFloat
-
-    private var message: String {
-        searching ? "No chats match your search." : "No chats yet."
-    }
-
-    var body: some View {
-        VStack(spacing: 7) {
-            Text(message)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-
-            if !searching {
-                Text("New conversations will appear here.")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.softInk)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: minHeight)
-    }
-}
-
-private struct HomeSearchBar: View {
-    @Binding var text: String
-    @FocusState.Binding var focused: Bool
-
-    private var active: Bool {
-        focused || !text.isEmpty
-    }
-
-    var body: some View {
-        HStack(spacing: active ? 6 : 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(StartTheme.Colors.ink.opacity(0.82))
-
-                TextField(
-                    "",
-                    text: $text,
-                    prompt: Text("Search")
-                        .foregroundStyle(StartTheme.Colors.ink.opacity(0.62))
-                )
-                .focused($focused)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .tint(StartTheme.Colors.ink)
-                .submitLabel(.search)
-                .textInputAutocapitalization(.never)
-                .disableAutocorrection(true)
-                .accessibilityLabel("Search chats")
-                .onSubmit {
-                    focused = false
-                }
-            }
-            .frame(maxWidth: .infinity, minHeight: StartTheme.Metrics.floatingButtonHitSize)
-            .padding(.leading, 16)
-            .padding(.trailing, 14)
-            .contentShape(Capsule())
-            .glassSearchCapsule(active: active)
-            .simultaneousGesture(
-                TapGesture().onEnded {
-                    focused = true
-                }
-            )
-
-            if active {
-                Button {
-                    StartHaptics.lightImpact()
-                    withAnimation(.snappy(duration: 0.14, extraBounce: 0)) {
-                        text = ""
-                        focused = false
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(StartTheme.Colors.ink.opacity(0.84))
-                        .frame(width: StartTheme.Metrics.floatingButtonHitSize, height: StartTheme.Metrics.floatingButtonHitSize)
-                }
-                .buttonStyle(.plain)
-                .contentShape(Circle())
-                .glassSearchCapsule(active: true)
-                .accessibilityLabel("Close search")
-                .transition(.searchBubbleSplit)
-                .zIndex(1)
-            }
-        }
-        .animation(.snappy(duration: 0.14, extraBounce: 0), value: active)
-    }
-}
-
-private struct SearchBubbleSplitModifier: ViewModifier {
-    let active: Bool
-
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(active ? 1 : 0.82, anchor: .leading)
-            .offset(x: active ? 0 : -18)
-            .opacity(active ? 1 : 0)
-    }
-}
-
-private extension AnyTransition {
-    static var searchBubbleSplit: AnyTransition {
-        .asymmetric(
-            insertion: .modifier(
-                active: SearchBubbleSplitModifier(active: false),
-                identity: SearchBubbleSplitModifier(active: true)
-            ),
-            removal: .modifier(
-                active: SearchBubbleSplitModifier(active: false),
-                identity: SearchBubbleSplitModifier(active: true)
-            )
-        )
-    }
-}
-
-private struct ConnectionScannerSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        QRCodeScannerView { payload in
-            if appState.pair(with: payload) {
-                dismiss()
-            }
-        }
-        .overlay(alignment: .center) {
-            ScannerReticle()
-        }
-        .overlay(alignment: .bottom) {
-            ScannerInstruction()
-                .padding(.bottom, 18)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 52, style: .continuous))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 18)
-        .ignoresSafeArea(.container, edges: .bottom)
-        .presentationDetents([.fraction(0.78)])
-        .presentationCornerRadius(58)
-        .presentationDragIndicator(.visible)
-        .presentationBackground(StartTheme.Colors.background)
-    }
-}
-
-private struct ScannerReticle: View {
-    var body: some View {
-        RoundedRectangle(cornerRadius: 26, style: .continuous)
-            .stroke(.white.opacity(0.82), lineWidth: 2)
-            .frame(width: 220, height: 220)
-            .shadow(color: .black.opacity(0.24), radius: 18)
-            .padding(18)
-            .allowsHitTesting(false)
-    }
-}
-
-private struct ScannerInstruction: View {
-    var body: some View {
-        Text("Scan the QR code on your desktop")
-            .font(.system(size: 14, weight: .medium))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: Capsule())
-            .allowsHitTesting(false)
     }
 }
 

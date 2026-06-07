@@ -61,9 +61,7 @@ struct ConnectionDeleteSheet: View {
         .padding(.horizontal, 22)
         .padding(.vertical, 20)
         .presentationDetents([.height(226)])
-        .presentationCornerRadius(34)
-        .presentationDragIndicator(.visible)
-        .presentationBackground(StartTheme.Colors.background)
+        .connectionSheetChrome(cornerRadius: 34)
     }
 }
 

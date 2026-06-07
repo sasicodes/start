@@ -86,13 +86,17 @@ final class AppState {
     }
 
     var connectionStatusLabel: String {
-        switch relay.status {
-        case .connected:
-            "Connected"
-        case .offline:
-            "Not connected"
-        case .connecting, .reconnecting:
-            "Connecting"
+        if activeConnection?.enabled == false {
+            "Disabled"
+        } else {
+            switch relay.status {
+            case .connected:
+                "Connected"
+            case .offline:
+                "Not connected"
+            case .connecting, .reconnecting:
+                "Connecting"
+            }
         }
     }
 
@@ -190,6 +194,24 @@ final class AppState {
 
         connections[index].name = boundedName
         persistConnections()
+    }
+
+    func setConnectionEnabled(_ connection: Connection, enabled: Bool) {
+        setConnection(connection, enabled: enabled)
+        guard activeConnectionID == connection.id else { return }
+
+        if enabled {
+            resetRemoteRequestState()
+            connectActiveConnection(resetAttempts: true)
+            return
+        }
+
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        connectionAttemptCount = 0
+        relay.disconnect()
+        resetRemoteData()
+        resetRemoteRequestState()
     }
 
     func connectionState(for connection: Connection) -> ConnectionState {
