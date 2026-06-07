@@ -42,6 +42,10 @@ const subscribeUpdateState = () => {
   };
 };
 
+export const downloadUpdate = () => {
+  window.pi.app.downloadUpdate().catch(() => {});
+};
+
 export const installUpdate = () => {
   window.pi.app.installUpdate().catch(() => {});
 };

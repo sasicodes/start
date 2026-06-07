@@ -87,8 +87,8 @@ const gitChanges = new GitChangesService({
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
 let appQuitConfirmed = false;
+let quitCleanupStarted = false;
 let appQuitConfirmationOpen = false;
-let quitAfterAnalyticsShutdown = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
 
@@ -429,16 +429,6 @@ if (!singleInstanceLock) {
   });
 }
 
-const shutdownAnalyticsAndQuit = async () => {
-  try {
-    await shutdownAnalytics();
-  } catch (error) {
-    logger.error('analytics shutdown', error);
-  }
-
-  app.quit();
-};
-
 const shutdownAnalyticsSilently = async () => {
   try {
     await shutdownAnalytics();
@@ -455,21 +445,10 @@ const destroyBrowserSilently = async () => {
   }
 };
 
-app.on('before-quit', (event) => {
-  if (!appQuitConfirmed && getMainWindow()) {
-    event.preventDefault();
-    confirmAppQuit();
-    return;
-  }
+const startQuitCleanup = async () => {
+  if (quitCleanupStarted) return;
 
-  if (!quitAfterAnalyticsShutdown) {
-    quitAfterAnalyticsShutdown = true;
-    event.preventDefault();
-    shutdownAnalyticsAndQuit();
-    return;
-  }
-
-  shutdownAnalyticsSilently();
+  quitCleanupStarted = true;
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
   stopWorkspaceChanged?.();
@@ -477,11 +456,26 @@ app.on('before-quit', (event) => {
   stopResourceRefresh?.();
   stopResourceRefresh = null;
   stopAutoUpdateChecks();
-  destroyBrowserSilently();
   desktopRelay.stop();
   gitChanges.dispose();
   chat.dispose();
   deactivateWorkspaceAccess();
+
+  await Promise.all([shutdownAnalyticsSilently(), destroyBrowserSilently()]);
+  app.quit();
+};
+
+app.on('before-quit', (event) => {
+  if (!appQuitConfirmed && getMainWindow()) {
+    event.preventDefault();
+    confirmAppQuit();
+    return;
+  }
+
+  if (quitCleanupStarted) return;
+
+  event.preventDefault();
+  startQuitCleanup();
 });
 
 app.on('window-all-closed', () => {
