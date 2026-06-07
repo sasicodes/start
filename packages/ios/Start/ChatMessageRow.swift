@@ -25,6 +25,14 @@ struct ChatMessageRow: View {
         message.thinking?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
+    private var userBubbleBackground: Color {
+        Color(white: 0.92)
+    }
+
+    private var userBubbleText: Color {
+        Color.black.opacity(0.92)
+    }
+
     var body: some View {
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
             if message.role == .user {
@@ -39,12 +47,12 @@ struct ChatMessageRow: View {
     private var userBubble: some View {
         Text(message.text)
             .font(.system(size: 16, weight: .regular))
-            .foregroundStyle(StartTheme.Colors.ink)
+            .foregroundStyle(userBubbleText)
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(userBubbleBackground, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .accessibilityLabel("User: \(message.text)")
             .contextMenu {

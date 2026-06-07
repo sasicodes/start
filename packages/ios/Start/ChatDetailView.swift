@@ -51,13 +51,11 @@ struct ChatDetailView: View {
                 }
             }
 
-            EdgeFadeOverlay(topHeight: 20, topOpacity: 0.5, topSolidHeight: 62, bottomHeight: 160)
+            EdgeFadeOverlay(topHeight: 16, topOpacity: 0.24, bottomHeight: 160)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                header
-                    .padding(.leading, 16)
-                    .padding(.trailing, 10)
+                headerSurface
 
                 Spacer(minLength: 0)
 
@@ -75,6 +73,7 @@ struct ChatDetailView: View {
                 .padding(.bottom, 6)
             }
         }
+        .background(StartTheme.Colors.background)
         .contentShape(Rectangle())
         .simultaneousGesture(dismissGesture)
         .accessibilityAction(.escape) {
@@ -99,6 +98,23 @@ struct ChatDetailView: View {
             focusTask?.cancel()
             focusTask = nil
         }
+    }
+
+    private var headerSurface: some View {
+        header
+            .padding(.leading, 16)
+            .padding(.trailing, 10)
+            .background {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(StartTheme.Colors.background.opacity(0.34))
+                    .ignoresSafeArea(edges: .top)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Color(.separator).opacity(0.16))
+                    .frame(height: 0.5)
+            }
     }
 
     private var header: some View {
