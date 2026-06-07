@@ -207,7 +207,7 @@ private func previewChat() -> Chat {
         title: "Preview session",
         modified: Int(Date().timeIntervalSince1970 * 1000),
         workspaceName: "start",
-        workspacePath: "/Users/studio/Code/github.com/sasicodes/start"
+        workspacePath: "/workspace/start"
     )
 }
 
