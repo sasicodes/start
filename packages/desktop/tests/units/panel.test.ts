@@ -1,4 +1,4 @@
-import { sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/side-panel';
+import { sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/panel';
 import { describe, expect, it } from 'vitest';
 
 describe('side panel mode settings', () => {
