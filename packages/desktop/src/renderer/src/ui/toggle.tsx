@@ -7,7 +7,7 @@ interface ToggleProps {
   onChange: (checked: boolean) => void;
 }
 
-export const Toggle = ({ label, checked, disabled = false, onChange }: ToggleProps) => (
+export const Toggle = ({ label, checked, onChange, disabled = false }: ToggleProps) => (
   <Switch.Root
     checked={checked}
     disabled={disabled}

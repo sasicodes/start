@@ -63,8 +63,8 @@ export const CliInstall = () => {
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Use start . to open folders in Start.</p>
         </div>
         <Toggle
-          label="Command line"
           checked={installed}
+          label="Command line"
           disabled={busy || !actionable(status)}
           onChange={() => {
             apply().catch(() => {});

@@ -73,6 +73,10 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 - Window, html, body, and root backgrounds must stay transparent in light and dark mode.
 - The prompt send button icon must stay visible in all themes and use a 2 px stroke.
 - Tooltips must use Base UI side data attributes for direction-aware transform and opacity animations.
+- Build interactive controls on Base UI primitives (Switch, Tooltip, …) wrapped as thin composites styled with our tokens via `data-[...]` variants; do not hand-roll them.
+- Use a toggle for binary settings (enable/disable, install/uninstall) instead of a text-label button.
+- Drive on/active/selected affordances with a bold existing accent token (e.g. `bg-progress`), never green or ad-hoc colors.
+- Keep UI copy short and plain; do not use em dashes.
 - Use system UI fonts only.
 - Keep `packages/desktop/build/icons` and `packages/desktop/src/renderer/public` icons in sync.
 
