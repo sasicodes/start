@@ -36,6 +36,8 @@ final class AppState {
     private var thinkingSelectRequestId = ""
     private var messageRequestOffsets: [String: Int] = [:]
     private var messageRequestSessions: [String: String] = [:]
+    private var optimisticMessages: [String: ChatMessage] = [:]
+    private var optimisticMessageSessions: [String: String] = [:]
     private var pendingDrafts: [String: String] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
     private var pendingMessageRefreshSessions = Set<String>()
@@ -239,11 +241,11 @@ final class AppState {
     }
 
     func selectModel(_ key: String) {
+        selectedModelKey = key
         guard let desktopId = commandDesktopId else { return }
 
         let requestId = UUID().uuidString
         modelSelectRequestId = requestId
-        selectedModelKey = key
         relay.sendCommand(
             desktopId: desktopId,
             payload: RelayPayload(action: "model.select", requestId: requestId, modelKey: key)
@@ -251,11 +253,11 @@ final class AppState {
     }
 
     func selectThinkingLevel(_ level: String) {
+        thinkingLevel = level
         guard let desktopId = commandDesktopId else { return }
 
         let requestId = UUID().uuidString
         thinkingSelectRequestId = requestId
-        thinkingLevel = level
         relay.sendCommand(
             desktopId: desktopId,
             payload: RelayPayload(action: "thinking.select", requestId: requestId, level: level)
@@ -462,6 +464,13 @@ final class AppState {
         pendingDrafts[requestId] = text
         if sessionId.isEmpty {
             pendingNewChatTitles[requestId] = text
+        } else {
+            appendOptimisticMessage(
+                requestId: requestId,
+                sessionId: sessionId,
+                text: text,
+                createdAt: Int(Date().timeIntervalSince1970 * 1000)
+            )
         }
         draft = ""
         promptFocused = false
@@ -568,7 +577,8 @@ final class AppState {
         }
 
         if offset == 0 {
-            sessionMessages[sessionId] = messages
+            resolveOptimisticMessages(sessionId: sessionId, messages: messages)
+            sessionMessages[sessionId] = messagesWithOptimisticMessages(messages, sessionId: sessionId)
         } else {
             let existing = sessionMessages[sessionId] ?? []
             let incomingIds = Set(messages.map(\.id))
@@ -590,6 +600,7 @@ final class AppState {
         pendingDrafts[requestId] = nil
 
         guard payload.ok != false else {
+            removeOptimisticMessage(for: requestId)
             if draft.isEmpty, let pendingDraft {
                 draft = pendingDraft
             }
@@ -621,6 +632,68 @@ final class AppState {
 
         if case .newChat = route {
             path = [.chat(sessionId)]
+        }
+    }
+
+    private func appendOptimisticMessage(
+        requestId: String,
+        sessionId: String,
+        text: String,
+        createdAt: Int
+    ) {
+        let message = ChatMessage(
+            id: "pending:\(requestId)",
+            role: .user,
+            text: text,
+            createdAt: createdAt
+        )
+        optimisticMessages[requestId] = message
+        optimisticMessageSessions[requestId] = sessionId
+        sessionMessages[sessionId] = (sessionMessages[sessionId] ?? []) + [message]
+    }
+
+    private func messagesWithOptimisticMessages(_ messages: [ChatMessage], sessionId: String) -> [ChatMessage] {
+        let messageIds = Set(messages.map(\.id))
+        let optimistic = optimisticMessageSessions.compactMap { requestId, optimisticSessionId -> ChatMessage? in
+            guard optimisticSessionId == sessionId,
+                  let message = optimisticMessages[requestId],
+                  !messageIds.contains(message.id)
+            else { return nil }
+            return message
+        }
+        return messages + optimistic.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func removeOptimisticMessage(for requestId: String) {
+        guard let sessionId = optimisticMessageSessions[requestId],
+              let optimisticMessage = optimisticMessages[requestId]
+        else {
+            optimisticMessages[requestId] = nil
+            optimisticMessageSessions[requestId] = nil
+            return
+        }
+
+        optimisticMessages[requestId] = nil
+        optimisticMessageSessions[requestId] = nil
+        guard var messages = sessionMessages[sessionId] else { return }
+        messages.removeAll { $0.id == optimisticMessage.id }
+        sessionMessages[sessionId] = messages
+    }
+
+    private func resolveOptimisticMessages(sessionId: String, messages: [ChatMessage]) {
+        var userTextCounts: [String: Int] = [:]
+        for message in messages where message.role == .user {
+            userTextCounts[message.text, default: 0] += 1
+        }
+
+        for (requestId, optimisticSessionId) in Array(optimisticMessageSessions) where optimisticSessionId == sessionId {
+            guard let optimisticMessage = optimisticMessages[requestId] else { continue }
+            let count = userTextCounts[optimisticMessage.text] ?? 0
+            guard count > 0 else { continue }
+
+            userTextCounts[optimisticMessage.text] = count - 1
+            optimisticMessages[requestId] = nil
+            optimisticMessageSessions[requestId] = nil
         }
     }
 
@@ -674,6 +747,10 @@ final class AppState {
         pendingMessageRefreshSessions.removeAll()
         messageRequestOffsets.removeAll()
         messageRequestSessions.removeAll()
+        optimisticMessages.removeAll()
+        optimisticMessageSessions.removeAll()
+        pendingDrafts.removeAll()
+        pendingNewChatTitles.removeAll()
         for (sessionId, state) in messagePageStates where state.loading {
             messagePageStates[sessionId] = MessagePageState(
                 loading: false,

@@ -79,12 +79,18 @@ struct ChatMessageRow: View {
                     lineSpacing: 3
                 )
             }
-
-            if !message.streaming && hasText {
-                AgentMessageFooter(onCopy: { onCopy(message) })
-            }
         }
         .frame(maxWidth: 330, alignment: .leading)
+        .contentShape(Rectangle())
+        .contextMenu {
+            if hasText {
+                Button {
+                    _ = onCopy(message)
+                } label: {
+                    Label("Copy", systemImage: "square.on.square")
+                }
+            }
+        }
         .accessibilityElement(children: .contain)
     }
 }
@@ -231,46 +237,6 @@ private func thinkingMarkdown(_ thinking: String) -> String {
     }
 
     return compacted
-}
-
-private struct AgentMessageFooter: View {
-    @State private var copied = false
-    @State private var resetTask: Task<Void, Never>?
-
-    let onCopy: () -> Bool
-
-    var body: some View {
-        HStack {
-            Button(action: copy) {
-                Image(systemName: copied ? "checkmark" : "square.on.square")
-                    .contentTransition(.symbolEffect(.replace))
-                    .font(.system(size: copied ? 14 : 13, weight: .medium))
-                    .frame(width: 30, height: 30)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(copied ? StartTheme.Colors.success : StartTheme.Colors.softInk)
-            .accessibilityLabel(copied ? "Copied response" : "Copy response")
-
-            Spacer(minLength: 0)
-        }
-        .padding(.top, 1)
-        .onDisappear {
-            resetTask?.cancel()
-            resetTask = nil
-        }
-    }
-
-    private func copy() {
-        guard onCopy() else { return }
-
-        resetTask?.cancel()
-        copied = true
-        resetTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1200))
-            guard !Task.isCancelled else { return }
-            copied = false
-        }
-    }
 }
 
 private func durationLabel(for durationMs: Int?) -> String? {

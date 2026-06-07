@@ -48,6 +48,7 @@ struct ChatPromptFooter: View {
                 .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .offset(y: 27)
+                .allowsHitTesting(false)
                 .accessibilityLabel("Connection status: \(appState.connectionStatusLabel)")
         }
     }
@@ -94,6 +95,7 @@ struct ChatPromptBar: View {
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(sendEnabled ? Color.white : StartTheme.Colors.softInk)
                         .frame(width: 36, height: 36)
+                        .contentShape(Circle())
                         .glassProminentCircle(enabled: sendEnabled)
                 }
                 .accessibilityLabel("Send message")
@@ -136,6 +138,7 @@ struct ChatPromptBar: View {
         } label: {
             ProviderAssetIcon(providerID: selectedProviderID, size: 17)
                 .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
         }
         .disabled(appState.models.isEmpty)
         .accessibilityLabel("Model")
@@ -155,6 +158,7 @@ struct ChatPromptBar: View {
         Button(action: selectNextEffortLevel) {
             EffortSignal(activeCount: activeEffortCount)
                 .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
         }
         .accessibilityHint(canCycleEffort ? "Cycles effort level" : "")
         .accessibilityLabel("Effort \(activeEffortLabel)")

@@ -63,7 +63,7 @@ extension View {
     }
 
     func glassRoundedRectangle(cornerRadius: CGFloat) -> some View {
-        glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+        glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
     }
 
     func glassPanel(cornerRadius: CGFloat) -> some View {
