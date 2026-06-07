@@ -162,8 +162,8 @@ body {
 }
 
 .pairing-qr-pulse rect:not([fill="white"]) {
-  animation: pairing-qr-dot-pulse 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: calc(var(--qr-wave) * 28ms);
+  animation: pairing-qr-dot-pulse 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--qr-branch) * 18ms);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -174,15 +174,16 @@ body {
 
 @keyframes pairing-qr-dot-pulse {
   0%,
-  30% {
+  3% {
     fill: currentColor;
   }
 
-  46% {
+  10%,
+  28% {
     fill: var(--color-pairing-accent);
   }
 
-  64%,
+  58%,
   100% {
     fill: currentColor;
   }
