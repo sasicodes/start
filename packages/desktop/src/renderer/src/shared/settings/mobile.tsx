@@ -202,7 +202,8 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
         <div class="grid gap-1">
           <h3 class="m-0 text-sm leading-5 font-medium text-ink">Remote access</h3>
           <p class="m-0 text-xs leading-5 text-soft">
-            Connect this desktop to your hosted relay so trusted phones can start and resume work.
+            Connect this desktop to your hosted relay so trusted phones can start and resume work. It stays awake while
+            connected so your phone can always reach it.
           </p>
         </div>
         {qrAvailable && (
