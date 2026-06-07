@@ -39,9 +39,10 @@ import { type GitFileRef, getGitFileBlob } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
-import { DesktopRelay } from '@main/relay/client';
+import { DesktopRelay, type DesktopRelayCommandContext } from '@main/relay/client';
 import { probeRelay } from '@main/relay/probe';
-import type { RelayCommand } from '@main/relay/protocol';
+import type { DesktopRelayEventPayload, MobileRelayCommand } from '@main/relay/protocol';
+import { trustMobileDevice, verifyMobileResume } from '@main/relay/trust';
 import { listRootItems, type RootItemsScope } from '@main/root/items';
 import {
   type AppSettings,
@@ -50,6 +51,7 @@ import {
   validateAccelerator,
   writeAppSettings
 } from '@main/settings';
+import type { ChatStatus } from '@main/types';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import { logger } from '@main/utils/logger';
 import { setStayAwake } from '@main/utils/power';
@@ -92,13 +94,140 @@ let appQuitConfirmationOpen = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
 
-const runMobileCommand = (command: RelayCommand) => {
-  if (command.action === 'prompt' && command.value) submitComposerToMainWindow(command.value);
+const mobileResult = (
+  command: Extract<MobileRelayCommand, { requestId: string }>,
+  payload: object
+): DesktopRelayEventPayload => ({
+  ...payload,
+  ok: true,
+  requestId: command.requestId,
+  action: `${command.action}.result`
+});
+
+const mobileStatusResult = (
+  command: Extract<MobileRelayCommand, { requestId: string }>,
+  status: ChatStatus
+): DesktopRelayEventPayload => ({
+  ...status,
+  ok: status.ready,
+  requestId: command.requestId,
+  action: `${command.action}.result`
+});
+
+const runMobileSyncCommand = async (
+  command: Extract<MobileRelayCommand, { requestId: string }>,
+  context: DesktopRelayCommandContext
+) => {
+  if (command.action === 'sessions.list') {
+    context.reply(
+      mobileResult(
+        command,
+        await chat.getMobileSessionIndex({
+          ...(command.archived === true ? { archived: true } : {}),
+          ...(command.limit ? { limit: command.limit } : {}),
+          ...(command.offset ? { offset: command.offset } : {}),
+          ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
+        })
+      )
+    );
+    return;
+  }
+
+  if (command.action === 'messages.page') {
+    context.reply(
+      mobileResult(
+        command,
+        await chat.getMobileSessionMessages(command.sessionId, {
+          ...(command.limit ? { limit: command.limit } : {}),
+          ...(command.offset ? { offset: command.offset } : {})
+        })
+      )
+    );
+    return;
+  }
+
+  if (command.action === 'message.send') {
+    const result = await chat.sendMobileMessage({
+      text: command.text,
+      ...(command.sessionId ? { sessionId: command.sessionId } : {}),
+      ...(command.workspacePath ? { workspacePath: command.workspacePath } : {})
+    });
+    context.reply({
+      ok: result.ok,
+      requestId: command.requestId,
+      action: 'message.send.result',
+      ...(result.error ? { error: result.error } : {}),
+      ...(result.sessionId ? { sessionId: result.sessionId } : {})
+    });
+    if (result.ok) notifyRecentSessionsChanged();
+    return;
+  }
+
+  if (command.action === 'session.archive') {
+    const workspacePath = await chat.archiveSession(command.sessionId);
+    context.reply(
+      mobileResult(command, {
+        sessionId: command.sessionId,
+        workspacePath
+      })
+    );
+    notifyRecentSessionsChanged(workspacePath);
+    return;
+  }
+
+  if (command.action === 'session.rename') {
+    const workspacePath = await chat.renameSession(command.sessionId, command.title);
+    context.reply(
+      mobileResult(command, {
+        title: command.title,
+        sessionId: command.sessionId,
+        workspacePath
+      })
+    );
+    notifyRecentSessionsChanged(workspacePath);
+    return;
+  }
+
+  if (command.action === 'models.list') {
+    context.reply(mobileResult(command, await chat.getMobileModelsState()));
+    return;
+  }
+
+  if (command.action === 'model.select') {
+    const status = await chat.selectModel(command.modelKey);
+    context.reply(mobileStatusResult(command, status));
+    notifyStatusChanged();
+    return;
+  }
+
+  if (command.action === 'thinking.select') {
+    const status = await chat.selectThinkingLevel(command.level);
+    context.reply(mobileStatusResult(command, status));
+    notifyStatusChanged();
+  }
+};
+
+const runMobileCommand = (command: MobileRelayCommand, context: DesktopRelayCommandContext) => {
+  if (command.action === 'prompt' && command.value) {
+    submitComposerToMainWindow(command.value);
+    return;
+  }
+
+  if ('requestId' in command) {
+    return runMobileSyncCommand(command, context);
+  }
+
+  return;
 };
 
 const desktopRelay = new DesktopRelay({
   onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
-  onCommand: runMobileCommand
+  onCommand: runMobileCommand,
+  onPairingRequest: trustMobileDevice,
+  onPairingResume: verifyMobileResume
+});
+chat.setMobileSessionChangeHandler(({ sessionId, workspacePath }) => {
+  desktopRelay.broadcast({ action: 'sessions.changed', sessionId, workspacePath });
 });
 let stopWorkspaceChanged: (() => void) | null = null;
 
@@ -109,6 +238,7 @@ const refreshStayAwake = () => {
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
   sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
+  desktopRelay.broadcast({ action: 'sessions.changed', workspacePath });
   installStatusItem(menuActions());
 };
 

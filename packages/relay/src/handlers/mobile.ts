@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { pairingRequestMessage, relayError } from '../messages';
+import { pairingRequestMessage, pairingResumeMessage, relayError } from '../messages';
 import type { HelloMobile } from '../protocol';
 import { guardedHandler, sendJson } from '../socket';
 import type { RelayContext } from '../types';
@@ -39,7 +39,26 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
             code: pairing.code,
             mobileId: hello.mobileId,
             ...(message.name ? { name: message.name } : {}),
+            ...(message.trustKey ? { trustKey: message.trustKey } : {}),
             ...(message.publicKey ? { publicKey: message.publicKey } : {})
+          })
+        );
+        return;
+      }
+
+      if (message.type === 'pairing.resume') {
+        const desktop = context.state.desktopSocket(message.desktopId);
+        if (!desktop) {
+          sendJson(socket, relayError('Desktop is offline.'));
+          return;
+        }
+
+        sendJson(
+          desktop,
+          pairingResumeMessage({
+            mobileId: hello.mobileId,
+            nonce: message.nonce,
+            proof: message.proof
           })
         );
         return;
@@ -60,5 +79,10 @@ export const handleMobile = (context: RelayContext, socket: WebSocket, hello: He
     })
   );
 
-  socket.on('close', () => context.state.deleteMobile(hello.mobileId, socket));
+  socket.on('close', () => {
+    for (const desktopId of context.state.deleteMobile(hello.mobileId, socket)) {
+      const desktop = context.state.desktopSocket(desktopId);
+      if (desktop) sendJson(desktop, { type: 'mobile.disconnected', mobileId: hello.mobileId });
+    }
+  });
 };

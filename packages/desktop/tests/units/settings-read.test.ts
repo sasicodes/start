@@ -9,7 +9,8 @@ vi.mock('@main/storage', () => ({
 }));
 
 vi.mock('@main/device', () => ({
-  loadDesktopId: () => 'generated-desktop-id'
+  loadDesktopId: () => 'generated-desktop-id',
+  loadDesktopName: () => 'MacBook.local'
 }));
 
 const { readAppSettings } = await import('@main/settings');
@@ -24,16 +25,26 @@ describe('readAppSettings', () => {
     const settings = await readAppSettings();
 
     expect(settings.mobileRelay.desktopId).toBe('generated-desktop-id');
+    expect(settings.mobileRelay.desktopName).toBe('MacBook.local');
     expect(updateStartState).toHaveBeenCalledTimes(1);
     expect(updateStartState).toHaveBeenCalledWith({ mobileRelay: settings.mobileRelay });
   });
 
-  it('does not write when the desktop id already exists', async () => {
-    storedState = { mobileRelay: { desktopId: 'existing-desktop-id', enabled: false, relayToken: '', relayUrl: '' } };
+  it('does not write when the desktop identity already exists', async () => {
+    storedState = {
+      mobileRelay: {
+        enabled: false,
+        relayUrl: '',
+        relayToken: '',
+        desktopName: 'Existing.local',
+        desktopId: 'existing-desktop-id'
+      }
+    };
 
     const settings = await readAppSettings();
 
     expect(settings.mobileRelay.desktopId).toBe('existing-desktop-id');
+    expect(settings.mobileRelay.desktopName).toBe('Existing.local');
     expect(updateStartState).not.toHaveBeenCalled();
   });
 });

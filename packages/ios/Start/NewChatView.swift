@@ -26,6 +26,7 @@ struct NewChatView: View {
                 ChatPromptFooter(
                     text: $appState.draft,
                     focused: $focused,
+                    onSend: appState.sendNewDraft,
                     accessibilityHint: "Type what you want to work on",
                     accessibilityLabel: "Prompt",
                     placeholder: "Ask anything"
@@ -66,15 +67,22 @@ struct NewChatView: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(StartTheme.Colors.ink)
 
-                ChatHeaderMetadata(
-                    branchName: appState.activeBranchName,
-                    workspaceName: appState.activeProjectName
-                )
+                if let workspace = appState.activeWorkspaceHeader {
+                    ChatHeaderMetadata(
+                        branchName: workspace.branchName,
+                        workspaceName: workspace.name
+                    )
+                }
             }
 
             Spacer()
 
-            ChatHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
+            ChatOptionsMenu(
+                canRename: false,
+                canArchive: false,
+                onRename: {},
+                onArchive: {}
+            )
         }
         .padding(.top, 8)
         .padding(.bottom, 8)
@@ -99,7 +107,6 @@ struct NewChatView: View {
         }
     }
 }
-
 
 #Preview {
     NewChatView()

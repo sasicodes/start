@@ -64,10 +64,19 @@ export class RelayState {
     this.desktops.delete(desktopId);
   }
 
-  deleteMobile(mobileId: string, socket: WebSocket) {
-    if (this.mobiles.get(mobileId)?.socket !== socket) return;
+  deleteMobile(mobileId: string, socket: WebSocket): string[] {
+    if (this.mobiles.get(mobileId)?.socket !== socket) return [];
+
+    const desktopIds: string[] = [];
+    for (const [desktopId, routes] of this.routes) {
+      if (!routes.delete(mobileId)) continue;
+
+      desktopIds.push(desktopId);
+      if (routes.size === 0) this.routes.delete(desktopId);
+    }
+
     this.mobiles.delete(mobileId);
-    for (const routes of this.routes.values()) routes.delete(mobileId);
+    return desktopIds;
   }
 
   desktopSocket(desktopId: string) {

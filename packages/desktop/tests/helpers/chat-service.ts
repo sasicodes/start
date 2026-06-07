@@ -9,8 +9,9 @@ import { resetWorkspaceAccess } from '../fakes/workspace-access.js';
 export interface FreshServiceOptions {
   models?: FakeModel[];
   lastWorkspace?: string;
-  modelRegistryError?: string;
   selectedModelKey?: string;
+  modelRegistryError?: string;
+  onMobileSessionChanged?: (change: { sessionId: string; workspacePath: string }) => void;
 }
 
 const defaultModels: FakeModel[] = [
@@ -36,7 +37,9 @@ export const freshChatService = (options: FreshServiceOptions = {}) => {
   setModelRegistryError(options.modelRegistryError);
   setAvailableModels(options.models ?? defaultModels);
 
-  return new ChatService();
+  const chat = new ChatService();
+  if (options.onMobileSessionChanged) chat.setMobileSessionChangeHandler(options.onMobileSessionChanged);
+  return chat;
 };
 
 export const newWebContents = (): FakeWebContents & WebContents =>

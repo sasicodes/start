@@ -78,7 +78,7 @@ describe('RelayState', () => {
     expect([...state.mobileIds('desktop-2')]).toEqual(['mobile-1']);
   });
 
-  it('removes a mobile route from every desktop when the mobile disconnects', () => {
+  it('removes mobile routes when the mobile disconnects', () => {
     const state = new RelayState();
     const mobile = socket();
     state.addDesktop({ socket: socket(), desktopId: 'desktop-1' });
@@ -87,10 +87,22 @@ describe('RelayState', () => {
     state.approveRoute('desktop-1', 'mobile-1');
     state.approveRoute('desktop-2', 'mobile-1');
 
-    state.deleteMobile('mobile-1', mobile);
+    expect(state.deleteMobile('mobile-1', mobile)).toEqual(['desktop-1', 'desktop-2']);
 
     expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(false);
     expect(state.isRouteApproved('desktop-2', 'mobile-1')).toBe(false);
+  });
+
+  it('removes desktop routes when the desktop disconnects', () => {
+    const state = new RelayState();
+    const desktop = socket();
+    state.addDesktop({ socket: desktop, desktopId: 'desktop-1' });
+    state.addMobile({ socket: socket(), mobileId: 'mobile-1' });
+    state.approveRoute('desktop-1', 'mobile-1');
+
+    state.deleteDesktop('desktop-1', desktop);
+
+    expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(false);
   });
 
   it('replaces duplicate desktop and mobile connections by id', () => {

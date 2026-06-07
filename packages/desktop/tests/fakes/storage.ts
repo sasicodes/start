@@ -1,7 +1,9 @@
 import type { EffortLevel, SessionNotice } from '@main/types';
+import type { TrustedMobileDevice } from '@main/storage';
 
 export interface MobileRelaySettings {
   desktopId: string;
+  desktopName: string;
   enabled: boolean;
   relayToken: string;
   relayUrl: string;
@@ -17,12 +19,14 @@ export interface StartState {
   workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
   sessionNotices?: Record<string, SessionNotice>;
+  trustedMobileDevices?: Record<string, TrustedMobileDevice>;
 }
 
 const defaultStartState: StartState = {
   mobileRelay: {
     enabled: false,
     desktopId: '',
+    desktopName: '',
     relayUrl: '',
     relayToken: ''
   },

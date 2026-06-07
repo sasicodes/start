@@ -12,7 +12,7 @@ struct WorkspaceChatList: View {
     @Environment(AppState.self) private var appState
 
     let sections: [WorkspaceChatSection]
-    @Binding var expandedWorkspaces: Set<Workspace>
+    @Binding var expandedWorkspaces: Set<String>
     let transitionNamespace: Namespace.ID
 
     var body: some View {
@@ -20,9 +20,9 @@ struct WorkspaceChatList: View {
             ForEach(sections) { section in
                 WorkspaceChatAccordion(
                     section: section,
-                    expanded: expandedWorkspaces.contains(section.workspace),
+                    expanded: expandedWorkspaces.contains(section.workspacePath),
                     transitionNamespace: transitionNamespace,
-                    onToggle: { toggle(section.workspace) }
+                    onToggle: { toggle(section.workspacePath) }
                 )
             }
         }
@@ -30,12 +30,13 @@ struct WorkspaceChatList: View {
         .padding(.top, StartTheme.Metrics.chatListTopPadding)
     }
 
-    private func toggle(_ workspace: Workspace) {
+    private func toggle(_ workspacePath: String) {
+        StartHaptics.selection()
         withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
-            if expandedWorkspaces.contains(workspace) {
-                expandedWorkspaces.remove(workspace)
+            if expandedWorkspaces.contains(workspacePath) {
+                expandedWorkspaces.remove(workspacePath)
             } else {
-                expandedWorkspaces.insert(workspace)
+                expandedWorkspaces.insert(workspacePath)
             }
         }
     }
@@ -58,8 +59,9 @@ private struct WorkspaceChatAccordion: View {
                         .rotationEffect(.degrees(expanded ? 0 : -90))
                         .animation(.snappy(duration: 0.08, extraBounce: 0), value: expanded)
 
-                    Text(section.workspace.rawValue)
+                    Text(section.workspaceName)
                         .font(WorkspaceChatListMetrics.headingFont)
+                        .lineLimit(1)
 
                     Spacer()
                 }
@@ -68,7 +70,7 @@ private struct WorkspaceChatAccordion: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(section.workspace.rawValue) workspace")
+            .accessibilityLabel("\(section.workspaceName) workspace")
             .accessibilityValue(expanded ? "Expanded" : "Collapsed")
 
             if expanded {
@@ -92,16 +94,25 @@ private struct ChatRow: View {
     let transitionNamespace: Namespace.ID
 
     var body: some View {
-        Button {
-            withAnimation(.smooth(duration: 0.18)) {
+        let status = visibleStatus
+
+        return Button {
+            StartHaptics.lightImpact()
+            withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                 appState.openChat(chat)
             }
         } label: {
-            HStack(alignment: .top) {
+            HStack(alignment: .center, spacing: 8) {
                 Text(chat.title)
                     .font(WorkspaceChatListMetrics.titleFont)
                     .foregroundStyle(StartTheme.Colors.ink)
                     .lineLimit(1)
+
+                Spacer(minLength: 8)
+
+                if let status {
+                    SessionStatusIndicator(status: status)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .frame(minHeight: WorkspaceChatListMetrics.rowMinHeight, alignment: .leading)
@@ -111,7 +122,57 @@ private struct ChatRow: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(chat.title)
+        .accessibilityValue(status?.accessibilityLabel ?? "")
         .accessibilityHint("Opens chat")
+    }
+
+    private var visibleStatus: ChatSessionStatus? {
+        if case let .chat(sessionId) = appState.route, sessionId == chat.id {
+            return nil
+        }
+        if chat.status == .generating {
+            return .generating
+        }
+        if chat.status == .completed || chat.noticeKind == .completed {
+            return .completed
+        }
+        return nil
+    }
+}
+
+private struct SessionStatusIndicator: View {
+    let status: ChatSessionStatus
+
+    var body: some View {
+        Circle()
+            .fill(status.indicatorColor)
+            .frame(width: 7, height: 7)
+            .frame(width: 14, height: 14)
+            .accessibilityHidden(true)
+    }
+}
+
+private extension ChatSessionStatus {
+    var indicatorColor: Color {
+        switch self {
+        case .generating:
+            StartTheme.Colors.working.opacity(0.84)
+        case .completed:
+            StartTheme.Colors.success.opacity(0.78)
+        case .idle, .failed:
+            Color.clear
+        }
+    }
+
+    var accessibilityLabel: String {
+        switch self {
+        case .generating:
+            "Working"
+        case .completed:
+            "Completed"
+        case .idle, .failed:
+            ""
+        }
     }
 }
 

@@ -82,4 +82,25 @@ describe('session progress', () => {
     const endStatus = await chat.getStatus();
     expect(endStatus.isGenerating).toBe(false);
   });
+
+  it('notifies mobile listeners when a session starts and finishes generating', async () => {
+    const changes: Array<{ sessionId: string; workspacePath: string }> = [];
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      onMobileSessionChanged: (change) => changes.push(change)
+    });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const sendPromise = chat.send('mobile progress', webContents);
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+
+    expect(changes).toContainEqual({ sessionId: tab.id, workspacePath: '/tmp/workspace-a' });
+
+    session?.finishPrompt();
+    await sendPromise;
+
+    expect(changes.filter((change) => change.sessionId === tab.id).length).toBeGreaterThanOrEqual(2);
+  });
 });

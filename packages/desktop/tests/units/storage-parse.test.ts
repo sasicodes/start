@@ -7,7 +7,13 @@ const { parseStartState } = await import('@main/storage');
 describe('parseStartState', () => {
   it('falls back to defaults for missing or invalid values', () => {
     const state = parseStartState({});
-    expect(state.mobileRelay).toEqual({ desktopId: '', enabled: false, relayToken: '', relayUrl: '' });
+    expect(state.mobileRelay).toEqual({
+      enabled: false,
+      desktopId: '',
+      relayUrl: '',
+      desktopName: '',
+      relayToken: ''
+    });
     expect(state.composerShortcut).toBe('Control+Space');
     expect(state.solidWindowBackground).toBe(false);
     expect(state.selectedThinkingLevel).toBe('high');
@@ -26,6 +32,7 @@ describe('parseStartState', () => {
           enabled: true,
           desktopId: ' ',
           relayUrl: '',
+          desktopName: '',
           relayToken: ''
         }
       }).mobileRelay
@@ -33,6 +40,7 @@ describe('parseStartState', () => {
       enabled: true,
       desktopId: '',
       relayUrl: '',
+      desktopName: '',
       relayToken: ''
     });
   });
@@ -44,6 +52,7 @@ describe('parseStartState', () => {
           enabled: true,
           desktopId: ' desktop ',
           relayUrl: ' wss://relay.example.com/connect ',
+          desktopName: ' MacBook.local ',
           relayToken: ' token '
         }
       }).mobileRelay
@@ -51,6 +60,7 @@ describe('parseStartState', () => {
       enabled: true,
       desktopId: 'desktop',
       relayUrl: 'wss://relay.example.com/connect',
+      desktopName: 'MacBook.local',
       relayToken: 'token'
     });
   });
@@ -75,6 +85,24 @@ describe('parseStartState', () => {
     expect(state.sessionNotices?.bad).toBeUndefined();
     expect(state.sessionNotices?.ok?.kind).toBe('completed');
     expect(state.sessionNotices?.ok?.seenAt).toBe(2);
+  });
+
+  it('keeps only valid trusted mobile devices', () => {
+    const state = parseStartState({
+      trustedMobileDevices: {
+        bad: { mobileId: 'bad', pairedAt: 1 },
+        ' mobile-1 ': { name: ' iPhone ', trustKey: ' secret ', pairedAt: 1, lastSeenAt: 2 }
+      }
+    });
+
+    expect(state.trustedMobileDevices?.bad).toBeUndefined();
+    expect(state.trustedMobileDevices?.['mobile-1']).toEqual({
+      name: 'iPhone',
+      pairedAt: 1,
+      mobileId: 'mobile-1',
+      trustKey: 'secret',
+      lastSeenAt: 2
+    });
   });
 
   it('keeps only valid workspace history entries', () => {

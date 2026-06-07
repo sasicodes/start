@@ -1,4 +1,4 @@
-import { loadDesktopId } from '@main/device';
+import { loadDesktopId, loadDesktopName } from '@main/device';
 import { type MobileRelaySettings, readStartState, updateStartState } from '@main/storage';
 import electron from 'electron';
 import * as v from 'valibot';
@@ -16,6 +16,7 @@ export const defaultMobileRelaySettings = {
   enabled: false,
   desktopId: '',
   relayUrl: '',
+  desktopName: '',
   relayToken: ''
 } satisfies MobileRelaySettings;
 
@@ -34,6 +35,7 @@ const mobileRelaySettingsSchema = v.fallback(
     enabled: booleanSchema,
     relayUrl: trimmedStringSchema,
     desktopId: trimmedStringSchema,
+    desktopName: trimmedStringSchema,
     relayToken: trimmedStringSchema
   }),
   defaultMobileRelaySettings
@@ -49,14 +51,17 @@ const appSettingsSchema = v.fallback(
   defaultAppSettings
 );
 
-const settingsWithDesktopId = (settings: AppSettings): AppSettings => {
-  if (settings.mobileRelay.desktopId) return settings;
+const settingsWithDesktopIdentity = (settings: AppSettings): AppSettings => {
+  const desktopId = settings.mobileRelay.desktopId || loadDesktopId();
+  const desktopName = settings.mobileRelay.desktopName || loadDesktopName(desktopId);
+  if (settings.mobileRelay.desktopId && settings.mobileRelay.desktopName) return settings;
 
   return {
     ...settings,
     mobileRelay: {
       ...settings.mobileRelay,
-      desktopId: loadDesktopId()
+      desktopId,
+      desktopName
     }
   };
 };
@@ -65,15 +70,18 @@ export const parseSettings = (value: unknown): AppSettings => v.parse(appSetting
 
 export const readAppSettings = async (): Promise<AppSettings> => {
   const base = parseSettings(readStartState());
-  const settings = settingsWithDesktopId(base);
-  if (settings.mobileRelay.desktopId !== base.mobileRelay.desktopId) {
+  const settings = settingsWithDesktopIdentity(base);
+  if (
+    settings.mobileRelay.desktopId !== base.mobileRelay.desktopId ||
+    settings.mobileRelay.desktopName !== base.mobileRelay.desktopName
+  ) {
     updateStartState({ mobileRelay: settings.mobileRelay });
   }
   return settings;
 };
 
 export const writeAppSettings = async (settings: AppSettings): Promise<AppSettings> => {
-  const nextSettings = settingsWithDesktopId(parseSettings(settings));
+  const nextSettings = settingsWithDesktopIdentity(parseSettings(settings));
   updateStartState({
     keepAwake: nextSettings.keepAwake,
     mobileRelay: nextSettings.mobileRelay,

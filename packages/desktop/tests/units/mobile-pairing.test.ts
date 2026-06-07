@@ -9,6 +9,7 @@ describe('mobile pairing', () => {
           enabled: true,
           desktopId: 'desktop-1',
           relayUrl: 'wss://relay.example.com/connect',
+          desktopName: 'MacBook.local',
           relayToken: 'secret'
         })
       )
@@ -16,6 +17,7 @@ describe('mobile pairing', () => {
       type: 'start.mobile.relay',
       version: 1,
       desktopId: 'desktop-1',
+      desktopName: 'MacBook.local',
       relayUrl: 'wss://relay.example.com/connect',
       relayToken: 'secret'
     });
@@ -28,6 +30,7 @@ describe('mobile pairing', () => {
           enabled: true,
           desktopId: 'desktop-1',
           relayUrl: 'wss://relay.example.com/connect',
+          desktopName: '',
           relayToken: ''
         })
       ).relayToken
@@ -39,6 +42,7 @@ describe('mobile pairing', () => {
       enabled: true,
       desktopId: 'desktop-1',
       relayUrl: 'wss://relay.example.com/connect',
+      desktopName: '',
       relayToken: ''
     };
     expect(JSON.parse(mobilePairingPayload(settings, '482913')).code).toBe('482913');
@@ -50,6 +54,7 @@ describe('mobile pairing', () => {
       enabled: true,
       desktopId: 'desktop-1',
       relayUrl: 'wss://relay.example.com/connect',
+      desktopName: '',
       relayToken: ''
     });
 

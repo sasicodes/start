@@ -1,9 +1,13 @@
 import {
+  desktopBroadcastMessage,
   desktopEventMessage,
+  type DesktopRelayEventPayload,
   helloDesktopMessage,
+  type MobileRelayCommand,
   pairingCreateMessage,
+  pairingApproveMessage,
+  pairingRejectMessage,
   parseRelayServerMessage,
-  type RelayCommand,
   relayReply
 } from '@main/relay/protocol';
 import type { MobileRelaySettings } from '@main/storage';
@@ -16,7 +20,28 @@ export interface RelaySocket {
 
 export interface DesktopRelayCallbacks {
   onCode: (code: string) => void;
-  onCommand: (command: RelayCommand) => void;
+  onCommand: (command: MobileRelayCommand, context: DesktopRelayCommandContext) => Promise<void> | void;
+  onPairingRequest?: (request: DesktopRelayPairingRequest) => void;
+  onPairingResume?: (request: DesktopRelayPairingResumeRequest) => boolean;
+}
+
+export interface DesktopRelayCommandContext {
+  mobileId: string;
+  reply: (payload: DesktopRelayEventPayload) => void;
+  broadcast: (payload: DesktopRelayEventPayload) => void;
+}
+
+export interface DesktopRelayPairingRequest {
+  name?: string;
+  mobileId: string;
+  trustKey?: string;
+}
+
+export interface DesktopRelayPairingResumeRequest {
+  proof: string;
+  nonce: string;
+  mobileId: string;
+  desktopId: string;
 }
 
 export interface RelaySocketHandlers {
@@ -57,10 +82,12 @@ export class DesktopRelay {
   private active = false;
   private relayUrl = '';
   private desktopId = '';
+  private desktopName = '';
   private relayToken = '';
   private socket: RelaySocket | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly pairedMobileIds = new Set<string>();
 
   constructor(
     private readonly callbacks: DesktopRelayCallbacks,
@@ -85,6 +112,7 @@ export class DesktopRelay {
       this.active &&
       this.relayUrl === settings.relayUrl &&
       this.desktopId === settings.desktopId &&
+      this.desktopName === settings.desktopName &&
       this.relayToken === settings.relayToken;
     if (unchanged) return;
 
@@ -92,21 +120,29 @@ export class DesktopRelay {
     this.active = true;
     this.relayUrl = settings.relayUrl;
     this.desktopId = settings.desktopId;
+    this.desktopName = settings.desktopName;
     this.relayToken = settings.relayToken;
     this.open();
   }
 
   stop() {
     this.active = false;
+    this.pairedMobileIds.clear();
     this.clearTimers();
     this.socket?.close();
     this.socket = null;
     this.setCode('');
   }
 
+  broadcast(payload: DesktopRelayEventPayload): boolean {
+    if (this.pairedMobileIds.size === 0) return false;
+    this.send(desktopBroadcastMessage(payload));
+    return true;
+  }
+
   private open() {
     this.socket = this.createSocket(this.relayUrl, {
-      onOpen: () => this.send(helloDesktopMessage(this.desktopId, this.relayToken)),
+      onOpen: () => this.send(helloDesktopMessage(this.desktopId, this.relayToken, this.desktopName)),
       onClose: () => this.scheduleReconnect(),
       onMessage: (data) => this.receive(data)
     });
@@ -119,13 +155,72 @@ export class DesktopRelay {
       this.setCode(message.code);
       this.scheduleRefresh(message.expiresAt);
     }
+    if (message.type === 'pairing.request') {
+      this.pairedMobileIds.add(message.mobileId);
+      this.callbacks.onPairingRequest?.({
+        mobileId: message.mobileId,
+        ...(message.name ? { name: message.name } : {}),
+        ...(message.trustKey ? { trustKey: message.trustKey } : {})
+      });
+    }
+    if (message.type === 'pairing.resume') this.handlePairingResume(message);
+    if (message.type === 'mobile.disconnected') {
+      this.pairedMobileIds.delete(message.mobileId);
+    }
     if (message.type === 'mobile.command') {
-      this.callbacks.onCommand(message.payload);
-      this.send(desktopEventMessage(message.mobileId, { value: message.payload.action, action: 'ack' }));
+      this.pairedMobileIds.add(message.mobileId);
+      this.handleCommand(message.mobileId, message.payload);
     }
 
     const reply = relayReply(message);
     if (reply) this.send(reply);
+  }
+
+  private handlePairingResume(request: Omit<DesktopRelayPairingResumeRequest, 'desktopId'>) {
+    const approved =
+      this.callbacks.onPairingResume?.({
+        proof: request.proof,
+        nonce: request.nonce,
+        mobileId: request.mobileId,
+        desktopId: this.desktopId
+      }) ?? false;
+
+    if (!approved) {
+      this.send(pairingRejectMessage(request.mobileId, 'Mobile is not paired with this desktop.'));
+      return;
+    }
+
+    this.pairedMobileIds.add(request.mobileId);
+    this.send(pairingApproveMessage(request.mobileId));
+  }
+
+  private async handleCommand(mobileId: string, command: MobileRelayCommand) {
+    const context: DesktopRelayCommandContext = {
+      mobileId,
+      reply: (payload) => this.send(desktopEventMessage(mobileId, payload)),
+      broadcast: (payload) => this.broadcast(payload)
+    };
+
+    try {
+      const result = this.callbacks.onCommand(command, context);
+      if (command.action === 'prompt') context.reply({ action: 'ack', value: command.action });
+      await result;
+    } catch (error) {
+      context.reply(this.errorPayload(command, error));
+    }
+  }
+
+  private errorPayload(command: MobileRelayCommand, error: unknown): DesktopRelayEventPayload {
+    const message = error instanceof Error ? error.message : 'Mobile command failed.';
+    if ('requestId' in command) {
+      return {
+        ok: false,
+        requestId: command.requestId,
+        action: `${command.action}.result`,
+        error: message
+      };
+    }
+    return { action: 'error', error: message, value: command.action };
   }
 
   private setCode(code: string) {
@@ -147,6 +242,9 @@ export class DesktopRelay {
   private scheduleReconnect() {
     this.socket = null;
     this.setCode('');
+    this.pairedMobileIds.clear();
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    this.refreshTimer = null;
     if (!this.active || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;

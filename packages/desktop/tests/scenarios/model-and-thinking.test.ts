@@ -70,6 +70,32 @@ describe('model and thinking level', () => {
     expect(getStorageSnapshot().selectedThinkingLevel).toBe('high');
   });
 
+  it('includes provider identity in mobile model state', async () => {
+    const chat = freshChatService({
+      models: [
+        {
+          reasoning: true,
+          input: ['text'],
+          contextWindow: 200000,
+          id: 'gpt-5.5',
+          name: 'GPT 5.5',
+          provider: 'openai'
+        }
+      ]
+    });
+
+    const state = await chat.getMobileModelsState();
+    expect(state.models).toEqual([
+      {
+        key: 'openai:gpt-5.5',
+        name: 'GPT 5.5',
+        provider: 'openai',
+        reasoning: true,
+        effortLevels: ['low', 'medium', 'high']
+      }
+    ]);
+  });
+
   it('rejects unknown thinking levels', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const status = await chat.selectThinkingLevel('insane');

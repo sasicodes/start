@@ -27,36 +27,39 @@ final class RelayClient {
     var pairedDesktopId = ""
     var lastEvent: RelayPayload?
     var status = RelayConnectionStatus.offline
+    @ObservationIgnored var onEvent: ((RelayPayload) -> Void)?
+    @ObservationIgnored var onStatusChange: ((RelayConnectionStatus) -> Void)?
 
     var statusLabel: String {
         status.rawValue
     }
 
-    var canRetry: Bool {
-        lastRequest != nil
-    }
-
-    func connect(url: URL, mobileId: String, token: String = "", pairingCode: String = "") {
+    func connect(
+        url: URL,
+        token: String = "",
+        mobileId: String,
+        trustKey: String = "",
+        desktopId: String = "",
+        pairingCode: String = ""
+    ) {
         let request = RelayConnectionRequest(
             url: url,
             token: token,
             mobileId: mobileId,
+            trustKey: trustKey,
+            desktopId: desktopId,
             pairingCode: pairingCode
         )
         lastRequest = request
         connect(with: request)
     }
 
-    func retry() {
-        guard let lastRequest else { return }
-        connect(with: lastRequest)
-    }
-
     private func connect(with request: RelayConnectionRequest) {
         let shouldReconnect = socketTask != nil || connected
-        disconnect()
-        status = shouldReconnect ? .reconnecting : .connecting
+        closeSocket()
+        updateStatus(shouldReconnect ? .reconnecting : .connecting)
         pendingPairingCode = request.pairingCode
+        pairedDesktopId = ""
 
         let socketTask = URLSession.shared.webSocketTask(with: request.url)
         self.socketTask = socketTask
@@ -71,17 +74,14 @@ final class RelayClient {
     }
 
     func disconnect() {
-        receiveTask?.cancel()
-        receiveTask = nil
-        socketTask?.cancel(with: .goingAway, reason: nil)
-        socketTask = nil
-        connected = false
-        status = .offline
+        closeSocket()
+        pairedDesktopId = ""
         pendingPairingCode = ""
+        updateStatus(.offline)
     }
 
-    func joinPairing(code: String, name: String = "iPhone") {
-        send(MobileMessage.pairingJoin(PairingJoin(code: code, name: name)))
+    func joinPairing(code: String, trustKey: String, name: String = "iPhone") {
+        send(MobileMessage.pairingJoin(PairingJoin(code: code, name: name, trustKey: trustKey.isEmpty ? nil : trustKey)))
     }
 
     func sendCommand(desktopId: String, payload: RelayPayload) {
@@ -92,17 +92,16 @@ final class RelayClient {
         do {
             while !Task.isCancelled {
                 let message = try await socketTask.receive()
+                guard self.socketTask === socketTask else { return }
+
                 if let decoded = decode(message) {
                     handle(decoded)
                 }
             }
         } catch is CancellationError {
-            connected = false
-            status = .offline
+            markDisconnected(from: socketTask)
         } catch {
-            connected = false
-            status = .offline
-            lastError = error.localizedDescription
+            markDisconnected(from: socketTask, error: error)
         }
     }
 
@@ -122,21 +121,38 @@ final class RelayClient {
         case .ready:
             connected = true
             if !pendingPairingCode.isEmpty {
-                status = .connecting
-                joinPairing(code: pendingPairingCode)
+                updateStatus(.connecting)
+                joinPairing(code: pendingPairingCode, trustKey: lastRequest?.trustKey ?? "")
                 pendingPairingCode = ""
+            } else if let request = lastRequest,
+                      !request.desktopId.isEmpty,
+                      let resume = PairingResume.resume(
+                        desktopId: request.desktopId,
+                        mobileId: request.mobileId,
+                        trustKey: request.trustKey
+                      )
+            {
+                updateStatus(.connecting)
+                send(MobileMessage.pairingResume(resume))
             } else {
-                status = .connected
+                pairedDesktopId = lastRequest?.desktopId ?? pairedDesktopId
+                updateStatus(.connecting)
             }
         case .error(let text):
             connected = false
             lastError = text
-            status = .offline
+            pairedDesktopId = ""
+            updateStatus(.offline)
         case .pairingApproved(let desktopId):
             pairedDesktopId = desktopId
-            status = .connected
-        case .desktopEvent(_, let payload):
+            updateStatus(.connected)
+        case .desktopEvent(let desktopId, let payload):
+            pairedDesktopId = desktopId
+            if status != .connected {
+                updateStatus(.connected)
+            }
             lastEvent = payload
+            onEvent?(payload)
         }
     }
 
@@ -149,11 +165,33 @@ final class RelayClient {
                 let text = String(decoding: data, as: UTF8.self)
                 try await socketTask.send(.string(text))
             } catch {
-                connected = false
-                status = .offline
-                lastError = error.localizedDescription
+                markDisconnected(from: socketTask, error: error)
             }
         }
+    }
+
+    private func markDisconnected(from socketTask: URLSessionWebSocketTask, error: Error? = nil) {
+        guard self.socketTask === socketTask else { return }
+
+        connected = false
+        pairedDesktopId = ""
+        updateStatus(.offline)
+        if let error {
+            lastError = error.localizedDescription
+        }
+    }
+
+    private func closeSocket() {
+        receiveTask?.cancel()
+        receiveTask = nil
+        socketTask?.cancel(with: .goingAway, reason: nil)
+        socketTask = nil
+        connected = false
+    }
+
+    private func updateStatus(_ nextStatus: RelayConnectionStatus) {
+        status = nextStatus
+        onStatusChange?(nextStatus)
     }
 }
 
@@ -161,6 +199,8 @@ private struct RelayConnectionRequest {
     let url: URL
     let token: String
     let mobileId: String
+    let trustKey: String
+    let desktopId: String
     let pairingCode: String
 }
 
@@ -213,11 +253,14 @@ enum ServerMessage: Decodable {
 
 enum MobileMessage: Encodable {
     case pairingJoin(PairingJoin)
+    case pairingResume(PairingResume)
     case command(MobileCommand)
 
     func encode(to encoder: Encoder) throws {
         switch self {
         case .pairingJoin(let message):
+            try message.encode(to: encoder)
+        case .pairingResume(let message):
             try message.encode(to: encoder)
         case .command(let message):
             try message.encode(to: encoder)
@@ -229,6 +272,27 @@ struct PairingJoin: Encodable {
     let type = "pairing.join"
     let code: String
     let name: String
+    let trustKey: String?
+}
+
+struct PairingResume: Encodable {
+    let type = "pairing.resume"
+    let desktopId: String
+    let nonce: String
+    let proof: String
+
+    static func resume(desktopId: String, mobileId: String, trustKey: String) -> PairingResume? {
+        let nonce = MobileTrust.nonce()
+        guard let proof = MobileTrust.proof(
+            key: trustKey,
+            nonce: nonce,
+            mobileId: mobileId,
+            desktopId: desktopId
+        )
+        else { return nil }
+
+        return PairingResume(desktopId: desktopId, nonce: nonce, proof: proof)
+    }
 }
 
 struct MobileCommand: Encodable {
@@ -239,7 +303,78 @@ struct MobileCommand: Encodable {
 
 struct RelayPayload: Codable {
     let action: String
-    let value: String
+    let requestId: String?
+    let ok: Bool?
+    let error: String?
+    let value: String?
+    let text: String?
+    let level: String?
+    let limit: Int?
+    let offset: Int?
+    let sessionId: String?
+    let modelKey: String?
+    let workspace: RemoteWorkspace?
+    let workspacePath: String?
+    let workspaceName: String?
+    let hasMore: Bool?
+    let hasMoreOlder: Bool?
+    let nextOffset: Int?
+    let title: String?
+    let thinkingLevel: String?
+    let selectedModelKey: String?
+    let sessions: [RemoteSession]?
+    let messages: [RemoteMessage]?
+    let models: [RemoteModel]?
+
+    init(
+        action: String,
+        requestId: String? = nil,
+        ok: Bool? = nil,
+        error: String? = nil,
+        value: String? = nil,
+        text: String? = nil,
+        level: String? = nil,
+        limit: Int? = nil,
+        offset: Int? = nil,
+        sessionId: String? = nil,
+        modelKey: String? = nil,
+        workspace: RemoteWorkspace? = nil,
+        workspacePath: String? = nil,
+        workspaceName: String? = nil,
+        hasMore: Bool? = nil,
+        hasMoreOlder: Bool? = nil,
+        nextOffset: Int? = nil,
+        title: String? = nil,
+        thinkingLevel: String? = nil,
+        selectedModelKey: String? = nil,
+        sessions: [RemoteSession]? = nil,
+        messages: [RemoteMessage]? = nil,
+        models: [RemoteModel]? = nil
+    ) {
+        self.ok = ok
+        self.text = text
+        self.level = level
+        self.limit = limit
+        self.value = value
+        self.error = error
+        self.title = title
+        self.models = models
+        self.offset = offset
+        self.action = action
+        self.messages = messages
+        self.modelKey = modelKey
+        self.sessions = sessions
+        self.requestId = requestId
+        self.sessionId = sessionId
+        self.workspace = workspace
+        self.hasMore = hasMore
+        self.nextOffset = nextOffset
+        self.workspacePath = workspacePath
+        self.workspaceName = workspaceName
+        self.hasMoreOlder = hasMoreOlder
+        self.thinkingLevel = thinkingLevel
+        self.selectedModelKey = selectedModelKey
+    }
 }
 
 struct PairingPayload: Decodable {

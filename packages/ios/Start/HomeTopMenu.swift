@@ -2,18 +2,14 @@ import SwiftUI
 
 struct HomeTopMenu: View {
     let sort: WorkspaceSort
-    let activeConnectionID: UUID?
-    let connections: [Connection]
-    let onAddConnection: () -> Void
     let onSelectSort: (WorkspaceSort) -> Void
-    let onSelectConnection: (Connection) -> Void
+    let onOpenConnections: () -> Void
 
     var body: some View {
         Menu {
-            if !connections.isEmpty {
-                sortMenu
-            }
-            connectionMenu
+            sortMenu
+
+            connectionsMenu
         } label: {
             Label("More", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
@@ -31,6 +27,7 @@ struct HomeTopMenu: View {
         Menu {
             ForEach(WorkspaceSort.allCases) { option in
                 Button {
+                    StartHaptics.selection()
                     onSelectSort(option)
                 } label: {
                     Label(option.label, systemImage: option == sort ? "checkmark" : option.icon)
@@ -41,39 +38,10 @@ struct HomeTopMenu: View {
         }
     }
 
-    private var connectionMenu: some View {
-        Menu {
-            Button(action: onAddConnection) {
-                Label("New connection", systemImage: "plus")
-            }
-
-            if !connections.isEmpty {
-                Divider()
-            }
-
-            ForEach(connections) { connection in
-                Button {
-                    withAnimation(.smooth(duration: 0.18)) {
-                        onSelectConnection(connection)
-                    }
-                } label: {
-                    Label {
-                        Text(connection.name)
-                    } icon: {
-                        ZStack(alignment: .bottomTrailing) {
-                            Image(systemName: "laptopcomputer")
-                                .foregroundStyle(connection.state.symbolColor)
-
-                            if activeConnectionID == connection.id {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(connection.state.symbolColor)
-                                    .background(StartTheme.Colors.background, in: Circle())
-                            }
-                        }
-                    }
-                }
-            }
+    private var connectionsMenu: some View {
+        Button {
+            StartHaptics.lightImpact()
+            onOpenConnections()
         } label: {
             Label("Connections", systemImage: "globe")
         }
@@ -83,10 +51,7 @@ struct HomeTopMenu: View {
 #Preview {
     HomeTopMenu(
         sort: .recent,
-        activeConnectionID: Connection.samples[0].id,
-        connections: Connection.samples,
-        onAddConnection: {},
         onSelectSort: { _ in },
-        onSelectConnection: { _ in }
+        onOpenConnections: {}
     )
 }

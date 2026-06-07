@@ -165,6 +165,61 @@ export type RecentSessionsPage = {
   sessions: RecentSession[];
 };
 
+export interface MobileWorkspace {
+  name: string;
+  path: string;
+  branchName?: string;
+}
+
+export interface MobileSession {
+  id: string;
+  title: string;
+  modified: number;
+  workspaceName: string;
+  workspacePath: string;
+  status?: AgentTabStatus;
+  noticeKind?: SessionNoticeKind;
+}
+
+export interface MobileSessionIndex {
+  hasMore: boolean;
+  sessions: MobileSession[];
+  workspace: MobileWorkspace;
+}
+
+export interface MobileSessionMessage {
+  id: string;
+  role: Extract<HistoryTurn['role'], 'assistant' | 'user'>;
+  text: string;
+  createdAt: number;
+  durationMs?: number;
+  thinking?: string;
+  streaming?: boolean;
+}
+
+export interface MobileSessionMessagesPage {
+  hasMoreOlder: boolean;
+  messages: MobileSessionMessage[];
+  nextOffset: number;
+  sessionId: string;
+  title: string;
+  workspace: MobileWorkspace;
+}
+
+export interface MobileModelOption {
+  key: string;
+  name: string;
+  provider: string;
+  reasoning: boolean;
+  effortLevels: EffortLevel[];
+}
+
+export interface MobileModelsState {
+  models: MobileModelOption[];
+  thinkingLevel: EffortLevel;
+  selectedModelKey?: string;
+}
+
 export type ScopedChatEvent<T> = {
   payload: T;
   tabId: string;

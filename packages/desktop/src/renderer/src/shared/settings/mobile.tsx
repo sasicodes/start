@@ -21,7 +21,7 @@ interface MobileInputProps {
 }
 
 const mobileRelaySettingsKey = (settings: MobileRelaySettings) =>
-  `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.relayToken}`;
+  `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.desktopName}:${settings.relayToken}`;
 
 const normalizedRelayUrl = (value: string) =>
   value
@@ -54,15 +54,16 @@ const useRelayProbe = (relayUrl: string, relayToken: string): RelayProbeStatus =
 
     let active = true;
     setStatus('checking');
+    const checkRelay = async () => {
+      try {
+        const result = await window.pi.app.probeMobileRelay({ relayUrl: url, relayToken: token });
+        if (active) setStatus(result.ok ? 'ok' : 'fail');
+      } catch {
+        if (active) setStatus('fail');
+      }
+    };
     const timer = setTimeout(() => {
-      window.pi.app
-        .probeMobileRelay({ relayUrl: url, relayToken: token })
-        .then((result) => {
-          if (active) setStatus(result.ok ? 'ok' : 'fail');
-        })
-        .catch(() => {
-          if (active) setStatus('fail');
-        });
+      checkRelay();
     }, 500);
 
     return () => {
@@ -109,12 +110,16 @@ const useMobileRelayCode = (enabled: boolean) => {
       };
     }
 
-    window.pi.app
-      .mobileRelayCode()
-      .then((value) => {
+    const loadCode = async () => {
+      try {
+        const value = await window.pi.app.mobileRelayCode();
         if (active) setCode(value);
-      })
-      .catch(() => {});
+      } catch {
+        return;
+      }
+    };
+
+    loadCode();
 
     const stopMobileRelayCode = window.pi.app.onMobileRelayCode((value) => {
       if (active) setCode(value);

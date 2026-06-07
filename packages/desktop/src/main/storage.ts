@@ -8,9 +8,18 @@ import * as v from 'valibot';
 
 export interface MobileRelaySettings {
   enabled: boolean;
-  relayUrl: string;
   desktopId: string;
+  relayUrl: string;
+  desktopName: string;
   relayToken: string;
+}
+
+export interface TrustedMobileDevice {
+  mobileId: string;
+  trustKey: string;
+  name?: string;
+  pairedAt: number;
+  lastSeenAt?: number;
 }
 
 export type StartState = {
@@ -24,12 +33,14 @@ export type StartState = {
   workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
   sessionNotices?: Record<string, SessionNotice>;
+  trustedMobileDevices?: Record<string, TrustedMobileDevice>;
 };
 
 const defaultMobileRelay = {
   enabled: false,
   desktopId: '',
   relayUrl: '',
+  desktopName: '',
   relayToken: ''
 } satisfies MobileRelaySettings;
 
@@ -52,6 +63,7 @@ const thinkingLevelSchema = v.picklist(['low', 'medium', 'high', 'xhigh'] satisf
 const mobileRelaySchema = v.object({
   enabled: v.boolean(),
   desktopId: v.optional(trimmedOptionalStringSchema),
+  desktopName: v.optional(trimmedOptionalStringSchema),
   relayToken: v.optional(trimmedOptionalStringSchema),
   relayUrl: v.optional(trimmedOptionalStringSchema)
 });
@@ -61,6 +73,13 @@ const sessionNoticeSchema = v.object({
   createdAt: v.optional(finiteNumberSchema),
   sessionId: v.optional(trimmedStringSchema),
   workspacePath: trimmedStringSchema
+});
+const trustedMobileDeviceSchema = v.object({
+  name: v.optional(trimmedStringSchema),
+  pairedAt: v.optional(finiteNumberSchema),
+  trustKey: trimmedStringSchema,
+  lastSeenAt: v.optional(finiteNumberSchema),
+  mobileId: v.optional(trimmedStringSchema)
 });
 const stringRecordEntrySchema = v.tuple([trimmedStringSchema, trimmedStringSchema]);
 const workspaceHistoryEntrySchema = v.tuple([trimmedStringSchema, finiteNumberSchema]);
@@ -119,6 +138,29 @@ const parseSessionNotices = (value: unknown) => {
   return;
 };
 
+const parseTrustedMobileDevices = (value: unknown) => {
+  const devices: Record<string, TrustedMobileDevice> = {};
+
+  for (const [key, entry] of recordEntries(value)) {
+    const result = v.safeParse(trustedMobileDeviceSchema, entry);
+    if (!result.success) continue;
+
+    const mobileId = result.output.mobileId ?? parseTrimmedString(key);
+    if (!mobileId) continue;
+
+    devices[mobileId] = {
+      mobileId,
+      trustKey: result.output.trustKey,
+      pairedAt: result.output.pairedAt ?? Date.now(),
+      ...(result.output.name ? { name: result.output.name } : {}),
+      ...(result.output.lastSeenAt ? { lastSeenAt: result.output.lastSeenAt } : {})
+    };
+  }
+
+  if (Object.keys(devices).length > 0) return devices;
+  return;
+};
+
 const parseMobileRelay = (value: unknown): MobileRelaySettings => {
   const result = v.safeParse(mobileRelaySchema, value);
   if (!result.success) return defaultMobileRelay;
@@ -126,6 +168,7 @@ const parseMobileRelay = (value: unknown): MobileRelaySettings => {
   return {
     enabled: result.output.enabled,
     desktopId: result.output.desktopId ?? '',
+    desktopName: result.output.desktopName ?? '',
     relayUrl: result.output.relayUrl ?? '',
     relayToken: result.output.relayToken ?? ''
   };
@@ -144,6 +187,7 @@ export const parseStartState = (value: unknown): StartState => {
   const sessionNotices = parseSessionNotices(state.sessionNotices);
   const workspaceHistory = parseWorkspaceHistory(state.workspaceHistory);
   const workspaceBookmarks = parseStringRecord(state.workspaceBookmarks);
+  const trustedMobileDevices = parseTrustedMobileDevices(state.trustedMobileDevices);
   return {
     keepAwake: state.keepAwake !== false,
     mobileRelay: parseMobileRelay(state.mobileRelay),
@@ -154,6 +198,7 @@ export const parseStartState = (value: unknown): StartState => {
     ...(selectedModelKey ? { selectedModelKey } : {}),
     ...(sessionNotices ? { sessionNotices } : {}),
     ...(workspaceHistory ? { workspaceHistory } : {}),
+    ...(trustedMobileDevices ? { trustedMobileDevices } : {}),
     ...(workspaceBookmarks ? { workspaceBookmarks } : {})
   };
 };
@@ -167,6 +212,7 @@ const stateKey = {
   workspaceHistory: 'workspace_history',
   workspaceBookmarks: 'workspace_bookmarks',
   sessionNotices: 'session_notices',
+  trustedMobileDevices: 'trusted_mobile_devices',
   selectedThinkingLevel: 'selected_thinking_level',
   solidWindowBackground: 'solid_window_background'
 } as const satisfies Record<keyof StartState, string>;
@@ -233,6 +279,7 @@ const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   workspaceHistory: raw[stateKey.workspaceHistory],
   workspaceBookmarks: raw[stateKey.workspaceBookmarks],
   sessionNotices: raw[stateKey.sessionNotices],
+  trustedMobileDevices: raw[stateKey.trustedMobileDevices],
   selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
   solidWindowBackground: raw[stateKey.solidWindowBackground]
 });
@@ -257,6 +304,7 @@ export const writeStartState = (state: StartState): StartState => {
     writeOrDeleteRow(stateKey.workspaceHistory, nextState.workspaceHistory);
     writeOrDeleteRow(stateKey.workspaceBookmarks, nextState.workspaceBookmarks);
     writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);
+    writeOrDeleteRow(stateKey.trustedMobileDevices, nextState.trustedMobileDevices);
   });
   return nextState;
 };

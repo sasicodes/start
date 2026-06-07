@@ -1,10 +1,11 @@
-import { DesktopRelay, type RelaySocketHandlers } from '@main/relay/client';
+import { DesktopRelay, type DesktopRelayCommandContext, type RelaySocketHandlers } from '@main/relay/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const enabledSettings = {
   enabled: true,
   relayUrl: 'wss://relay.test/connect',
   desktopId: 'desktop-1',
+  desktopName: 'MacBook.local',
   relayToken: 'secret'
 };
 
@@ -38,14 +39,16 @@ describe('DesktopRelay', () => {
 
   it('drives the full pairing handshake and surfaces the code', () => {
     const onCode = vi.fn();
+    const onPairingRequest = vi.fn();
     const socket = fakeSocket();
-    const relay = new DesktopRelay({ onCode, onCommand: vi.fn() }, socket.factory);
+    const relay = new DesktopRelay({ onCode, onCommand: vi.fn(), onPairingRequest }, socket.factory);
 
     relay.sync(enabledSettings);
     socket.open();
     expect(socket.sent).toContainEqual({
       type: 'hello.desktop',
       token: 'secret',
+      name: 'MacBook.local',
       desktopId: 'desktop-1',
       protocolVersion: 1
     });
@@ -57,8 +60,21 @@ describe('DesktopRelay', () => {
     expect(onCode).toHaveBeenCalledWith('482913');
     expect(relay.currentCode).toBe('482913');
 
-    socket.emit(JSON.stringify({ type: 'pairing.request', code: '482913', mobileId: 'mobile-1' }));
+    socket.emit(
+      JSON.stringify({
+        type: 'pairing.request',
+        code: '482913',
+        name: 'iPhone',
+        mobileId: 'mobile-1',
+        trustKey: 'secret-key'
+      })
+    );
     expect(socket.sent).toContainEqual({ type: 'pairing.approve', mobileId: 'mobile-1' });
+    expect(onPairingRequest).toHaveBeenCalledWith({
+      name: 'iPhone',
+      mobileId: 'mobile-1',
+      trustKey: 'secret-key'
+    });
   });
 
   it('runs an incoming mobile command and acks it back', () => {
@@ -72,12 +88,152 @@ describe('DesktopRelay', () => {
       JSON.stringify({ type: 'mobile.command', mobileId: 'mobile-1', payload: { action: 'prompt', value: 'ship it' } })
     );
 
-    expect(onCommand).toHaveBeenCalledWith({ action: 'prompt', value: 'ship it' });
+    expect(onCommand).toHaveBeenCalledWith(
+      { action: 'prompt', value: 'ship it' },
+      expect.objectContaining({ mobileId: 'mobile-1' })
+    );
     expect(socket.sent).toContainEqual({
       type: 'desktop.event',
       mobileId: 'mobile-1',
       payload: { action: 'ack', value: 'prompt' }
     });
+  });
+
+  it('lets handlers reply to a mobile sync command', () => {
+    const onCommand = vi.fn((_command: unknown, context: DesktopRelayCommandContext) => {
+      context.reply({ action: 'sessions.list.result', requestId: 'request-1', ok: true, sessions: [] });
+    });
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(
+      JSON.stringify({
+        type: 'mobile.command',
+        mobileId: 'mobile-1',
+        payload: { action: 'sessions.list', requestId: 'request-1', limit: 10 }
+      })
+    );
+
+    expect(socket.sent).toContainEqual({
+      type: 'desktop.event',
+      mobileId: 'mobile-1',
+      payload: { action: 'sessions.list.result', requestId: 'request-1', ok: true, sessions: [] }
+    });
+  });
+
+  it('replies with a request-scoped error when a mobile sync command fails', async () => {
+    const onCommand = vi.fn(async () => {
+      throw new Error('Session failed.');
+    });
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(
+      JSON.stringify({
+        type: 'mobile.command',
+        mobileId: 'mobile-1',
+        payload: { action: 'messages.page', requestId: 'request-1', sessionId: 'session-1' }
+      })
+    );
+    await Promise.resolve();
+
+    expect(socket.sent).toContainEqual({
+      type: 'desktop.event',
+      mobileId: 'mobile-1',
+      payload: {
+        ok: false,
+        error: 'Session failed.',
+        requestId: 'request-1',
+        action: 'messages.page.result'
+      }
+    });
+  });
+
+  it('skips broadcasts when no mobile is paired', () => {
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
+
+    expect(socket.sent).not.toContainEqual({
+      type: 'desktop.event',
+      payload: { action: 'sessions.changed', workspacePath: '/work/start' }
+    });
+  });
+
+  it('broadcasts desktop events to paired mobiles only while they are connected', () => {
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.request', code: '482913', mobileId: 'mobile-1' }));
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(true);
+
+    expect(socket.sent).toContainEqual({
+      type: 'desktop.event',
+      payload: { action: 'sessions.changed', workspacePath: '/work/start' }
+    });
+
+    socket.emit(JSON.stringify({ type: 'mobile.disconnected', mobileId: 'mobile-1' }));
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
+  });
+
+  it('clears pairing code refresh when the relay socket closes', () => {
+    const socket = fakeSocket();
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.created', code: '482913', expiresAt: 40000 }));
+    const sentCount = socket.sent.length;
+
+    socket.drop();
+    vi.advanceTimersByTime(10000);
+
+    expect(socket.sent).toHaveLength(sentCount);
+  });
+
+  it('approves a valid pairing resume request', () => {
+    const socket = fakeSocket();
+    const onPairingResume = vi.fn(() => true);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn(), onPairingResume }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' }));
+
+    expect(onPairingResume).toHaveBeenCalledWith({
+      proof: 'proof-1',
+      nonce: 'nonce-1',
+      mobileId: 'mobile-1',
+      desktopId: 'desktop-1'
+    });
+    expect(socket.sent).toContainEqual({ type: 'pairing.approve', mobileId: 'mobile-1' });
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(true);
+  });
+
+  it('rejects an invalid pairing resume request', () => {
+    const socket = fakeSocket();
+    const onPairingResume = vi.fn(() => false);
+    const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn(), onPairingResume }, socket.factory);
+
+    relay.sync(enabledSettings);
+    socket.open();
+    socket.emit(JSON.stringify({ type: 'pairing.resume', mobileId: 'mobile-1', nonce: 'nonce-1', proof: 'proof-1' }));
+
+    expect(socket.sent).toContainEqual({
+      type: 'pairing.reject',
+      mobileId: 'mobile-1',
+      message: 'Mobile is not paired with this desktop.'
+    });
+    expect(relay.broadcast({ action: 'sessions.changed', workspacePath: '/work/start' })).toBe(false);
   });
 
   it('ignores a malformed mobile command payload', () => {
@@ -112,7 +268,7 @@ describe('DesktopRelay', () => {
     const factory = vi.fn(socket.factory);
     const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, factory);
 
-    relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', relayToken: '' });
+    relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', desktopName: '', relayToken: '' });
     expect(factory).not.toHaveBeenCalled();
   });
 
@@ -125,9 +281,16 @@ describe('DesktopRelay', () => {
       enabled: true,
       relayUrl: 'Connect this desktop to your hosted relay',
       desktopId: 'desktop-1',
+      desktopName: '',
       relayToken: ''
     });
-    relay.sync({ enabled: true, relayUrl: 'https://relay.example.com', desktopId: 'desktop-1', relayToken: '' });
+    relay.sync({
+      enabled: true,
+      relayUrl: 'https://relay.example.com',
+      desktopId: 'desktop-1',
+      desktopName: '',
+      relayToken: ''
+    });
     expect(factory).not.toHaveBeenCalled();
   });
 });

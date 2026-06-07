@@ -2,6 +2,7 @@ import SwiftUI
 
 struct EdgeFadeOverlay: View {
     var topHeight: CGFloat = 52
+    var topOpacity = 0.94
     var topSolidHeight: CGFloat = 0
     var bottomHeight: CGFloat = 78
 
@@ -10,14 +11,14 @@ struct EdgeFadeOverlay: View {
             VStack(spacing: 0) {
                 if topSolidHeight > 0 {
                     Rectangle()
-                        .fill(StartTheme.Colors.background.opacity(0.94))
+                        .fill(StartTheme.Colors.background.opacity(topOpacity))
                         .frame(height: topSolidHeight)
                 }
 
                 LinearGradient(
                     colors: [
-                        StartTheme.Colors.background.opacity(0.94),
-                        StartTheme.Colors.background.opacity(0.6),
+                        StartTheme.Colors.background.opacity(topOpacity),
+                        StartTheme.Colors.background.opacity(topOpacity * 0.64),
                         .clear
                     ],
                     startPoint: .top,

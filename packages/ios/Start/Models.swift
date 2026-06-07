@@ -3,33 +3,7 @@ import Foundation
 enum AppRoute: Hashable {
     case home
     case newChat
-    case chat(UUID)
-}
-
-enum Workspace: String, CaseIterable, Identifiable {
-    case start = "start"
-    case relay = "relay"
-    case desktop = "desktop"
-    case ios = "ios"
-    case web = "web"
-    case docs = "docs"
-
-    var branchName: String {
-        switch self {
-        case .start, .ios:
-            "main"
-        case .relay:
-            "deploy"
-        case .desktop:
-            "ui-polish"
-        case .web:
-            "site"
-        case .docs:
-            "guides"
-        }
-    }
-
-    var id: String { rawValue }
+    case chat(String)
 }
 
 enum ConnectionState {
@@ -37,89 +11,47 @@ enum ConnectionState {
     case offline
 }
 
-struct Chat: Identifiable {
-    let id: UUID
+struct Chat: Identifiable, Codable {
+    let id: String
     let title: String
-    let workspace: Workspace
-    let updatedAt: String
-    var branchName: String { workspace.branchName }
-    var projectName: String { workspace.rawValue }
+    let modified: Int
+    let status: ChatSessionStatus?
+    let noticeKind: SessionNoticeKind?
+    let workspaceName: String
+    let workspacePath: String
 
-    static let samples = [
-        Chat(id: UUID(), title: "Mobile relay settings", workspace: .start, updatedAt: "Now"),
-        Chat(id: UUID(), title: "Review prompt spacing", workspace: .start, updatedAt: "4m"),
-        Chat(id: UUID(), title: "Pair iPhone relay", workspace: .start, updatedAt: "9m"),
-        Chat(id: UUID(), title: "Chat polish pass", workspace: .start, updatedAt: "18m"),
-        Chat(id: UUID(), title: "Glass controls audit", workspace: .start, updatedAt: "32m"),
-        Chat(id: UUID(), title: "Keyboard transition fix", workspace: .start, updatedAt: "45m"),
-        Chat(id: UUID(), title: "Chat list layout", workspace: .start, updatedAt: "1h"),
-        Chat(id: UUID(), title: "Mobile preview notes", workspace: .start, updatedAt: "2h"),
-        Chat(id: UUID(), title: "Home screen alignment", workspace: .start, updatedAt: "3h"),
-        Chat(id: UUID(), title: "Provider picker idea", workspace: .start, updatedAt: "5h"),
-        Chat(id: UUID(), title: "Release notes draft", workspace: .start, updatedAt: "7h"),
-        Chat(id: UUID(), title: "Local cache cleanup", workspace: .start, updatedAt: "9h"),
-        Chat(id: UUID(), title: "Settings copy review", workspace: .start, updatedAt: "11h"),
-        Chat(id: UUID(), title: "Thread detail sketch", workspace: .start, updatedAt: "1d"),
-        Chat(id: UUID(), title: "Empty state polish", workspace: .start, updatedAt: "1d"),
-        Chat(id: UUID(), title: "Voice input affordance", workspace: .start, updatedAt: "2d"),
-        Chat(id: UUID(), title: "Keyboard focus timing", workspace: .start, updatedAt: "2d"),
-        Chat(id: UUID(), title: "Compact toolbar pass", workspace: .start, updatedAt: "3d"),
-        Chat(id: UUID(), title: "Prompt placeholder ideas", workspace: .start, updatedAt: "3d"),
-        Chat(id: UUID(), title: "Recent files cleanup", workspace: .start, updatedAt: "4d"),
-        Chat(id: UUID(), title: "Thread search sketch", workspace: .start, updatedAt: "4d"),
-        Chat(id: UUID(), title: "Mobile settings audit", workspace: .start, updatedAt: "5d"),
-        Chat(id: UUID(), title: "Agent status layout", workspace: .start, updatedAt: "5d"),
-        Chat(id: UUID(), title: "Local model picker notes", workspace: .start, updatedAt: "6d"),
-        Chat(id: UUID(), title: "Chat send behavior", workspace: .start, updatedAt: "6d"),
-        Chat(id: UUID(), title: "Device install checklist", workspace: .start, updatedAt: "1w"),
-        Chat(id: UUID(), title: "Personal relay archive", workspace: .start, updatedAt: "1w"),
-        Chat(id: UUID(), title: "Diff panel follow-up", workspace: .relay, updatedAt: "12m"),
-        Chat(id: UUID(), title: "Desktop pairing test", workspace: .relay, updatedAt: "26m"),
-        Chat(id: UUID(), title: "Relay server deploy", workspace: .relay, updatedAt: "41m"),
-        Chat(id: UUID(), title: "Workspace access review", workspace: .relay, updatedAt: "58m"),
-        Chat(id: UUID(), title: "Provider auth bug", workspace: .relay, updatedAt: "2h"),
-        Chat(id: UUID(), title: "Usage telemetry pass", workspace: .relay, updatedAt: "4h"),
-        Chat(id: UUID(), title: "Window behavior notes", workspace: .relay, updatedAt: "6h"),
-        Chat(id: UUID(), title: "Subagent activity cleanup", workspace: .relay, updatedAt: "8h"),
-        Chat(id: UUID(), title: "Browser inspect task", workspace: .relay, updatedAt: "10h"),
-        Chat(id: UUID(), title: "Shortcut command design", workspace: .relay, updatedAt: "13h"),
-        Chat(id: UUID(), title: "Model settings migration", workspace: .relay, updatedAt: "16h"),
-        Chat(id: UUID(), title: "Error surface copy", workspace: .relay, updatedAt: "20h"),
-        Chat(id: UUID(), title: "Build verification notes", workspace: .relay, updatedAt: "1d"),
-        Chat(id: UUID(), title: "Release checklist review", workspace: .relay, updatedAt: "1d"),
-        Chat(id: UUID(), title: "Team onboarding notes", workspace: .relay, updatedAt: "2d"),
-        Chat(id: UUID(), title: "Staging relay incident", workspace: .relay, updatedAt: "2d"),
-        Chat(id: UUID(), title: "Connection status design", workspace: .relay, updatedAt: "3d"),
-        Chat(id: UUID(), title: "App signing cleanup", workspace: .relay, updatedAt: "3d"),
-        Chat(id: UUID(), title: "Project generator pass", workspace: .relay, updatedAt: "4d"),
-        Chat(id: UUID(), title: "Access token rotation", workspace: .relay, updatedAt: "4d"),
-        Chat(id: UUID(), title: "Office workspace archive", workspace: .relay, updatedAt: "5d"),
-        Chat(id: UUID(), title: "Review queue triage", workspace: .relay, updatedAt: "5d"),
-        Chat(id: UUID(), title: "Design sync summary", workspace: .relay, updatedAt: "6d"),
-        Chat(id: UUID(), title: "Security review notes", workspace: .relay, updatedAt: "6d"),
-        Chat(id: UUID(), title: "Xcode warning audit", workspace: .relay, updatedAt: "1w"),
-        Chat(id: UUID(), title: "Office relay backlog", workspace: .relay, updatedAt: "1w"),
-        Chat(id: UUID(), title: "Window chrome alignment", workspace: .desktop, updatedAt: "15m"),
-        Chat(id: UUID(), title: "Browser panel toolbar", workspace: .desktop, updatedAt: "38m"),
-        Chat(id: UUID(), title: "Chat dock behavior", workspace: .desktop, updatedAt: "1h"),
-        Chat(id: UUID(), title: "Settings panel cleanup", workspace: .desktop, updatedAt: "3h"),
-        Chat(id: UUID(), title: "Markdown rendering pass", workspace: .desktop, updatedAt: "6h"),
-        Chat(id: UUID(), title: "Home recents grouping", workspace: .ios, updatedAt: "8m"),
-        Chat(id: UUID(), title: "Accordion motion tuning", workspace: .ios, updatedAt: "19m"),
-        Chat(id: UUID(), title: "Bottom compose placement", workspace: .ios, updatedAt: "27m"),
-        Chat(id: UUID(), title: "System theme audit", workspace: .ios, updatedAt: "53m"),
-        Chat(id: UUID(), title: "Prompt bar focus timing", workspace: .ios, updatedAt: "2h"),
-        Chat(id: UUID(), title: "Landing page copy", workspace: .web, updatedAt: "22m"),
-        Chat(id: UUID(), title: "Download CTA layout", workspace: .web, updatedAt: "1h"),
-        Chat(id: UUID(), title: "Pricing section notes", workspace: .web, updatedAt: "4h"),
-        Chat(id: UUID(), title: "Public domain routing", workspace: .web, updatedAt: "8h"),
-        Chat(id: UUID(), title: "SEO metadata pass", workspace: .web, updatedAt: "12h"),
-        Chat(id: UUID(), title: "Release guide draft", workspace: .docs, updatedAt: "31m"),
-        Chat(id: UUID(), title: "Relay setup steps", workspace: .docs, updatedAt: "2h"),
-        Chat(id: UUID(), title: "Mobile pairing docs", workspace: .docs, updatedAt: "5h"),
-        Chat(id: UUID(), title: "Troubleshooting section", workspace: .docs, updatedAt: "9h"),
-        Chat(id: UUID(), title: "Changelog cleanup", workspace: .docs, updatedAt: "1d")
-    ]
+    init(
+        id: String,
+        title: String,
+        modified: Int,
+        status: ChatSessionStatus? = nil,
+        noticeKind: SessionNoticeKind? = nil,
+        workspaceName: String,
+        workspacePath: String
+    ) {
+        self.id = id
+        self.title = title
+        self.status = status
+        self.modified = modified
+        self.noticeKind = noticeKind
+        self.workspaceName = workspaceName
+        self.workspacePath = workspacePath
+    }
+
+    var branchName: String {
+        workspaceLeafName(for: workspacePath)
+    }
+
+    var projectName: String { workspaceName }
+
+    var updatedAt: String {
+        relativeTimeLabel(for: modified)
+    }
+}
+
+func workspaceLeafName(for path: String) -> String {
+    let name = URL(fileURLWithPath: path).lastPathComponent
+    return name.isEmpty ? "workspace" : name
 }
 
 enum WorkspaceSort: String, CaseIterable, Identifiable {
@@ -148,114 +80,323 @@ enum WorkspaceSort: String, CaseIterable, Identifiable {
 }
 
 struct WorkspaceChatSection: Identifiable {
-    let workspace: Workspace
+    let workspaceName: String
+    let workspacePath: String
     let chats: [Chat]
 
-    var id: Workspace { workspace }
+    var id: String { workspacePath }
 }
 
 func workspaceChatSections(
     from chats: [Chat],
     sort: WorkspaceSort = .recent,
-    limit: Int = 5
+    limit: Int = Int.max
 ) -> [WorkspaceChatSection] {
-    let chatsByWorkspace = Dictionary(grouping: chats, by: \.workspace)
-    let workspaces: [Workspace]
+    let chatsByWorkspace = Dictionary(grouping: chats, by: \.workspacePath)
+    let workspacePaths: [String]
 
     switch sort {
     case .recent:
-        workspaces = Workspace.allCases
+        workspacePaths = chats.reduce(into: []) { result, chat in
+            guard !result.contains(chat.workspacePath) else { return }
+            result.append(chat.workspacePath)
+        }
     case .alphabetical:
-        workspaces = Workspace.allCases.sorted { $0.rawValue.localizedStandardCompare($1.rawValue) == .orderedAscending }
+        workspacePaths = chatsByWorkspace.keys.sorted { lhs, rhs in
+            let leftName = chatsByWorkspace[lhs]?.first?.workspaceName ?? lhs
+            let rightName = chatsByWorkspace[rhs]?.first?.workspaceName ?? rhs
+            return leftName.localizedStandardCompare(rightName) == .orderedAscending
+        }
     }
 
-    return workspaces.compactMap { workspace in
-        guard let chats = chatsByWorkspace[workspace] else { return nil }
+    return workspacePaths.compactMap { workspacePath in
+        guard let chats = chatsByWorkspace[workspacePath],
+              let firstChat = chats.first
+        else { return nil }
         let workspaceChats = chats.prefix(limit)
         guard !workspaceChats.isEmpty else { return nil }
-        return WorkspaceChatSection(workspace: workspace, chats: Array(workspaceChats))
+        return WorkspaceChatSection(
+            workspaceName: firstChat.workspaceName,
+            workspacePath: workspacePath,
+            chats: Array(workspaceChats)
+        )
     }
 }
 
-enum ChatMessageRole: String {
+enum ChatMessageRole: String, Codable {
     case agent = "Agent"
     case user = "You"
 }
 
-struct ChatMessage: Identifiable {
+struct ChatMessage: Identifiable, Codable {
     let id: String
     let role: ChatMessageRole
     let text: String
+    let createdAt: Int
+    let durationMs: Int?
+    let streaming: Bool
+    let thinking: String?
 
-    static func samples(for chat: Chat) -> [ChatMessage] {
-        [
-            ChatMessage(id: "\(chat.id)-0", role: .user, text: "Open \(chat.title.lowercased()) and summarize what is still unresolved."),
-            ChatMessage(id: "\(chat.id)-1", role: .agent, text: "I checked the latest thread state. The main remaining work is spacing, tap comfort, and making the mobile flow feel more native."),
-            ChatMessage(id: "\(chat.id)-2", role: .user, text: "Keep the interface direct and avoid adding extra chrome."),
-            ChatMessage(id: "\(chat.id)-3", role: .agent, text: "Understood. I kept the list text-forward, preserved the floating compose action, and avoided card styling for the history."),
-            ChatMessage(id: "\(chat.id)-4", role: .user, text: "Make sure the prompt still feels easy to reach."),
-            ChatMessage(id: "\(chat.id)-5", role: .agent, text: "The bottom action now uses a compact Liquid Glass capsule with matched edge padding. It should feel reachable without crowding the screen corner."),
-            ChatMessage(id: "\(chat.id)-6", role: .user, text: "What about the connection menu?"),
-            ChatMessage(id: "\(chat.id)-7", role: .agent, text: "Connections live under the top more menu. Online devices use a soft green laptop, offline devices use a soft red laptop, and the selected device gets a small check badge."),
-            ChatMessage(id: "\(chat.id)-8", role: .user, text: "Can the history scroll cleanly with more content?"),
-            ChatMessage(id: "\(chat.id)-9", role: .agent, text: "Yes. The message stack has compact spacing, the top and bottom fades stay passive, and the prompt remains pinned below the conversation."),
-            ChatMessage(id: "\(chat.id)-10", role: .agent, text: "Next step is to run it on a physical phone and tune only the last few points of safe-area spacing if the hardware corner radius changes the feel.")
-        ]
+    init(
+        id: String,
+        role: ChatMessageRole,
+        text: String,
+        createdAt: Int,
+        durationMs: Int? = nil,
+        streaming: Bool = false,
+        thinking: String? = nil
+    ) {
+        self.id = id
+        self.role = role
+        self.text = text
+        self.createdAt = createdAt
+        self.durationMs = durationMs
+        self.streaming = streaming
+        self.thinking = thinking
     }
 }
 
-struct Connection: Identifiable {
+enum ChatSessionStatus: String, Codable {
+    case idle
+    case failed
+    case completed
+    case generating
+}
+
+enum SessionNoticeKind: String, Codable {
+    case failed
+    case completed
+}
+
+struct RemoteWorkspace: Codable {
+    let name: String
+    let path: String
+    let branchName: String?
+}
+
+struct RemoteSession: Codable {
+    let id: String
+    let title: String
+    let modified: Int
+    let status: String?
+    let noticeKind: String?
+    let workspaceName: String
+    let workspacePath: String
+}
+
+struct RemoteMessage: Codable {
+    let id: String
+    let role: String
+    let text: String
+    let createdAt: Int
+    let durationMs: Int?
+    let streaming: Bool?
+    let thinking: String?
+}
+
+enum ModelProviderID: String, CaseIterable, Identifiable {
+    case openai
+    case anthropic
+    case google
+
+    var id: String { rawValue }
+
+    var iconName: String {
+        switch self {
+        case .openai:
+            "provider-openai"
+        case .anthropic:
+            "provider-anthropic"
+        case .google:
+            "provider-gemini"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .openai:
+            "OpenAI"
+        case .anthropic:
+            "Anthropic"
+        case .google:
+            "Google"
+        }
+    }
+}
+
+struct RemoteModel: Codable, Identifiable {
+    let key: String
+    let name: String
+    let provider: String
+    let reasoning: Bool
+    let effortLevels: [String]
+
+    var id: String { key }
+    var providerID: ModelProviderID { modelProviderID(for: self) }
+
+    init(
+        key: String,
+        name: String,
+        provider: String = "",
+        reasoning: Bool,
+        effortLevels: [String]
+    ) {
+        self.key = key
+        self.name = name
+        self.provider = provider
+        self.reasoning = reasoning
+        self.effortLevels = effortLevels
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        key = try container.decode(String.self, forKey: .key)
+        name = try container.decode(String.self, forKey: .name)
+        provider = try container.decodeIfPresent(String.self, forKey: .provider) ?? ""
+        reasoning = try container.decode(Bool.self, forKey: .reasoning)
+        effortLevels = try container.decode([String].self, forKey: .effortLevels)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case key
+        case name
+        case provider
+        case reasoning
+        case effortLevels
+    }
+}
+
+struct ModelProviderGroup: Identifiable {
+    let id: ModelProviderID
+    let models: [RemoteModel]
+
+    var name: String { id.label }
+}
+
+func modelProviderGroups(from models: [RemoteModel]) -> [ModelProviderGroup] {
+    let grouped = Dictionary(grouping: models, by: \.providerID)
+
+    return ModelProviderID.allCases.compactMap { providerID in
+        guard let models = grouped[providerID], !models.isEmpty else { return nil }
+        return ModelProviderGroup(id: providerID, models: models)
+    }
+}
+
+func modelProviderID(for model: RemoteModel) -> ModelProviderID {
+    if let providerID = ModelProviderID(rawValue: model.provider.lowercased()) {
+        return providerID
+    }
+
+    let haystack = "\(model.provider) \(model.key) \(model.name)".lowercased()
+    if ["gemini", "google"].contains(where: { haystack.contains($0) }) {
+        return .google
+    }
+    if ["gpt", "openai", "o3", "o4"].contains(where: { haystack.contains($0) }) {
+        return .openai
+    }
+    return .anthropic
+}
+
+enum SessionLoadState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case failed(String)
+}
+
+struct MessagePageState {
+    var loading = false
+    var hasMoreOlder = true
+    var nextOffset = 0
+}
+
+func relativeTimeLabel(for timestamp: Int) -> String {
+    let updatedAt = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000)
+    let seconds = max(0, Int(Date().timeIntervalSince(updatedAt)))
+
+    if seconds < 60 { return "Now" }
+
+    let minutes = seconds / 60
+    if minutes < 60 { return "\(minutes)m" }
+
+    let hours = minutes / 60
+    if hours < 24 { return "\(hours)h" }
+
+    let days = hours / 24
+    if days < 7 { return "\(days)d" }
+
+    return "\(days / 7)w"
+}
+
+struct Connection: Identifiable, Codable {
     let id: UUID
-    let desktopId: String
-    let workspace: Workspace
-    let downloadSpeed: String
-    let uploadSpeed: String
     var name: String
     var enabled: Bool
+    let relayUrl: String
+    let desktopId: String
+    let relayToken: String
+    let trustKey: String
 
     init(
         id: UUID = UUID(),
-        desktopId: String,
         name: String,
-        workspace: Workspace,
-        downloadSpeed: String = "0 KB/s",
-        uploadSpeed: String = "0 KB/s",
-        enabled: Bool
+        enabled: Bool,
+        relayUrl: String,
+        desktopId: String,
+        relayToken: String = "",
+        trustKey: String = ""
     ) {
         self.id = id
         self.name = name
         self.enabled = enabled
+        self.relayUrl = relayUrl
         self.desktopId = desktopId
-        self.workspace = workspace
-        self.uploadSpeed = uploadSpeed
-        self.downloadSpeed = downloadSpeed
+        self.relayToken = relayToken
+        self.trustKey = trustKey
     }
 
-    init(pairing: PairingPayload) {
+    init(pairing: PairingPayload, trustKey: String) {
         let fallbackName = String(pairing.desktopId.prefix(8))
         let trimmedName = pairing.desktopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         self.init(
-            desktopId: pairing.desktopId,
             name: trimmedName.isEmpty ? "Desktop \(fallbackName)" : trimmedName,
-            workspace: .start,
-            enabled: true
+            enabled: true,
+            relayUrl: pairing.relayUrl,
+            desktopId: pairing.desktopId,
+            relayToken: pairing.relayToken ?? "",
+            trustKey: trustKey
         )
     }
 
-    var speedLabel: String {
-        guard enabled else { return "Offline" }
-        return "↓ \(downloadSpeed)  ↑ \(uploadSpeed)"
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        relayUrl = try container.decode(String.self, forKey: .relayUrl)
+        desktopId = try container.decode(String.self, forKey: .desktopId)
+        relayToken = ""
+        trustKey = ""
     }
 
-    var state: ConnectionState {
-        enabled ? .online : .offline
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(enabled, forKey: .enabled)
+        try container.encode(relayUrl, forKey: .relayUrl)
+        try container.encode(desktopId, forKey: .desktopId)
     }
 
-    static let samples = [
-        Connection(desktopId: "personal", name: "Personal", workspace: .start, downloadSpeed: "1.8 MB/s", uploadSpeed: "420 KB/s", enabled: true),
-        Connection(desktopId: "office", name: "Office", workspace: .relay, enabled: false),
-        Connection(desktopId: "design", name: "Design", workspace: .start, downloadSpeed: "940 KB/s", uploadSpeed: "180 KB/s", enabled: true),
-        Connection(desktopId: "staging", name: "Staging", workspace: .relay, enabled: false)
-    ]
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case enabled
+        case relayUrl
+        case desktopId
+    }
 }

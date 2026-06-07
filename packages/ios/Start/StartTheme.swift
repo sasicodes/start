@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum StartTheme {
     enum Colors {
@@ -7,6 +8,7 @@ enum StartTheme {
         static let ink = Color.primary
         static let softInk = Color.secondary
         static let success = Color.green
+        static let working = Color(.systemYellow)
     }
 
     enum Metrics {
@@ -26,13 +28,30 @@ enum StartTheme {
     }
 }
 
+enum StartHaptics {
+    @MainActor
+    static func lightImpact() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    @MainActor
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    @MainActor
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+}
+
 extension ConnectionState {
     var symbolColor: Color {
         switch self {
         case .online:
-            Color(.systemGreen).opacity(0.78)
+            Color(.systemGreen).opacity(0.74)
         case .offline:
-            Color(.systemRed).opacity(0.72)
+            Color(.systemRed).opacity(0.66)
         }
     }
 }

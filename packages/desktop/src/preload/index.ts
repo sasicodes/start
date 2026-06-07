@@ -4,8 +4,9 @@ const { contextBridge, ipcRenderer, webUtils } = electron;
 
 export interface MobileRelaySettings {
   enabled: boolean;
-  relayUrl: string;
   desktopId: string;
+  relayUrl: string;
+  desktopName: string;
   relayToken: string;
 }
 

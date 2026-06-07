@@ -6,6 +6,7 @@ const emptyMobileRelaySettings = {
   enabled: false,
   desktopId: '',
   relayUrl: '',
+  desktopName: '',
   relayToken: ''
 } satisfies MobileRelaySettings;
 
@@ -16,17 +17,21 @@ export const useRendererRuntime = () => {
   useEffect(() => {
     let active = true;
 
-    window.pi.app
-      .settings()
-      .then((settings) => {
+    const loadSettings = async () => {
+      try {
+        const settings = await window.pi.app.settings();
         if (active) {
           keepAwake.value = settings.keepAwake;
           composerShortcut.value = settings.composerShortcut;
           setMobileRelay(settings.mobileRelay);
           setSolidWindowBackground(settings.solidWindowBackground);
         }
-      })
-      .catch(() => {});
+      } catch {
+        return;
+      }
+    };
+
+    loadSettings();
 
     return () => {
       active = false;

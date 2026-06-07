@@ -54,6 +54,12 @@ export const handleDesktop = (context: RelayContext, socket: WebSocket, hello: H
         return;
       }
 
+      if (message.type === 'pairing.reject') {
+        const mobile = context.state.mobileSocket(message.mobileId);
+        if (mobile) sendJson(mobile, relayError(message.message ?? 'Mobile is not paired with this desktop.'));
+        return;
+      }
+
       handleDesktopEvent(context, socket, hello, message);
     })
   );

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
     @Namespace private var transitionNamespace
 
     var body: some View {
@@ -38,6 +39,10 @@ struct RootView: View {
         }
         .tint(StartTheme.Colors.ink)
         .background(StartTheme.Colors.background)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            appState.connectActiveConnectionIfNeeded()
+        }
     }
 }
 

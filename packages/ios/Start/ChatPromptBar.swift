@@ -1,11 +1,32 @@
 import SwiftUI
-import UniformTypeIdentifiers
+
+private enum EffortLevelScale {
+    static let orderedIDs = ["low", "medium", "high", "xhigh"]
+
+    static func activeCount(for level: String) -> Int {
+        guard let index = orderedIDs.firstIndex(of: level) else { return 0 }
+        return index + 1
+    }
+
+    static func label(for level: String) -> String {
+        if level == "xhigh" { return "Extra high" }
+        if level.isEmpty { return "Unavailable" }
+        return level.capitalized
+    }
+
+    static func orderedLevels(from levels: [String]) -> [String] {
+        let knownLevels = orderedIDs.filter { levels.contains($0) }
+        let unknownLevels = levels.filter { !orderedIDs.contains($0) }
+        return knownLevels + unknownLevels
+    }
+}
 
 struct ChatPromptFooter: View {
     @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var focused: Bool
 
+    let onSend: () -> Void
     let accessibilityHint: String
     let accessibilityLabel: String
     let placeholder: String
@@ -14,6 +35,7 @@ struct ChatPromptFooter: View {
         ChatPromptBar(
             text: $text,
             focused: $focused,
+            onSend: onSend,
             accessibilityHint: accessibilityHint,
             accessibilityLabel: accessibilityLabel,
             placeholder: placeholder
@@ -26,23 +48,24 @@ struct ChatPromptFooter: View {
                 .animation(.easeInOut(duration: 0.16), value: appState.connectionStatusLabel)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .offset(y: 27)
+                .allowsHitTesting(false)
                 .accessibilityLabel("Connection status: \(appState.connectionStatusLabel)")
         }
     }
 }
 
 struct ChatPromptBar: View {
+    @Environment(AppState.self) private var appState
     @Binding var text: String
     @FocusState.Binding var focused: Bool
-    @State private var filePickerOpen = false
-    @State private var selectedFileURLs: [URL] = []
 
+    let onSend: () -> Void
     let accessibilityHint: String
     let accessibilityLabel: String
     let placeholder: String
 
     private var sendEnabled: Bool {
-        !text.isEmpty
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -60,23 +83,19 @@ struct ChatPromptBar: View {
                 .accessibilityLabel(accessibilityLabel)
                 .accessibilityHint(accessibilityHint)
 
-            HStack(spacing: 10) {
-                Button {
-                    filePickerOpen = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 19, weight: .regular))
-                        .frame(width: 32, height: 32)
-                }
-                .accessibilityLabel("Add attachment")
+            HStack(spacing: 8) {
+                modelMenu
+
+                effortButton
 
                 Spacer()
 
-                Button {} label: {
+                Button(action: send) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(sendEnabled ? Color.white : StartTheme.Colors.softInk)
                         .frame(width: 36, height: 36)
+                        .contentShape(Circle())
                         .glassProminentCircle(enabled: sendEnabled)
                 }
                 .accessibilityLabel("Send message")
@@ -94,17 +113,141 @@ struct ChatPromptBar: View {
         .frame(maxWidth: .infinity)
         .frame(minHeight: 96)
         .glassRoundedRectangle(cornerRadius: 24)
-        .fileImporter(
-            isPresented: $filePickerOpen,
-            allowedContentTypes: [.item],
-            allowsMultipleSelection: true
-        ) { result in
-            switch result {
-            case let .success(urls):
-                selectedFileURLs = urls
-            case .failure:
-                selectedFileURLs = []
+    }
+
+    private var modelMenu: some View {
+        Menu {
+            ForEach(modelGroups) { group in
+                Section {
+                    ForEach(group.models) { model in
+                        Button {
+                            StartHaptics.selection()
+                            appState.selectModel(model.key)
+                        } label: {
+                            modelRow(model)
+                        }
+                    }
+                } header: {
+                    Label {
+                        Text(group.name)
+                    } icon: {
+                        ProviderAssetIcon(providerID: group.id, size: 15)
+                    }
+                }
+            }
+        } label: {
+            ProviderAssetIcon(providerID: selectedProviderID, size: 17)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .disabled(appState.models.isEmpty)
+        .accessibilityLabel("Model")
+        .opacity(appState.models.isEmpty ? 0.44 : 1)
+    }
+
+    @ViewBuilder
+    private func modelRow(_ model: RemoteModel) -> some View {
+        if model.key == appState.selectedModelKey {
+            Label(model.name, systemImage: "checkmark")
+        } else {
+            Text(model.name)
+        }
+    }
+
+    private var effortButton: some View {
+        Button(action: selectNextEffortLevel) {
+            EffortSignal(activeCount: activeEffortCount)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+        }
+        .accessibilityHint(canCycleEffort ? "Cycles effort level" : "")
+        .accessibilityLabel("Effort \(activeEffortLabel)")
+        .disabled(!canCycleEffort)
+        .opacity(currentEffortLevels.isEmpty ? 0.38 : 1)
+    }
+
+    private var currentEffortLevels: [String] {
+        selectedModel?.effortLevels ?? []
+    }
+
+    private var modelGroups: [ModelProviderGroup] {
+        modelProviderGroups(from: appState.models)
+    }
+
+    private var selectedModel: RemoteModel? {
+        appState.models.first { $0.key == appState.selectedModelKey } ?? appState.models.first
+    }
+
+    private var selectedProviderID: ModelProviderID {
+        selectedModel?.providerID ?? .openai
+    }
+
+    private var activeEffortCount: Int {
+        EffortLevelScale.activeCount(for: activeEffortLevel)
+    }
+
+    private var activeEffortLabel: String {
+        EffortLevelScale.label(for: activeEffortLevel)
+    }
+
+    private var activeEffortLevel: String {
+        if currentEffortLevels.contains(appState.thinkingLevel) {
+            return appState.thinkingLevel
+        }
+        return orderedEffortLevels.first ?? ""
+    }
+
+    private var canCycleEffort: Bool {
+        orderedEffortLevels.count > 1
+    }
+
+    private var orderedEffortLevels: [String] {
+        EffortLevelScale.orderedLevels(from: currentEffortLevels)
+    }
+
+    private func selectNextEffortLevel() {
+        guard canCycleEffort else { return }
+
+        let currentIndex = orderedEffortLevels.firstIndex(of: appState.thinkingLevel) ?? -1
+        let nextIndex = (currentIndex + 1) % orderedEffortLevels.count
+
+        StartHaptics.selection()
+        appState.selectThinkingLevel(orderedEffortLevels[nextIndex])
+    }
+
+    private func send() {
+        guard sendEnabled else { return }
+
+        StartHaptics.lightImpact()
+        onSend()
+    }
+}
+
+private struct EffortSignal: View {
+    let activeCount: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2) {
+            ForEach(0..<EffortLevelScale.orderedIDs.count, id: \.self) { index in
+                Capsule()
+                    .fill(StartTheme.Colors.ink.opacity(index < activeCount ? 0.82 : 0.25))
+                    .frame(width: 2, height: 10)
             }
         }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct ProviderAssetIcon: View {
+    let providerID: ModelProviderID
+    let size: CGFloat
+
+    var body: some View {
+        Image(providerID.iconName)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(StartTheme.Colors.ink)
+            .frame(width: size, height: size)
     }
 }
