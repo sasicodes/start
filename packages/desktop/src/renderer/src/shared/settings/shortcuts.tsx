@@ -1,40 +1,45 @@
-import { formatShortcut } from '@renderer/shared/shortcuts/format';
-import { tw } from '@renderer/utils/tw';
+import { shortcutKeys } from '@renderer/shared/shortcuts/format';
+import { composerShortcut } from '@renderer/shared/settings/state';
 import { memo } from 'preact/compat';
-
-interface ShortcutsProps {
-  composerShortcut: string;
-}
 
 interface ShortcutEntry {
   label: string;
   chords: string[];
 }
 
-export const Shortcuts = memo(({ composerShortcut }: ShortcutsProps) => {
+export const Shortcuts = memo(() => {
   const entries: ShortcutEntry[] = [
     { label: 'New session', chords: ['Command+N', 'Command+T'] },
-    { label: 'Quick access', chords: composerShortcut ? [composerShortcut] : [] },
+    { label: 'Quick access', chords: composerShortcut.value ? [composerShortcut.value] : [] },
     { label: 'Settings', chords: ['Command+,'] },
     { label: 'Keyboard shortcuts', chords: ['Command+/'] },
     { label: 'Toggle side panel', chords: [']'] },
     { label: 'Submit prompt', chords: ['Enter'] },
     { label: 'New line in prompt', chords: ['Shift+Enter'] },
     { label: 'Use previous message', chords: ['ArrowUp'] },
-    { label: 'Finder next', chords: ['ArrowDown'] },
+    { label: 'Use next message', chords: ['ArrowDown'] },
     { label: 'Close side panel or popover', chords: ['Escape'] }
   ];
 
   return (
-    <ul class="m-0 grid list-none gap-0 p-0">
-      {entries.map((entry, index) => (
-        <li key={entry.label} class={tw('flex items-center justify-between gap-4', index > 0 ? 'pt-3 pb-3' : 'pb-3')}>
+    <ul class="m-0 grid list-none gap-1 p-0">
+      {entries.map((entry) => (
+        <li key={entry.label} class="flex items-center justify-between gap-4 py-1.5">
           <span class="text-sm text-ink">{entry.label}</span>
-          <span class="flex items-center gap-2 text-xs text-soft">
-            {entry.chords.map((chord, chordIndex) => (
-              <span class="flex items-center gap-2" key={chord}>
-                {chordIndex > 0 && <span>/</span>}
-                <span>{formatShortcut(chord)}</span>
+          <span class="flex items-center gap-1.5">
+            {entry.chords.map((chord, index) => (
+              <span key={chord} class="flex items-center gap-1.5">
+                {index > 0 && <span class="text-xs text-soft">or</span>}
+                <span class="flex items-center gap-1">
+                  {shortcutKeys(chord).map((key, keyIndex) => (
+                    <kbd
+                      key={`${chord}-${keyIndex}`}
+                      class="grid h-6 min-w-6 place-items-center rounded-md border border-line bg-control px-1.5 font-sans text-xs font-medium text-soft"
+                    >
+                      {key}
+                    </kbd>
+                  ))}
+                </span>
               </span>
             ))}
           </span>
