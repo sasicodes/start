@@ -30,7 +30,7 @@ export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProp
     setPulse(false);
     frameRef.current = requestAnimationFrame(() => {
       setPulse(true);
-      timerRef.current = window.setTimeout(() => setPulse(false), 1800);
+      timerRef.current = window.setTimeout(() => setPulse(false), 3000);
     });
   };
 
