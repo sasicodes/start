@@ -2,10 +2,11 @@ import SwiftUI
 
 struct HomeTopMenu: View {
     let sort: WorkspaceSort
-    let activeConnectionID: UUID?
     let connections: [Connection]
+    let activeConnectionID: UUID?
     let onAddConnection: () -> Void
     let onSelectSort: (WorkspaceSort) -> Void
+    let connectionState: (Connection) -> ConnectionState
     let onSelectConnection: (Connection) -> Void
 
     var body: some View {
@@ -57,17 +58,22 @@ struct HomeTopMenu: View {
                         onSelectConnection(connection)
                     }
                 } label: {
+                    let active = activeConnectionID == connection.id
+                    let state = connectionState(connection)
+
                     Label {
                         Text(connection.name)
+                            .foregroundStyle(active ? state.symbolColor : StartTheme.Colors.ink)
+                            .padding(.leading, active ? 4 : 0)
                     } icon: {
                         ZStack(alignment: .bottomTrailing) {
                             Image(systemName: "laptopcomputer")
-                                .foregroundStyle(connection.state.symbolColor)
+                                .foregroundStyle(state.symbolColor)
 
-                            if activeConnectionID == connection.id {
+                            if active {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(connection.state.symbolColor)
+                                    .foregroundStyle(state.symbolColor)
                                     .background(StartTheme.Colors.background, in: Circle())
                             }
                         }
@@ -81,14 +87,20 @@ struct HomeTopMenu: View {
 }
 
 #Preview {
-    let connection = Connection(desktopId: "preview", name: "Preview", enabled: true)
+    let connection = Connection(
+        name: "Preview",
+        enabled: true,
+        relayUrl: "wss://relay.example.com",
+        desktopId: "preview"
+    )
 
     HomeTopMenu(
         sort: .recent,
-        activeConnectionID: connection.id,
         connections: [connection],
+        activeConnectionID: connection.id,
         onAddConnection: {},
         onSelectSort: { _ in },
+        connectionState: { _ in .online },
         onSelectConnection: { _ in }
     )
 }

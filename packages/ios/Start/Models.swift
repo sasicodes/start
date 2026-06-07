@@ -328,22 +328,28 @@ func relativeTimeLabel(for timestamp: Int) -> String {
     return "\(days / 7)w"
 }
 
-struct Connection: Identifiable {
+struct Connection: Identifiable, Codable {
     let id: UUID
-    let desktopId: String
     var name: String
     var enabled: Bool
+    let relayUrl: String
+    let desktopId: String
+    let relayToken: String
 
     init(
         id: UUID = UUID(),
-        desktopId: String,
         name: String,
-        enabled: Bool
+        enabled: Bool,
+        relayUrl: String,
+        desktopId: String,
+        relayToken: String = ""
     ) {
         self.id = id
         self.name = name
         self.enabled = enabled
+        self.relayUrl = relayUrl
         self.desktopId = desktopId
+        self.relayToken = relayToken
     }
 
     init(pairing: PairingPayload) {
@@ -351,13 +357,40 @@ struct Connection: Identifiable {
         let trimmedName = pairing.desktopName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
         self.init(
-            desktopId: pairing.desktopId,
             name: trimmedName.isEmpty ? "Desktop \(fallbackName)" : trimmedName,
-            enabled: true
+            enabled: true,
+            relayUrl: pairing.relayUrl,
+            desktopId: pairing.desktopId,
+            relayToken: pairing.relayToken ?? ""
         )
     }
 
-    var state: ConnectionState {
-        enabled ? .online : .offline
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        relayUrl = try container.decode(String.self, forKey: .relayUrl)
+        desktopId = try container.decode(String.self, forKey: .desktopId)
+        relayToken = ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(enabled, forKey: .enabled)
+        try container.encode(relayUrl, forKey: .relayUrl)
+        try container.encode(desktopId, forKey: .desktopId)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case enabled
+        case relayUrl
+        case desktopId
     }
 }

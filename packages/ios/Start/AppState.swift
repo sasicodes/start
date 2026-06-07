@@ -1,8 +1,14 @@
 import Foundation
 import Observation
+import Security
 
 private let messagePageLimit = 10
 private let sessionPageLimit = 40
+private let maxConnectionAttempts = 3
+private let reconnectRetryDelay = Duration.milliseconds(900)
+private let relayTokenKeychainService = "one.intelligence.start.mobile-relay"
+private let connectionsStorageKey = "start:mobile-connections"
+private let activeConnectionStorageKey = "start:active-mobile-connection-id"
 
 @Observable
 @MainActor
@@ -32,19 +38,23 @@ final class AppState {
     private var messageRequestSessions: [String: String] = [:]
     private var pendingDrafts: [String: String] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
+    @ObservationIgnored private var reconnectTask: Task<Void, Never>?
+    @ObservationIgnored private var connectionAttemptCount = 0
 
-    init(connections: [Connection] = [], chats: [Chat] = []) {
-        self.connections = connections
+    init(connections: [Connection]? = nil, chats: [Chat] = []) {
+        let initialConnections = connections ?? Self.loadConnections()
+
+        self.connections = initialConnections
         self.chats = chats
+        activeConnectionID = Self.activeConnectionID(in: initialConnections)
         relay.onEvent = { [weak self] payload in
             self?.handleRelayPayload(payload)
         }
-        relay.onPaired = { [weak self] in
-            self?.requestHomeData()
+        relay.onStatusChange = { [weak self] status in
+            self?.handleRelayStatus(status)
         }
 
-        guard let connection = connections.first else { return }
-        activeConnectionID = connection.id
+        connectActiveConnection(resetAttempts: true)
     }
 
     var activeBranchName: String {
@@ -117,32 +127,56 @@ final class AppState {
     }
 
     func selectConnection(_ connection: Connection) {
+        if activeConnectionID == connection.id, connectionState(for: connection) == .online {
+            requestHomeData()
+            return
+        }
+
         activeConnectionID = connection.id
-        requestHomeData()
+        persistActiveConnectionID()
+        resetRemoteData()
+        resetRemoteRequestState()
+        connectActiveConnection(resetAttempts: true)
+    }
+
+    func connectionState(for connection: Connection) -> ConnectionState {
+        guard activeConnectionID == connection.id,
+              relay.status == .connected,
+              relay.pairedDesktopId == connection.desktopId
+        else { return .offline }
+
+        return .online
     }
 
     func pair(with payload: String) -> Bool {
         guard let data = payload.data(using: .utf8),
               let pairing = try? JSONDecoder().decode(PairingPayload.self, from: data),
               pairing.type == "start.mobile.relay",
-              let url = URL(string: pairing.relayUrl)
+              URL(string: pairing.relayUrl) != nil
         else { return false }
 
         upsertConnection(with: pairing)
+        resetRemoteData()
         resetRemoteRequestState()
-
-        relay.connect(
-            url: url,
-            mobileId: DeviceIdentity.mobileId,
-            token: pairing.relayToken ?? "",
-            pairingCode: pairing.code ?? ""
-        )
+        connectActiveConnection(resetAttempts: true, pairingCode: pairing.code ?? "")
         return true
     }
 
     func retryConnection() {
         resetRemoteRequestState()
-        relay.retry()
+        connectActiveConnection(resetAttempts: true)
+    }
+
+    func connectActiveConnectionIfNeeded() {
+        guard let activeConnection else { return }
+        guard connectionState(for: activeConnection) == .offline else {
+            requestHomeData()
+            return
+        }
+        guard !relay.status.isAttempting else { return }
+
+        resetRemoteRequestState()
+        connectActiveConnection(resetAttempts: true)
     }
 
     func refreshChats() async {
@@ -232,7 +266,153 @@ final class AppState {
     private var commandDesktopId: String? {
         guard relay.status == .connected else { return nil }
         guard !relay.pairedDesktopId.isEmpty else { return nil }
+        guard activeConnection?.desktopId == relay.pairedDesktopId else { return nil }
         return relay.pairedDesktopId
+    }
+
+    private static func activeConnectionID(in connections: [Connection]) -> UUID? {
+        guard let storedId = UserDefaults.standard.string(forKey: activeConnectionStorageKey),
+              let id = UUID(uuidString: storedId),
+              connections.contains(where: { $0.id == id })
+        else { return connections.first?.id }
+
+        return id
+    }
+
+    private static func loadConnections() -> [Connection] {
+        guard let data = UserDefaults.standard.data(forKey: connectionsStorageKey),
+              let connections = try? JSONDecoder().decode([Connection].self, from: data)
+        else { return [] }
+
+        return connections.map { connection in
+            Connection(
+                id: connection.id,
+                name: connection.name,
+                enabled: connection.enabled,
+                relayUrl: connection.relayUrl,
+                desktopId: connection.desktopId,
+                relayToken: loadRelayToken(for: connection.id)
+            )
+        }
+    }
+
+    private static func loadRelayToken(for id: UUID) -> String {
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(
+            relayTokenQuery(for: id, returningData: true) as CFDictionary,
+            &item
+        )
+        guard status == errSecSuccess,
+              let data = item as? Data,
+              let token = String(data: data, encoding: .utf8)
+        else { return "" }
+
+        return token
+    }
+
+    private static func relayTokenQuery(for id: UUID, returningData: Bool = false) -> [String: Any] {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: relayTokenKeychainService,
+            kSecAttrAccount as String: id.uuidString
+        ]
+
+        if returningData {
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+        }
+
+        return query
+    }
+
+    private func connectActiveConnection(resetAttempts: Bool, pairingCode: String = "") {
+        guard let connection = activeConnection,
+              let url = URL(string: connection.relayUrl)
+        else { return }
+
+        if resetAttempts {
+            connectionAttemptCount = 0
+            reconnectTask?.cancel()
+            reconnectTask = nil
+        }
+
+        guard connectionAttemptCount < maxConnectionAttempts else { return }
+
+        connectionAttemptCount += 1
+        relay.connect(
+            url: url,
+            token: connection.relayToken,
+            mobileId: DeviceIdentity.mobileId,
+            desktopId: connection.desktopId,
+            pairingCode: pairingCode
+        )
+    }
+
+    private func handleRelayStatus(_ status: RelayConnectionStatus) {
+        switch status {
+        case .connected:
+            connectionAttemptCount = 0
+            reconnectTask?.cancel()
+            reconnectTask = nil
+            requestHomeData()
+        case .offline:
+            scheduleReconnect()
+        case .connecting, .reconnecting:
+            break
+        }
+    }
+
+    private func persistActiveConnectionID() {
+        guard let activeConnectionID else {
+            UserDefaults.standard.removeObject(forKey: activeConnectionStorageKey)
+            return
+        }
+
+        UserDefaults.standard.set(activeConnectionID.uuidString, forKey: activeConnectionStorageKey)
+    }
+
+    private func persistConnections() {
+        for connection in connections {
+            saveRelayToken(connection.relayToken, for: connection.id)
+        }
+
+        guard let data = try? JSONEncoder().encode(connections) else { return }
+        UserDefaults.standard.set(data, forKey: connectionsStorageKey)
+    }
+
+    private func saveRelayToken(_ token: String, for id: UUID) {
+        let query = Self.relayTokenQuery(for: id)
+
+        guard !token.isEmpty else {
+            _ = SecItemDelete(query as CFDictionary)
+            return
+        }
+
+        let data = Data(token.utf8)
+        let attributes: [String: Any] = [
+            kSecValueData as String: data
+        ]
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        guard status == errSecItemNotFound else { return }
+
+        var item = query
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        _ = SecItemAdd(item as CFDictionary, nil)
+    }
+
+    private func scheduleReconnect() {
+        guard connectionAttemptCount > 0,
+              connectionAttemptCount < maxConnectionAttempts,
+              reconnectTask == nil
+        else { return }
+
+        reconnectTask = Task { [weak self] in
+            try? await Task.sleep(for: reconnectRetryDelay)
+            guard let self, !Task.isCancelled, self.relay.status == .offline else { return }
+            self.reconnectTask = nil
+            self.connectActiveConnection(resetAttempts: false)
+        }
     }
 
     private func requestModels() {
@@ -484,16 +664,40 @@ final class AppState {
         }
     }
 
+    private func resetRemoteData() {
+        draft = ""
+        searchText = ""
+        models = []
+        chats = []
+        thinkingLevel = ""
+        selectedModelKey = ""
+        activeRemoteWorkspace = nil
+        sessionLoadState = .idle
+        sessionMessages.removeAll()
+        messagePageStates.removeAll()
+    }
+
     private func upsertConnection(with pairing: PairingPayload) {
+        let nextConnection = Connection(pairing: pairing)
+
         if let index = connections.firstIndex(where: { $0.desktopId == pairing.desktopId }) {
-            connections[index].name = Connection(pairing: pairing).name
-            connections[index].enabled = true
+            connections[index] = Connection(
+                id: connections[index].id,
+                name: nextConnection.name,
+                enabled: true,
+                relayUrl: nextConnection.relayUrl,
+                desktopId: nextConnection.desktopId,
+                relayToken: nextConnection.relayToken
+            )
             activeConnectionID = connections[index].id
+            persistConnections()
+            persistActiveConnectionID()
             return
         }
 
-        let connection = Connection(pairing: pairing)
-        connections.insert(connection, at: 0)
-        activeConnectionID = connection.id
+        connections.insert(nextConnection, at: 0)
+        activeConnectionID = nextConnection.id
+        persistConnections()
+        persistActiveConnectionID()
     }
 }

@@ -112,6 +112,9 @@ describe('handleHello', () => {
     expect(mobile.sent).toContainEqual({ type: 'pairing.approved', desktopId: 'desktop-1' });
     expect(state.isRouteApproved('desktop-1', 'mobile-1')).toBe(true);
 
+    const mobileCommands = () =>
+      desktop.sent.filter((message) => (message as { type?: string }).type === 'mobile.command');
+
     mobile.emit(
       'message',
       Buffer.from(
@@ -119,8 +122,20 @@ describe('handleHello', () => {
       )
     );
     expect(desktop.sent).toContainEqual(expect.objectContaining({ type: 'mobile.command', mobileId: 'mobile-1' }));
+    expect(mobileCommands()).toHaveLength(1);
 
     mobile.emit('close', Buffer.alloc(0));
     expect(desktop.sent).toContainEqual({ type: 'mobile.disconnected', mobileId: 'mobile-1' });
+
+    const reconnectedMobile = socket();
+    handleHello(context, reconnectedMobile.socket, hello('hello.mobile', 'mobile-1'));
+    reconnectedMobile.emit(
+      'message',
+      Buffer.from(
+        JSON.stringify({ type: 'mobile.command', desktopId: 'desktop-1', payload: { action: 'ping', value: '2' } })
+      )
+    );
+
+    expect(mobileCommands()).toHaveLength(2);
   });
 });

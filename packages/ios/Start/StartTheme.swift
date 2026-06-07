@@ -30,9 +30,9 @@ extension ConnectionState {
     var symbolColor: Color {
         switch self {
         case .online:
-            Color(.systemGreen).opacity(0.78)
+            Color(.systemGreen).opacity(0.74)
         case .offline:
-            Color(.systemRed).opacity(0.72)
+            Color(.systemRed).opacity(0.66)
         }
     }
 }

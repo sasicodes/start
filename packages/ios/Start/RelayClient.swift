@@ -28,7 +28,7 @@ final class RelayClient {
     var lastEvent: RelayPayload?
     var status = RelayConnectionStatus.offline
     @ObservationIgnored var onEvent: ((RelayPayload) -> Void)?
-    @ObservationIgnored var onPaired: (() -> Void)?
+    @ObservationIgnored var onStatusChange: ((RelayConnectionStatus) -> Void)?
 
     var statusLabel: String {
         status.rawValue
@@ -38,27 +38,30 @@ final class RelayClient {
         lastRequest != nil
     }
 
-    func connect(url: URL, mobileId: String, token: String = "", pairingCode: String = "") {
+    func connect(
+        url: URL,
+        token: String = "",
+        mobileId: String,
+        desktopId: String = "",
+        pairingCode: String = ""
+    ) {
         let request = RelayConnectionRequest(
             url: url,
             token: token,
             mobileId: mobileId,
+            desktopId: desktopId,
             pairingCode: pairingCode
         )
         lastRequest = request
         connect(with: request)
     }
 
-    func retry() {
-        guard let lastRequest else { return }
-        connect(with: lastRequest)
-    }
-
     private func connect(with request: RelayConnectionRequest) {
         let shouldReconnect = socketTask != nil || connected
-        disconnect()
-        status = shouldReconnect ? .reconnecting : .connecting
+        closeSocket()
+        updateStatus(shouldReconnect ? .reconnecting : .connecting)
         pendingPairingCode = request.pairingCode
+        pairedDesktopId = ""
 
         let socketTask = URLSession.shared.webSocketTask(with: request.url)
         self.socketTask = socketTask
@@ -73,14 +76,10 @@ final class RelayClient {
     }
 
     func disconnect() {
-        receiveTask?.cancel()
-        receiveTask = nil
-        socketTask?.cancel(with: .goingAway, reason: nil)
-        socketTask = nil
-        connected = false
-        status = .offline
+        closeSocket()
         pairedDesktopId = ""
         pendingPairingCode = ""
+        updateStatus(.offline)
     }
 
     func joinPairing(code: String, name: String = "iPhone") {
@@ -124,20 +123,21 @@ final class RelayClient {
         case .ready:
             connected = true
             if !pendingPairingCode.isEmpty {
-                status = .connecting
+                updateStatus(.connecting)
                 joinPairing(code: pendingPairingCode)
                 pendingPairingCode = ""
             } else {
-                status = .connected
+                pairedDesktopId = lastRequest?.desktopId ?? pairedDesktopId
+                updateStatus(.connected)
             }
         case .error(let text):
             connected = false
             lastError = text
-            status = .offline
+            pairedDesktopId = ""
+            updateStatus(.offline)
         case .pairingApproved(let desktopId):
             pairedDesktopId = desktopId
-            status = .connected
-            onPaired?()
+            updateStatus(.connected)
         case .desktopEvent(_, let payload):
             lastEvent = payload
             onEvent?(payload)
@@ -162,11 +162,24 @@ final class RelayClient {
         guard self.socketTask === socketTask else { return }
 
         connected = false
-        status = .offline
         pairedDesktopId = ""
+        updateStatus(.offline)
         if let error {
             lastError = error.localizedDescription
         }
+    }
+
+    private func closeSocket() {
+        receiveTask?.cancel()
+        receiveTask = nil
+        socketTask?.cancel(with: .goingAway, reason: nil)
+        socketTask = nil
+        connected = false
+    }
+
+    private func updateStatus(_ nextStatus: RelayConnectionStatus) {
+        status = nextStatus
+        onStatusChange?(nextStatus)
     }
 }
 
@@ -174,6 +187,7 @@ private struct RelayConnectionRequest {
     let url: URL
     let token: String
     let mobileId: String
+    let desktopId: String
     let pairingCode: String
 }
 

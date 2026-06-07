@@ -73,7 +73,6 @@ export class RelayState {
     }
 
     this.mobiles.delete(mobileId);
-    for (const routes of this.routes.values()) routes.delete(mobileId);
     return desktopIds;
   }
 

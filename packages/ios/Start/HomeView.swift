@@ -41,12 +41,16 @@ struct HomeView: View {
             ConnectionScannerSheet()
         }
         .task {
-            appState.requestHomeData()
+            appState.connectActiveConnectionIfNeeded()
         }
         .onChange(of: appState.chats.map(\.workspacePath)) { _, paths in
             guard !workspaceExpansionInitialized, let first = paths.first else { return }
             workspaceExpansionInitialized = true
             expandedWorkspaces = [first]
+        }
+        .onChange(of: appState.activeConnectionID) {
+            workspaceExpansionInitialized = false
+            expandedWorkspaces = []
         }
     }
 
@@ -178,12 +182,13 @@ struct HomeView: View {
 
             HomeTopMenu(
                 sort: sort,
-                activeConnectionID: appState.activeConnectionID,
                 connections: appState.connections,
+                activeConnectionID: appState.activeConnectionID,
                 onAddConnection: {
                     scannerOpen = true
                 },
                 onSelectSort: { sort = $0 },
+                connectionState: { appState.connectionState(for: $0) },
                 onSelectConnection: appState.selectConnection
             )
         }
