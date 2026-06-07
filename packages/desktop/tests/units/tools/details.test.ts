@@ -78,7 +78,7 @@ describe('tool details', () => {
   });
 
   it('renders web search labels and query detail', () => {
-    expect(toolResultTitle('web_search', false)).toBe('Searched Web');
+    expect(toolResultTitle('web_search', false)).toBe('Searched the web');
     expect(toolResultTitle('web_search', true)).toBe('Web search failed');
     expect(
       toolEventDetail({
@@ -89,7 +89,7 @@ describe('tool details', () => {
       })
     ).toMatchObject({
       detail: 'package release notes',
-      title: 'Searching Web for package release notes'
+      title: 'Searching the web for package release notes'
     });
     expect(
       toolEventDetail({
@@ -101,7 +101,7 @@ describe('tool details', () => {
       })
     ).toMatchObject({
       metric: '2 results',
-      title: 'Searched Web for package release notes'
+      title: 'Searched the web for package release notes'
     });
   });
 

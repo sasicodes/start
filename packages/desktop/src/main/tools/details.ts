@@ -217,23 +217,23 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   if (error) {
     if (toolName === 'web_search') return 'Web search failed';
     if (toolName === 'bash') return 'Command failed';
-    if (toolName === 'edit') return 'File modification failed';
+    if (toolName === 'edit') return 'Edit failed';
     if (toolName === 'find') return 'File lookup failed';
     if (toolName === 'grep') return 'Search failed';
     if (toolName === 'ls') return 'Folder exploration failed';
-    if (toolName === 'read') return 'File exploration failed';
-    if (toolName === 'write') return 'File write failed';
+    if (toolName === 'read') return 'Read failed';
+    if (toolName === 'write') return 'Write failed';
     return `${toolName} failed`;
   }
 
   if (toolName === 'bash') return 'Ran command';
-  if (toolName === 'web_search') return 'Searched Web';
-  if (toolName === 'edit') return 'Modified file';
+  if (toolName === 'web_search') return 'Searched the web';
+  if (toolName === 'edit') return 'Edited file';
   if (toolName === 'find') return 'Found files';
-  if (toolName === 'grep') return 'Searched files';
+  if (toolName === 'grep') return 'Searched code';
   if (toolName === 'ls') return 'Explored folder';
-  if (toolName === 'read') return 'Explored file';
-  if (toolName === 'write') return 'Wrote file';
+  if (toolName === 'read') return 'Read file';
+  if (toolName === 'write') return 'Created file';
   return `Used ${toolName}`;
 };
 
@@ -243,13 +243,13 @@ const failedToolTitle = (toolName: string, args: Record<string, unknown>) => {
   const pattern = stringValue(args.pattern);
 
   if (toolName === 'bash') return command ? `Command failed ${command}` : 'Command failed';
-  if (toolName === 'edit') return `Could not modify file ${path}`;
+  if (toolName === 'edit') return `Could not edit ${path}`;
   if (toolName === 'find') return `Could not find files${pattern ? ` matching ${pattern}` : ''}`;
-  if (toolName === 'grep') return `Could not search files${pattern ? ` for ${pattern}` : ''}`;
-  if (toolName === 'web_search') return `Could not search Web${command ? ` for ${command}` : ''}`;
+  if (toolName === 'grep') return `Could not search code${pattern ? ` for ${pattern}` : ''}`;
+  if (toolName === 'web_search') return `Could not search the web${command ? ` for ${command}` : ''}`;
   if (toolName === 'ls') return `Could not explore folder ${path}`;
-  if (toolName === 'read') return `Could not explore file ${path}`;
-  if (toolName === 'write') return `Could not write file ${path}`;
+  if (toolName === 'read') return `Could not read ${path}`;
+  if (toolName === 'write') return `Could not create ${path}`;
   return toolResultTitle(toolName, true);
 };
 
@@ -275,16 +275,16 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
     return command
       ? `${state === 'active' ? 'Running' : 'Ran'} command ${command}`
       : `${state === 'active' ? 'Running' : 'Ran'} command`;
-  if (toolName === 'edit') return `${state === 'active' ? 'Modifying' : 'Modified'} file ${path}`;
+  if (toolName === 'edit') return `${state === 'active' ? 'Editing' : 'Edited'} ${path}`;
   if (toolName === 'find')
     return `${state === 'active' ? 'Finding' : 'Found'} files${pattern ? ` matching ${pattern}` : ''}`;
   if (toolName === 'grep')
-    return `${state === 'active' ? 'Searching' : 'Searched'} files${pattern ? ` for ${pattern}` : ''}`;
+    return `${state === 'active' ? 'Searching' : 'Searched'} code${pattern ? ` for ${pattern}` : ''}`;
   if (toolName === 'web_search')
-    return `${state === 'active' ? 'Searching' : 'Searched'} Web${command ? ` for ${command}` : ''}`;
+    return `${state === 'active' ? 'Searching' : 'Searched'} the web${command ? ` for ${command}` : ''}`;
   if (toolName === 'ls') return `${state === 'active' ? 'Exploring' : 'Explored'} folder ${path}`;
-  if (toolName === 'read') return `${state === 'active' ? 'Exploring' : 'Explored'} file ${path}`;
-  if (toolName === 'write') return `${state === 'active' ? 'Writing' : 'Wrote'} file ${path}`;
+  if (toolName === 'read') return `${state === 'active' ? 'Reading' : 'Read'} ${path}`;
+  if (toolName === 'write') return `${state === 'active' ? 'Creating' : 'Created'} ${path}`;
   return `${state === 'active' ? 'Using' : 'Used'} ${toolName}`;
 };
 
