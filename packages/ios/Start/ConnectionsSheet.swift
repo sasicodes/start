@@ -10,7 +10,6 @@ struct ConnectionsSheet: View {
     let onRenameConnection: (Connection, String) -> Void
     let connectionState: (Connection) -> ConnectionState
     let onSelectConnection: (Connection) -> Void
-    let onSetConnectionEnabled: (Connection, Bool) -> Void
 
     var body: some View {
         ZStack {
@@ -71,9 +70,6 @@ struct ConnectionsSheet: View {
                 },
                 onRename: { name in
                     onRenameConnection(currentConnection, name)
-                },
-                onSetEnabled: { enabled in
-                    onSetConnectionEnabled(currentConnection, enabled)
                 }
             )
         }
@@ -212,7 +208,6 @@ private struct ConnectionListRow: View {
         onDeleteConnection: { _ in },
         onRenameConnection: { _, _ in },
         connectionState: { _ in .online },
-        onSelectConnection: { _ in },
-        onSetConnectionEnabled: { _, _ in }
+        onSelectConnection: { _ in }
     )
 }

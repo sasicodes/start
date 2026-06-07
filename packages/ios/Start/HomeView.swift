@@ -57,8 +57,7 @@ struct HomeView: View {
                 onDeleteConnection: appState.deleteConnection,
                 onRenameConnection: appState.renameConnection,
                 connectionState: { appState.connectionState(for: $0) },
-                onSelectConnection: appState.selectConnection,
-                onSetConnectionEnabled: appState.setConnectionEnabled
+                onSelectConnection: appState.selectConnection
             )
         }
         .task {
