@@ -147,12 +147,13 @@ struct ChatDetailView: View {
         }
     }
 
-    private func copy(_ message: ChatMessage) {
+    private func copy(_ message: ChatMessage) -> Bool {
         let text = message.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty else { return false }
 
         UIPasteboard.general.string = text
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+        return true
     }
 
     private func scrollToInitialBottom(proxy: ScrollViewProxy, messages: [ChatMessage]) {

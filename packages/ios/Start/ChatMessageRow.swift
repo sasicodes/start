@@ -1,8 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct ChatMessageRow: View {
     let message: ChatMessage
-    let onCopy: (ChatMessage) -> Void
+    let onCopy: (ChatMessage) -> Bool
 
     private var alignment: Alignment {
         message.role == .user ? .trailing : .leading
@@ -21,8 +22,6 @@ struct ChatMessageRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: alignment)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(message.role.rawValue): \(message.text)")
     }
 
     private var userBubble: some View {
@@ -35,11 +34,12 @@ struct ChatMessageRow: View {
             .padding(.vertical, 10)
             .background(Color(.secondarySystemFill), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .accessibilityLabel("User: \(message.text)")
             .contextMenu {
                 Button {
-                    onCopy(message)
+                    _ = onCopy(message)
                 } label: {
-                    Label("Copy", systemImage: "square.on.square")
+                    Label("Copy", systemImage: "doc.on.doc")
                 }
             }
             .frame(maxWidth: 310, alignment: .trailing)
@@ -60,10 +60,11 @@ struct ChatMessageRow: View {
             }
 
             if !message.streaming && hasText {
-                AgentMessageFooter(message: message, onCopy: { onCopy(message) })
+                AgentMessageFooter(onCopy: { onCopy(message) })
             }
         }
         .frame(maxWidth: 330, alignment: .leading)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -76,7 +77,8 @@ private struct ThinkingDisclosure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: expanded ? 6 : 0) {
             Button {
-                withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
+                UISelectionFeedbackGenerator().selectionChanged()
+                withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                     expanded.toggle()
                 }
             } label: {
@@ -116,34 +118,42 @@ private struct ThinkingDisclosure: View {
 }
 
 private struct AgentMessageFooter: View {
-    let message: ChatMessage
-    let onCopy: () -> Void
+    @State private var copied = false
+    @State private var resetTask: Task<Void, Never>?
+
+    let onCopy: () -> Bool
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(messageFooterLabel)
-                .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(StartTheme.Colors.softInk.opacity(0.72))
-
-            Button(action: onCopy) {
-                Image(systemName: "square.on.square")
-                    .font(.system(size: 13, weight: .medium))
+        HStack {
+            Button(action: copy) {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .contentTransition(.symbolEffect(.replace))
+                    .font(.system(size: copied ? 14 : 13, weight: .medium))
                     .frame(width: 30, height: 30)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(StartTheme.Colors.softInk)
-            .accessibilityLabel("Copy response")
+            .foregroundStyle(copied ? StartTheme.Colors.success : StartTheme.Colors.softInk)
+            .accessibilityLabel(copied ? "Copied response" : "Copy response")
 
             Spacer(minLength: 0)
         }
         .padding(.top, 1)
+        .onDisappear {
+            resetTask?.cancel()
+            resetTask = nil
+        }
     }
 
-    private var messageFooterLabel: String {
-        if let duration = durationLabel(for: message.durationMs) {
-            return "\(messageTimeLabel(for: message.createdAt)) · \(duration)"
+    private func copy() {
+        guard onCopy() else { return }
+
+        resetTask?.cancel()
+        copied = true
+        resetTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1200))
+            guard !Task.isCancelled else { return }
+            copied = false
         }
-        return messageTimeLabel(for: message.createdAt)
     }
 }
 
@@ -157,8 +167,4 @@ private func durationLabel(for durationMs: Int?) -> String? {
     let minutes = seconds / 60
     let remainingSeconds = seconds % 60
     return remainingSeconds > 0 ? "\(minutes)m \(remainingSeconds)s" : "\(minutes)m"
-}
-
-private func messageTimeLabel(for timestamp: Int) -> String {
-    Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000).formatted(date: .omitted, time: .shortened)
 }

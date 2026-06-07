@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct HomeView: View {
     @Environment(AppState.self) private var appState
@@ -35,6 +36,7 @@ struct HomeView: View {
         }
         .refreshable {
             await appState.refreshChats()
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
         .animation(.easeOut(duration: 0.16), value: appState.sessionLoadStateKey)
         .sheet(isPresented: $scannerOpen) {
@@ -120,16 +122,17 @@ struct HomeView: View {
 
                 if !searchActive {
                     ChatButton(transitionNamespace: transitionNamespace) {
-                        withAnimation(.smooth(duration: 0.18)) {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                             appState.openNewChat()
                         }
                     }
                     .transition(.scale(scale: 0.76).combined(with: .opacity))
                 }
             }
-            .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: searchActive)
-            .padding(.leading, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
-            .padding(.trailing, searchActive ? 14 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+            .animation(.snappy(duration: 0.14, extraBounce: 0), value: searchActive)
+            .padding(.leading, searchActive ? 8 : StartTheme.Metrics.floatingButtonHorizontalPadding)
+            .padding(.trailing, searchActive ? 8 : StartTheme.Metrics.floatingButtonHorizontalPadding)
             .padding(.bottom, searchActive ? 16 : StartTheme.Metrics.floatingButtonBottomPadding)
         }
         .ignoresSafeArea(.container, edges: .bottom)
@@ -140,6 +143,7 @@ struct HomeView: View {
             Spacer()
 
             Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 scannerOpen = true
             } label: {
                 Label("Add connection", systemImage: "plus")
@@ -350,7 +354,8 @@ private struct HomeSearchBar: View {
 
             if active {
                 Button {
-                    withAnimation(.bouncy(duration: 0.32, extraBounce: 0.22)) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    withAnimation(.snappy(duration: 0.14, extraBounce: 0)) {
                         text = ""
                         focused = false
                     }
@@ -368,7 +373,7 @@ private struct HomeSearchBar: View {
                 .zIndex(1)
             }
         }
-        .animation(.bouncy(duration: 0.28, extraBounce: 0.12), value: active)
+        .animation(.snappy(duration: 0.14, extraBounce: 0), value: active)
     }
 }
 

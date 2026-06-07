@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct HomeTopMenu: View {
     let sort: WorkspaceSort
@@ -12,9 +13,9 @@ struct HomeTopMenu: View {
     var body: some View {
         Menu {
             if !connections.isEmpty {
-                sortMenu
+                sortSection
             }
-            connectionMenu
+            connectionSection
         } label: {
             Label("More", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
@@ -28,33 +29,32 @@ struct HomeTopMenu: View {
         .glassCircle()
     }
 
-    private var sortMenu: some View {
-        Menu {
+    private var sortSection: some View {
+        Section("Sort") {
             ForEach(WorkspaceSort.allCases) { option in
                 Button {
+                    UISelectionFeedbackGenerator().selectionChanged()
                     onSelectSort(option)
                 } label: {
                     Label(option.label, systemImage: option == sort ? "checkmark" : option.icon)
                 }
             }
-        } label: {
-            Label("Sort", systemImage: sort.icon)
         }
     }
 
-    private var connectionMenu: some View {
-        Menu {
-            Button(action: onAddConnection) {
+    private var connectionSection: some View {
+        Section("Connections") {
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                onAddConnection()
+            } label: {
                 Label("New connection", systemImage: "plus")
-            }
-
-            if !connections.isEmpty {
-                Divider()
             }
 
             ForEach(connections) { connection in
                 Button {
-                    withAnimation(.smooth(duration: 0.18)) {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                    withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
                         onSelectConnection(connection)
                     }
                 } label: {
@@ -80,8 +80,6 @@ struct HomeTopMenu: View {
                     }
                 }
             }
-        } label: {
-            Label("Connections", systemImage: "globe")
         }
     }
 }

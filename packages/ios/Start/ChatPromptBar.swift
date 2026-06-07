@@ -1,4 +1,7 @@
 import SwiftUI
+import UIKit
+
+private let effortLevelOrder = ["low", "medium", "high", "xhigh"]
 
 struct ChatPromptFooter: View {
     @Environment(AppState.self) private var appState
@@ -64,11 +67,11 @@ struct ChatPromptBar: View {
             HStack(spacing: 8) {
                 modelMenu
 
-                thinkingMenu
+                effortButton
 
                 Spacer()
 
-                Button(action: onSend) {
+                Button(action: send) {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(sendEnabled ? Color.white : StartTheme.Colors.softInk)
@@ -95,15 +98,16 @@ struct ChatPromptBar: View {
     private var modelMenu: some View {
         Menu {
             ForEach(modelGroups) { group in
-                Menu {
+                Section {
                     ForEach(group.models) { model in
                         Button {
+                            UISelectionFeedbackGenerator().selectionChanged()
                             appState.selectModel(model.key)
                         } label: {
                             modelRow(model)
                         }
                     }
-                } label: {
+                } header: {
                     Label {
                         Text(group.name)
                     } icon: {
@@ -129,31 +133,15 @@ struct ChatPromptBar: View {
         }
     }
 
-    private var thinkingMenu: some View {
-        Menu {
-            ForEach(currentEffortLevels, id: \.self) { level in
-                Button {
-                    appState.selectThinkingLevel(level)
-                } label: {
-                    thinkingRow(level)
-                }
-            }
-        } label: {
-            Image(systemName: "speedometer")
-                .font(.system(size: 17, weight: .regular))
+    private var effortButton: some View {
+        Button(action: selectNextEffortLevel) {
+            EffortSignal(activeCount: activeEffortCount)
                 .frame(width: 32, height: 32)
         }
-        .disabled(currentEffortLevels.isEmpty)
-        .accessibilityLabel("Effort")
-    }
-
-    @ViewBuilder
-    private func thinkingRow(_ level: String) -> some View {
-        if level == appState.thinkingLevel {
-            Label(level.capitalized, systemImage: "checkmark")
-        } else {
-            Text(level.capitalized)
-        }
+        .accessibilityHint(canCycleEffort ? "Cycles effort level" : "")
+        .accessibilityLabel("Effort \(activeEffortLabel)")
+        .disabled(!canCycleEffort)
+        .opacity(currentEffortLevels.isEmpty ? 0.38 : 1)
     }
 
     private var currentEffortLevels: [String] {
@@ -170,6 +158,70 @@ struct ChatPromptBar: View {
 
     private var selectedProviderID: ModelProviderID {
         selectedModel?.providerID ?? .openai
+    }
+
+    private var activeEffortCount: Int {
+        guard let index = effortLevelOrder.firstIndex(of: activeEffortLevel) else { return 0 }
+        return index + 1
+    }
+
+    private var activeEffortLabel: String {
+        effortLabel(for: activeEffortLevel)
+    }
+
+    private var activeEffortLevel: String {
+        if currentEffortLevels.contains(appState.thinkingLevel) {
+            return appState.thinkingLevel
+        }
+        return orderedEffortLevels.first ?? ""
+    }
+
+    private var canCycleEffort: Bool {
+        orderedEffortLevels.count > 1
+    }
+
+    private var orderedEffortLevels: [String] {
+        let knownLevels = effortLevelOrder.filter { currentEffortLevels.contains($0) }
+        let unknownLevels = currentEffortLevels.filter { !effortLevelOrder.contains($0) }
+        return knownLevels + unknownLevels
+    }
+
+    private func effortLabel(for level: String) -> String {
+        if level == "xhigh" { return "Extra high" }
+        if level.isEmpty { return "Unavailable" }
+        return level.capitalized
+    }
+
+    private func selectNextEffortLevel() {
+        guard canCycleEffort else { return }
+
+        let currentIndex = orderedEffortLevels.firstIndex(of: appState.thinkingLevel) ?? -1
+        let nextIndex = (currentIndex + 1) % orderedEffortLevels.count
+
+        UISelectionFeedbackGenerator().selectionChanged()
+        appState.selectThinkingLevel(orderedEffortLevels[nextIndex])
+    }
+
+    private func send() {
+        guard sendEnabled else { return }
+
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        onSend()
+    }
+}
+
+private struct EffortSignal: View {
+    let activeCount: Int
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2) {
+            ForEach(0..<effortLevelOrder.count, id: \.self) { index in
+                Capsule()
+                    .fill(StartTheme.Colors.ink.opacity(index < activeCount ? 0.82 : 0.25))
+                    .frame(width: 2, height: 10)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 

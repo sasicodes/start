@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 private enum WorkspaceChatListMetrics {
     static let titleFont = Font.system(size: 17, weight: .regular)
@@ -31,6 +32,7 @@ struct WorkspaceChatList: View {
     }
 
     private func toggle(_ workspacePath: String) {
+        UISelectionFeedbackGenerator().selectionChanged()
         withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
             if expandedWorkspaces.contains(workspacePath) {
                 expandedWorkspaces.remove(workspacePath)
@@ -96,7 +98,8 @@ private struct ChatRow: View {
         let status = visibleStatus
 
         return Button {
-            withAnimation(.smooth(duration: 0.18)) {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                 appState.openChat(chat)
             }
         } label: {
