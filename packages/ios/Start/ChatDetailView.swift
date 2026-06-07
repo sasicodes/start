@@ -5,6 +5,8 @@ struct ChatDetailView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var focused: Bool
     @State private var focusTask: Task<Void, Never>?
+    @State private var renameDraft = ""
+    @State private var renameOpen = false
     @State private var initialScrollDone = false
     @State private var olderPagingEnabled = false
 
@@ -81,6 +83,16 @@ struct ChatDetailView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
+        .alert("Rename", isPresented: $renameOpen) {
+            TextField("Name", text: $renameDraft)
+            Button("Cancel", role: .cancel) {
+                renameDraft = ""
+            }
+            Button("Save") {
+                StartHaptics.lightImpact()
+                appState.rename(chat, title: renameDraft)
+            }
+        }
         .onAppear {
             focusTask = Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(140))
@@ -136,10 +148,22 @@ struct ChatDetailView: View {
 
             Spacer()
 
-            ChatHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
+            ChatOptionsMenu(
+                canRename: appState.remoteCommandsAvailable,
+                canArchive: appState.remoteCommandsAvailable,
+                onRename: openRename,
+                onArchive: {
+                    appState.archive(chat)
+                }
+            )
         }
         .padding(.top, 8)
         .padding(.bottom, 8)
+    }
+
+    private func openRename() {
+        renameDraft = chat.title
+        renameOpen = true
     }
 
     private var dismissGesture: some Gesture {
@@ -217,9 +241,10 @@ private func previewAppState(chat: Chat) -> AppState {
             text: "Mobile fetches the session index first, then requests the latest page only after a session opens.",
             createdAt: Int(Date().addingTimeInterval(-24).timeIntervalSince1970 * 1000),
             durationMs: 6200,
-            thinking: "Checked the relay command shape and verified the session page boundary."
+            thinking: "Mapped the relay events and checked pagination boundaries."
         )
     ]
+    appState.messagePageStates[chat.id] = MessagePageState(loading: false, hasMoreOlder: true, nextOffset: 2)
     return appState
 }
 

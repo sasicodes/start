@@ -69,6 +69,21 @@ const messageSendCommandSchema = v.object({
   workspacePath: v.optional(relayPathSchema)
 });
 
+const sessionArchiveCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('session.archive'),
+  sessionId: relaySessionIdSchema
+});
+
+const sessionRenameCommandSchema = v.object({
+  type: v.optional(v.string()),
+  requestId: requestIdSchema,
+  action: v.literal('session.rename'),
+  sessionId: relaySessionIdSchema,
+  title: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120))
+});
+
 const modelsListCommandSchema = v.object({
   type: v.optional(v.string()),
   requestId: requestIdSchema,
@@ -94,6 +109,8 @@ const mobileRelayCommandSchema = v.union([
   sessionsListCommandSchema,
   messagesPageCommandSchema,
   messageSendCommandSchema,
+  sessionArchiveCommandSchema,
+  sessionRenameCommandSchema,
   modelsListCommandSchema,
   modelSelectCommandSchema,
   thinkingSelectCommandSchema
@@ -130,10 +147,11 @@ export const parseRelayServerMessage = (raw: string): RelayServerMessage | undef
   return;
 };
 
-export const helloDesktopMessage = (desktopId: string, token: string) => ({
+export const helloDesktopMessage = (desktopId: string, token: string, name = '') => ({
   type: 'hello.desktop' as const,
   desktopId,
   protocolVersion: 1,
+  ...(name ? { name } : {}),
   ...(token ? { token } : {})
 });
 

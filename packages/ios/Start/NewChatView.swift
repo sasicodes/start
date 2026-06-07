@@ -75,7 +75,12 @@ struct NewChatView: View {
 
             Spacer()
 
-            ChatHeaderIconButton(systemName: "ellipsis", accessibilityLabel: "More") {}
+            ChatOptionsMenu(
+                canRename: false,
+                canArchive: false,
+                onRename: {},
+                onArchive: {}
+            )
         }
         .padding(.top, 8)
         .padding(.bottom, 8)

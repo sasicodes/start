@@ -8,6 +8,7 @@ export const mobilePairingPayload = (settings: MobileRelaySettings, code = '') =
     desktopId: settings.desktopId,
     relayUrl: settings.relayUrl,
     ...(code ? { code } : {}),
+    ...(settings.desktopName ? { desktopName: settings.desktopName } : {}),
     ...(settings.relayToken ? { relayToken: settings.relayToken } : {})
   });
 

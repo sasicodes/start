@@ -6,6 +6,7 @@ const emptyMobileRelaySettings = {
   enabled: false,
   desktopId: '',
   relayUrl: '',
+  desktopName: '',
   relayToken: ''
 } satisfies MobileRelaySettings;
 

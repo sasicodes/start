@@ -4,6 +4,7 @@ import Security
 
 private let messagePageLimit = 10
 private let sessionPageLimit = 40
+private let sessionTitleMaxLength = 120
 private let maxConnectionAttempts = 3
 private let reconnectRetryDelay = Duration.milliseconds(900)
 private let relayTokenKeychainService = "one.intelligence.start.mobile-relay"
@@ -38,7 +39,9 @@ final class AppState {
     private var messageRequestSessions: [String: String] = [:]
     private var optimisticMessages: [String: ChatMessage] = [:]
     private var optimisticMessageSessions: [String: String] = [:]
+    private var pendingArchivedChats: [String: Chat] = [:]
     private var pendingDrafts: [String: String] = [:]
+    private var pendingRenamedChats: [String: Chat] = [:]
     private var pendingNewChatTitles: [String: String] = [:]
     private var pendingMessageRefreshSessions = Set<String>()
     @ObservationIgnored private var reconnectTask: Task<Void, Never>?
@@ -71,6 +74,10 @@ final class AppState {
 
     var activeProjectName: String {
         activeRemoteWorkspace?.name ?? activeConnection?.name ?? "Desktop"
+    }
+
+    var remoteCommandsAvailable: Bool {
+        commandDesktopId != nil
     }
 
     var connectionStatusLabel: String {
@@ -238,6 +245,42 @@ final class AppState {
 
     func sendNewDraft() {
         sendDraft(sessionId: "", workspacePath: activeRemoteWorkspace?.path)
+    }
+
+    func archive(_ chat: Chat) {
+        guard let desktopId = commandDesktopId else { return }
+
+        let requestId = UUID().uuidString
+        pendingArchivedChats[requestId] = chat
+        chats.removeAll { $0.id == chat.id }
+        sessionMessages[chat.id] = nil
+        messagePageStates[chat.id] = nil
+        pendingMessageRefreshSessions.remove(chat.id)
+        closeChat()
+        relay.sendCommand(
+            desktopId: desktopId,
+            payload: RelayPayload(action: "session.archive", requestId: requestId, sessionId: chat.id)
+        )
+    }
+
+    func rename(_ chat: Chat, title: String) {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let boundedTitle = String(trimmedTitle.prefix(sessionTitleMaxLength)).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let desktopId = commandDesktopId else { return }
+        guard !boundedTitle.isEmpty && boundedTitle != chat.title else { return }
+
+        let requestId = UUID().uuidString
+        pendingRenamedChats[requestId] = chat
+        replaceChat(chat, title: boundedTitle)
+        relay.sendCommand(
+            desktopId: desktopId,
+            payload: RelayPayload(
+                action: "session.rename",
+                requestId: requestId,
+                sessionId: chat.id,
+                title: boundedTitle
+            )
+        )
     }
 
     func selectModel(_ key: String) {
@@ -494,6 +537,10 @@ final class AppState {
             handleMessagesResult(payload)
         case "message.send.result":
             handleSendResult(payload)
+        case "session.archive.result":
+            handleArchiveResult(payload)
+        case "session.rename.result":
+            handleRenameResult(payload)
         case "models.list.result", "model.select.result", "thinking.select.result":
             handleModelsResult(payload)
         case "sessions.changed":
@@ -635,6 +682,55 @@ final class AppState {
         }
     }
 
+    private func handleArchiveResult(_ payload: RelayPayload) {
+        guard let requestId = payload.requestId,
+              let chat = pendingArchivedChats.removeValue(forKey: requestId)
+        else { return }
+
+        guard payload.ok != false else {
+            chats.insert(chat, at: 0)
+            return
+        }
+
+        requestSessions()
+    }
+
+    private func handleRenameResult(_ payload: RelayPayload) {
+        guard let requestId = payload.requestId,
+              let chat = pendingRenamedChats.removeValue(forKey: requestId)
+        else { return }
+
+        guard payload.ok != false else {
+            restoreChat(chat)
+            return
+        }
+
+        requestSessions()
+    }
+
+    private func replaceChat(_ chat: Chat, title: String) {
+        guard let index = chats.firstIndex(where: { $0.id == chat.id }) else { return }
+
+        chats[index] = Chat(
+            id: chat.id,
+            title: title,
+            modified: chat.modified,
+            status: chat.status,
+            noticeKind: chat.noticeKind,
+            workspaceName: chat.workspaceName,
+            workspacePath: chat.workspacePath
+        )
+    }
+
+    private func restoreChat(_ chat: Chat) {
+        if let index = chats.firstIndex(where: { $0.id == chat.id }) {
+            chats[index] = chat
+            return
+        }
+
+        chats.insert(chat, at: 0)
+    }
+
     private func appendOptimisticMessage(
         requestId: String,
         sessionId: String,
@@ -749,7 +845,9 @@ final class AppState {
         messageRequestSessions.removeAll()
         optimisticMessages.removeAll()
         optimisticMessageSessions.removeAll()
+        pendingArchivedChats.removeAll()
         pendingDrafts.removeAll()
+        pendingRenamedChats.removeAll()
         pendingNewChatTitles.removeAll()
         for (sessionId, state) in messagePageStates where state.loading {
             messagePageStates[sessionId] = MessagePageState(

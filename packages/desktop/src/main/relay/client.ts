@@ -65,6 +65,7 @@ export class DesktopRelay {
   private active = false;
   private relayUrl = '';
   private desktopId = '';
+  private desktopName = '';
   private relayToken = '';
   private socket: RelaySocket | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -94,6 +95,7 @@ export class DesktopRelay {
       this.active &&
       this.relayUrl === settings.relayUrl &&
       this.desktopId === settings.desktopId &&
+      this.desktopName === settings.desktopName &&
       this.relayToken === settings.relayToken;
     if (unchanged) return;
 
@@ -101,6 +103,7 @@ export class DesktopRelay {
     this.active = true;
     this.relayUrl = settings.relayUrl;
     this.desktopId = settings.desktopId;
+    this.desktopName = settings.desktopName;
     this.relayToken = settings.relayToken;
     this.open();
   }
@@ -122,7 +125,7 @@ export class DesktopRelay {
 
   private open() {
     this.socket = this.createSocket(this.relayUrl, {
-      onOpen: () => this.send(helloDesktopMessage(this.desktopId, this.relayToken)),
+      onOpen: () => this.send(helloDesktopMessage(this.desktopId, this.relayToken, this.desktopName)),
       onClose: () => this.scheduleReconnect(),
       onMessage: (data) => this.receive(data)
     });

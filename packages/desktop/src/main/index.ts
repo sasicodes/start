@@ -162,6 +162,31 @@ const runMobileSyncCommand = async (
     return;
   }
 
+  if (command.action === 'session.archive') {
+    const workspacePath = await chat.archiveSession(command.sessionId);
+    context.reply(
+      mobileResult(command, {
+        sessionId: command.sessionId,
+        workspacePath
+      })
+    );
+    notifyRecentSessionsChanged(workspacePath);
+    return;
+  }
+
+  if (command.action === 'session.rename') {
+    const workspacePath = await chat.renameSession(command.sessionId, command.title);
+    context.reply(
+      mobileResult(command, {
+        title: command.title,
+        sessionId: command.sessionId,
+        workspacePath
+      })
+    );
+    notifyRecentSessionsChanged(workspacePath);
+    return;
+  }
+
   if (command.action === 'models.list') {
     context.reply(mobileResult(command, await chat.getMobileModelsState()));
     return;

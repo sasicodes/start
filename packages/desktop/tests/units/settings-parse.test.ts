@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 describe('parseSettings', () => {
   it('falls back to defaults for missing or invalid values', () => {
     const settings = parseSettings({});
-    expect(settings.mobileRelay).toEqual({ desktopId: '', enabled: false, relayToken: '', relayUrl: '' });
+    expect(settings.mobileRelay).toEqual({
+      enabled: false,
+      desktopId: '',
+      relayUrl: '',
+      desktopName: '',
+      relayToken: ''
+    });
     expect(settings.composerShortcut).toBe('Control+Space');
     expect(settings.solidWindowBackground).toBe(false);
     expect(settings.keepAwake).toBe(true);
@@ -22,6 +28,7 @@ describe('parseSettings', () => {
           enabled: true,
           desktopId: ' desktop ',
           relayUrl: ' wss://relay.example.com/connect ',
+          desktopName: ' MacBook.local ',
           relayToken: ' token '
         }
       }).mobileRelay
@@ -29,6 +36,7 @@ describe('parseSettings', () => {
       enabled: true,
       desktopId: 'desktop',
       relayUrl: 'wss://relay.example.com/connect',
+      desktopName: 'MacBook.local',
       relayToken: 'token'
     });
   });

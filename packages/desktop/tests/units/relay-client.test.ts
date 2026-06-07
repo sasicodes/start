@@ -5,6 +5,7 @@ const enabledSettings = {
   enabled: true,
   relayUrl: 'wss://relay.test/connect',
   desktopId: 'desktop-1',
+  desktopName: 'MacBook.local',
   relayToken: 'secret'
 };
 
@@ -46,6 +47,7 @@ describe('DesktopRelay', () => {
     expect(socket.sent).toContainEqual({
       type: 'hello.desktop',
       token: 'secret',
+      name: 'MacBook.local',
       desktopId: 'desktop-1',
       protocolVersion: 1
     });
@@ -201,7 +203,7 @@ describe('DesktopRelay', () => {
     const factory = vi.fn(socket.factory);
     const relay = new DesktopRelay({ onCode: vi.fn(), onCommand: vi.fn() }, factory);
 
-    relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', relayToken: '' });
+    relay.sync({ enabled: false, relayUrl: '', desktopId: 'desktop-1', desktopName: '', relayToken: '' });
     expect(factory).not.toHaveBeenCalled();
   });
 
@@ -214,9 +216,16 @@ describe('DesktopRelay', () => {
       enabled: true,
       relayUrl: 'Connect this desktop to your hosted relay',
       desktopId: 'desktop-1',
+      desktopName: '',
       relayToken: ''
     });
-    relay.sync({ enabled: true, relayUrl: 'https://relay.example.com', desktopId: 'desktop-1', relayToken: '' });
+    relay.sync({
+      enabled: true,
+      relayUrl: 'https://relay.example.com',
+      desktopId: 'desktop-1',
+      desktopName: '',
+      relayToken: ''
+    });
     expect(factory).not.toHaveBeenCalled();
   });
 });

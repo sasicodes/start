@@ -8,8 +8,9 @@ import * as v from 'valibot';
 
 export interface MobileRelaySettings {
   enabled: boolean;
-  relayUrl: string;
   desktopId: string;
+  relayUrl: string;
+  desktopName: string;
   relayToken: string;
 }
 
@@ -30,6 +31,7 @@ const defaultMobileRelay = {
   enabled: false,
   desktopId: '',
   relayUrl: '',
+  desktopName: '',
   relayToken: ''
 } satisfies MobileRelaySettings;
 
@@ -52,6 +54,7 @@ const thinkingLevelSchema = v.picklist(['low', 'medium', 'high', 'xhigh'] satisf
 const mobileRelaySchema = v.object({
   enabled: v.boolean(),
   desktopId: v.optional(trimmedOptionalStringSchema),
+  desktopName: v.optional(trimmedOptionalStringSchema),
   relayToken: v.optional(trimmedOptionalStringSchema),
   relayUrl: v.optional(trimmedOptionalStringSchema)
 });
@@ -126,6 +129,7 @@ const parseMobileRelay = (value: unknown): MobileRelaySettings => {
   return {
     enabled: result.output.enabled,
     desktopId: result.output.desktopId ?? '',
+    desktopName: result.output.desktopName ?? '',
     relayUrl: result.output.relayUrl ?? '',
     relayToken: result.output.relayToken ?? ''
   };

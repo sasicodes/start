@@ -48,6 +48,38 @@ describe('parseRelayServerMessage', () => {
     });
   });
 
+  it('parses a mobile session archive request', () => {
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({
+          type: 'mobile.command',
+          mobileId: 'mobile-1',
+          payload: { action: 'session.archive', requestId: 'request-1', sessionId: 'session-1' }
+        })
+      )
+    ).toEqual({
+      type: 'mobile.command',
+      mobileId: 'mobile-1',
+      payload: { action: 'session.archive', requestId: 'request-1', sessionId: 'session-1' }
+    });
+  });
+
+  it('parses a mobile session rename request', () => {
+    expect(
+      parseRelayServerMessage(
+        JSON.stringify({
+          type: 'mobile.command',
+          mobileId: 'mobile-1',
+          payload: { action: 'session.rename', requestId: 'request-1', sessionId: 'session-1', title: 'New title' }
+        })
+      )
+    ).toEqual({
+      type: 'mobile.command',
+      mobileId: 'mobile-1',
+      payload: { action: 'session.rename', requestId: 'request-1', sessionId: 'session-1', title: 'New title' }
+    });
+  });
+
   it('rejects malformed or unknown payloads', () => {
     expect(parseRelayServerMessage('not json')).toBeUndefined();
     expect(parseRelayServerMessage(JSON.stringify({ type: 'unknown' }))).toBeUndefined();
@@ -120,6 +152,12 @@ describe('helloDesktopMessage', () => {
     expect(helloDesktopMessage('desktop-1', 'secret')).toEqual({
       type: 'hello.desktop',
       token: 'secret',
+      desktopId: 'desktop-1',
+      protocolVersion: 1
+    });
+    expect(helloDesktopMessage('desktop-1', '', 'MacBook.local')).toEqual({
+      type: 'hello.desktop',
+      name: 'MacBook.local',
       desktopId: 'desktop-1',
       protocolVersion: 1
     });

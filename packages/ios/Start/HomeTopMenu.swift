@@ -10,26 +10,15 @@ struct HomeTopMenu: View {
     let onSelectConnection: (Connection) -> Void
 
     var body: some View {
-        Menu {
-            if !connections.isEmpty {
-                sortSection
-            }
-            connectionSection
-        } label: {
-            Label("More", systemImage: "ellipsis")
-                .labelStyle(.iconOnly)
-                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
-                .foregroundStyle(StartTheme.Colors.ink)
-                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
-                .accessibilityHidden(true)
+        HStack(spacing: 8) {
+            sortMenu
+
+            connectionMenu
         }
-        .accessibilityLabel("More")
-        .buttonStyle(.plain)
-        .glassCircle()
     }
 
-    private var sortSection: some View {
-        Section("Sort") {
+    private var sortMenu: some View {
+        Menu {
             ForEach(WorkspaceSort.allCases) { option in
                 Button {
                     StartHaptics.selection()
@@ -38,44 +27,81 @@ struct HomeTopMenu: View {
                     Label(option.label, systemImage: option == sort ? "checkmark" : option.icon)
                 }
             }
+        } label: {
+            Label("Sort", systemImage: sort.icon)
+                .labelStyle(.iconOnly)
+                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
+                .accessibilityHidden(true)
         }
+        .accessibilityLabel("Sort")
+        .buttonStyle(.plain)
+        .glassCircle()
     }
 
-    private var connectionSection: some View {
-        Section("Connections") {
+    private var connectionMenu: some View {
+        Menu {
+            if !connections.isEmpty {
+                Menu {
+                    ForEach(connections) { connection in
+                        connectionButton(connection)
+                    }
+                } label: {
+                    Label("Connections", systemImage: "laptopcomputer")
+                }
+            }
+
             Button {
                 StartHaptics.lightImpact()
                 onAddConnection()
             } label: {
                 Label("New connection", systemImage: "plus")
             }
+        } label: {
+            Label("Connections", systemImage: "laptopcomputer")
+                .labelStyle(.iconOnly)
+                .font(.system(size: StartTheme.Metrics.floatingButtonIconSize, weight: .semibold))
+                .foregroundStyle(activeConnectionColor)
+                .frame(width: StartTheme.Metrics.floatingButtonSize, height: StartTheme.Metrics.floatingButtonSize)
+                .accessibilityHidden(true)
+        }
+        .accessibilityLabel("Connections")
+        .buttonStyle(.plain)
+        .glassCircle()
+    }
 
-            ForEach(connections) { connection in
-                Button {
-                    StartHaptics.selection()
-                    withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
-                        onSelectConnection(connection)
-                    }
-                } label: {
-                    let active = activeConnectionID == connection.id
-                    let state = connectionState(connection)
+    private var activeConnectionColor: Color {
+        guard let connection = connections.first(where: { $0.id == activeConnectionID }) else {
+            return StartTheme.Colors.ink
+        }
+        return connectionState(connection).symbolColor
+    }
 
-                    Label {
-                        Text(connection.name)
-                            .foregroundStyle(active ? state.symbolColor : StartTheme.Colors.ink)
-                            .padding(.leading, active ? 4 : 0)
-                    } icon: {
-                        ZStack(alignment: .bottomTrailing) {
-                            Image(systemName: "laptopcomputer")
-                                .foregroundStyle(state.symbolColor)
+    private func connectionButton(_ connection: Connection) -> some View {
+        Button {
+            StartHaptics.selection()
+            withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
+                onSelectConnection(connection)
+            }
+        } label: {
+            let active = activeConnectionID == connection.id
+            let state = connectionState(connection)
 
-                            if active {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .foregroundStyle(state.symbolColor)
-                                    .background(StartTheme.Colors.background, in: Circle())
-                            }
-                        }
+            Label {
+                Text(connection.name)
+                    .foregroundStyle(active ? state.symbolColor : StartTheme.Colors.ink)
+                    .padding(.leading, active ? 4 : 0)
+            } icon: {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(systemName: "laptopcomputer")
+                        .foregroundStyle(state.symbolColor)
+
+                    if active {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(state.symbolColor)
+                            .background(StartTheme.Colors.background, in: Circle())
                     }
                 }
             }

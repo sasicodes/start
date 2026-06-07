@@ -317,6 +317,12 @@ export class ChatService {
     return cwd;
   }
 
+  async renameSession(sessionId: string, title: string): Promise<string> {
+    const cwd = getSession(sessionId)?.cwd ?? this.workspaceCwd;
+    updateSessionTitle(sessionId, title);
+    return cwd;
+  }
+
   async getModels(): Promise<{
     models: ModelOption[];
     error?: string;

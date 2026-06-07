@@ -21,7 +21,7 @@ interface MobileInputProps {
 }
 
 const mobileRelaySettingsKey = (settings: MobileRelaySettings) =>
-  `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.relayToken}`;
+  `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.desktopName}:${settings.relayToken}`;
 
 const normalizedRelayUrl = (value: string) =>
   value

@@ -2,6 +2,7 @@ import type { EffortLevel, SessionNotice } from '@main/types';
 
 export interface MobileRelaySettings {
   desktopId: string;
+  desktopName: string;
   enabled: boolean;
   relayToken: string;
   relayUrl: string;
@@ -23,6 +24,7 @@ const defaultStartState: StartState = {
   mobileRelay: {
     enabled: false,
     desktopId: '',
+    desktopName: '',
     relayUrl: '',
     relayToken: ''
   },

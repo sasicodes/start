@@ -45,6 +45,43 @@ struct ChatHeaderIconButton: View {
     }
 }
 
+struct ChatOptionsMenu: View {
+    let canRename: Bool
+    let canArchive: Bool
+    let onRename: () -> Void
+    let onArchive: () -> Void
+
+    var body: some View {
+        Menu {
+            Button {
+                StartHaptics.lightImpact()
+                onRename()
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            .disabled(!canRename)
+
+            Button(role: .destructive) {
+                StartHaptics.lightImpact()
+                onArchive()
+            } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
+            .disabled(!canArchive)
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(StartTheme.Colors.ink)
+                .frame(width: 38, height: 38)
+        }
+        .frame(width: 44, height: 44)
+        .contentShape(Circle())
+        .accessibilityLabel("More")
+        .buttonStyle(.plain)
+        .glassCircle()
+    }
+}
+
 extension View {
     func glassCircle() -> some View {
         glassEffect(.regular.interactive(), in: .circle)
