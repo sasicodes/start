@@ -411,6 +411,7 @@ const api = {
       ipcRenderer.invoke('app:browser-open', url, options),
     browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
       ipcRenderer.invoke('app:browser-bounds', bounds),
+    browserClose: (): Promise<void> => ipcRenderer.invoke('app:browser-close'),
     browserInspectStart: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-start'),
     browserInspectStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-stop'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),

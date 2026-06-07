@@ -179,6 +179,7 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
   useEffect(
     () => () => {
       mountedRef.current = false;
+      window.pi.app.browserClose().catch(() => {});
     },
     []
   );

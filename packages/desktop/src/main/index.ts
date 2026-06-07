@@ -314,6 +314,7 @@ if (!singleInstanceLock) {
       openBrowserUrl(event.sender, url, options)
     );
     ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
+    ipcMain.handle('app:browser-close', () => destroyBrowser());
     registerUpdateIpc();
     ipcMain.handle('app:hide-composer', () => {
       hideComposerWindow();
