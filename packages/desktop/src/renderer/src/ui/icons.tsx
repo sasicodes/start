@@ -88,20 +88,19 @@ export const ChevronRightIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { 
 export const SidebarCloseIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
-      d="M8.75 9.75L11 12L8.75 14.25"
+      d="M15.25 4V20"
       stroke="currentColor"
       stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
     />
     <path
-      d="M20.25 6.75C20.25 5.09315 18.9069 3.75 17.25 3.75H6.75C5.09315 3.75 3.75 5.09315 3.75 6.75V17.25C3.75 18.9069 5.09315 20.25 6.75 20.25H17.25C18.9069 20.25 20.25 18.9069 20.25 17.25V6.75Z"
+      d="M3.75 5.75C3.75 4.64543 4.64543 3.75 5.75 3.75H18.25C19.3546 3.75 20.25 4.64543 20.25 5.75V18.25C20.25 19.3546 19.3546 20.25 18.25 20.25H5.75C4.64543 20.25 3.75 19.3546 3.75 18.25V5.75Z"
       stroke="currentColor"
       stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-    <path d="M15.75 3.75V20.25" stroke="currentColor" stroke-width={strokeWidth} />
   </svg>
 );
 
