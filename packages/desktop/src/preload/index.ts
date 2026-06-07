@@ -356,10 +356,12 @@ export interface BrowserSelectRequest {
 }
 
 export type UpdateState =
-  | { status: 'downloaded' }
-  | { error: string; status: 'error' }
+  | { status: 'idle' }
   | { status: 'checking' }
-  | { status: 'idle' };
+  | { status: 'available' }
+  | { status: 'downloaded' }
+  | { status: 'downloading' }
+  | { error: string; status: 'error' };
 
 export interface InstallUpdateResult {
   ok: boolean;
@@ -420,6 +422,7 @@ const api = {
     openPath: (path: string): Promise<string> => ipcRenderer.invoke('app:open-path', path),
     revealPath: (workspacePath: string, filePath: string): Promise<void> =>
       ipcRenderer.invoke('app:reveal-path', workspacePath, filePath),
+    downloadUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:download-update'),
     installUpdate: (): Promise<InstallUpdateResult> => ipcRenderer.invoke('app:install-update'),
     setKeepAwake: (enabled: boolean): Promise<AppSettingsResult> => ipcRenderer.invoke('app:set-keep-awake', enabled),
     setComposerShortcut: (shortcut: string): Promise<AppSettingsResult> =>

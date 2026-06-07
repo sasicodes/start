@@ -14,10 +14,12 @@ const updateCheckDelayMs = 10 * 1000;
 const updateCheckIntervalMs = 60 * 60 * 1000;
 
 export type UpdateState =
-  | { status: 'downloaded' }
-  | { error: string; status: 'error' }
+  | { status: 'idle' }
   | { status: 'checking' }
-  | { status: 'idle' };
+  | { status: 'available' }
+  | { status: 'downloaded' }
+  | { status: 'downloading' }
+  | { error: string; status: 'error' };
 
 let checking = false;
 let downloadPending = false;
@@ -46,9 +48,10 @@ const stopUpdateCheckSchedule = () => {
 const updateErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;
 
-const updateIsReadyToInstall = () => state.status === 'downloaded';
+const updateInProgress = () =>
+  state.status === 'available' || state.status === 'downloading' || state.status === 'downloaded';
 
-const canRequestUpdateCheck = () => isProd && !downloadPending && !updateIsReadyToInstall();
+const canRequestUpdateCheck = () => isProd && !downloadPending && !updateInProgress();
 
 const canCheckForUpdates = () => canRequestUpdateCheck() && getAppFocusState().focused;
 
@@ -107,8 +110,21 @@ const updateCheckScheduleForFocus = (focused: boolean) => {
   stopUpdateCheckSchedule();
 };
 
+const downloadUpdate = () => {
+  if (state.status !== 'available') return { ok: false };
+
+  downloadPending = true;
+  setUpdateState({ status: 'downloading' });
+  autoUpdater.downloadUpdate().catch((error: unknown) => {
+    downloadPending = false;
+    setUpdateState({ status: 'error', error: updateErrorMessage(error, 'Update download failed.') });
+  });
+  return { ok: true };
+};
+
 export const registerUpdateIpc = () => {
   ipcMain.handle('app:update-state', () => state);
+  ipcMain.handle('app:download-update', downloadUpdate);
   ipcMain.handle('app:install-update', () => {
     if (state.status !== 'downloaded') return { ok: false };
 
@@ -121,17 +137,19 @@ export const registerUpdateIpc = () => {
 export const startAutoUpdateChecks = () => {
   if (!isProd || stopUpdateEvents) return;
 
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowPrerelease = app.getVersion().includes('-');
 
   const onCheckingForUpdate = () => setUpdateState({ status: 'checking' });
   const onUpdateAvailable = () => {
-    downloadPending = true;
+    downloadPending = false;
+    setUpdateState({ status: 'available' });
     stopUpdateCheckSchedule();
   };
   const onDownloadProgress = () => {
     downloadPending = true;
+    if (state.status !== 'downloading') setUpdateState({ status: 'downloading' });
   };
   const onUpdateDownloaded = () => {
     downloadPending = false;
