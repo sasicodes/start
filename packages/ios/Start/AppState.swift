@@ -25,7 +25,9 @@ final class AppState {
 
     private var modelsRequestId = ""
     private var sessionRequestId = ""
+    private var modelSelectRequestId = ""
     private var sessionRefreshPending = false
+    private var thinkingSelectRequestId = ""
     private var messageRequestOffsets: [String: Int] = [:]
     private var messageRequestSessions: [String: String] = [:]
     private var pendingDrafts: [String: String] = [:]
@@ -206,20 +208,24 @@ final class AppState {
     func selectModel(_ key: String) {
         guard let desktopId = commandDesktopId else { return }
 
+        let requestId = UUID().uuidString
+        modelSelectRequestId = requestId
         selectedModelKey = key
         relay.sendCommand(
             desktopId: desktopId,
-            payload: RelayPayload(action: "model.select", requestId: UUID().uuidString, modelKey: key)
+            payload: RelayPayload(action: "model.select", requestId: requestId, modelKey: key)
         )
     }
 
     func selectThinkingLevel(_ level: String) {
         guard let desktopId = commandDesktopId else { return }
 
+        let requestId = UUID().uuidString
+        thinkingSelectRequestId = requestId
         thinkingLevel = level
         relay.sendCommand(
             desktopId: desktopId,
-            payload: RelayPayload(action: "thinking.select", requestId: UUID().uuidString, level: level)
+            payload: RelayPayload(action: "thinking.select", requestId: requestId, level: level)
         )
     }
 
@@ -419,9 +425,18 @@ final class AppState {
     }
 
     private func handleModelsResult(_ payload: RelayPayload) {
-        if payload.action == "models.list.result" {
+        switch payload.action {
+        case "models.list.result":
             guard let requestId = payload.requestId, requestId == modelsRequestId else { return }
             modelsRequestId = ""
+        case "model.select.result":
+            guard let requestId = payload.requestId, requestId == modelSelectRequestId else { return }
+            modelSelectRequestId = ""
+        case "thinking.select.result":
+            guard let requestId = payload.requestId, requestId == thinkingSelectRequestId else { return }
+            thinkingSelectRequestId = ""
+        default:
+            return
         }
 
         guard payload.ok != false else {
@@ -453,7 +468,9 @@ final class AppState {
     private func resetRemoteRequestState() {
         modelsRequestId = ""
         sessionRequestId = ""
+        modelSelectRequestId = ""
         sessionRefreshPending = false
+        thinkingSelectRequestId = ""
         messageRequestOffsets.removeAll()
         messageRequestSessions.removeAll()
         for (sessionId, state) in messagePageStates where state.loading {
