@@ -1,5 +1,5 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
-import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing-qr';
+import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';

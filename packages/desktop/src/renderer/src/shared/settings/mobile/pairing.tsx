@@ -2,7 +2,7 @@ import type { MobileRelaySettings } from '@preload/index';
 import { appIconHref } from '@renderer/constants';
 import { mobilePairingQrSvg } from '@renderer/shared/settings/utils/pairing';
 import { tw } from '@renderer/utils/tw';
-import { useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 
 interface PairingQrDialogProps {
   code: string;
@@ -12,6 +12,7 @@ interface PairingQrDialogProps {
 
 export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProps) => {
   const [pulseKey, setPulseKey] = useState(0);
+  const qrMarkup = useMemo(() => mobilePairingQrSvg(settings, code), [settings, code]);
 
   return (
     <div class="fixed inset-0 z-50 grid place-items-center p-4" role="presentation">
@@ -26,7 +27,7 @@ export const PairingQrDialog = ({ code, onClose, settings }: PairingQrDialogProp
           <span
             key={pulseKey}
             class={tw('relative z-10 block size-full', pulseKey > 0 ? 'pairing-qr-pulse' : '')}
-            dangerouslySetInnerHTML={{ __html: mobilePairingQrSvg(settings, code) }}
+            dangerouslySetInnerHTML={{ __html: qrMarkup }}
           />
           <button
             type="button"
