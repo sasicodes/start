@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct ChatMessageRow: View {
     let message: ChatMessage
@@ -10,6 +11,18 @@ struct ChatMessageRow: View {
 
     private var hasText: Bool {
         !message.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var hasThinking: Bool {
+        !thinkingText.isEmpty
+    }
+
+    private var showsActivity: Bool {
+        message.streaming || hasThinking
+    }
+
+    private var thinkingText: String {
+        message.thinking?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
 
     var body: some View {
@@ -38,7 +51,7 @@ struct ChatMessageRow: View {
                 Button {
                     _ = onCopy(message)
                 } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                    Label("Copy", systemImage: "square.on.square")
                 }
             }
             .frame(maxWidth: 310, alignment: .trailing)
@@ -46,16 +59,17 @@ struct ChatMessageRow: View {
 
     private var agentMessage: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let thinking = message.thinking?.trimmingCharacters(in: .whitespacesAndNewlines), !thinking.isEmpty {
-                ThinkingDisclosure(message: message, thinking: thinking)
+            if showsActivity {
+                ThinkingDisclosure(message: message, thinking: thinkingText)
             }
 
             if hasText {
-                Text(message.text)
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.ink)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                MarkdownText(
+                    message.text,
+                    color: StartTheme.Colors.ink,
+                    font: .system(size: 16, weight: .regular),
+                    lineSpacing: 3
+                )
             }
 
             if !message.streaming && hasText {
@@ -68,52 +82,147 @@ struct ChatMessageRow: View {
 }
 
 private struct ThinkingDisclosure: View {
-    @State private var expanded = false
+    @State private var overrideExpanded: Bool?
 
     let message: ChatMessage
     let thinking: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: expanded ? 6 : 0) {
-            Button {
-                StartHaptics.selection()
-                withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
-                    expanded.toggle()
+            if hasThinking {
+                Button {
+                    toggle()
+                } label: {
+                    label
                 }
-            } label: {
-                HStack(spacing: 6) {
-                    if message.streaming {
-                        ProgressView()
-                            .controlSize(.mini)
-                            .tint(StartTheme.Colors.softInk)
-                    }
-
-                    Text(thinkingTitle)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(StartTheme.Colors.softInk)
-                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(thinkingTitle)
+                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            } else {
+                label
+                    .accessibilityLabel(thinkingTitle)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(thinkingTitle)
 
-            if expanded {
-                Text(thinking)
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundStyle(StartTheme.Colors.softInk)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            if expanded && hasThinking {
+                MarkdownText(
+                    thinkingMarkdown(thinking),
+                    color: StartTheme.Colors.softInk,
+                    font: .system(size: 13, weight: .regular),
+                    lineSpacing: 2
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .clipped()
     }
 
-    private var thinkingTitle: String {
-        guard let duration = durationLabel(for: message.durationMs) else {
-            return message.streaming ? "Working" : "Worked"
-        }
-        return message.streaming ? "Working \(duration)" : "Worked \(duration)"
+    private var expanded: Bool {
+        overrideExpanded ?? message.streaming
     }
+
+    private var hasThinking: Bool {
+        !thinking.isEmpty
+    }
+
+    private var label: some View {
+        HStack(spacing: 6) {
+            Text(thinkingTitle)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(StartTheme.Colors.softInk)
+                .contentTransition(.numericText())
+        }
+    }
+
+    private var thinkingTitle: String {
+        let duration = durationLabel(for: message.durationMs) ?? "<1s"
+        return "\(message.streaming ? "Working" : "Worked") \(duration)"
+    }
+
+    private func toggle() {
+        StartHaptics.selection()
+        withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
+            overrideExpanded = !expanded
+        }
+    }
+}
+
+private struct MarkdownText: View {
+    @State private var rendered: AttributedString
+    @State private var renderedSource: String
+
+    let color: Color
+    let font: Font
+    let source: String
+    let lineSpacing: CGFloat
+
+    init(
+        _ source: String,
+        color: Color,
+        font: Font,
+        lineSpacing: CGFloat
+    ) {
+        self.font = font
+        self.color = color
+        self.source = source
+        self.lineSpacing = lineSpacing
+
+        let rendered = renderMarkdown(source)
+        _rendered = State(initialValue: rendered)
+        _renderedSource = State(initialValue: source)
+    }
+
+    var body: some View {
+        Text(rendered)
+            .font(font)
+            .foregroundStyle(color)
+            .lineSpacing(lineSpacing)
+            .fixedSize(horizontal: false, vertical: true)
+            .task(id: source) {
+                guard renderedSource != source else { return }
+                rendered = renderMarkdown(source)
+                renderedSource = source
+            }
+    }
+}
+
+private func boldTitle(in line: String) -> String? {
+    guard line.hasPrefix("**"), line.hasSuffix("**") else { return nil }
+
+    let title = line
+        .dropFirst(2)
+        .dropLast(2)
+        .trimmingCharacters(in: .whitespaces)
+
+    guard !title.isEmpty, !title.contains("*") else { return nil }
+    return title
+}
+
+private func renderMarkdown(_ source: String) -> AttributedString {
+    let options = AttributedString.MarkdownParsingOptions(
+        interpretedSyntax: .full,
+        failurePolicy: .returnPartiallyParsedIfPossible
+    )
+
+    return (try? AttributedString(markdown: source, options: options)) ?? AttributedString(source)
+}
+
+private func thinkingMarkdown(_ thinking: String) -> String {
+    var compacted = thinking
+        .split(separator: "\n", omittingEmptySubsequences: false)
+        .map { line -> String in
+            let text = String(line)
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+            guard let title = boldTitle(in: trimmed) else { return text }
+            return "### \(title)"
+        }
+        .joined(separator: "\n")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    while compacted.contains("\n\n\n") {
+        compacted = compacted.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+    }
+
+    return compacted
 }
 
 private struct AgentMessageFooter: View {
@@ -125,7 +234,7 @@ private struct AgentMessageFooter: View {
     var body: some View {
         HStack {
             Button(action: copy) {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                Image(systemName: copied ? "checkmark" : "square.on.square")
                     .contentTransition(.symbolEffect(.replace))
                     .font(.system(size: copied ? 14 : 13, weight: .medium))
                     .frame(width: 30, height: 30)
@@ -165,5 +274,11 @@ private func durationLabel(for durationMs: Int?) -> String? {
 
     let minutes = seconds / 60
     let remainingSeconds = seconds % 60
-    return remainingSeconds > 0 ? "\(minutes)m \(remainingSeconds)s" : "\(minutes)m"
+    if minutes < 60 {
+        return remainingSeconds > 0 ? "\(minutes)m \(remainingSeconds)s" : "\(minutes)m"
+    }
+
+    let hours = minutes / 60
+    let remainingMinutes = minutes % 60
+    return remainingMinutes > 0 ? "\(hours)h \(remainingMinutes)m" : "\(hours)h"
 }
