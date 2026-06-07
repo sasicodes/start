@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum StartTheme {
     enum Colors {
@@ -23,6 +24,23 @@ enum StartTheme {
 
     enum Text {
         static let title = Font.system(size: 32, weight: .regular, design: .default)
+    }
+}
+
+enum StartHaptics {
+    @MainActor
+    static func lightImpact() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    @MainActor
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    @MainActor
+    static func success() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 }
 

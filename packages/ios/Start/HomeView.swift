@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct HomeView: View {
     @Environment(AppState.self) private var appState
@@ -36,7 +35,7 @@ struct HomeView: View {
         }
         .refreshable {
             await appState.refreshChats()
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            StartHaptics.lightImpact()
         }
         .animation(.easeOut(duration: 0.16), value: appState.sessionLoadStateKey)
         .sheet(isPresented: $scannerOpen) {
@@ -122,7 +121,7 @@ struct HomeView: View {
 
                 if !searchActive {
                     ChatButton(transitionNamespace: transitionNamespace) {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        StartHaptics.lightImpact()
                         withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                             appState.openNewChat()
                         }
@@ -143,7 +142,7 @@ struct HomeView: View {
             Spacer()
 
             Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                StartHaptics.lightImpact()
                 scannerOpen = true
             } label: {
                 Label("Add connection", systemImage: "plus")
@@ -354,7 +353,7 @@ private struct HomeSearchBar: View {
 
             if active {
                 Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    StartHaptics.lightImpact()
                     withAnimation(.snappy(duration: 0.14, extraBounce: 0)) {
                         text = ""
                         focused = false

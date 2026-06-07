@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ChatMessageRow: View {
     let message: ChatMessage
@@ -77,7 +76,7 @@ private struct ThinkingDisclosure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: expanded ? 6 : 0) {
             Button {
-                UISelectionFeedbackGenerator().selectionChanged()
+                StartHaptics.selection()
                 withAnimation(.snappy(duration: 0.12, extraBounce: 0)) {
                     expanded.toggle()
                 }

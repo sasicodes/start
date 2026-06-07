@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct HomeTopMenu: View {
     let sort: WorkspaceSort
@@ -33,7 +32,7 @@ struct HomeTopMenu: View {
         Section("Sort") {
             ForEach(WorkspaceSort.allCases) { option in
                 Button {
-                    UISelectionFeedbackGenerator().selectionChanged()
+                    StartHaptics.selection()
                     onSelectSort(option)
                 } label: {
                     Label(option.label, systemImage: option == sort ? "checkmark" : option.icon)
@@ -45,7 +44,7 @@ struct HomeTopMenu: View {
     private var connectionSection: some View {
         Section("Connections") {
             Button {
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                StartHaptics.lightImpact()
                 onAddConnection()
             } label: {
                 Label("New connection", systemImage: "plus")
@@ -53,7 +52,7 @@ struct HomeTopMenu: View {
 
             ForEach(connections) { connection in
                 Button {
-                    UISelectionFeedbackGenerator().selectionChanged()
+                    StartHaptics.selection()
                     withAnimation(.snappy(duration: 0.1, extraBounce: 0)) {
                         onSelectConnection(connection)
                     }

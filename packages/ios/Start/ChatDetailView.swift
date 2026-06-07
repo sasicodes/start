@@ -152,7 +152,7 @@ struct ChatDetailView: View {
         guard !text.isEmpty else { return false }
 
         UIPasteboard.general.string = text
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        StartHaptics.success()
         return true
     }
 

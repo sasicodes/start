@@ -1,7 +1,25 @@
 import SwiftUI
-import UIKit
 
-private let effortLevelOrder = ["low", "medium", "high", "xhigh"]
+private enum EffortLevelScale {
+    static let orderedIDs = ["low", "medium", "high", "xhigh"]
+
+    static func activeCount(for level: String) -> Int {
+        guard let index = orderedIDs.firstIndex(of: level) else { return 0 }
+        return index + 1
+    }
+
+    static func label(for level: String) -> String {
+        if level == "xhigh" { return "Extra high" }
+        if level.isEmpty { return "Unavailable" }
+        return level.capitalized
+    }
+
+    static func orderedLevels(from levels: [String]) -> [String] {
+        let knownLevels = orderedIDs.filter { levels.contains($0) }
+        let unknownLevels = levels.filter { !orderedIDs.contains($0) }
+        return knownLevels + unknownLevels
+    }
+}
 
 struct ChatPromptFooter: View {
     @Environment(AppState.self) private var appState
@@ -101,7 +119,7 @@ struct ChatPromptBar: View {
                 Section {
                     ForEach(group.models) { model in
                         Button {
-                            UISelectionFeedbackGenerator().selectionChanged()
+                            StartHaptics.selection()
                             appState.selectModel(model.key)
                         } label: {
                             modelRow(model)
@@ -161,12 +179,11 @@ struct ChatPromptBar: View {
     }
 
     private var activeEffortCount: Int {
-        guard let index = effortLevelOrder.firstIndex(of: activeEffortLevel) else { return 0 }
-        return index + 1
+        EffortLevelScale.activeCount(for: activeEffortLevel)
     }
 
     private var activeEffortLabel: String {
-        effortLabel(for: activeEffortLevel)
+        EffortLevelScale.label(for: activeEffortLevel)
     }
 
     private var activeEffortLevel: String {
@@ -181,15 +198,7 @@ struct ChatPromptBar: View {
     }
 
     private var orderedEffortLevels: [String] {
-        let knownLevels = effortLevelOrder.filter { currentEffortLevels.contains($0) }
-        let unknownLevels = currentEffortLevels.filter { !effortLevelOrder.contains($0) }
-        return knownLevels + unknownLevels
-    }
-
-    private func effortLabel(for level: String) -> String {
-        if level == "xhigh" { return "Extra high" }
-        if level.isEmpty { return "Unavailable" }
-        return level.capitalized
+        EffortLevelScale.orderedLevels(from: currentEffortLevels)
     }
 
     private func selectNextEffortLevel() {
@@ -198,14 +207,14 @@ struct ChatPromptBar: View {
         let currentIndex = orderedEffortLevels.firstIndex(of: appState.thinkingLevel) ?? -1
         let nextIndex = (currentIndex + 1) % orderedEffortLevels.count
 
-        UISelectionFeedbackGenerator().selectionChanged()
+        StartHaptics.selection()
         appState.selectThinkingLevel(orderedEffortLevels[nextIndex])
     }
 
     private func send() {
         guard sendEnabled else { return }
 
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        StartHaptics.lightImpact()
         onSend()
     }
 }
@@ -215,7 +224,7 @@ private struct EffortSignal: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 2) {
-            ForEach(0..<effortLevelOrder.count, id: \.self) { index in
+            ForEach(0..<EffortLevelScale.orderedIDs.count, id: \.self) { index in
                 Capsule()
                     .fill(StartTheme.Colors.ink.opacity(index < activeCount ? 0.82 : 0.25))
                     .frame(width: 2, height: 10)
