@@ -32,7 +32,7 @@ import {
   parseCliLaunchArgv,
   resolveCliWorkspacePath
 } from '@main/cli/args';
-import { getCliInstallStatus, installCliCommand } from '@main/cli/install';
+import { getCliInstallStatus, installCliCommand, uninstallCliCommand } from '@main/cli/install';
 import { confirmClose } from '@main/confirm';
 import { clearAppFocusTimer, getAppFocusState, onAppFocusChanged, scheduleAppFocusStateChanged } from '@main/focus';
 import { type GitFileRef, getGitFileBlob } from '@main/git';
@@ -299,6 +299,7 @@ if (!singleInstanceLock) {
     );
     ipcMain.handle('app:cli-install-status', getCliInstallStatus);
     ipcMain.handle('app:install-cli', installCliCommand);
+    ipcMain.handle('app:uninstall-cli', uninstallCliCommand);
     ipcMain.handle('app:browser-back', goBackInBrowser);
     ipcMain.handle('app:browser-forward', goForwardInBrowser);
     ipcMain.handle('app:browser-reload', reloadBrowser);

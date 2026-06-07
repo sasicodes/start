@@ -395,6 +395,7 @@ const api = {
       ipcRenderer.invoke('app:probe-mobile-relay', settings),
     cliInstallStatus: (): Promise<CliInstallStatus> => ipcRenderer.invoke('app:cli-install-status'),
     installCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:install-cli'),
+    uninstallCli: (): Promise<CliInstallResult> => ipcRenderer.invoke('app:uninstall-cli'),
     updateState: (): Promise<UpdateState> => ipcRenderer.invoke('app:update-state'),
     browserBack: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-back'),
     browserForward: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-forward'),

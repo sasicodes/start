@@ -1,4 +1,5 @@
 import type { AppSettingsResult } from '@preload/index';
+import { Toggle } from '@renderer/ui/toggle';
 import { useState } from 'preact/hooks';
 
 interface TranslucencyProps {
@@ -10,14 +11,14 @@ export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const toggle = async () => {
+  const save = async (next: boolean) => {
     if (saving) return;
 
     setError('');
     setSaving(true);
 
     try {
-      const result = await onChange(!enabled);
+      const result = await onChange(next);
       setError(result.error ?? '');
     } catch {
       setError('Translucent background could not be saved.');
@@ -33,16 +34,14 @@ export const Translucency = ({ enabled, onChange }: TranslucencyProps) => {
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Translucent background</h2>
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Let the desktop show through the app window.</p>
         </div>
-        <button
-          type="button"
+        <Toggle
+          checked={enabled}
           disabled={saving}
-          onClick={() => {
-            toggle().catch(() => {});
+          label="Translucent background"
+          onChange={(next) => {
+            save(next).catch(() => {});
           }}
-          class="h-9 min-w-24 flex-none rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
-        >
-          {saving ? 'Saving' : enabled ? 'Disable' : 'Enable'}
-        </button>
+        />
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
     </div>

@@ -64,6 +64,18 @@ mv "$tmp_path" "$bin_path"
 export const cliInstallShellCommand = (appBundlePath: string) =>
   `/bin/sh -c ${shellQuote(cliInstallScriptSource(appBundlePath))}`;
 
+export const cliUninstallScriptSource = () => `#!/bin/sh
+set -eu
+bin_path=${shellQuote(cliBinPath)}
+marker=${shellQuote(cliMarker)}
+
+if [ -e "$bin_path" ] && grep -q "$marker" "$bin_path"; then
+  rm -f "$bin_path"
+fi
+`;
+
+export const cliUninstallShellCommand = () => `/bin/sh -c ${shellQuote(cliUninstallScriptSource())}`;
+
 const unavailableStatus = (): CliInstallStatus | null => {
   if (!isMac) {
     return {
@@ -132,6 +144,25 @@ export const installCliCommand = async (): Promise<CliInstallResult> => {
     return { ok: true, status: await getCliInstallStatus() };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Command line installation failed.';
+    return { ok: false, status: await getCliInstallStatus(), error: message };
+  }
+};
+
+export const uninstallCliCommand = async (): Promise<CliInstallResult> => {
+  const status = await getCliInstallStatus();
+  if (status.status === 'not-installed') return { ok: false, status, error: 'Command line tool is not installed.' };
+  if (status.status === 'unavailable' || status.status === 'conflict') {
+    return { ok: false, status, error: status.reason };
+  }
+
+  try {
+    await execFileAsync('/usr/bin/osascript', [
+      '-e',
+      `do shell script ${appleScriptString(cliUninstallShellCommand())} with administrator privileges`
+    ]);
+    return { ok: true, status: await getCliInstallStatus() };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Command line removal failed.';
     return { ok: false, status: await getCliInstallStatus(), error: message };
   }
 };
