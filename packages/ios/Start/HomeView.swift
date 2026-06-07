@@ -167,7 +167,7 @@ struct HomeView: View {
                     .foregroundStyle(StartTheme.Colors.ink)
 
                 if !appState.connections.isEmpty {
-                    ConnectionStatusLabel(status: appState.relay.status, label: appState.connectionStatusLabel)
+                    ConnectionStatusLabel(label: appState.connectionStatusLabel)
                 }
             }
             .frame(height: StartTheme.Metrics.floatingButtonSize, alignment: .center)
@@ -197,25 +197,16 @@ struct HomeView: View {
 }
 
 private struct ConnectionStatusLabel: View {
-    let status: RelayConnectionStatus
     let label: String
 
     var body: some View {
-        HStack(spacing: 5) {
-            if status.isAttempting {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(StartTheme.Colors.softInk.opacity(0.62))
-            }
-
-            Text(label)
-                .contentTransition(.opacity)
-        }
-        .font(.system(size: 11, weight: .regular))
-        .foregroundStyle(StartTheme.Colors.softInk.opacity(0.58))
-        .animation(.easeInOut(duration: 0.16), value: label)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
+        Text(label)
+            .contentTransition(.opacity)
+            .font(.system(size: 11, weight: .regular))
+            .foregroundStyle(StartTheme.Colors.softInk.opacity(0.58))
+            .animation(.easeInOut(duration: 0.16), value: label)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
     }
 }
 
