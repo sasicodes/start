@@ -22,7 +22,6 @@
   --color-success: oklch(52% 0.14 145);
   --color-progress: oklch(54% 0.19 255);
   --color-link: oklch(54% 0.16 255);
-  --color-pairing-accent: oklch(66% 0.17 39);
   --color-brand-ink: oklch(100% 0 0);
   --color-composer: oklch(98.8% 0.001 264);
   --color-control: oklch(94.8% 0.004 264);
@@ -100,7 +99,6 @@
     --color-success: oklch(72% 0.15 145);
     --color-progress: oklch(72% 0.13 255);
     --color-link: oklch(72% 0.13 255);
-    --color-pairing-accent: oklch(76% 0.15 44);
     --color-composer: oklch(18% 0.005 285);
     --color-brand-ink: oklch(0% 0 0);
     --color-control: oklch(27% 0.006 285);
@@ -161,41 +159,33 @@ body {
   }
 }
 
-.pairing-qr-burst rect {
-  animation: pairing-qr-branch 1100ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  animation-delay: calc(var(--qr-branch) * 14ms);
-}
-
-.pairing-qr-burst rect:not([fill="white"]) {
-  animation-name: pairing-qr-branch-dot;
+.pairing-qr-ripple {
+  opacity: 0;
+  mask-image: radial-gradient(circle, transparent 26%, #000 44%, transparent 62%);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  animation: pairing-qr-ripple 1300ms cubic-bezier(0.24, 0.65, 0.27, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pairing-qr-burst rect {
+  .pairing-qr-ripple {
     animation: none;
   }
 }
 
-@keyframes pairing-qr-branch {
-  35% {
-    transform: translate(calc(var(--qr-dx) * 0.62px), calc(var(--qr-dy) * 0.62px));
-  }
-}
-
-@keyframes pairing-qr-branch-dot {
+@keyframes pairing-qr-ripple {
   0% {
-    fill: currentColor;
-    transform: translate(0, 0);
+    opacity: 0;
+    mask-size: 24% 24%;
   }
 
-  35% {
-    fill: var(--color-pairing-accent);
-    transform: translate(calc(var(--qr-dx) * 0.62px), calc(var(--qr-dy) * 0.62px));
+  22% {
+    opacity: 0.85;
   }
 
   100% {
-    fill: currentColor;
-    transform: translate(0, 0);
+    opacity: 0;
+    mask-size: 340% 340%;
   }
 }
 

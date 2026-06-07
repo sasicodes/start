@@ -449,30 +449,20 @@ const inFinder = (size: number, x: number, y: number) => {
 
 type FinderOrigin = [number, number];
 
-const qrMotion = (dimension: number, x: number, y: number) => {
-  const dx = x - dimension / 2;
-  const dy = y - dimension / 2;
-  const reach = Math.max(Math.abs(dx), Math.abs(dy));
-  const branch = Math.round(reach * 0.9 + Math.abs(Math.abs(dx) - Math.abs(dy)) * 0.35);
-  return `--qr-branch:${branch};--qr-dx:${(Math.sign(dx) * reach).toFixed(2)};--qr-dy:${(Math.sign(dy) * reach).toFixed(2)}`;
-};
-
 const finderSvgs = (size: number, margin: number) => {
-  const dimension = size + margin * 2;
   const origins: FinderOrigin[] = [
     [margin, margin],
     [size - 7 + margin, margin],
     [margin, size - 7 + margin]
   ];
   return origins
-    .map(([x, y]) => {
-      const motion = qrMotion(dimension, x + 3.5, y + 3.5);
-      return [
-        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.85" style="${motion}" />`,
-        `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="1.35" fill="white" style="${motion}" />`,
-        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="1" style="${motion}" />`
-      ].join('');
-    })
+    .map(([x, y]) =>
+      [
+        `<rect x="${x}" y="${y}" width="7" height="7" rx="1.85" />`,
+        `<rect x="${x + 1}" y="${y + 1}" width="5" height="5" rx="1.35" fill="white" />`,
+        `<rect x="${x + 2}" y="${y + 2}" width="3" height="3" rx="1" />`
+      ].join('')
+    )
     .join('');
 };
 
@@ -487,7 +477,7 @@ export const qrSvg = (text: string, { margin, ecc }: QrOptions) => {
     for (let x = 0; x < size; x += 1) {
       if (!row[x]) continue;
       if (inFinder(size, x, y)) continue;
-      cells += `<rect x="${x + margin + 0.09}" y="${y + margin + 0.09}" width="0.82" height="0.82" rx="0.3" style="${qrMotion(dimension, x + margin + 0.5, y + margin + 0.5)}" />`;
+      cells += `<rect x="${x + margin + 0.09}" y="${y + margin + 0.09}" width="0.82" height="0.82" rx="0.3" />`;
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimension} ${dimension}" fill="currentColor">${finderSvgs(size, margin)}${cells}</svg>`;
