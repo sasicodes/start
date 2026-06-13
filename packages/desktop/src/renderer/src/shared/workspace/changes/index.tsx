@@ -3,16 +3,16 @@ import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
-  useGitPatch,
+  availableViewModes,
+  emptyGitSummary,
+  type GitPatchViewMode,
+  gitChangesLabel,
   gitViewLabel,
   nextViewMode,
-  useGitChanges,
-  emptyGitSummary,
-  gitChangesLabel,
-  availableViewModes,
   sectionsForViewMode,
-  type GitPatchViewMode,
-  summaryForViewMode
+  summaryForViewMode,
+  useGitChanges,
+  useGitPatch
 } from '@renderer/shared/workspace/changes/state';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import {

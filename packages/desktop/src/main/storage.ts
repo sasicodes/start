@@ -28,10 +28,14 @@ export type StartState = {
   mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   selectedModelKey?: string;
+  mcpDisabledServers?: string[];
   solidWindowBackground: boolean;
   selectedThinkingLevel: EffortLevel;
+  mcpAuth?: Record<string, string>;
+  mcpSecrets?: Record<string, string>;
   workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
+  mcpWorkspaceTrust?: Record<string, boolean>;
   sessionNotices?: Record<string, SessionNotice>;
   trustedMobileDevices?: Record<string, TrustedMobileDevice>;
 };
@@ -82,6 +86,7 @@ const trustedMobileDeviceSchema = v.object({
   mobileId: v.optional(trimmedStringSchema)
 });
 const stringRecordEntrySchema = v.tuple([trimmedStringSchema, trimmedStringSchema]);
+const booleanRecordEntrySchema = v.tuple([trimmedStringSchema, v.boolean()]);
 const workspaceHistoryEntrySchema = v.tuple([trimmedStringSchema, finiteNumberSchema]);
 
 const parseTrimmedString = (value: unknown) => {
@@ -102,6 +107,28 @@ const parseStringRecord = (value: unknown) => {
   });
 
   if (entries.length > 0) return Object.fromEntries(entries);
+  return;
+};
+
+const parseBooleanRecord = (value: unknown) => {
+  const entries = recordEntries(value).flatMap((entry) => {
+    const result = v.safeParse(booleanRecordEntrySchema, entry);
+    return result.success ? [result.output] : [];
+  });
+
+  if (entries.length > 0) return Object.fromEntries(entries);
+  return;
+};
+
+const parseStringList = (value: unknown) => {
+  if (!Array.isArray(value)) return;
+
+  const entries = value.flatMap((entry) => {
+    const result = v.safeParse(trimmedStringSchema, entry);
+    return result.success ? [result.output] : [];
+  });
+
+  if (entries.length > 0) return entries;
   return;
 };
 
@@ -182,11 +209,15 @@ const parseThinkingLevel = (value: unknown): EffortLevel => {
 export const parseStartState = (value: unknown): StartState => {
   if (!value || typeof value !== 'object') return defaultStartState;
   const state = value as Partial<StartState>;
+  const mcpAuth = parseStringRecord(state.mcpAuth);
+  const mcpSecrets = parseStringRecord(state.mcpSecrets);
   const lastWorkspace = parseTrimmedString(state.lastWorkspace);
   const selectedModelKey = parseTrimmedString(state.selectedModelKey);
   const sessionNotices = parseSessionNotices(state.sessionNotices);
   const workspaceHistory = parseWorkspaceHistory(state.workspaceHistory);
   const workspaceBookmarks = parseStringRecord(state.workspaceBookmarks);
+  const mcpDisabledServers = parseStringList(state.mcpDisabledServers);
+  const mcpWorkspaceTrust = parseBooleanRecord(state.mcpWorkspaceTrust);
   const trustedMobileDevices = parseTrustedMobileDevices(state.trustedMobileDevices);
   return {
     keepAwake: state.keepAwake !== false,
@@ -194,17 +225,23 @@ export const parseStartState = (value: unknown): StartState => {
     composerShortcut: parseTrimmedString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     solidWindowBackground: state.solidWindowBackground === true,
     selectedThinkingLevel: parseThinkingLevel(state.selectedThinkingLevel),
+    ...(mcpAuth ? { mcpAuth } : {}),
+    ...(mcpSecrets ? { mcpSecrets } : {}),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
     ...(sessionNotices ? { sessionNotices } : {}),
     ...(workspaceHistory ? { workspaceHistory } : {}),
+    ...(mcpDisabledServers ? { mcpDisabledServers } : {}),
+    ...(mcpWorkspaceTrust ? { mcpWorkspaceTrust } : {}),
     ...(trustedMobileDevices ? { trustedMobileDevices } : {}),
     ...(workspaceBookmarks ? { workspaceBookmarks } : {})
   };
 };
 
 const stateKey = {
+  mcpAuth: 'mcp_auth',
   keepAwake: 'keep_awake',
+  mcpSecrets: 'mcp_secrets',
   lastWorkspace: 'last_workspace',
   mobileRelay: 'mobile_relay',
   composerShortcut: 'composer_shortcut',
@@ -212,6 +249,8 @@ const stateKey = {
   workspaceHistory: 'workspace_history',
   workspaceBookmarks: 'workspace_bookmarks',
   sessionNotices: 'session_notices',
+  mcpWorkspaceTrust: 'mcp_workspace_trust',
+  mcpDisabledServers: 'mcp_disabled_servers',
   trustedMobileDevices: 'trusted_mobile_devices',
   selectedThinkingLevel: 'selected_thinking_level',
   solidWindowBackground: 'solid_window_background'
@@ -272,6 +311,8 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
 };
 
 const rawToStartStateShape = (raw: Record<string, unknown>) => ({
+  mcpAuth: raw[stateKey.mcpAuth],
+  mcpSecrets: raw[stateKey.mcpSecrets],
   lastWorkspace: raw[stateKey.lastWorkspace],
   mobileRelay: raw[stateKey.mobileRelay],
   composerShortcut: raw[stateKey.composerShortcut],
@@ -279,31 +320,44 @@ const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   workspaceHistory: raw[stateKey.workspaceHistory],
   workspaceBookmarks: raw[stateKey.workspaceBookmarks],
   sessionNotices: raw[stateKey.sessionNotices],
+  mcpWorkspaceTrust: raw[stateKey.mcpWorkspaceTrust],
+  mcpDisabledServers: raw[stateKey.mcpDisabledServers],
   trustedMobileDevices: raw[stateKey.trustedMobileDevices],
   selectedThinkingLevel: raw[stateKey.selectedThinkingLevel],
   solidWindowBackground: raw[stateKey.solidWindowBackground]
 });
 
+let cachedState: StartState | null = null;
+
 export const readStartState = (): StartState => {
+  if (cachedState) return cachedState;
+
   try {
-    return parseStartState(rawToStartStateShape(rowsToRaw(readAllRows())));
+    cachedState = parseStartState(rawToStartStateShape(rowsToRaw(readAllRows())));
   } catch {
     return defaultStartState;
   }
+
+  return cachedState;
 };
 
 export const writeStartState = (state: StartState): StartState => {
   const nextState = parseStartState(state);
+  cachedState = nextState;
   runStartTransaction(() => {
     writeRow(stateKey.mobileRelay, nextState.mobileRelay);
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
     writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
+    writeOrDeleteRow(stateKey.mcpAuth, nextState.mcpAuth);
+    writeOrDeleteRow(stateKey.mcpSecrets, nextState.mcpSecrets);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
     writeOrDeleteRow(stateKey.workspaceHistory, nextState.workspaceHistory);
     writeOrDeleteRow(stateKey.workspaceBookmarks, nextState.workspaceBookmarks);
     writeOrDeleteRow(stateKey.sessionNotices, nextState.sessionNotices);
+    writeOrDeleteRow(stateKey.mcpWorkspaceTrust, nextState.mcpWorkspaceTrust);
+    writeOrDeleteRow(stateKey.mcpDisabledServers, nextState.mcpDisabledServers);
     writeOrDeleteRow(stateKey.trustedMobileDevices, nextState.trustedMobileDevices);
   });
   return nextState;

@@ -1,12 +1,12 @@
+import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import {
-  totalHeight,
-  visibleRange,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
-  shouldPreserveScrollEnd
+  shouldPreserveScrollEnd,
+  totalHeight,
+  visibleRange
 } from '@renderer/ui/virtual/geometry';
-import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
 import { Fragment } from 'preact';

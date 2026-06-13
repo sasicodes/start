@@ -12,9 +12,16 @@ const aliases = {
   '@renderer': resolve(root, 'src/renderer/src')
 } as const;
 
+const mcpSdkCjsAlias = {
+  find: /^@modelcontextprotocol\/sdk\/(.+)\.js$/,
+  replacement: resolve(root, 'node_modules/@modelcontextprotocol/sdk/dist/cjs/$1.js')
+};
+
 export default defineConfig({
   main: {
-    resolve: { alias: aliases },
+    resolve: {
+      alias: [mcpSdkCjsAlias, ...Object.entries(aliases).map(([find, replacement]) => ({ find, replacement }))]
+    },
     build: {
       minify: true,
       sourcemap: false,

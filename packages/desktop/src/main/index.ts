@@ -38,6 +38,7 @@ import { clearAppFocusTimer, getAppFocusState, onAppFocusChanged, scheduleAppFoc
 import { type GitFileRef, getGitFileBlob } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
+import { registerMcpIpc } from '@main/mcp/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
 import { DesktopRelay, type DesktopRelayCommandContext } from '@main/relay/client';
 import { probeRelay } from '@main/relay/probe';
@@ -253,7 +254,7 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
-type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+type SettingsTab = 'personalization' | 'providers' | 'mcp' | 'mobile' | 'shortcuts';
 
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;
@@ -551,6 +552,7 @@ if (!singleInstanceLock) {
       withComposerBlurSuppressed,
       notifyRecentSessionsChanged
     });
+    registerMcpIpc({ workspacePath: () => chat.getWorkspaceCwd() });
 
     app.on('browser-window-blur', scheduleAppFocusStateChanged);
     app.on('browser-window-focus', scheduleAppFocusStateChanged);

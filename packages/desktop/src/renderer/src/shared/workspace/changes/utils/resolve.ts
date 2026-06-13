@@ -1,4 +1,4 @@
-import type { GitChangesPayload, GitChangeSummary, GitPatch, GitPatchSection } from '@preload/index';
+import type { GitChangeSummary, GitChangesPayload, GitPatch, GitPatchSection } from '@preload/index';
 import type { GitPatchState, GitSummaryState } from '@renderer/shared/workspace/changes/types';
 
 export interface LoadedGitSummaryState {

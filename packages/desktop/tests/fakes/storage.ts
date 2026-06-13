@@ -1,5 +1,5 @@
-import type { EffortLevel, SessionNotice } from '@main/types';
 import type { TrustedMobileDevice } from '@main/storage';
+import type { EffortLevel, SessionNotice } from '@main/types';
 
 export interface MobileRelaySettings {
   desktopId: string;
@@ -14,10 +14,14 @@ export interface StartState {
   mobileRelay: MobileRelaySettings;
   composerShortcut: string;
   selectedModelKey?: string;
+  mcpDisabledServers?: string[];
   solidWindowBackground: boolean;
   selectedThinkingLevel: EffortLevel;
+  mcpAuth?: Record<string, string>;
+  mcpSecrets?: Record<string, string>;
   workspaceHistory?: Record<string, number>;
   workspaceBookmarks?: Record<string, string>;
+  mcpWorkspaceTrust?: Record<string, boolean>;
   sessionNotices?: Record<string, SessionNotice>;
   trustedMobileDevices?: Record<string, TrustedMobileDevice>;
 }

@@ -1,11 +1,11 @@
 import {
-  totalHeight,
-  visibleRange,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
   lastVisibleIndex,
-  shouldPreserveScrollEnd
+  shouldPreserveScrollEnd,
+  totalHeight,
+  visibleRange
 } from '@renderer/ui/virtual/geometry';
 import { describe, expect, it } from 'vitest';
 

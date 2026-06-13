@@ -54,7 +54,26 @@ export interface ChatStatus {
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
-export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'mcp' | 'mobile' | 'shortcuts';
+
+export type McpServerStatus = 'idle' | 'error' | 'disabled' | 'connected' | 'untrusted' | 'needs-auth' | 'missing-vars';
+
+export interface McpServerSnapshot {
+  name: string;
+  error?: string;
+  enabled: boolean;
+  toolCount?: number;
+  missingVars: string[];
+  authenticated?: boolean;
+  status: McpServerStatus;
+  kind: 'stdio' | 'remote';
+  origin: 'global' | 'project';
+}
+
+export interface McpSecretResult {
+  ok: boolean;
+  servers: McpServerSnapshot[];
+}
 
 export interface ModelOption {
   id: string;
@@ -464,6 +483,18 @@ const api = {
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>
         listener(prompt, attachments)
       )
+  },
+  mcp: {
+    servers: (): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:servers'),
+    connect: (name: string): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:connect', name),
+    disconnect: (name: string): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:disconnect', name),
+    openConfig: (origin: 'global' | 'project'): Promise<void> => ipcRenderer.invoke('mcp:open-config', origin),
+    setWorkspaceTrust: (trusted: boolean): Promise<McpServerSnapshot[]> =>
+      ipcRenderer.invoke('mcp:set-workspace-trust', trusted),
+    setEnabled: (name: string, enabled: boolean): Promise<McpServerSnapshot[]> =>
+      ipcRenderer.invoke('mcp:set-enabled', name, enabled),
+    setSecret: (server: string, name: string, value: string): Promise<McpSecretResult> =>
+      ipcRenderer.invoke('mcp:set-secret', server, name, value)
   },
   chat: {
     status: (): Promise<ChatStatus> => ipcRenderer.invoke('chat:status'),

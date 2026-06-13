@@ -1,5 +1,5 @@
-import { toolEventDetail } from '@main/tools/details';
 import { normalizeSubagentTasks } from '@main/subagents/utils/input';
+import { toolEventDetail } from '@main/tools/details';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
 import { describe, expect, it } from 'vitest';
 

@@ -1,4 +1,4 @@
-export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'mcp' | 'mobile' | 'shortcuts';
 
 export const providerSettingsTab = 'providers' satisfies SettingsTab;
 

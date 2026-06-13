@@ -29,7 +29,23 @@ export const clearEvents = (webContents: FakeWebContents) => {
 };
 
 export const shell = {
+  openPath: async (_path: string) => '',
   openExternal: async (_url: string) => {}
+};
+
+const ipcHandlers = new Map<string, Handler>();
+
+export const invokeIpc = (channel: string, ...args: unknown[]) => {
+  const handler = ipcHandlers.get(channel);
+  if (!handler) throw new Error(`No ipc handler registered for ${channel}.`);
+  return handler({}, ...args);
+};
+
+export const ipcMain = {
+  handle: (channel: string, handler: Handler) => {
+    ipcHandlers.set(channel, handler);
+  },
+  on: (_channel: string, _handler: Handler) => {}
 };
 
 export const clipboard = {
@@ -246,21 +262,25 @@ export const resetFakeBrowserWindows = () => {
   windowsByWebContents.clear();
 };
 
+export const safeStorage = {
+  isEncryptionAvailable: () => true,
+  encryptString: (value: string) => Buffer.from(`enc:${value}`, 'utf8'),
+  decryptString: (buffer: Buffer) => buffer.toString('utf8').replace(/^enc:/u, '')
+};
+
 const fakeElectronModule = {
   app,
   shell,
   dialog,
   clipboard,
   nativeImage,
+  safeStorage,
   powerSaveBlocker,
   BrowserWindow: {
     fromWebContents: (webContents: FakeBrowserWebContents) => windowsByWebContents.get(webContents) ?? null
   },
   WebContentsView: FakeWebContentsView,
-  ipcMain: {
-    handle: (_channel: string, _handler: Handler) => {},
-    on: (_channel: string, _handler: Handler) => {}
-  }
+  ipcMain
 };
 
 export default fakeElectronModule;

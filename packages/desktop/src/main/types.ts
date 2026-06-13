@@ -268,3 +268,17 @@ export type OpenSessionResult = {
   error?: string;
   turns?: HistoryTurn[];
 };
+
+export type McpServerStatus = 'idle' | 'error' | 'disabled' | 'connected' | 'untrusted' | 'needs-auth' | 'missing-vars';
+
+export type McpServerSnapshot = {
+  name: string;
+  error?: string;
+  enabled: boolean;
+  toolCount?: number;
+  missingVars: string[];
+  authenticated?: boolean;
+  status: McpServerStatus;
+  kind: 'stdio' | 'remote';
+  origin: 'global' | 'project';
+};
