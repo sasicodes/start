@@ -22,11 +22,6 @@ const withDetail = (event: ChatEvent, detail: string) => {
   return event;
 };
 
-const withMetric = (event: ChatEvent, metric: string) => {
-  if (metric) event.metric = metric;
-  return event;
-};
-
 const streamDetail = (event: Extract<AgentSessionEvent, { type: 'message_update' }>) => {
   const update = event.assistantMessageEvent;
 
@@ -122,12 +117,11 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
       result.metric = String(event.attempt);
       return withDetail(result, event.finalError ?? '');
     }
-    case 'session_info_changed':
-      return withDetail(metadataEvent('session-info', 'Renamed session'), event.name ?? 'Untitled');
-    case 'thinking_level_changed':
-      return withMetric(metadataEvent('thinking-level', 'Changed thinking level'), event.level);
     case 'message_end':
       return customMessageEvent(event);
+    case 'session_info_changed':
+    case 'thinking_level_changed':
+      return;
     case 'agent_end':
     case 'agent_start':
     case 'message_start':
