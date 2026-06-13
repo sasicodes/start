@@ -44,6 +44,10 @@ export const allowMainWindowClose = () => {
 
 export const getMainWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 
+interface MainWindowOptions {
+  showOnReady?: boolean;
+}
+
 const fitComposerWindowToActiveDisplay = (window: ElectronBrowserWindow) => {
   const nextBounds = activeDisplayWorkArea();
   const currentBounds = window.getBounds();
@@ -59,7 +63,7 @@ const fitComposerWindowToActiveDisplay = (window: ElectronBrowserWindow) => {
   window.setBounds(nextBounds, false);
 };
 
-export const createMainWindow = (): ElectronBrowserWindow => {
+export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {}): ElectronBrowserWindow => {
   if (mainWindow && !mainWindow.isDestroyed()) return mainWindow;
 
   const options: BrowserWindowConstructorOptions = {
@@ -102,7 +106,7 @@ export const createMainWindow = (): ElectronBrowserWindow => {
 
   window.once('ready-to-show', () => {
     window.maximize();
-    window.show();
+    if (showOnReady) window.show();
   });
 
   window.webContents.on('before-input-event', (event, input) => {
@@ -251,6 +255,11 @@ export const sendToMainWindow = (channel: string, ...args: unknown[]) => {
   runWhenReady(window.webContents, () => window.webContents.send(channel, ...args));
 };
 
+const sendToMainWindowInBackground = (channel: string, ...args: unknown[]) => {
+  const window = createMainWindow({ showOnReady: false });
+  runWhenReady(window.webContents, () => window.webContents.send(channel, ...args));
+};
+
 export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
   for (const window of [mainWindow, composerWindow]) {
     if (!window || window.isDestroyed()) continue;
@@ -324,6 +333,6 @@ export const toggleComposerWindow = () => {
 };
 
 export const submitComposerToMainWindow = (prompt: string, attachments: unknown[] = []) => {
-  hideComposerWindow({ discard: false, keepAppActive: true });
-  sendToMainWindow('app:submit-composer', prompt, attachments);
+  hideComposerWindow({ discard: false });
+  sendToMainWindowInBackground('app:submit-composer', prompt, attachments);
 };
