@@ -1,11 +1,12 @@
 import path from 'node:path';
+import { relativeInside } from '@main/search/path';
 
 export const normalizeWorkspacePath = (workspacePath: string) => workspacePath.replace(/[/\\]+$/u, '');
 
 export const resolveInside = (cwd: string, relativePath: string) => {
   const base = path.resolve(cwd);
   const absolute = path.resolve(base, relativePath);
-  return absolute === base || absolute.startsWith(base + path.sep) ? absolute : '';
+  return relativeInside(base, absolute) !== null ? absolute : '';
 };
 
 export const workspaceDisplayName = (workspacePath: string) => {

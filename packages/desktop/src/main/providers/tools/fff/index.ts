@@ -1,19 +1,24 @@
 import { createFindTool, createGrepTool, defineTool } from '@earendil-works/pi-coding-agent';
-import { findWorkspacePaths, grepWorkspace, multiGrepWorkspace } from '@main/search/fff';
 import {
   boundedPatterns,
   defaultFindLimit,
   defaultGrepLimit,
-  findArgs,
-  grepArgs,
   maxFindLimit,
   maxGrepLimit,
   positiveContext,
   positiveCursor,
   positiveLimit
 } from '@main/providers/tools/fff/bounds';
-import { findText, grepDetails, grepText, toolResult } from '@main/providers/tools/fff/format';
+import {
+  fallbackFindPattern,
+  findText,
+  grepDetails,
+  grepText,
+  restartedPagination
+} from '@main/providers/tools/fff/format';
 import { findSchema, grepSchema, multiGrepSchema } from '@main/providers/tools/fff/schema';
+import { toolResult } from '@main/providers/tools/result';
+import { findWorkspacePaths, grepWorkspace, multiGrepWorkspace } from '@main/search/client';
 
 interface CreateFffToolsOptions {
   cwd: () => string;
@@ -28,9 +33,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
       'Find files from the shared repository FFF index. Supports fuzzy queries and glob patterns. Falls back to the built-in finder if FFF is unavailable.',
     promptSnippet: 'Find files quickly from the shared repository index.',
     async execute(toolCallId, { pattern, path, limit }, signal, onUpdate) {
-      const fallback = createFindTool(cwd());
       const resultLimit = positiveLimit(limit, defaultFindLimit, maxFindLimit);
-      const fallbackArgs = findArgs(pattern, path, resultLimit);
       const items = await findWorkspacePaths({
         cwd: cwd(),
         limit: resultLimit,
@@ -38,7 +41,14 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
         ...(path ? { path } : {})
       });
 
-      if (!items) return fallback.execute(toolCallId, fallbackArgs, signal, onUpdate);
+      if (!items) {
+        const fallbackArgs = {
+          limit: resultLimit,
+          pattern: fallbackFindPattern(pattern),
+          ...(path ? { path } : {})
+        };
+        return createFindTool(cwd()).execute(toolCallId, fallbackArgs, signal, onUpdate);
+      }
 
       return toolResult(findText(items), {
         backend: 'fff',
@@ -55,15 +65,29 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
       'Search file contents through the shared repository FFF index. Falls back to built-in content search when FFF is unavailable or forced ignore-case is requested.',
     promptSnippet: 'Search code quickly from the shared repository index.',
     async execute(toolCallId, { pattern, path, glob, ignoreCase, literal, context, limit, cursor }, signal, onUpdate) {
-      const fallback = createGrepTool(cwd());
       const resultLimit = positiveLimit(limit, defaultGrepLimit, maxGrepLimit);
       const resultContext = positiveContext(context);
-      const fallbackArgs = grepArgs(pattern, path, glob, ignoreCase, literal, resultContext, resultLimit);
-      if (ignoreCase) return fallback.execute(toolCallId, fallbackArgs, signal, onUpdate);
+      const resultCursor = positiveCursor(cursor);
+
+      const runFallback = async () => {
+        const fallbackArgs = {
+          pattern,
+          limit: resultLimit,
+          context: resultContext,
+          ...(path ? { path } : {}),
+          ...(glob ? { glob } : {}),
+          ...(typeof literal === 'boolean' ? { literal } : {}),
+          ...(typeof ignoreCase === 'boolean' ? { ignoreCase } : {})
+        };
+        const result = await createGrepTool(cwd()).execute(toolCallId, fallbackArgs, signal, onUpdate);
+        return resultCursor > 0 ? restartedPagination(result) : result;
+      };
+
+      if (ignoreCase) return runFallback();
 
       const result = await grepWorkspace({
         cwd: cwd(),
-        cursor: positiveCursor(cursor),
+        cursor: resultCursor,
         limit: resultLimit,
         mode: literal ? 'plain' : 'regex',
         pattern,
@@ -73,7 +97,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
         ...(glob ? { glob } : {})
       });
 
-      if (!result) return fallback.execute(toolCallId, fallbackArgs, signal, onUpdate);
+      if (!result) return runFallback();
 
       return toolResult(grepText(result), {
         backend: 'fff',
@@ -90,6 +114,12 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     promptSnippet: 'Use for fast OR searches across multiple code identifiers.',
     async execute(_toolCallId, { patterns, constraints, context, limit, cursor }) {
       const resultPatterns = boundedPatterns(patterns);
+      if (resultPatterns.length === 0)
+        return toolResult<Record<string, unknown>>('No valid patterns provided. Pass at least one non-empty pattern.', {
+          backend: 'fff',
+          invalidArguments: true
+        });
+
       const result = await multiGrepWorkspace({
         cwd: cwd(),
         cursor: positiveCursor(cursor),
@@ -101,7 +131,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
       });
 
       if (!result)
-        return toolResult('FFF multi-grep is unavailable in this workspace.', {
+        return toolResult('FFF multi-grep is unavailable in this workspace. Use grep instead.', {
           backend: 'fff',
           unavailable: true
         });

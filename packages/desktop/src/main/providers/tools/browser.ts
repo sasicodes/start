@@ -11,6 +11,7 @@ import {
   typeInBrowser
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
+import { toolResult } from '@main/providers/tools/result';
 import { sendToMainWindow } from '@main/window';
 import * as v from 'valibot';
 
@@ -106,7 +107,7 @@ const browserPressSchema = {
   additionalProperties: false
 } as const;
 
-const textResult = (text: string) => ({ details: null, content: [{ text, type: 'text' as const }] });
+const textResult = (text: string) => toolResult(text, null);
 
 const browserStringSchema = (label: string) =>
   v.pipe(v.string(), v.trim(), v.minLength(1, `Enter a browser ${label}.`));

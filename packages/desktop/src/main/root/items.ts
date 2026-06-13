@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { searchWorkspacePaths } from '@main/search/fff';
+import { searchWorkspacePaths } from '@main/search/client';
 import { cleanRelativePath, toPosixPath } from '@main/search/path';
 import { logger } from '@main/utils/logger';
 

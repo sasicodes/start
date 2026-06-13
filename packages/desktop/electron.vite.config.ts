@@ -32,10 +32,14 @@ export default defineConfig({
           /^@ff-labs\/fff-bin-/,
           '@silvia-odwyer/photon-node'
         ],
+        input: {
+          index: resolve(root, 'src/main/index.ts'),
+          'search-host': resolve(root, 'src/main/search/host.ts')
+        },
         output: {
           format: 'cjs',
-          codeSplitting: false,
-          entryFileNames: 'index.cjs'
+          entryFileNames: '[name].cjs',
+          chunkFileNames: '[name]-[hash].cjs'
         }
       }
     }

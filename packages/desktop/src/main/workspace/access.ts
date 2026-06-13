@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { relativeInside } from '@main/search/path';
 import { readStartState, updateStartState } from '@main/storage';
 import type { OpenDialogOptions } from 'electron';
 import electron from 'electron';
@@ -14,12 +15,7 @@ const supportsSecurityScopedBookmarks = () => process.platform === 'darwin' && B
 
 const resolvedPath = (workspacePath: string) => path.resolve(workspacePath);
 
-const containsPath = (parentPath: string, workspacePath: string) => {
-  const relativePath = path.relative(parentPath, workspacePath);
-  return (
-    relativePath === '' || (Boolean(relativePath) && !relativePath.startsWith('..') && !path.isAbsolute(relativePath))
-  );
-};
+const containsPath = (parentPath: string, workspacePath: string) => relativeInside(parentPath, workspacePath) !== null;
 
 const bookmarkForPath = (workspacePath: string) => {
   const bookmarks = readStartState().workspaceBookmarks;
