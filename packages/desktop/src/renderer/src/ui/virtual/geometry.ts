@@ -1,3 +1,11 @@
+export interface VisibleRange {
+  end: number;
+  start: number;
+}
+
+export const shouldPreserveScrollEnd = (distanceFromEnd: number, heightDelta: number, threshold: number) =>
+  heightDelta > 0 && distanceFromEnd - heightDelta <= threshold;
+
 export const cumulativeHeights = (heights: ReadonlyArray<number>): Float64Array => {
   const result = new Float64Array(heights.length + 1);
   for (let index = 0; index < heights.length; index += 1) {
@@ -36,3 +44,21 @@ export const lastVisibleIndex = (cumulative: Float64Array, scrollBottom: number)
 };
 
 export const totalHeight = (cumulative: Float64Array) => cumulative[cumulative.length - 1] ?? 0;
+
+export const initialVisibleEnd = (cumulative: Float64Array, viewportGuess: number) => {
+  const last = cumulative.length - 1;
+  for (let index = 0; index < last; index += 1) {
+    if ((cumulative[index + 1] ?? 0) > viewportGuess) return index + 1;
+  }
+  return last;
+};
+
+export const visibleRange = (
+  cumulative: Float64Array,
+  scrollTop: number,
+  scrollBottom: number,
+  overscan: number
+): VisibleRange => ({
+  end: lastVisibleIndex(cumulative, scrollBottom + overscan) + 1,
+  start: firstVisibleIndex(cumulative, Math.max(0, scrollTop - overscan))
+});

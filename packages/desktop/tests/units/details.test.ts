@@ -1,10 +1,12 @@
 import {
   countLabel,
+  imageAttachments,
   isRecord,
   numberValue,
   previewValue,
   stringValue,
   textContent,
+  textOnlyContent,
   thinkingContent
 } from '@main/details';
 import { describe, expect, it } from 'vitest';
@@ -38,6 +40,38 @@ describe('details helpers', () => {
     ).toBe('one\n[image: image/png]\ntwo');
     expect(textContent('plain string')).toBe('plain string');
     expect(textContent([])).toBe('');
+  });
+
+  it('extracts text-only content and image attachments separately', () => {
+    const content = [
+      { type: 'text', text: 'one' },
+      { type: 'image', data: 'aW1hZ2U=', mimeType: 'image/png' }
+    ];
+
+    expect(textOnlyContent(content)).toBe('one');
+    expect(imageAttachments(content, 'turn')).toEqual([
+      {
+        path: '',
+        name: 'image',
+        type: 'image',
+        id: 'turn:image:1',
+        mimeType: 'image/png',
+        previewUrl: 'data:image/png;base64,aW1hZ2U='
+      }
+    ]);
+  });
+
+  it('skips image parts without data and defaults the mime type', () => {
+    expect(imageAttachments([{ type: 'image' }, { type: 'image', data: 'abc' }], 'turn')).toEqual([
+      {
+        path: '',
+        name: 'image',
+        type: 'image',
+        id: 'turn:image:1',
+        mimeType: 'image/png',
+        previewUrl: 'data:image/png;base64,abc'
+      }
+    ]);
   });
 
   it('extracts thinking content and marks redacted parts', () => {

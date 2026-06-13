@@ -1,5 +1,5 @@
 import type { ChatEvent, QueuedMessage } from '@preload/index';
-import { createTurn } from '@renderer/functions/chat';
+import { createTurn, createUserTurn } from '@renderer/functions/chat';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
@@ -181,7 +181,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.flushNow();
       assistantFlush.flushNow();
       const currentAssistantId = optionsRef.current.assistantIdRef.current;
-      const userTurn = createTurn('user', turn.text);
+      const userTurn = createUserTurn(turn.text, turn.attachments ?? []);
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
       if (currentAssistantId) setTurnStreaming(setTurns, currentAssistantId, false);
       optionsRef.current.assistantIdRef.current = assistantTurn.id;

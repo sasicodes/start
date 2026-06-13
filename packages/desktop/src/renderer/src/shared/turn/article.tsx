@@ -18,37 +18,35 @@ const supplementOnlyRoles = new Set<Turn['role']>(['event', 'terminal', 'assista
 const hasSupplement = (turn: Turn) =>
   Boolean(turn.thinking) || Boolean(turn.details?.length) || Boolean(turn.activityItems?.length);
 
-const shouldShowBody = (turn: Turn) =>
-  Boolean(turn.text) ||
-  (turn.role === 'user' && Boolean(turn.attachments?.length)) ||
-  (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)));
+const shouldShowBody = (turn: Turn) => {
+  if (turn.role === 'user') return Boolean(turn.text);
+  return (
+    Boolean(turn.text) || (turn.role !== 'assistant' && (!supplementOnlyRoles.has(turn.role) || !hasSupplement(turn)))
+  );
+};
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
 
 const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   const attachments = turn.attachments ?? [];
-  if (turn.role !== 'user' || attachments.length === 0) return null;
+  if (turn.role !== 'user' || !attachments.length) return null;
 
   const visibleAttachments = attachments.slice(0, 4);
   const overflowCount = attachments.length - visibleAttachments.length;
 
   return (
-    <div class="mt-2 flex items-center justify-start -space-x-1.5">
-      {visibleAttachments.map((attachment, index) => (
-        <button
+    <div class="mb-1.5 flex max-w-full flex-wrap justify-end gap-1.5">
+      {visibleAttachments.map((attachment) => (
+        <img
+          alt=""
           key={attachment.id}
-          type="button"
-          style={{ zIndex: visibleAttachments.length - index }}
-          aria-label={`Open ${attachment.name}`}
-          onClick={() => window.pi.app.openPath(attachment.path).catch(() => {})}
-          onDragStart={(event) => event.preventDefault()}
-          class="relative grid size-7 place-items-center overflow-hidden rounded-full border border-line bg-composer p-0 select-none transition-opacity hover:opacity-90 focus-visible:opacity-90 focus-visible:outline-0"
-        >
-          <img alt="" draggable={false} src={attachment.previewUrl} class="size-full object-cover" />
-        </button>
+          draggable={false}
+          src={attachment.previewUrl}
+          class="size-14 overflow-hidden rounded-lg border border-line bg-composer object-cover"
+        />
       ))}
       {overflowCount > 0 && (
-        <span class="relative grid size-7 place-items-center rounded-full border border-line bg-composer text-[10px] leading-none font-semibold text-ink">
+        <span class="grid size-14 place-items-center rounded-lg border border-line bg-composer text-xs leading-none font-semibold text-ink">
           +{overflowCount}
         </span>
       )}
@@ -65,7 +63,7 @@ const TurnActions = memo(({ turn, actionText = '' }: { turn: Turn; actionText?: 
   return (
     <div
       class={tw(
-        'mt-1.5 flex items-center gap-1 text-soft opacity-0 transition-opacity ease-in group-hover/turn:opacity-100 group-focus-within/turn:opacity-100',
+        'mt-1.5 flex items-center gap-1 text-soft opacity-0 transition-opacity ease-in group-hover/turn:opacity-100 group-has-[:focus-visible]/turn:opacity-100',
         turn.role === 'user' && 'flex-row-reverse justify-start self-end',
         turn.role !== 'user' && 'justify-start self-start'
       )}
@@ -104,7 +102,6 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
       )}
     >
       {useMarkdown ? <Markdown source={turn.text} streaming={Boolean(turn.streaming)} /> : fallbackText(turn)}
-      <UserAttachments turn={turn} />
     </div>
   );
 });
@@ -147,6 +144,7 @@ export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) =>
         createdAt={turn.createdAt}
         working={activityWorking}
       />
+      <UserAttachments turn={turn} />
       <TurnBody turn={turn} />
       <TurnActions turn={turn} actionText={actionText} />
     </article>
