@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type {
@@ -196,7 +196,8 @@ describe('fff workspace manager', () => {
     ]);
   });
 
-  it('maps grep results and cursor offsets through the shared finder', async () => {
+  it('maps grep results and round-trips opaque cursors through numeric tokens', async () => {
+    const opaqueCursor = { _offset: 9, __brand: 'GrepCursor' } as GrepCursor;
     const finder = createFinder({
       grep: vi.fn(() =>
         ok<GrepResult>({
@@ -204,7 +205,7 @@ describe('fff workspace manager', () => {
           totalMatched: 1,
           filteredFileCount: 12,
           totalFilesSearched: 3,
-          nextCursor: { _offset: 9, __brand: 'GrepCursor' } as GrepCursor,
+          nextCursor: opaqueCursor,
           items: [grepMatch('src/main/chat.ts')]
         })
       )
@@ -213,7 +214,6 @@ describe('fff workspace manager', () => {
 
     const { grepWorkspace } = await import('@main/search/fff');
     const result = await grepWorkspace({
-      cursor: 4,
       limit: 20,
       pattern: 'chat',
       cwd: workspacePath
@@ -227,25 +227,46 @@ describe('fff workspace manager', () => {
         maxFileSize: 2 * 1024 * 1024,
         timeBudgetMs: 2000,
         maxMatchesPerFile: 20,
-        classifyDefinitions: false,
-        cursor: { _offset: 4, __brand: 'GrepCursor' }
+        classifyDefinitions: false
       })
     );
-    expect(result).toEqual({
-      totalFiles: 12,
-      nextCursor: 9,
-      searchedFiles: 3,
-      matches: [
-        {
-          line: 5,
-          isDefinition: true,
-          path: 'src/main/chat.ts',
-          text: 'const chat = true;',
-          contextAfter: ['after'],
-          contextBefore: ['before']
-        }
-      ]
+    expect(finder.grep).not.toHaveBeenCalledWith('chat', expect.objectContaining({ cursor: expect.anything() }));
+    expect(result?.nextCursor).toBeGreaterThan(0);
+    expect(result?.matches).toEqual([
+      {
+        line: 5,
+        isDefinition: true,
+        path: 'src/main/chat.ts',
+        text: 'const chat = true;',
+        contextAfter: ['after'],
+        contextBefore: ['before']
+      }
+    ]);
+
+    await grepWorkspace({
+      limit: 20,
+      pattern: 'chat',
+      cwd: workspacePath,
+      cursor: result?.nextCursor ?? 0
     });
+
+    expect(finder.grep).toHaveBeenLastCalledWith('chat', expect.objectContaining({ cursor: opaqueCursor }));
+  });
+
+  it('flags unknown cursor tokens as restarts instead of fabricating offsets', async () => {
+    const finder = createFinder({});
+    fffMock.create.mockReturnValue(ok(finder));
+
+    const { grepWorkspace } = await import('@main/search/fff');
+    const result = await grepWorkspace({
+      cursor: 987_654,
+      limit: 20,
+      pattern: 'chat',
+      cwd: workspacePath
+    });
+
+    expect(finder.grep).not.toHaveBeenCalledWith('chat', expect.objectContaining({ cursor: expect.anything() }));
+    expect(result?.restarted).toBe(true);
   });
 
   it('formats directory grep constraints with the slash FFF expects', async () => {
@@ -317,7 +338,7 @@ describe('fff workspace manager', () => {
   it('returns null instead of searching when the index is not ready within the caller budget', async () => {
     const finder = createFinder({
       mixedSearch: vi.fn(() => ok(emptyMixed)),
-      waitForIndexReady: vi.fn(() => new Promise<Result<boolean>>(() => {}))
+      waitForIndexReady: vi.fn(async () => ok(false))
     });
     fffMock.create.mockReturnValue(ok(finder));
 
@@ -331,6 +352,50 @@ describe('fff workspace manager', () => {
 
     expect(result).toBeNull();
     expect(finder.mixedSearch).not.toHaveBeenCalled();
+  });
+
+  it('skips the readiness wait for UI budgets while the initial scan runs', async () => {
+    const finder = createFinder({
+      isScanning: vi.fn(() => true),
+      mixedSearch: vi.fn(() => ok(emptyMixed)),
+      waitForIndexReady: vi.fn(() => new Promise<Result<boolean>>(() => {}))
+    });
+    fffMock.create.mockReturnValue(ok(finder));
+
+    const { searchWorkspacePaths } = await import('@main/search/fff');
+    const result = await searchWorkspacePaths({
+      limit: 10,
+      query: 'chat',
+      workspaceRoot: workspacePath
+    });
+
+    expect(result).toBeNull();
+    expect(finder.mixedSearch).not.toHaveBeenCalled();
+  });
+
+  it('recovers once the index becomes ready after an initial timeout', async () => {
+    let indexReady = false;
+    const finder = createFinder({
+      waitForIndexReady: vi.fn(async () => ok(indexReady)),
+      mixedSearch: vi.fn(() =>
+        ok<MixedSearchResult>({
+          scores: [],
+          totalDirs: 0,
+          totalFiles: 1,
+          totalMatched: 1,
+          items: [mixedFile('src/main/chat.ts')]
+        })
+      )
+    });
+    fffMock.create.mockReturnValue(ok(finder));
+
+    const { searchWorkspacePaths } = await import('@main/search/fff');
+    const blocked = await searchWorkspacePaths({ limit: 10, query: 'chat', workspaceRoot: workspacePath });
+    indexReady = true;
+    const recovered = await searchWorkspacePaths({ limit: 10, query: 'chat', workspaceRoot: workspacePath });
+
+    expect(blocked).toBeNull();
+    expect(recovered).toEqual([{ path: 'src/main/chat.ts', type: 'file' }]);
   });
 
   it('passes workspace-relative find constraints to FFF as index-relative constraints', async () => {
@@ -391,7 +456,6 @@ describe('fff workspace manager', () => {
 
     const { multiGrepWorkspace } = await import('@main/search/fff');
     const result = await multiGrepWorkspace({
-      cursor: 7,
       limit: 20,
       context: 1,
       cwd: workspacePath,
@@ -410,41 +474,97 @@ describe('fff workspace manager', () => {
       maxMatchesPerFile: 20,
       patterns: ['chat', 'settings'],
       constraints: '**/*.ts',
-      cursor: { _offset: 7, __brand: 'GrepCursor' },
       classifyDefinitions: true
     });
-    expect(result).toEqual({
-      totalFiles: 9,
-      nextCursor: 18,
-      searchedFiles: 4,
-      matches: [
-        {
-          line: 5,
-          isDefinition: true,
-          path: 'src/main/chat.ts',
-          text: 'const chat = true;',
-          contextAfter: ['after'],
-          contextBefore: ['before']
-        }
-      ]
+    expect(result?.nextCursor).toBeGreaterThan(0);
+    expect(result?.matches).toEqual([
+      {
+        line: 5,
+        isDefinition: true,
+        path: 'src/main/chat.ts',
+        text: 'const chat = true;',
+        contextAfter: ['after'],
+        contextBefore: ['before']
+      }
+    ]);
+
+    await multiGrepWorkspace({
+      limit: 20,
+      cwd: workspacePath,
+      cursor: result?.nextCursor ?? 0,
+      patterns: ['chat', 'settings']
     });
+
+    expect(finder.multiGrep).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: { _offset: 18, __brand: 'GrepCursor' } })
+    );
   });
 
-  it('refreshes and disposes the shared finder explicitly', async () => {
+  it('debounces refresh scans against the freshly created index', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const finder = createFinder({
+        destroy: vi.fn(),
+        scanFiles: vi.fn(() => okVoid()),
+        refreshGitStatus: vi.fn(() => ok(2))
+      });
+      fffMock.create.mockReturnValue(ok(finder));
+
+      const { disposeWorkspaceFinders, refreshWorkspaceFinder } = await import('@main/search/fff');
+      await expect(refreshWorkspaceFinder(workspacePath)).resolves.toBe(true);
+      expect(finder.scanFiles).not.toHaveBeenCalled();
+
+      vi.setSystemTime(Date.now() + 61_000);
+      await expect(refreshWorkspaceFinder(workspacePath)).resolves.toBe(true);
+      expect(finder.scanFiles).toHaveBeenCalledOnce();
+      expect(finder.refreshGitStatus).toHaveBeenCalledOnce();
+
+      await expect(refreshWorkspaceFinder(workspacePath)).resolves.toBe(true);
+      expect(finder.scanFiles).toHaveBeenCalledOnce();
+
+      disposeWorkspaceFinders();
+      expect(finder.destroy).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('relativizes absolute path constraints inside the workspace and falls back outside it', async () => {
+    mkdirSync(path.join(workspacePath, 'src', 'main'), { recursive: true });
+
     const finder = createFinder({
-      destroy: vi.fn(),
-      scanFiles: vi.fn(() => okVoid()),
-      refreshGitStatus: vi.fn(() => ok(2))
+      grep: vi.fn(() =>
+        ok<GrepResult>({
+          totalFiles: 1,
+          totalMatched: 1,
+          filteredFileCount: 1,
+          totalFilesSearched: 1,
+          nextCursor: null,
+          items: [grepMatch('src/main/chat.ts')]
+        })
+      )
     });
     fffMock.create.mockReturnValue(ok(finder));
 
-    const { disposeWorkspaceFinders, refreshWorkspaceFinder } = await import('@main/search/fff');
-    await expect(refreshWorkspaceFinder(workspacePath)).resolves.toBe(true);
-    disposeWorkspaceFinders();
+    const { grepWorkspace } = await import('@main/search/fff');
+    const inside = await grepWorkspace({
+      limit: 20,
+      pattern: 'chat',
+      cwd: workspacePath,
+      path: path.join(realpathSync(workspacePath), 'src', 'main')
+    });
+    const outside = await grepWorkspace({
+      limit: 20,
+      pattern: 'chat',
+      cwd: workspacePath,
+      path: path.sep
+    });
 
-    expect(finder.scanFiles).toHaveBeenCalledOnce();
-    expect(finder.refreshGitStatus).toHaveBeenCalledOnce();
-    expect(finder.destroy).toHaveBeenCalledOnce();
+    expect(finder.grep).toHaveBeenCalledTimes(1);
+    expect(finder.grep).toHaveBeenCalledWith('src/main/ chat', expect.anything());
+    expect(inside?.matches).toHaveLength(1);
+    expect(outside).toBeNull();
   });
 
   it('caps grep options before calling FFF', async () => {

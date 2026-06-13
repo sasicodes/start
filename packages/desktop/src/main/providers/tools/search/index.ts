@@ -1,4 +1,5 @@
 import { defineTool, type ModelRegistry } from '@earendil-works/pi-coding-agent';
+import { toolResult } from '@main/providers/tools/result';
 import { withSources, withUngroundedWarning } from '@main/providers/tools/search/helpers';
 import { runWebSearch, unsupportedWebSearchMessage } from '@main/providers/tools/search/providers';
 import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
@@ -22,11 +23,6 @@ export interface CreateWebSearchToolsOptions {
   modelRegistry: ModelRegistry;
   model: () => SearchModel | null;
 }
-
-const toolResult = (text: string, details: Record<string, unknown>) => ({
-  details,
-  content: [{ text, type: 'text' as const }]
-});
 
 const searchQuerySchema = v.pipe(
   v.union([

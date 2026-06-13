@@ -2,8 +2,8 @@ import {
   maxContext,
   maxFindLimit,
   maxGrepLimit,
-  maxPatternLength,
-  maxMultiGrepPatterns
+  maxMultiGrepPatterns,
+  maxPatternLength
 } from '@main/providers/tools/fff/bounds';
 
 export const findSchema = {

@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { listRootItems } from '@main/root/items';
@@ -9,7 +9,7 @@ const fffMock = vi.hoisted(() => ({
   searchWorkspacePaths: vi.fn()
 }));
 
-vi.mock('@main/search/fff', () => fffMock);
+vi.mock('@main/search/client', () => fffMock);
 
 describe('root workspace items', () => {
   let workspacePath = '';

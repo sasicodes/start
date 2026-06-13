@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, open, readFile, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { toPosixPath } from '@main/search/path';
 import type { ImageAttachment, PreparedDropFiles } from '@main/types';
 import electron from 'electron';
 
@@ -190,8 +191,6 @@ const prepareImageAttachment = async (filePath: string) => {
   if (!buffer) return;
   return prepareImageBuffer(filePath, buffer, mimeType);
 };
-
-const toPosixPath = (filePath: string) => filePath.split(path.sep).join(path.posix.sep);
 
 export const stripAttachmentData = (attachment: PreparedImageAttachment): ImageAttachment => ({
   id: attachment.id,

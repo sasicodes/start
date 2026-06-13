@@ -2,14 +2,12 @@ import { statSync } from 'node:fs';
 import type { GrepCursor, GrepOptions, GrepResult, MixedItem, SearchOptions } from '@ff-labs/fff-node';
 import {
   absoluteFromIndex,
-  canonicalPath,
   disposeWorkspaceFinders,
+  type FinderEntry,
   refreshWorkspaceFinder,
-  relativeToIndex,
   relativeToWorkspace,
   warmWorkspaceFinder,
-  workspaceFinder,
-  type FinderEntry
+  workspaceFinder
 } from '@main/search/finder';
 import {
   agentWaitMs,
@@ -22,7 +20,7 @@ import {
   maxMatchesPerFile,
   uiWaitMs
 } from '@main/search/limits';
-import { cleanRelativePath } from '@main/search/path';
+import { hasGlobChars, workspaceRelativePath } from '@main/search/path';
 import type {
   FindOptions,
   GrepOptionsInput,
@@ -32,12 +30,10 @@ import type {
   WorkspacePathMatch
 } from '@main/search/types';
 
-export { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder };
 export type { WorkspaceGrepMatch, WorkspaceGrepResult, WorkspacePathMatch } from '@main/search/types';
+export { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder };
 
-const hasGlob = (value: string) => /[*?[{\]}]/u.test(value);
-
-const cleanConstraint = (value = '') => cleanRelativePath(value);
+const maxStoredCursors = 64;
 
 const isInsideFolder = (itemPath: string, folderPath = '') =>
   !folderPath || itemPath === folderPath || itemPath.startsWith(`${folderPath}/`);
@@ -61,10 +57,9 @@ const uniquePaths = (items: WorkspacePathMatch[], limit: number) => {
 };
 
 const pathQuery = (query: string, folderPath = '') => {
-  const cleanFolder = cleanConstraint(folderPath);
   const cleanQuery = query.trim();
-  if (!cleanFolder) return cleanQuery;
-  return `${cleanFolder}/ ${cleanQuery}`.trim();
+  if (!folderPath) return cleanQuery;
+  return `${folderPath}/ ${cleanQuery}`.trim();
 };
 
 const searchOptions = (limit: number): SearchOptions => ({
@@ -77,56 +72,63 @@ const globPattern = (pattern: string, folderPath: string) => {
 };
 
 const constraintPath = (entry: FinderEntry, relativePath = '') => {
-  const cleanPath = cleanConstraint(relativePath);
-  if (!cleanPath) return '';
+  if (!relativePath) return '';
 
   try {
-    return statSync(absoluteFromIndex(entry, cleanPath)).isDirectory() ? `${cleanPath}/` : cleanPath;
+    return statSync(absoluteFromIndex(entry, relativePath)).isDirectory() ? `${relativePath}/` : relativePath;
   } catch {
-    return cleanPath;
+    return relativePath;
   }
 };
 
 const grepQuery = (pattern: string, pathConstraint = '', globConstraint = '') =>
   [pathConstraint.trim(), globConstraint.trim(), pattern].filter(Boolean).join(' ');
 
-const grepCursor = (cursor?: number): GrepCursor | null => {
-  if (!cursor || cursor < 0) return null;
-  return { _offset: Math.floor(cursor), __brand: 'GrepCursor' } as GrepCursor;
-};
+let lastCursorToken = 0;
 
-const cursorValue = (cursor: GrepCursor | null) => {
+const storedCursors = new Map<number, GrepCursor>();
+
+const storeCursor = (cursor: GrepCursor | null): number => {
   if (!cursor) return 0;
-  const value = (cursor as { _offset?: unknown })._offset;
-  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+
+  lastCursorToken += 1;
+  storedCursors.set(lastCursorToken, cursor);
+
+  while (storedCursors.size > maxStoredCursors) {
+    const oldest = storedCursors.keys().next().value;
+    if (oldest === undefined) break;
+    storedCursors.delete(oldest);
+  }
+
+  return lastCursorToken;
 };
 
-const grepOptions = ({
-  mode,
-  limit,
-  cursor,
-  context,
-  classifyDefinitions
-}: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'cursor' | 'limit' | 'mode'>): GrepOptions => {
-  const nextCursor = grepCursor(cursor);
+const storedCursor = (token?: number): GrepCursor | null => (token ? (storedCursors.get(token) ?? null) : null);
 
-  return {
-    ...(nextCursor ? { cursor: nextCursor } : {}),
-    mode: mode ?? 'plain',
-    smartCase: true,
-    maxFileSize: maxGrepFileSize,
-    timeBudgetMs: grepTimeBudgetMs,
-    maxMatchesPerFile,
-    pageSize: boundedCount(limit, maxGrepPageSize),
-    beforeContext: boundedContext(context),
-    afterContext: boundedContext(context),
-    classifyDefinitions: Boolean(classifyDefinitions)
-  };
-};
+const grepOptions = (
+  {
+    mode,
+    limit,
+    context,
+    classifyDefinitions
+  }: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'limit' | 'mode'>,
+  cursor: GrepCursor | null
+): GrepOptions => ({
+  ...(cursor ? { cursor } : {}),
+  mode: mode ?? 'plain',
+  smartCase: true,
+  maxFileSize: maxGrepFileSize,
+  timeBudgetMs: grepTimeBudgetMs,
+  maxMatchesPerFile,
+  pageSize: boundedCount(limit, maxGrepPageSize),
+  beforeContext: boundedContext(context),
+  afterContext: boundedContext(context),
+  classifyDefinitions: Boolean(classifyDefinitions)
+});
 
-const workspaceGrepResult = (entry: FinderEntry, cwd: string, result: GrepResult): WorkspaceGrepResult => ({
+const workspaceGrepResult = (entry: FinderEntry, result: GrepResult, restarted: boolean): WorkspaceGrepResult => ({
   matches: result.items.flatMap((match) => {
-    const itemPath = relativeToWorkspace(entry, cwd, match.relativePath);
+    const itemPath = relativeToWorkspace(entry, match.relativePath);
     if (!itemPath) return [];
     return [
       {
@@ -140,7 +142,8 @@ const workspaceGrepResult = (entry: FinderEntry, cwd: string, result: GrepResult
     ];
   }),
   totalFiles: result.totalFiles,
-  nextCursor: cursorValue(result.nextCursor),
+  nextCursor: storeCursor(result.nextCursor),
+  ...(restarted ? { restarted: true } : {}),
   searchedFiles: result.totalFilesSearched
 });
 
@@ -151,23 +154,21 @@ export const searchWorkspacePaths = async ({
   workspaceRoot,
   waitMs = uiWaitMs
 }: PathSearchOptions): Promise<WorkspacePathMatch[] | null> => {
-  const root = await canonicalPath(workspaceRoot);
-  const entry = await workspaceFinder(root, { waitMs });
+  const entry = await workspaceFinder(workspaceRoot, { waitMs });
   if (!entry) return null;
 
-  const cleanFolder = cleanConstraint(folderPath);
-  const indexFolder = relativeToIndex(entry, root, cleanFolder);
-  if (indexFolder === null) return null;
+  const cleanFolder = workspaceRelativePath(entry.indexRoot, folderPath);
+  if (cleanFolder === null) return null;
 
   const resultLimit = boundedCount(limit, maxFindPageSize);
-  const result = entry.finder.mixedSearch(pathQuery(query, indexFolder), {
+  const result = entry.finder.mixedSearch(pathQuery(query, cleanFolder), {
     pageSize: boundedCount(Math.max(resultLimit * 4, 200), maxFindPageSize)
   });
   if (!result.ok) return null;
 
   return uniquePaths(
     result.value.items.flatMap((item) => {
-      const itemPath = relativeToWorkspace(entry, root, mixedPath(item));
+      const itemPath = relativeToWorkspace(entry, mixedPath(item));
       if (!itemPath || !isInsideFolder(itemPath, cleanFolder) || itemPath === cleanFolder) return [];
       return [{ path: itemPath, type: mixedType(item) }];
     }),
@@ -182,23 +183,21 @@ export const findWorkspacePaths = async ({
   pattern,
   waitMs = agentWaitMs
 }: FindOptions): Promise<WorkspacePathMatch[] | null> => {
-  const root = await canonicalPath(cwd);
-  const entry = await workspaceFinder(root, { waitMs });
+  const entry = await workspaceFinder(cwd, { waitMs });
   if (!entry) return null;
 
-  const folderPath = cleanConstraint(searchPath);
-  const indexFolder = relativeToIndex(entry, root, folderPath);
-  if (indexFolder === null) return null;
+  const folderPath = workspaceRelativePath(entry.indexRoot, searchPath);
+  if (folderPath === null) return null;
 
   const resultLimit = boundedCount(limit, maxFindPageSize);
-  const result = hasGlob(pattern)
-    ? entry.finder.glob(globPattern(pattern, indexFolder), searchOptions(resultLimit))
-    : entry.finder.fileSearch(pathQuery(pattern, indexFolder), searchOptions(resultLimit));
+  const result = hasGlobChars(pattern)
+    ? entry.finder.glob(globPattern(pattern, folderPath), searchOptions(resultLimit))
+    : entry.finder.fileSearch(pathQuery(pattern, folderPath), searchOptions(resultLimit));
   if (!result.ok) return null;
 
   return uniquePaths(
     result.value.items.flatMap((item) => {
-      const itemPath = relativeToWorkspace(entry, root, item.relativePath);
+      const itemPath = relativeToWorkspace(entry, item.relativePath);
       if (!itemPath || !isInsideFolder(itemPath, folderPath)) return [];
       return [{ path: itemPath, type: 'file' as const }];
     }),
@@ -207,19 +206,20 @@ export const findWorkspacePaths = async ({
 };
 
 export const grepWorkspace = async (options: GrepOptionsInput): Promise<WorkspaceGrepResult | null> => {
-  const root = await canonicalPath(options.cwd);
-  const entry = await workspaceFinder(root, { waitMs: options.waitMs ?? agentWaitMs });
+  const entry = await workspaceFinder(options.cwd, { waitMs: options.waitMs ?? agentWaitMs });
   if (!entry) return null;
 
-  const indexPath = relativeToIndex(entry, root, options.path);
-  if (indexPath === null) return null;
+  const searchPath = workspaceRelativePath(entry.indexRoot, options.path);
+  if (searchPath === null) return null;
 
+  const cursor = storedCursor(options.cursor);
+  const restarted = Boolean(options.cursor) && !cursor;
   const result = entry.finder.grep(
-    grepQuery(options.pattern, constraintPath(entry, indexPath), options.glob),
-    grepOptions(options)
+    grepQuery(options.pattern, constraintPath(entry, searchPath), options.glob),
+    grepOptions(options, cursor)
   );
   if (!result.ok) return null;
-  return workspaceGrepResult(entry, root, result.value);
+  return workspaceGrepResult(entry, result.value, restarted);
 };
 
 export const multiGrepWorkspace = async ({
@@ -232,19 +232,15 @@ export const multiGrepWorkspace = async ({
   waitMs = agentWaitMs,
   classifyDefinitions
 }: MultiGrepOptionsInput): Promise<WorkspaceGrepResult | null> => {
-  const root = await canonicalPath(cwd);
-  const entry = await workspaceFinder(root, { waitMs });
+  const entry = await workspaceFinder(cwd, { waitMs });
   if (!entry) return null;
 
-  const indexPath = relativeToIndex(entry, root);
-  if (indexPath === null) return null;
-
-  const nextCursor = grepCursor(cursor);
-  const searchConstraints = [constraintPath(entry, indexPath), constraints].filter(Boolean).join(' ');
+  const storedGrepCursor = storedCursor(cursor);
+  const restarted = Boolean(cursor) && !storedGrepCursor;
   const result = entry.finder.multiGrep({
     patterns,
-    ...(nextCursor ? { cursor: nextCursor } : {}),
-    ...(searchConstraints ? { constraints: searchConstraints } : {}),
+    ...(storedGrepCursor ? { cursor: storedGrepCursor } : {}),
+    ...(constraints ? { constraints } : {}),
     smartCase: true,
     maxFileSize: maxGrepFileSize,
     timeBudgetMs: grepTimeBudgetMs,
@@ -256,5 +252,5 @@ export const multiGrepWorkspace = async ({
   });
 
   if (!result.ok) return null;
-  return workspaceGrepResult(entry, root, result.value);
+  return workspaceGrepResult(entry, result.value, restarted);
 };

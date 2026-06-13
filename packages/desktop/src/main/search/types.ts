@@ -22,6 +22,7 @@ export interface WorkspaceGrepResult {
   matches: WorkspaceGrepMatch[];
   nextCursor: number;
   totalFiles: number;
+  restarted?: boolean;
   searchedFiles: number;
 }
 
@@ -60,3 +61,20 @@ export interface MultiGrepOptionsInput extends SearchWaitOptions {
   constraints?: string;
   classifyDefinitions?: boolean;
 }
+
+export interface WorkspaceRootArgs {
+  workspaceRoot: string;
+}
+
+export interface SearchHostResponse {
+  id: number;
+  value: unknown;
+}
+
+export type SearchHostRequest =
+  | { id: number; op: 'find'; args: FindOptions }
+  | { id: number; op: 'grep'; args: GrepOptionsInput }
+  | { id: number; op: 'warm'; args: WorkspaceRootArgs }
+  | { id: number; op: 'search'; args: PathSearchOptions }
+  | { id: number; op: 'refresh'; args: WorkspaceRootArgs }
+  | { id: number; op: 'multiGrep'; args: MultiGrepOptionsInput };

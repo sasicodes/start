@@ -5,9 +5,9 @@ import {
   type SettingsManager,
   type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
+import { toolResult } from '@main/providers/tools/result';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
-import type { SubagentRunSnapshot } from '@main/subagents/types';
 import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import type { EffortLevel } from '@main/types';
 
@@ -45,11 +45,6 @@ interface CreateSubagentToolsOptions {
   nameAllocator: () => SubagentNameAllocator;
   model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
 }
-
-const toolResult = (text: string, details: SubagentRunSnapshot) => ({
-  content: [{ text, type: 'text' as const }],
-  details
-});
 
 export const createSubagentTools = ({
   cwd,

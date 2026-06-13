@@ -3,21 +3,24 @@ import { realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { FileFinderApi } from '@ff-labs/fff-node';
-import { agentWaitMs } from '@main/search/limits';
-import { cleanRelativePath, relativeInside } from '@main/search/path';
+import { uiWaitMs } from '@main/search/limits';
+import { relativeInside } from '@main/search/path';
 
 const finderLimit = 4;
-const finderIdleMs = 15 * 60 * 1000;
 const defaultWaitMs = 1000;
+const refreshIntervalMs = 60 * 1000;
+const readyPollMs = 10 * 60 * 1000;
+const finderIdleMs = 15 * 60 * 1000;
 const homePath = path.resolve(homedir());
 
 type FffNode = typeof import('@ff-labs/fff-node');
 
 export interface FinderEntry {
-  ready: Promise<boolean>;
-  finder: FileFinderApi;
+  ready: boolean;
   indexRoot: string;
+  finder: FileFinderApi;
   lastUsedAt: number;
+  lastRefreshAt: number;
 }
 
 interface FinderOptions {
@@ -31,7 +34,7 @@ const creatingFinders = new Map<string, Promise<FinderEntry | null>>();
 
 const now = () => Date.now();
 
-export const canonicalPath = async (value: string) => {
+const canonicalPath = async (value: string) => {
   const resolved = path.resolve(value);
 
   try {
@@ -79,6 +82,25 @@ const pruneFinders = () => {
   }
 };
 
+const markReady = async (entry: FinderEntry, timeoutMs: number) => {
+  if (entry.ready) return true;
+
+  try {
+    const result = await entry.finder.waitForIndexReady(timeoutMs);
+    if (result.ok && result.value) entry.ready = true;
+  } catch {
+    return false;
+  }
+
+  return entry.ready;
+};
+
+const indexReady = async (entry: FinderEntry, waitMs: number) => {
+  if (entry.ready) return true;
+  if (waitMs <= uiWaitMs && entry.finder.isScanning()) return false;
+  return markReady(entry, waitMs);
+};
+
 const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null> => {
   const fff = await loadFffNode();
   if (!fff) return null;
@@ -88,33 +110,15 @@ const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null>
     .catch(() => null);
   if (!result?.ok) return null;
 
-  const finder = result.value;
-  return {
-    finder,
+  const entry: FinderEntry = {
     indexRoot,
+    ready: false,
     lastUsedAt: now(),
-    ready: finder
-      .waitForIndexReady(agentWaitMs)
-      .then((ready) => (ready.ok ? ready.value : false))
-      .catch(() => false)
+    finder: result.value,
+    lastRefreshAt: now()
   };
-};
-
-const waitForReady = async (entry: FinderEntry, waitMs: number) => {
-  if (waitMs <= 0) return true;
-
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    return await Promise.race([
-      entry.ready,
-      new Promise<boolean>((resolve) => {
-        timeoutId = setTimeout(() => resolve(false), waitMs);
-      })
-    ]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
+  markReady(entry, readyPollMs);
+  return entry;
 };
 
 export const workspaceFinder = async (workspaceRoot: string, options: FinderOptions = {}) => {
@@ -144,35 +148,26 @@ export const workspaceFinder = async (workspaceRoot: string, options: FinderOpti
   const waitMs = options.waitMs ?? defaultWaitMs;
   entry.lastUsedAt = now();
 
-  const ready = await waitForReady(entry, waitMs);
-  if (waitMs > 0 && !ready) return null;
+  if (waitMs > 0 && !(await indexReady(entry, waitMs))) return null;
 
   return entry;
 };
 
 export const absoluteFromIndex = (entry: FinderEntry, relativePath: string) => path.join(entry.indexRoot, relativePath);
 
-export const relativeToWorkspace = (entry: FinderEntry, workspaceRoot: string, relativePath: string) =>
-  relativeInside(workspaceRoot, absoluteFromIndex(entry, relativePath));
-
-export const relativeToIndex = (entry: FinderEntry, workspaceRoot: string, relativePath = '') => {
-  const workspacePrefix = relativeInside(entry.indexRoot, workspaceRoot);
-  if (workspacePrefix === null) return null;
-
-  const itemPath = cleanRelativePath(relativePath);
-  if (!workspacePrefix) return itemPath;
-  return itemPath ? `${workspacePrefix}/${itemPath}` : workspacePrefix;
-};
+export const relativeToWorkspace = (entry: FinderEntry, relativePath: string) =>
+  relativeInside(entry.indexRoot, absoluteFromIndex(entry, relativePath));
 
 export const warmWorkspaceFinder = (workspaceRoot: string) => {
   workspaceFinder(workspaceRoot, { waitMs: 0 }).catch(() => {});
 };
 
 export const refreshWorkspaceFinder = async (workspaceRoot: string): Promise<boolean> => {
-  const root = await canonicalPath(workspaceRoot);
-  const entry = await workspaceFinder(root, { waitMs: 0 });
+  const entry = await workspaceFinder(workspaceRoot, { waitMs: 0 });
   if (!entry) return false;
+  if (now() - entry.lastRefreshAt < refreshIntervalMs) return true;
 
+  entry.lastRefreshAt = now();
   const scan = entry.finder.scanFiles();
   const git = entry.finder.refreshGitStatus();
   return scan.ok && git.ok;
