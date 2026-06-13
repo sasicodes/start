@@ -83,6 +83,12 @@ const constraintPath = (entry: FinderEntry, relativePath = '') => {
 const grepQuery = (pattern: string, pathConstraint = '', globConstraint = '') =>
   [pathConstraint.trim(), globConstraint.trim(), pattern].filter(Boolean).join(' ');
 
+const grepPattern = (pattern: string, mode: GrepOptions['mode'], ignoreCase: boolean) => {
+  if (!ignoreCase) return pattern;
+  if (mode === 'regex') return `(?i:${pattern})`;
+  return pattern.toLowerCase();
+};
+
 let lastCursorToken = 0;
 
 const storedCursors = new Map<number, GrepCursor>();
@@ -213,8 +219,13 @@ export const grepWorkspace = async (options: GrepOptionsInput): Promise<Workspac
 
   const cursor = storedCursor(options.cursor);
   const restarted = Boolean(options.cursor) && !cursor;
+  const mode = options.mode ?? 'plain';
   const result = entry.finder.grep(
-    grepQuery(options.pattern, constraintPath(entry, searchPath), options.glob),
+    grepQuery(
+      grepPattern(options.pattern, mode, Boolean(options.ignoreCase)),
+      constraintPath(entry, searchPath),
+      options.glob
+    ),
     grepOptions(options, cursor)
   );
   if (!result.ok) return null;

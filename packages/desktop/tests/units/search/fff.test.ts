@@ -313,6 +313,54 @@ describe('fff workspace manager', () => {
     ]);
   });
 
+  it('forces regex grep to ignore case without leaving FFF', async () => {
+    mkdirSync(path.join(workspacePath, 'src', 'main'), { recursive: true });
+
+    const finder = createFinder({});
+    fffMock.create.mockReturnValue(ok(finder));
+
+    const { grepWorkspace } = await import('@main/search/fff');
+    await grepWorkspace({
+      limit: 20,
+      mode: 'regex',
+      glob: '**/*.ts',
+      path: 'src/main',
+      ignoreCase: true,
+      cwd: workspacePath,
+      pattern: 'TASK_TYPE_DIRS'
+    });
+
+    expect(finder.grep).toHaveBeenCalledWith(
+      'src/main/ **/*.ts (?i:TASK_TYPE_DIRS)',
+      expect.objectContaining({
+        mode: 'regex',
+        smartCase: true
+      })
+    );
+  });
+
+  it('forces plain grep to ignore case without leaving FFF', async () => {
+    const finder = createFinder({});
+    fffMock.create.mockReturnValue(ok(finder));
+
+    const { grepWorkspace } = await import('@main/search/fff');
+    await grepWorkspace({
+      limit: 20,
+      mode: 'plain',
+      cwd: workspacePath,
+      ignoreCase: true,
+      pattern: 'TASK_TYPE_DIRS'
+    });
+
+    expect(finder.grep).toHaveBeenCalledWith(
+      'task_type_dirs',
+      expect.objectContaining({
+        mode: 'plain',
+        smartCase: true
+      })
+    );
+  });
+
   it('shares an in-flight finder creation for concurrent calls to the same workspace', async () => {
     const finder = createFinder({});
     fffMock.create.mockReturnValue(ok(finder));

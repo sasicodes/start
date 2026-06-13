@@ -218,15 +218,78 @@ describe('fff provider tools', () => {
     expect(toolText(result)).not.toContain('x'.repeat(700));
   });
 
-  it('falls back to built-in content search when forced ignore-case is requested', async () => {
-    const { grepTool } = tools();
-    const result = await executeTool(grepTool, { ignoreCase: true, pattern: 'chat' });
+  it('keeps forced ignore-case searches on FFF', async () => {
+    fffMock.grepWorkspace.mockResolvedValue({
+      totalFiles: 20,
+      nextCursor: 0,
+      searchedFiles: 4,
+      matches: [
+        {
+          line: 8,
+          contextAfter: [],
+          contextBefore: [],
+          isDefinition: true,
+          path: 'src/main/config.ts',
+          text: 'const TASK_TYPE_DIRS = []'
+        }
+      ]
+    });
 
-    expect(fffMock.grepWorkspace).not.toHaveBeenCalled();
+    const { grepTool } = tools();
+    const result = await executeTool(grepTool, { ignoreCase: true, pattern: 'task_type_dirs' });
+
+    expect(toolText(result)).toBe('src/main/config.ts:8: const TASK_TYPE_DIRS = []');
+    expect(fffMock.grepWorkspace).toHaveBeenCalledWith({
+      cwd: '/repo',
+      limit: 100,
+      cursor: 0,
+      context: 0,
+      mode: 'regex',
+      ignoreCase: true,
+      pattern: 'task_type_dirs',
+      classifyDefinitions: true
+    });
+    expect(builtinMock.grepExecute).not.toHaveBeenCalled();
+  });
+
+  it('ignores malformed boolean search options', async () => {
+    fffMock.grepWorkspace.mockResolvedValue({
+      matches: [],
+      totalFiles: 20,
+      nextCursor: 0,
+      searchedFiles: 4
+    });
+
+    const { grepTool } = tools();
+    await executeTool(grepTool, { literal: 'true', ignoreCase: 'true', pattern: 'task_type_dirs' });
+
+    expect(fffMock.grepWorkspace).toHaveBeenCalledWith({
+      cwd: '/repo',
+      limit: 100,
+      cursor: 0,
+      context: 0,
+      mode: 'regex',
+      pattern: 'task_type_dirs',
+      classifyDefinitions: true
+    });
+  });
+
+  it('preserves ignore-case and literal options when FFF is unavailable', async () => {
+    fffMock.grepWorkspace.mockResolvedValue(null);
+
+    const { grepTool } = tools();
+    const result = await executeTool(grepTool, { literal: true, ignoreCase: true, pattern: 'TASK_TYPE_DIRS' });
+
     expect(toolText(result)).toBe('fallback grep');
     expect(builtinMock.grepExecute).toHaveBeenCalledWith(
       'tool-call',
-      { context: 0, limit: 100, pattern: 'chat', ignoreCase: true },
+      {
+        limit: 100,
+        context: 0,
+        literal: true,
+        ignoreCase: true,
+        pattern: 'TASK_TYPE_DIRS'
+      },
       signal,
       expect.any(Function)
     );

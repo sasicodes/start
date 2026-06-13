@@ -25,4 +25,20 @@ describe('logger', () => {
       expect.stringMatching(/^\d{4}-\d{2}-\d{2}T.*\[start\] storage parse: corrupt row\n$/)
     );
   });
+
+  it('writes from utility processes without app-level state', () => {
+    const hadParentPort = Reflect.has(process, 'parentPort');
+    const parentPort = Reflect.get(process, 'parentPort');
+    const write = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
+
+    try {
+      Reflect.set(process, 'parentPort', {});
+      logger.error('fff load', new Error('native module missing'));
+    } finally {
+      if (hadParentPort) Reflect.set(process, 'parentPort', parentPort);
+      else Reflect.deleteProperty(process, 'parentPort');
+    }
+
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('[start] fff load:'));
+  });
 });

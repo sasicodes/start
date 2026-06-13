@@ -13,8 +13,14 @@ export const maxContext = maxGrepContext;
 export const maxGrepLimit = maxGrepPageSize;
 export const defaultGrepLimit = maxGrepPageSize;
 
+const booleanSchema = v.boolean();
 const positiveSchema = v.pipe(v.number(), v.finite(), v.minValue(1));
 const nonNegativeSchema = v.pipe(v.number(), v.finite(), v.minValue(0));
+
+export const optionalBoolean = (value: unknown) => {
+  const parsed = v.safeParse(booleanSchema, value);
+  return parsed.success ? parsed.output : null;
+};
 
 export const positiveLimit = (value: number | null = null, fallback: number, max: number) => {
   const parsed = v.safeParse(positiveSchema, value);
