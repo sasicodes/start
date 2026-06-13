@@ -1,18 +1,17 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
-import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
-  useGitPatch,
+  availableViewModes,
+  emptyGitSummary,
+  type GitPatchViewMode,
+  gitChangesLabel,
   gitViewLabel,
   nextViewMode,
-  useGitChanges,
-  emptyGitSummary,
-  gitChangesLabel,
-  availableViewModes,
   sectionsForViewMode,
-  type GitPatchViewMode,
-  summaryForViewMode
+  summaryForViewMode,
+  useGitChanges,
+  useGitPatch
 } from '@renderer/shared/workspace/changes/state';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import {
@@ -132,7 +131,7 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
       ? summaryForViewMode(patchSummary, patch.patch.sections, effectiveViewMode)
       : emptyGitSummary;
   const splitDiffView = diffViewMode === 'split';
-  const hasVisibleDiff = hasGitDiff(visibleSummary);
+  const hasVisibleDiff = visibleSummary.filesChanged > 0;
   const canCycle = patch.kind === 'ready' && availableModes.length > 1;
 
   return (

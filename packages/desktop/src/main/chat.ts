@@ -43,20 +43,20 @@ import {
   thinkingDelta
 } from '@main/helpers';
 import { historyTurns } from '@main/history';
-import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/fff';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
+import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
 import {
   archiveSession,
   getSession,
   listRecentSessions,
+  truncateTitle,
   unarchiveSession,
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
   updateSessionTitle,
-  truncateTitle,
   upsertSessionOnStart
 } from '@main/sessions';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
@@ -235,6 +235,7 @@ export class ChatService {
   private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
   private readonly modelRegistry = ModelRegistry.create(this.authStorage);
   private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
+  private readonly liveTitles = new Map<string, string>();
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
@@ -550,26 +551,32 @@ export class ChatService {
     return this.openSession(session.path);
   }
 
+  private liveSessionTitle(sessionId: string, sessionManager: AgentSession['sessionManager']): string {
+    const cached = this.liveTitles.get(sessionId);
+    if (cached) return cached;
+
+    const title = truncateTitle(firstUserMessageText(sessionManager.getEntries()));
+    if (title) this.liveTitles.set(sessionId, title);
+    return title;
+  }
+
   private liveRecentSession(session: AgentSession, workspacePath: string): LiveRecentSession | null {
-    if (!this.sessionIsReportable(session)) return null;
+    if (!this.sessionIsReportable(session) || !this.sessionIsGenerating(session)) return null;
 
     const sessionManager = session.sessionManager;
     const sessionId = sessionManager.getSessionId();
     const path = sessionManager.getSessionFile();
     if (!path) return null;
 
-    const entries = sessionManager.getEntries();
-    const firstMessage = firstUserMessageText(entries);
-    const status = this.sessionIsGenerating(session) ? 'generating' : 'idle';
     const notice = this.notices.get(sessionId);
 
     return {
       path,
-      status,
       workspacePath,
       id: sessionId,
+      status: 'generating',
       modified: Date.now(),
-      title: truncateTitle(firstMessage),
+      title: this.liveSessionTitle(sessionId, sessionManager),
       ...(notice ? { noticeKind: notice.kind } : {})
     };
   }
@@ -1302,6 +1309,7 @@ export class ChatService {
     this.session?.dispose();
     this.session = null;
     for (const session of this.backgroundSessions.values()) session.dispose();
+    this.liveTitles.clear();
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
     this.attachments.clear();
@@ -1339,6 +1347,7 @@ export class ChatService {
   }
 
   private deleteRuntimeState(sessionId: string): void {
+    this.liveTitles.delete(sessionId);
     this.sessionRuntimeStates.delete(sessionId);
   }
 

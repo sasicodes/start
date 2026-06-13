@@ -36,26 +36,22 @@ const recentSession = (
 const mergeLiveSessions = (
   sessions: RecentSession[],
   liveSessions: readonly LiveRecentSession[],
-  options: RecentSessionsRequest,
-  statuses: ReadonlyMap<string, AgentTabStatus>,
-  notices: ReadonlyMap<string, SessionNotice>
+  options: RecentSessionsRequest
 ) => {
   if (options.archived === true) return sessions;
 
   const merged = new Map(sessions.map((session) => [session.id, session]));
-  for (const session of liveSessions) {
-    if (session.workspacePath !== options.workspacePath) continue;
+  for (const live of liveSessions) {
+    if (live.workspacePath !== options.workspacePath || !live.modified) continue;
 
-    const status = statuses.get(session.id) ?? session.status;
-    const notice = notices.get(session.id);
-    const persisted = merged.get(session.id);
-    merged.set(session.id, {
-      id: session.id,
-      path: persisted?.path ?? session.path,
-      title: persisted?.title ?? session.title,
-      modified: Math.max(persisted?.modified ?? 0, session.modified),
-      ...(status ? { status } : {}),
-      ...(notice ? { noticeKind: notice.kind } : {})
+    const persisted = merged.get(live.id);
+    merged.set(live.id, {
+      id: live.id,
+      path: persisted?.path ?? live.path,
+      title: persisted?.title ?? live.title,
+      modified: Math.max(persisted?.modified ?? 0, live.modified),
+      ...(live.status ? { status: live.status } : {}),
+      ...(live.noticeKind ? { noticeKind: live.noticeKind } : {})
     });
   }
 
@@ -77,7 +73,7 @@ export const recentSessionsPage = async (
     archived: options.archived === true
   });
   const sessions = rows.map((session) => recentSession(session, statuses, notices.get(session.id)));
-  const mergedSessions = mergeLiveSessions(sessions, liveSessions, options, statuses, notices);
+  const mergedSessions = mergeLiveSessions(sessions, liveSessions, options);
   const page = mergedSessions.slice(offset, offset + limit);
 
   return {

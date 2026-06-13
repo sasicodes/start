@@ -71,4 +71,46 @@ describe('recent sessions page', () => {
     expect(page.sessions.map((session) => session.id)).toEqual(['persisted']);
     expect(archivedPage.sessions.map((session) => session.id)).toEqual(['persisted']);
   });
+
+  it('keeps idle open sessions at their persisted recency instead of pinning them', async () => {
+    persistedSessions.splice(0, persistedSessions.length, sessionRecord('newer', 300), sessionRecord('idle-open', 100));
+    const { recentSessionsPage } = await import('@main/chat/recents');
+
+    const page = await recentSessionsPage(
+      { workspacePath: '/workspace', limit: 10 },
+      new Map<string, AgentTabStatus>([['idle-open', 'idle']]),
+      new Map(),
+      [
+        {
+          id: 'idle-open',
+          path: 'idle.json',
+          title: 'Idle open session',
+          status: 'idle',
+          modified: 0,
+          workspacePath: '/workspace'
+        }
+      ]
+    );
+
+    expect(page.sessions.map((session) => session.id)).toEqual(['newer', 'idle-open']);
+    expect(page.sessions[1]?.modified).toBe(100);
+  });
+
+  it('does not resurface idle archived sessions that are still loaded in memory', async () => {
+    persistedSessions.splice(0, persistedSessions.length, sessionRecord('persisted', 100));
+    const { recentSessionsPage } = await import('@main/chat/recents');
+
+    const page = await recentSessionsPage({ workspacePath: '/workspace', limit: 10 }, new Map(), new Map(), [
+      {
+        id: 'archived-live',
+        path: 'archived.json',
+        title: 'Archived session',
+        status: 'idle',
+        modified: 0,
+        workspacePath: '/workspace'
+      }
+    ]);
+
+    expect(page.sessions.map((session) => session.id)).toEqual(['persisted']);
+  });
 });
