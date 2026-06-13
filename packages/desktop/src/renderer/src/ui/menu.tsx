@@ -2,32 +2,25 @@ import { Menu } from '@base-ui/react/menu';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 
-interface MenuPanelProps {
+interface MenuChromeProps {
   className?: string;
   children: ComponentChildren;
 }
 
 export const AppMenu = Menu;
 
-export const MenuPanel = ({ className, children }: MenuPanelProps) => {
+export const MenuSurface = ({ className, children }: MenuChromeProps) => {
+  return <div class={tw('rounded-2xl bg-panel p-1 shadow-panel', className)}>{children}</div>;
+};
+
+export const MenuPanel = ({ className, children }: MenuChromeProps) => {
   return (
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
-      className={tw(
-        'rounded-2xl bg-panel p-1 shadow-panel outline-0 transition-[opacity,transform] duration-75 ease-out data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0',
-        className
-      )}
+      className="outline-0 transition-[opacity,translate] duration-75 ease-out data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0"
     >
-      {children}
+      <MenuSurface {...(className ? { className } : {})}>{children}</MenuSurface>
     </Menu.Popup>
-  );
-};
-
-export const MenuSubmenuTrigger = ({ children }: { children: ComponentChildren }) => {
-  return (
-    <Menu.SubmenuTrigger className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control data-[popup-open]:bg-control">
-      {children}
-    </Menu.SubmenuTrigger>
   );
 };
 
