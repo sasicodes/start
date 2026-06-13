@@ -18,8 +18,8 @@ type FffNode = typeof import('@ff-labs/fff-node');
 export interface FinderEntry {
   ready: boolean;
   indexRoot: string;
-  finder: FileFinderApi;
   lastUsedAt: number;
+  finder: FileFinderApi;
   lastRefreshAt: number;
 }
 
@@ -114,8 +114,8 @@ const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null>
     indexRoot,
     ready: false,
     lastUsedAt: now(),
-    finder: result.value,
-    lastRefreshAt: now()
+    lastRefreshAt: now(),
+    finder: result.value
   };
   markReady(entry, readyPollMs);
   return entry;

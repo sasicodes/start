@@ -13,17 +13,17 @@ export interface WorkspaceGrepMatch {
   line: number;
   path: string;
   text: string;
+  isDefinition: boolean;
   contextAfter: string[];
   contextBefore: string[];
-  isDefinition: boolean;
 }
 
 export interface WorkspaceGrepResult {
-  matches: WorkspaceGrepMatch[];
   nextCursor: number;
   totalFiles: number;
   restarted?: boolean;
   searchedFiles: number;
+  matches: WorkspaceGrepMatch[];
 }
 
 export interface PathSearchOptions extends SearchWaitOptions {
@@ -44,11 +44,11 @@ export interface GrepOptionsInput extends SearchWaitOptions {
   cwd: string;
   glob?: string;
   limit: number;
-  mode?: GrepMode;
   path?: string;
+  mode?: GrepMode;
   cursor?: number;
-  context?: number;
   pattern: string;
+  context?: number;
   classifyDefinitions?: boolean;
 }
 
