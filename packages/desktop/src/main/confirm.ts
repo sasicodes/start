@@ -1,3 +1,4 @@
+import { workInProgress } from '@main/wip';
 import type { MessageBoxOptions } from 'electron';
 import electron from 'electron';
 
@@ -28,6 +29,8 @@ const runCloseConfirmation = async () => {
 };
 
 export const confirmClose = () => {
+  if (!workInProgress()) return Promise.resolve(true);
+
   if (!closeConfirmation) closeConfirmation = runCloseConfirmation();
   return closeConfirmation;
 };

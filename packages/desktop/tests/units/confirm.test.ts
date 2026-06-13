@@ -1,10 +1,19 @@
 import { confirmClose } from '@main/confirm';
+import { setWorkInProgressSource } from '@main/wip';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { dialog, resetDialog, setDialogResponse } from '../fakes/electron.js';
 
 describe('confirmClose', () => {
   beforeEach(() => {
     resetDialog();
+    setWorkInProgressSource(() => true);
+  });
+
+  it('skips the dialog and confirms when no work is in progress', async () => {
+    setWorkInProgressSource(() => false);
+
+    await expect(confirmClose()).resolves.toBe(true);
+    expect(dialog.calls).toHaveLength(0);
   });
 
   it('returns false when the dialog is canceled', async () => {
