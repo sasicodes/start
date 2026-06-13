@@ -21,7 +21,17 @@ export default defineConfig({
       externalizeDeps: false,
       reportCompressedSize: false,
       rollupOptions: {
-        external: ['electron', /^node:/, '@silvia-odwyer/photon-node', 'bufferutil', 'utf-8-validate'],
+        external: [
+          /^node:/,
+          'electron',
+          'ffi-rs',
+          'bufferutil',
+          'utf-8-validate',
+          /^@yuuang\/ffi-rs-/,
+          '@ff-labs/fff-node',
+          /^@ff-labs\/fff-bin-/,
+          '@silvia-odwyer/photon-node'
+        ],
         output: {
           format: 'cjs',
           codeSplitting: false,

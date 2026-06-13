@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { readdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { searchWorkspacePaths } from '@main/search/fff';
+import { cleanRelativePath, toPosixPath } from '@main/search/path';
 import { logger } from '@main/utils/logger';
 
 export type RootItem = {
@@ -31,6 +33,7 @@ const workspaceSearchLimit = 120;
 const filesystemRoot = homedir();
 const rootItemsCacheMaxEntries = 80;
 const rootItemsCache = new Map<string, RootItemsCacheEntry>();
+const rootItemCollator = new Intl.Collator([], { sensitivity: 'base' });
 const ignoredDirectoryNames = new Set(['.git', 'node_modules']);
 
 const pruneCache = (cache: Map<string, RootItemsCacheEntry>, now = Date.now()) => {
@@ -45,21 +48,13 @@ const pruneCache = (cache: Map<string, RootItemsCacheEntry>, now = Date.now()) =
   }
 };
 
-const toPosixPath = (value: string) => value.split(path.sep).join('/').replace(/\/+/gu, '/');
-
-const cleanRelativePath = (value: string) =>
-  toPosixPath(path.normalize(value || '.'))
-    .replace(/^\.(?:\/|$)/u, '')
-    .replace(/^\/+/u, '')
-    .replace(/\/+$|^\.$/gu, '');
-
 const hasIgnoredSegment = (value: string) => value.split('/').some((segment) => ignoredDirectoryNames.has(segment));
 
 const itemName = (itemPath: string) => itemPath.split('/').filter(Boolean).at(-1) ?? itemPath;
 
 const itemSort = (first: RootItem, second: RootItem) => {
   if (first.type !== second.type) return first.type === 'directory' ? -1 : 1;
-  return first.path.localeCompare(second.path, undefined, { sensitivity: 'base' });
+  return rootItemCollator.compare(first.path, second.path);
 };
 
 const rootItem = (itemPath: string, type: RootItem['type']): RootItem => ({
@@ -213,6 +208,15 @@ const directWorkspaceItems = async (folderPath: string, workspaceRoot: string) =
   return [...items.values()].sort(itemSort).slice(0, rootItemsLimit);
 };
 
+const safeStatEntry = async (entryPath: string) => {
+  try {
+    return await stat(entryPath);
+  } catch (error) {
+    logger.error('stat entry', error);
+    return null;
+  }
+};
+
 const scoreEntry = (entry: RootItem, query: string) => {
   const lowerName = entry.name.toLowerCase();
   const lowerPath = entry.path.toLowerCase();
@@ -257,6 +261,15 @@ const addSearchPath = (items: Map<string, ScoredRootItem>, itemPath: string, fol
 };
 
 const searchWorkspaceItems = async (folderPath: string, query: string, workspaceRoot: string) => {
+  const fffItems = await searchWorkspacePaths({
+    query,
+    folderPath,
+    workspaceRoot,
+    limit: workspaceSearchLimit
+  });
+
+  if (fffItems) return fffItems.map((item) => rootItem(item.path, item.type));
+
   const items = new Map<string, ScoredRootItem>();
   const ok = await runGitPathStream(workspaceRoot, folderPath, (itemPath) =>
     addSearchPath(items, itemPath, folderPath, query)
@@ -293,14 +306,7 @@ const readDirectoryItems = async (relativePath: string, basePath: string) => {
       if (ignoredDirectoryNames.has(entry.name)) return;
 
       const entryPath = path.join(targetPath, entry.name);
-      let entryStat: Awaited<ReturnType<typeof stat>> | undefined;
-      if (entry.isSymbolicLink()) {
-        try {
-          entryStat = await stat(entryPath);
-        } catch (error) {
-          logger.error('stat entry', error);
-        }
-      }
+      const entryStat = entry.isSymbolicLink() ? await safeStatEntry(entryPath) : null;
       const isDirectory = entry.isDirectory() || entryStat?.isDirectory();
       const isFile = entry.isFile() || entryStat?.isFile();
 
