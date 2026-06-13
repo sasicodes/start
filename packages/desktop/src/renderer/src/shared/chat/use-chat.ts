@@ -276,7 +276,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applyWorkspaceSwitch = useCallback(
     (result: SwitchWorkspaceResult, options: WorkspaceSwitchOptions = {}) => {
-      if (result.cancelled) return false;
+      if (result.cancelled || result.unchanged) return false;
       if (!result.ok || !result.status) return false;
 
       if (result.workspace) {

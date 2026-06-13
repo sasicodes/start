@@ -15,6 +15,7 @@ import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { canSelectWorkspace } from '@renderer/shared/workspace/select';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
@@ -183,8 +184,12 @@ export const App = () => {
   );
 
   const selectWorkspaceFromComposer = useCallback(
-    (path: string) => showSwitchedWorkspace(() => switchWorkspace(path, { preserveDraft: true })),
-    [showSwitchedWorkspace, switchWorkspace]
+    (path: string) => {
+      if (!canSelectWorkspace(path, workspacePath)) return;
+
+      showSwitchedWorkspace(() => switchWorkspace(path, { preserveDraft: true }));
+    },
+    [workspacePath, switchWorkspace, showSwitchedWorkspace]
   );
 
   const startNewSession = useCallback(() => {
@@ -249,8 +254,12 @@ export const App = () => {
   );
 
   const selectWorkspaceFromDock = useCallback(
-    (path: string) => showSwitchedWorkspace(() => switchWorkspace(path)),
-    [showSwitchedWorkspace, switchWorkspace]
+    (path: string) => {
+      if (!canSelectWorkspace(path, workspacePath)) return;
+
+      showSwitchedWorkspace(() => switchWorkspace(path));
+    },
+    [workspacePath, switchWorkspace, showSwitchedWorkspace]
   );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;

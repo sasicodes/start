@@ -52,9 +52,9 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
             <MenuPanel className="w-64">
               <WorkspaceMenu
                 folders={folders}
+                onSelect={onSelectWorkspace}
                 workspacePath={workspacePath}
                 onChooseDirectory={onChooseDirectory}
-                onSelectWorkspace={onSelectWorkspace}
               />
             </MenuPanel>
           </AppMenu.Positioner>

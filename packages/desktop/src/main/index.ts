@@ -347,8 +347,10 @@ const openCliWorkspace = async (request: CliLaunchRequest) => {
   }
 
   await getWorkspace(resolved.workspacePath).catch(() => null);
-  notifyWorkspaceChanged(result.status?.workspacePath ?? resolved.workspacePath);
-  sendToMainWindow('chat:workspace-opened');
+  if (!result.unchanged) {
+    notifyWorkspaceChanged(result.status?.workspacePath ?? resolved.workspacePath);
+    sendToMainWindow('chat:workspace-opened');
+  }
   showMainWindow();
 };
 

@@ -276,6 +276,7 @@ export interface SwitchWorkspaceResult {
   error?: string;
   status?: ChatStatus;
   cancelled?: boolean;
+  unchanged?: boolean;
   workspace?: WorkspaceInfo;
 }
 

@@ -118,9 +118,9 @@ export const Workspace = memo(
               <MenuPanel className="w-64">
                 <WorkspaceMenu
                   folders={folders}
+                  onSelect={onSelectWorkspace}
                   workspacePath={workspacePath}
                   onChooseDirectory={onChooseDirectory}
-                  onSelectWorkspace={onSelectWorkspace}
                 />
               </MenuPanel>
             </AppMenu.Positioner>

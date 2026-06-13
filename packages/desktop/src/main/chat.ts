@@ -820,6 +820,7 @@ export class ChatService {
   async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
+    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: await this.getStatus() };
 
     try {
       this.sessionOpenSequence += 1;
@@ -1375,11 +1376,14 @@ export class ChatService {
   }
 
   private consumeQueuedMessageText(messages: string[], message: QueuedMessage): boolean {
-    const index = messages.findIndex((text) => this.queuedMessageMatches(message, text));
-    if (index === -1) return false;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (!this.queuedMessageMatches(message, messages[index] ?? '')) continue;
 
-    messages.splice(index, 1);
-    return true;
+      messages.splice(index, 1);
+      return true;
+    }
+
+    return false;
   }
 
   private syncQueuedMessages(
@@ -1395,7 +1399,7 @@ export class ChatService {
     const nextMessages: PendingQueuedMessage[] = [];
     const deliveredMessages: PendingQueuedMessage[] = [];
 
-    for (const message of runtimeState.queuedMessages) {
+    for (const message of [...runtimeState.queuedMessages].reverse()) {
       if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
       } else if (message.kind === 'followUp' && this.consumeQueuedMessageText(followUpMessages, message)) {
@@ -1409,6 +1413,8 @@ export class ChatService {
       }
     }
 
+    nextMessages.reverse();
+    deliveredMessages.reverse();
     for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
     for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
 

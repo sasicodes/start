@@ -1,6 +1,7 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { attentionStatus } from '@renderer/shared/attention-status';
 import { Indicator } from '@renderer/shared/indicator';
+import { canSelectWorkspace } from '@renderer/shared/workspace/select';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
@@ -11,48 +12,52 @@ const WorkspaceAttention = ({ folder }: { folder: WorkspaceFolder }) => {
   return <Indicator kind={attention} />;
 };
 
-const WorkspaceRow = ({
-  folder,
-  selected,
-  onSelectWorkspace
-}: {
+interface WorkspaceRowProps {
   selected: boolean;
   folder: WorkspaceFolder;
-  onSelectWorkspace: (path: string) => void;
-}) => (
-  <AppMenu.Item
-    onClick={() => onSelectWorkspace(folder.path)}
-    className={tw(
-      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
-      selected ? 'bg-control text-hover' : 'bg-transparent'
-    )}
-  >
-    <span class="flex min-w-0 flex-col gap-0.5">
-      <span class="truncate text-sm leading-5 font-medium">{folder.name}</span>
-      <span class="truncate text-xs leading-4 font-normal text-soft">{folder.path}</span>
-    </span>
-    {!selected && <WorkspaceAttention folder={folder} />}
-  </AppMenu.Item>
-);
+  onSelect: (path: string) => void;
+}
 
-export const WorkspaceMenu = ({
-  folders,
-  workspacePath,
-  onChooseDirectory,
-  onSelectWorkspace
-}: {
+interface WorkspaceMenuProps {
   workspacePath?: string;
   folders: WorkspaceFolder[];
   onChooseDirectory: () => void;
-  onSelectWorkspace: (path: string) => void;
-}) => (
+  onSelect: (path: string) => void;
+}
+
+const WorkspaceRow = ({ folder, selected, onSelect }: WorkspaceRowProps) => {
+  const selectWorkspace = () => {
+    if (selected) return;
+
+    onSelect(folder.path);
+  };
+
+  return (
+    <AppMenu.Item
+      disabled={selected}
+      onClick={selectWorkspace}
+      className={tw(
+        'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+        selected ? 'bg-control text-hover' : 'bg-transparent'
+      )}
+    >
+      <span class="flex min-w-0 flex-col gap-0.5">
+        <span class="truncate text-sm leading-5 font-medium">{folder.name}</span>
+        <span class="truncate text-xs leading-4 font-normal text-soft">{folder.path}</span>
+      </span>
+      {!selected && <WorkspaceAttention folder={folder} />}
+    </AppMenu.Item>
+  );
+};
+
+export const WorkspaceMenu = ({ folders, onSelect, workspacePath, onChooseDirectory }: WorkspaceMenuProps) => (
   <div class="flex flex-col gap-1">
     {folders.map((folder) => (
       <WorkspaceRow
         key={folder.path}
         folder={folder}
-        selected={folder.path === workspacePath}
-        onSelectWorkspace={onSelectWorkspace}
+        onSelect={onSelect}
+        selected={!canSelectWorkspace(folder.path, workspacePath)}
       />
     ))}
     <AppMenu.Item

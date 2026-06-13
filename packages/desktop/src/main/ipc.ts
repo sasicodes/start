@@ -146,7 +146,7 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
   ipcMain.handle('chat:switch-workspace', async (_event, path: string) => {
     const result = await chat.switchWorkspace(path);
-    if (result.ok) {
+    if (result.ok && !result.unchanged) {
       trackWorkspaceChanged('switcher', result.status?.workspacePath ?? path);
       notifyWorkspaceChanged(result.status?.workspacePath);
     }
@@ -210,7 +210,7 @@ export const registerChatIpc = ({
     if (result.canceled || !path) return { ok: true, cancelled: true, status: await chat.getStatus() };
     rememberWorkspaceBookmark(path, result.bookmarks?.[0]);
     const nextResult = await chat.switchWorkspace(path);
-    if (nextResult.ok) {
+    if (nextResult.ok && !nextResult.unchanged) {
       trackWorkspaceChanged('dialog', nextResult.status?.workspacePath ?? path);
       notifyWorkspaceChanged(nextResult.status?.workspacePath);
     }
