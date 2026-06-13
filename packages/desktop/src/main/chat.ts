@@ -1346,6 +1346,11 @@ export class ChatService {
     return Boolean(this.runtimeStateForSession(session).isGenerating || session.isStreaming || session.isBashRunning);
   }
 
+  workInProgress(): boolean {
+    if (this.session && this.sessionIsGenerating(this.session)) return true;
+    return [...this.backgroundSessions.values()].some((session) => this.sessionIsGenerating(session));
+  }
+
   private deleteRuntimeState(sessionId: string): void {
     this.liveTitles.delete(sessionId);
     this.sessionRuntimeStates.delete(sessionId);
