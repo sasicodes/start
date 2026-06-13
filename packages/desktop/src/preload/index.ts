@@ -135,6 +135,7 @@ export interface QueuedMessage {
 export interface QueuedTurnStart {
   id: string;
   text: string;
+  attachments?: ImageAttachment[];
 }
 
 export type TurnDetailKind = 'error' | 'metadata' | 'tool';
@@ -177,6 +178,7 @@ export interface HistoryTurn {
   streaming?: boolean;
   createdAt: number;
   details?: HistoryTurnDetail[];
+  attachments?: ImageAttachment[];
   role: 'user' | 'assistant' | 'terminal' | 'event';
 }
 

@@ -1,4 +1,12 @@
-import { cumulativeHeights, firstVisibleIndex, lastVisibleIndex, totalHeight } from '@renderer/ui/virtual/geometry';
+import {
+  totalHeight,
+  visibleRange,
+  cumulativeHeights,
+  firstVisibleIndex,
+  initialVisibleEnd,
+  lastVisibleIndex,
+  shouldPreserveScrollEnd
+} from '@renderer/ui/virtual/geometry';
 import { describe, expect, it } from 'vitest';
 
 describe('cumulativeHeights', () => {
@@ -75,5 +83,45 @@ describe('lastVisibleIndex', () => {
 
   it('caps at the last index when the viewport extends past the end', () => {
     expect(lastVisibleIndex(cumulative, 9999)).toBe(4);
+  });
+});
+
+describe('initialVisibleEnd', () => {
+  it('includes rows until the viewport guess is filled', () => {
+    expect(initialVisibleEnd(cumulativeHeights([40, 50, 60]), 70)).toBe(2);
+  });
+
+  it('returns the list end when estimates are shorter than the viewport guess', () => {
+    expect(initialVisibleEnd(cumulativeHeights([40, 50, 60]), 500)).toBe(3);
+  });
+});
+
+describe('visibleRange', () => {
+  const cumulative = cumulativeHeights([100, 100, 100, 100, 100]);
+
+  it('returns the viewport range with no overscan', () => {
+    expect(visibleRange(cumulative, 120, 280, 0)).toEqual({ end: 3, start: 1 });
+  });
+
+  it('expands the range by overscan in both directions', () => {
+    expect(visibleRange(cumulative, 220, 320, 75)).toEqual({ end: 4, start: 1 });
+  });
+
+  it('keeps the start at 0 when overscan reaches above the list', () => {
+    expect(visibleRange(cumulative, 20, 80, 100)).toEqual({ end: 2, start: 0 });
+  });
+});
+
+describe('shouldPreserveScrollEnd', () => {
+  it('preserves when growth moved a pinned viewport away from the end', () => {
+    expect(shouldPreserveScrollEnd(40, 30, 24)).toBe(true);
+  });
+
+  it('does not preserve when the viewport was already away from the end', () => {
+    expect(shouldPreserveScrollEnd(80, 30, 24)).toBe(false);
+  });
+
+  it('ignores shrink changes', () => {
+    expect(shouldPreserveScrollEnd(0, -30, 24)).toBe(false);
   });
 });

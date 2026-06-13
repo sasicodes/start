@@ -9,7 +9,7 @@ const setVisible = (visible: boolean) => {
   if (scrollToBottomButtonState.value !== visible) scrollToBottomButtonState.value = visible;
 };
 
-export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, turnCount: number) => {
+export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, contentRef: RefObject<HTMLElement>) => {
   const sync = useCallback(() => {
     const element = scrollRef.current;
     setVisible(Boolean(element && hasPageBelow(element)));
@@ -22,5 +22,14 @@ export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, turnCount: 
     element.addEventListener('scroll', sync, { passive: true });
     sync();
     return () => element.removeEventListener('scroll', sync);
-  }, [scrollRef, sync, turnCount]);
+  }, [sync, scrollRef]);
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const observer = new ResizeObserver(sync);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [sync, contentRef]);
 };

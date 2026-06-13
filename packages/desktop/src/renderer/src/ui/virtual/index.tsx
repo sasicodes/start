@@ -1,32 +1,48 @@
-import { cumulativeHeights, firstVisibleIndex, lastVisibleIndex, totalHeight } from '@renderer/ui/virtual/geometry';
+import {
+  totalHeight,
+  visibleRange,
+  cumulativeHeights,
+  firstVisibleIndex,
+  initialVisibleEnd,
+  shouldPreserveScrollEnd
+} from '@renderer/ui/virtual/geometry';
+import type { VisibleRange } from '@renderer/ui/virtual/geometry';
+import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
 import { Fragment } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+
+export interface VirtualHandle {
+  scrollToIndex: (index: number) => boolean;
+  scrollTopForIndex: (index: number) => number | null;
+}
 
 interface VirtualProps<T> {
+  gap?: number;
   overscan?: number;
+  className?: string;
+  itemClassName?: string;
   items: ReadonlyArray<T>;
+  preserveScrollEnd?: boolean;
   getKey: (item: T) => string;
+  estimateHeightAsMinimum?: boolean;
   estimateHeight: (item: T) => number;
-  renderItem: (item: T) => ComponentChildren;
+  apiRef?: RefObject<VirtualHandle | null>;
+  onRangeChange?: (range: VisibleRange) => void;
+  renderItem: (item: T, index: number) => ComponentChildren;
 }
 
-interface Range {
-  end: number;
-  start: number;
+interface MeasuredItemProps {
+  itemKey: string;
+  className: string;
+  children: ComponentChildren;
+  onHeight: (key: string, height: number) => void;
 }
 
+const pinnedThreshold = 24;
 const defaultOverscan = 1500;
 const initialViewportGuess = 3000;
 const scrollOverflowValues = new Set(['auto', 'overlay', 'scroll']);
-
-const initialEnd = (cumulative: Float64Array, viewportGuess: number) => {
-  const last = cumulative.length - 1;
-  for (let index = 0; index < last; index += 1) {
-    if ((cumulative[index + 1] ?? 0) > viewportGuess) return index + 1;
-  }
-  return last;
-};
 
 const findScrollAncestor = (element: HTMLElement): HTMLElement | null => {
   let parent = element.parentElement;
@@ -37,15 +53,43 @@ const findScrollAncestor = (element: HTMLElement): HTMLElement | null => {
   return null;
 };
 
-const sameRange = (a: Range, b: Range) => a.start === b.start && a.end === b.end;
+const sameRange = (a: VisibleRange, b: VisibleRange) => a.start === b.start && a.end === b.end;
 
-const rangeOf = (cumulative: Float64Array, scrollTop: number, scrollBottom: number, overscan: number): Range => ({
-  end: lastVisibleIndex(cumulative, scrollBottom + overscan) + 1,
-  start: firstVisibleIndex(cumulative, Math.max(0, scrollTop - overscan))
-});
+const useVisibleRange = (
+  cumulative: Float64Array,
+  overscan: number,
+  containerRef: RefObject<HTMLElement>
+): VisibleRange => {
+  const frameRef = useRef(0);
+  const cumulativeRef = useRef(cumulative);
+  const [range, setRange] = useState<VisibleRange>(() => ({
+    start: 0,
+    end: initialVisibleEnd(cumulative, initialViewportGuess)
+  }));
 
-const useVisibleRange = (cumulative: Float64Array, overscan: number, containerRef: RefObject<HTMLElement>): Range => {
-  const [range, setRange] = useState<Range>(() => ({ end: initialEnd(cumulative, initialViewportGuess), start: 0 }));
+  cumulativeRef.current = cumulative;
+
+  const compute = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const scrollAncestor = findScrollAncestor(container);
+    const anchorTop = scrollAncestor ? scrollAncestor.getBoundingClientRect().top : 0;
+    const containerRect = container.getBoundingClientRect();
+    const viewportHeight = scrollAncestor ? scrollAncestor.clientHeight : window.innerHeight;
+    const scrollTop = anchorTop - containerRect.top;
+    const next = visibleRange(cumulativeRef.current, scrollTop, scrollTop + viewportHeight, overscan);
+    setRange((previous) => (sameRange(previous, next) ? previous : next));
+  }, [overscan, containerRef]);
+
+  const schedule = useCallback(() => {
+    if (frameRef.current) return;
+
+    frameRef.current = window.requestAnimationFrame(() => {
+      frameRef.current = 0;
+      compute();
+    });
+  }, [compute]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -53,55 +97,232 @@ const useVisibleRange = (cumulative: Float64Array, overscan: number, containerRe
 
     const scrollAncestor = findScrollAncestor(container);
     const scrollTarget: EventTarget = scrollAncestor ?? window;
-    let rafId = 0;
-
-    const computeRange = () => {
-      const anchorTop = scrollAncestor ? scrollAncestor.getBoundingClientRect().top : 0;
-      const containerRect = container.getBoundingClientRect();
-      const viewportHeight = scrollAncestor ? scrollAncestor.clientHeight : window.innerHeight;
-      const scrollTop = anchorTop - containerRect.top;
-      const next = rangeOf(cumulative, scrollTop, scrollTop + viewportHeight, overscan);
-      setRange((previous) => (sameRange(previous, next) ? previous : next));
-    };
-
-    const schedule = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = 0;
-        computeRange();
-      });
-    };
 
     scrollTarget.addEventListener('scroll', schedule, { passive: true });
     const resizeObserver = new ResizeObserver(schedule);
     if (scrollAncestor) resizeObserver.observe(scrollAncestor);
     else window.addEventListener('resize', schedule, { passive: true });
 
-    computeRange();
-
     return () => {
-      if (rafId) window.cancelAnimationFrame(rafId);
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = 0;
+      }
       scrollTarget.removeEventListener('scroll', schedule);
       resizeObserver.disconnect();
       if (!scrollAncestor) window.removeEventListener('resize', schedule);
     };
-  }, [cumulative, overscan, containerRef]);
+  }, [schedule, containerRef]);
+
+  useEffect(() => {
+    compute();
+  }, [compute, cumulative]);
 
   return range;
+};
+
+const MeasuredItem = ({ itemKey, className, children, onHeight }: MeasuredItemProps) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const measure = () => onHeight(itemKey, element.offsetHeight);
+    const observer = new ResizeObserver(measure);
+    measure();
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [itemKey, onHeight]);
+
+  return (
+    <div ref={ref} class={tw('min-w-0', className)}>
+      {children}
+    </div>
+  );
 };
 
 export const Virtual = <T,>({
   items,
   getKey,
-  overscan = defaultOverscan,
+  apiRef,
+  gap = 0,
   renderItem,
-  estimateHeight
+  onRangeChange,
+  className = '',
+  estimateHeight,
+  itemClassName = '',
+  preserveScrollEnd = false,
+  overscan = defaultOverscan,
+  estimateHeightAsMinimum = false
 }: VirtualProps<T>) => {
+  const itemsRef = useRef(items);
+  const pinnedRef = useRef(true);
+  const appliedScrollDeltaRef = useRef(0);
+  const totalRef = useRef<number | null>(null);
+  const estimateHeightRef = useRef(estimateHeight);
   const containerRef = useRef<HTMLDivElement>(null);
-  const heights = useMemo(() => items.map(estimateHeight), [items, estimateHeight]);
+  const itemIndexRef = useRef(new Map<string, number>());
+  const heightCacheRef = useRef(new Map<string, number>());
+  const [heightRevision, setHeightRevision] = useState(0);
+  const preserveScrollEndRef = useRef(preserveScrollEnd);
+  const cumulativeRef = useRef<Float64Array>(cumulativeHeights([]));
+
+  estimateHeightRef.current = estimateHeight;
+  preserveScrollEndRef.current = preserveScrollEnd;
+  itemsRef.current = items;
+
+  const heights = useMemo(() => {
+    const last = items.length - 1;
+    const nextIndexes = new Map<string, number>();
+    const nextHeights = items.map((item, index) => {
+      const key = getKey(item);
+      const cachedHeight = heightCacheRef.current.get(key);
+      const estimatedHeight = estimateHeight(item);
+      const contentHeight =
+        estimateHeightAsMinimum && typeof cachedHeight === 'number'
+          ? Math.max(cachedHeight, estimatedHeight)
+          : (cachedHeight ?? estimatedHeight);
+      nextIndexes.set(key, index);
+      return contentHeight + (index < last ? gap : 0);
+    });
+
+    itemIndexRef.current = nextIndexes;
+    return nextHeights;
+  }, [gap, items, getKey, estimateHeight, heightRevision, estimateHeightAsMinimum]);
   const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
   const total = totalHeight(cumulative);
   const range = useVisibleRange(cumulative, overscan, containerRef);
+
+  cumulativeRef.current = cumulative;
+
+  const scrollTopForIndex = useCallback((index: number) => {
+    const container = containerRef.current;
+    const cumulativeHeightsRef = cumulativeRef.current;
+    const last = cumulativeHeightsRef.length - 2;
+    if (!container || index < 0 || index > last) return null;
+
+    const scrollAncestor = findScrollAncestor(container);
+    const offset = cumulativeHeightsRef[index] ?? 0;
+    const containerTop = container.getBoundingClientRect().top;
+
+    if (!scrollAncestor) return window.scrollY + containerTop + offset;
+
+    const topInset = Number.parseFloat(getComputedStyle(scrollAncestor).paddingTop) || 0;
+    return scrollAncestor.scrollTop + containerTop - scrollAncestor.getBoundingClientRect().top - topInset + offset;
+  }, []);
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const scrollTop = scrollTopForIndex(index);
+      if (scrollTop === null) return false;
+
+      const container = containerRef.current;
+      const scrollAncestor = container ? findScrollAncestor(container) : null;
+      if (scrollAncestor) scrollAncestor.scrollTop = Math.ceil(scrollTop);
+      else window.scrollTo({ top: Math.ceil(scrollTop) });
+      return true;
+    },
+    [scrollTopForIndex]
+  );
+
+  const setMeasuredHeight = useCallback((key: string, height: number) => {
+    const current = heightCacheRef.current.get(key);
+    const index = itemIndexRef.current.get(key);
+    const item = typeof index === 'number' ? itemsRef.current[index] : null;
+    const previous = current ?? (item ? estimateHeightRef.current(item) : height);
+    if (previous === height) return;
+
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    const scrollTop =
+      container && scrollAncestor
+        ? scrollAncestor.getBoundingClientRect().top - container.getBoundingClientRect().top
+        : 0;
+    const firstVisible = firstVisibleIndex(cumulativeRef.current, scrollTop);
+    const heightDelta = height - previous;
+    const distanceFromEnd = scrollAncestor
+      ? scrollAncestor.scrollHeight - scrollAncestor.clientHeight - scrollAncestor.scrollTop
+      : 0;
+
+    const anchorAbove = typeof index === 'number' && index < firstVisible;
+    const pinnedToEnd =
+      preserveScrollEndRef.current &&
+      (pinnedRef.current || shouldPreserveScrollEnd(distanceFromEnd, heightDelta, pinnedThreshold));
+
+    heightCacheRef.current.set(key, height);
+    if (scrollAncestor && (anchorAbove || pinnedToEnd)) {
+      scrollAncestor.scrollTop += heightDelta;
+      appliedScrollDeltaRef.current += heightDelta;
+      if (pinnedToEnd) pinnedRef.current = true;
+    }
+    setHeightRevision((revision) => revision + 1);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (totalRef.current === null) {
+      totalRef.current = total;
+      return;
+    }
+
+    const totalDelta = total - totalRef.current;
+    const heightDelta = totalDelta - appliedScrollDeltaRef.current;
+    appliedScrollDeltaRef.current = 0;
+    totalRef.current = total;
+    if (heightDelta <= 0) return;
+
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    const distanceFromEnd = scrollAncestor
+      ? scrollAncestor.scrollHeight - scrollAncestor.clientHeight - scrollAncestor.scrollTop
+      : 0;
+
+    if (
+      scrollAncestor &&
+      preserveScrollEnd &&
+      (pinnedRef.current || shouldPreserveScrollEnd(distanceFromEnd, heightDelta, pinnedThreshold))
+    ) {
+      scrollAncestor.scrollTop += heightDelta;
+      pinnedRef.current = true;
+    }
+  }, [total, preserveScrollEnd]);
+
+  useEffect(() => {
+    if (!preserveScrollEnd) return;
+
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    if (!scrollAncestor) return;
+
+    const syncPinned = () => {
+      pinnedRef.current =
+        scrollAncestor.scrollHeight - scrollAncestor.clientHeight - scrollAncestor.scrollTop <= pinnedThreshold;
+    };
+
+    scrollAncestor.addEventListener('scroll', syncPinned, { passive: true });
+    syncPinned();
+    return () => scrollAncestor.removeEventListener('scroll', syncPinned);
+  }, [preserveScrollEnd]);
+
+  useEffect(() => {
+    const keys = new Set(items.map(getKey));
+    for (const key of heightCacheRef.current.keys()) {
+      if (!keys.has(key)) heightCacheRef.current.delete(key);
+    }
+  }, [items, getKey]);
+
+  useLayoutEffect(() => {
+    if (!apiRef) return;
+
+    apiRef.current = { scrollToIndex, scrollTopForIndex };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef, scrollToIndex, scrollTopForIndex]);
+
+  useLayoutEffect(() => {
+    onRangeChange?.(range);
+  }, [range, onRangeChange]);
 
   const limit = Math.max(0, cumulative.length - 1);
   const end = Math.min(range.end, limit);
@@ -111,11 +332,20 @@ export const Virtual = <T,>({
   const bottomSpacer = Math.max(0, total - (cumulative[end] ?? total));
 
   return (
-    <div ref={containerRef} class="min-w-0">
+    <div ref={containerRef} class={tw('min-w-0', className)}>
       <div aria-hidden="true" style={{ height: `${topSpacer}px` }} />
-      {visible.map((item) => (
-        <Fragment key={getKey(item)}>{renderItem(item)}</Fragment>
-      ))}
+      {visible.map((item, visibleIndex) => {
+        const index = start + visibleIndex;
+        const key = getKey(item);
+        return (
+          <Fragment key={key}>
+            <MeasuredItem itemKey={key} className={itemClassName} onHeight={setMeasuredHeight}>
+              {renderItem(item, index)}
+            </MeasuredItem>
+            {gap > 0 && index < items.length - 1 && <div aria-hidden="true" style={{ height: `${gap}px` }} />}
+          </Fragment>
+        );
+      })}
       <div aria-hidden="true" style={{ height: `${bottomSpacer}px` }} />
     </div>
   );

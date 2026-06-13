@@ -1,4 +1,5 @@
-import type { ChatEvent, HistoryTurnDetail } from '@main/types';
+import type { ChatEvent, HistoryTurnDetail, ImageAttachment } from '@main/types';
+import * as v from 'valibot';
 
 const previewMaxLength = 150;
 
@@ -60,42 +61,78 @@ export const previewValue = (value: unknown) => {
   }
 };
 
+const textPartSchema = v.object({
+  text: v.string(),
+  type: v.literal('text')
+});
+
+const imagePartSchema = v.object({
+  data: v.string(),
+  type: v.literal('image'),
+  mimeType: v.optional(v.string())
+});
+
+const joinedParts = (parts: readonly unknown[], partText: (part: unknown) => string) =>
+  parts.map(partText).filter(Boolean).join('\n').trim();
+
 export const textContent = (content: unknown) => {
   if (typeof content === 'string') return content.trim();
   if (!Array.isArray(content)) return '';
 
-  return content
-    .flatMap((part) => {
-      if (!isRecord(part)) return [];
+  return joinedParts(content, (part) => {
+    if (!isRecord(part)) return '';
 
-      const type = stringValue(part.type);
-      if (type === 'text') {
-        const text = stringValue(part.text);
-        return text ? [text] : [];
+    const type = stringValue(part.type);
+    if (type === 'text') return stringValue(part.text);
+    if (type !== 'image') return '';
+
+    const mimeType = stringValue(part.mimeType);
+    return mimeType ? `[image: ${mimeType}]` : '[image]';
+  });
+};
+
+export const textOnlyContent = (content: unknown) => {
+  if (typeof content === 'string') return content.trim();
+  if (!Array.isArray(content)) return '';
+
+  return joinedParts(content, (part) => {
+    const result = v.safeParse(textPartSchema, part);
+    return result.success ? result.output.text : '';
+  });
+};
+
+export const imageAttachments = (content: unknown, turnId: string): ImageAttachment[] => {
+  if (!Array.isArray(content)) return [];
+
+  return content.flatMap((part, index): ImageAttachment[] => {
+    const result = v.safeParse(imagePartSchema, part);
+    if (!result.success || !result.output.data) return [];
+
+    const mimeType = result.output.mimeType || 'image/png';
+    return [
+      {
+        path: '',
+        mimeType,
+        name: 'image',
+        type: 'image',
+        id: `${turnId}:image:${index}`,
+        previewUrl: `data:${mimeType};base64,${result.output.data}`
       }
-      if (type !== 'image') return [];
-
-      const mimeType = stringValue(part.mimeType);
-      return [mimeType ? `[image: ${mimeType}]` : '[image]'];
-    })
-    .join('\n')
-    .trim();
+    ];
+  });
 };
 
 export const thinkingContent = (content: unknown) => {
   if (!Array.isArray(content)) return '';
 
-  return content
-    .flatMap((part) => {
-      if (!isRecord(part)) return [];
-      if (stringValue(part.type) !== 'thinking') return [];
+  return joinedParts(content, (part) => {
+    if (!isRecord(part)) return '';
+    if (stringValue(part.type) !== 'thinking') return '';
 
-      const thinking = stringValue(part.thinking);
-      if (thinking) return [thinking];
-      return booleanValue(part.redacted) ? ['[redacted thinking]'] : [];
-    })
-    .join('\n')
-    .trim();
+    const thinking = stringValue(part.thinking);
+    if (thinking) return thinking;
+    return booleanValue(part.redacted) ? '[redacted thinking]' : '';
+  });
 };
 
 export const historyDetail = (

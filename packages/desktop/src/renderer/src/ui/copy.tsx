@@ -1,6 +1,6 @@
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
-import { useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 interface CopyButtonProps {
   ariaLabel: string;
@@ -9,24 +9,32 @@ interface CopyButtonProps {
   text: string;
 }
 
-export const CopyButton = ({ ariaLabel, class: className, iconClass = 'size-3.5', text }: CopyButtonProps) => {
+export const useCopied = (duration = 1500) => {
+  const timerRef = useRef(0);
   const [copied, setCopied] = useState(false);
 
-  const copy = async () => {
-    await navigator.clipboard.writeText(text);
+  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  const markCopied = useCallback(() => {
     setCopied(true);
+    window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => setCopied(false), duration);
+  }, [duration]);
+
+  return { copied, markCopied };
+};
+
+export const CopyButton = ({ ariaLabel, class: className, iconClass = 'size-3.5', text }: CopyButtonProps) => {
+  const { copied, markCopied } = useCopied();
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(text).catch(() => {});
+    markCopied();
   };
 
   return (
     <Tooltip label={copied ? 'Copied' : 'Copy'}>
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        onBlur={() => setCopied(false)}
-        onClick={() => void copy()}
-        onPointerLeave={() => setCopied(false)}
-        class={className}
-      >
+      <button type="button" onClick={copy} aria-label={ariaLabel} class={className}>
         {copied ? <CheckIcon class="size-3" /> : <CopyIcon class={iconClass} />}
       </button>
     </Tooltip>
