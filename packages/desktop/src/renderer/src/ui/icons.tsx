@@ -104,45 +104,6 @@ export const SidebarCloseIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { 
   </svg>
 );
 
-export const RefreshIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path
-      d="M13 21C13.5523 21 14 20.5523 14 20C14 19.4477 13.5523 19 13 19C12.4477 19 12 19.4477 12 20C12 20.5523 12.4477 21 13 21Z"
-      fill="currentColor"
-    />
-    <path
-      d="M21 11C21 10.4477 20.5523 9.99999 20 9.99999C19.4477 9.99999 19 10.4477 19 11C19 11.5523 19.4477 12 20 12C20.5523 12 21 11.5523 21 11Z"
-      fill="currentColor"
-    />
-    <path
-      d="M19.9295 14.2679C20.4078 14.5441 20.5716 15.1557 20.2955 15.634C20.0193 16.1123 19.4078 16.2761 18.9295 16C18.4512 15.7238 18.2873 15.1123 18.5634 14.634C18.8396 14.1557 19.4512 13.9918 19.9295 14.2679Z"
-      fill="currentColor"
-    />
-    <path
-      d="M17.3676 19.2942C17.8459 19.0181 18.0098 18.4065 17.7336 17.9282C17.4575 17.4499 16.8459 17.286 16.3676 17.5621C15.8893 17.8383 15.7254 18.4499 16.0016 18.9282C16.2777 19.4065 16.8893 19.5703 17.3676 19.2942Z"
-      fill="currentColor"
-    />
-    <path
-      d="M18.9269 7.99998C18.4487 8.27612 17.8371 8.11225 17.5609 7.63396C17.2848 7.15566 17.4487 6.54407 17.9269 6.26793C18.4052 5.99179 19.0168 6.15566 19.293 6.63396C19.5691 7.11225 19.4052 7.72384 18.9269 7.99998Z"
-      fill="currentColor"
-    />
-    <path
-      d="M9.25 14.75V20.25H3.75"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <path
-      d="M15.2493 4.41452C14.2521 3.98683 13.1537 3.75 12 3.75C7.44365 3.75 3.75 7.44365 3.75 12C3.75 15.498 5.92698 18.4875 9 19.6876"
-      stroke="currentColor"
-      stroke-width={strokeWidth}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>
-);
-
 export const SquareCursorIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
@@ -377,25 +338,6 @@ export const CopyIcon = (props: IconProps) => (
   </svg>
 );
 
-export const EditIcon = (props: IconProps) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path
-      d="M11.25 3.75H8.55C6.86984 3.75 6.02976 3.75 5.38803 4.07698C4.82354 4.3646 4.3646 4.82354 4.07698 5.38803C3.75 6.02976 3.75 6.86984 3.75 8.55V15.45C3.75 17.1302 3.75 17.9702 4.07698 18.612C4.3646 19.1765 4.82354 19.6354 5.38803 19.923C6.02976 20.25 6.86984 20.25 8.55 20.25H15.45C17.1302 20.25 17.9702 20.25 18.612 19.923C19.1765 19.6354 19.6354 19.1765 19.923 18.612C20.25 17.9702 20.25 17.1302 20.25 15.45V12.75"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <path
-      d="M8.75 15.25V12.25L17.5 3.49998C18.3284 2.67155 19.6716 2.67156 20.5 3.49998C21.3284 4.32841 21.3284 5.67156 20.5 6.49998L11.75 15.25H8.75Z"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-  </svg>
-);
-
 export const TrashIcon = (props: IconProps) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
@@ -415,23 +357,6 @@ export const TrashIcon = (props: IconProps) => (
     />
     <path d="M10 10.5V16.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
     <path d="M14 10.5V16.25" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-  </svg>
-);
-
-export const GearIcon = (props: IconProps) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path
-      d="M19.2479 6.923L12.9979 3.32455C12.3802 2.96888 11.6198 2.96888 11.0021 3.32455L4.75208 6.92297C4.13211 7.27992 3.75 7.94083 3.75 8.65622V15.3439C3.75 16.0593 4.13213 16.7202 4.75213 17.0772L11.0021 20.6754C11.6198 21.031 12.3802 21.031 12.9979 20.6753L19.2479 17.0769C19.8679 16.7199 20.25 16.059 20.25 15.3436V8.65625C20.25 7.94086 19.8679 7.27995 19.2479 6.923Z"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="square"
-    />
-    <path
-      d="M15.25 12C15.25 13.7949 13.7949 15.25 12 15.25C10.2051 15.25 8.75 13.7949 8.75 12C8.75 10.2051 10.2051 8.75 12 8.75C13.7949 8.75 15.25 10.2051 15.25 12Z"
-      stroke="currentColor"
-      stroke-width="1.5"
-      stroke-linecap="square"
-    />
   </svg>
 );
 
