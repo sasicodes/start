@@ -225,16 +225,11 @@ body {
 @keyframes composer-floating-shell-in {
   0% {
     opacity: 0;
-    transform: scale(1.055);
-    animation-timing-function: cubic-bezier(0.12, 0.9, 0.28, 1.08);
+    transform: scale(1.083);
+    animation-timing-function: cubic-bezier(0.16, 0.9, 0.22, 1);
   }
 
-  72% {
-    opacity: 1;
-    transform: scale(0.998);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-
+  72%,
   100% {
     opacity: 1;
     transform: scale(1);
@@ -264,15 +259,10 @@ body {
   0% {
     opacity: 0;
     transform: scale(1.16);
-    animation-timing-function: cubic-bezier(0.12, 0.9, 0.28, 1.08);
+    animation-timing-function: cubic-bezier(0.16, 0.9, 0.22, 1);
   }
 
-  74% {
-    opacity: 0.95;
-    transform: scale(0.998);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-
+  74%,
   100% {
     opacity: 0.95;
     transform: scale(1);
@@ -283,15 +273,10 @@ body {
   0% {
     opacity: 0;
     transform: scale(1.08);
-    animation-timing-function: cubic-bezier(0.12, 0.9, 0.28, 1.08);
+    animation-timing-function: cubic-bezier(0.16, 0.9, 0.22, 1);
   }
 
-  74% {
-    opacity: 0.78;
-    transform: scale(0.999);
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
-  }
-
+  74%,
   100% {
     opacity: 0.78;
     transform: scale(1);
