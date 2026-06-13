@@ -109,7 +109,7 @@ export const Workspace = memo(
           <AppMenu.Portal>
             <AppMenu.Positioner
               side="top"
-              align="start"
+              align="center"
               sideOffset={8}
               anchor={rootRef}
               className="z-50"

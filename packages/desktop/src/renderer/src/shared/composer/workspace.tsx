@@ -48,7 +48,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
           </AppMenu.Trigger>
         </Tooltip>
         <AppMenu.Portal>
-          <AppMenu.Positioner side="top" align="start" sideOffset={12} className="z-50" collisionPadding={12}>
+          <AppMenu.Positioner side="top" align="center" sideOffset={12} className="z-50" collisionPadding={12}>
             <MenuPanel className="w-64">
               <WorkspaceMenu
                 folders={folders}
