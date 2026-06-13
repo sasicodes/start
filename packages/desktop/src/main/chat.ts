@@ -22,7 +22,7 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
-import { recentSessionsPage } from '@main/chat/recents';
+import { type LiveRecentSession, recentSessionsPage } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, textContent } from '@main/details';
@@ -55,6 +55,7 @@ import {
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
   updateSessionTitle,
+  truncateTitle,
   upsertSessionOnStart
 } from '@main/sessions';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
@@ -546,6 +547,43 @@ export class ChatService {
     return this.openSession(session.path);
   }
 
+  private liveRecentSession(session: AgentSession, workspacePath: string): LiveRecentSession | null {
+    if (!this.sessionIsReportable(session)) return null;
+
+    const sessionManager = session.sessionManager;
+    const sessionId = sessionManager.getSessionId();
+    const path = sessionManager.getSessionFile();
+    if (!path) return null;
+
+    const entries = sessionManager.getEntries();
+    const firstMessage = firstUserMessageText(entries);
+    const status = this.sessionIsGenerating(session) ? 'generating' : 'idle';
+    const notice = this.notices.get(sessionId);
+
+    return {
+      path,
+      status,
+      workspacePath,
+      id: sessionId,
+      modified: Date.now(),
+      title: truncateTitle(firstMessage),
+      ...(notice ? { noticeKind: notice.kind } : {})
+    };
+  }
+
+  private liveRecentSessions(): LiveRecentSession[] {
+    const sessions: LiveRecentSession[] = [];
+    const activeSession = this.session ? this.liveRecentSession(this.session, this.workspaceCwd) : null;
+    if (activeSession) sessions.push(activeSession);
+
+    for (const session of this.backgroundSessions.values()) {
+      const recentSession = this.liveRecentSession(session, sessionWorkspacePath(session, this.workspaceCwd));
+      if (recentSession) sessions.push(recentSession);
+    }
+
+    return sessions;
+  }
+
   getTabs(): AgentTab[] {
     const tabs = new Map<string, AgentTab>();
     if (this.session && this.sessionIsReportable(this.session)) {
@@ -689,7 +727,7 @@ export class ChatService {
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
-    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices);
+    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices, this.liveRecentSessions());
   }
 
   getStatusItemRecentSessions(limit = 8): StatusItemRecentSession[] {
