@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { connectServer, dropServerClient, serverConnection } from '@main/mcp/clients';
-import { globalMcpConfigPath, loadMcpServers, type McpServer, projectMcpConfigPath } from '@main/mcp/config';
+import { globalMcpConfigPath, loadMcpServers, type McpServer } from '@main/mcp/config';
 import { authenticateServer, clearServerAuth, serverHasAuth } from '@main/mcp/oauth';
 import { missingServerVars, writeMcpSecret } from '@main/mcp/secrets';
 import { serverSnapshot } from '@main/mcp/snapshot';
@@ -86,8 +86,8 @@ export const registerMcpIpc = ({ workspacePath }: RegisterMcpIpcOptions) => {
     return snapshots(workspacePath());
   });
 
-  ipcMain.handle('mcp:open-config', async (_event, origin: 'global' | 'project') => {
-    const path = origin === 'project' ? projectMcpConfigPath(workspacePath()) : globalMcpConfigPath();
+  ipcMain.handle('mcp:open-config', async () => {
+    const path = globalMcpConfigPath();
     await ensureConfigFile(path);
     await shell.openPath(path);
   });

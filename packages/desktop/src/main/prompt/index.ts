@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { globalMcpConfigPath } from '@main/mcp/config';
 import * as v from 'valibot';
 
 interface ToolCapability {
@@ -130,7 +131,8 @@ Project and user resources:
 - Project rules come from AGENTS.md and CLAUDE.md files in or above the current working directory.
 - Existing skills can be loaded from ~/.agents/skills/<skill-name>/SKILL.md or <cwd>/.agents/skills/<skill-name>/SKILL.md.
 - Create Start-managed skills in ${skillsDir}/<skill-name>/SKILL.md with YAML frontmatter and instructions.
-- Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
+- Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.
+- MCP servers are "mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}. Never write secret values into these files; reference them as \${VAR} placeholders that users fill in Settings.`;
 };
 
 export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {

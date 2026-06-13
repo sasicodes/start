@@ -1,4 +1,5 @@
 import type { McpServerSnapshot } from '@preload/index';
+import { PlusIcon } from '@renderer/ui/icons';
 import { Toggle } from '@renderer/ui/toggle';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useState } from 'preact/hooks';
@@ -149,13 +150,12 @@ export const Mcp = () => {
     }
   };
 
-  const openConfig = (origin: 'global' | 'project') => {
-    window.pi.mcp.openConfig(origin).catch(() => {});
+  const addCustomMcp = () => {
+    window.pi.mcp.openConfig().catch(() => {});
   };
 
   return (
     <div class="grid gap-5">
-      {servers.length === 0 && <p class="m-0 text-sm leading-5 text-soft">No MCP servers configured.</p>}
       {servers.map((server) => (
         <ServerRow
           key={server.name}
@@ -166,23 +166,14 @@ export const Mcp = () => {
         />
       ))}
       {error && <p class="m-0 text-xs leading-4 text-danger">{error}</p>}
-      <div class="flex items-center gap-4 text-xs leading-4">
-        <button
-          type="button"
-          onClick={() => openConfig('global')}
-          class="border-0 bg-transparent p-0 font-medium text-soft transition-colors duration-100 hover:text-ink"
-        >
-          Open global config
-        </button>
-        <button
-          type="button"
-          onClick={() => openConfig('project')}
-          class="border-0 bg-transparent p-0 font-medium text-soft transition-colors duration-100 hover:text-ink"
-        >
-          Open project config
-        </button>
-        <span class="ml-auto text-soft">Changes apply to new sessions</span>
-      </div>
+      <button
+        type="button"
+        onClick={addCustomMcp}
+        class="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-dashed border-line bg-transparent px-3 text-sm font-medium text-ink transition-colors hover:border-ink/20"
+      >
+        <PlusIcon class="size-4" />
+        <span>Add custom MCP</span>
+      </button>
     </div>
   );
 };
