@@ -4,6 +4,13 @@ import type { ChatEvent, TurnDetailState } from '@main/types';
 
 const recordPath = (args: Record<string, unknown>) => stringValue(args.path) || '.';
 
+const toolDisplayName = (toolName: string) =>
+  toolName
+    .split(/[_-]+/u)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ') || 'Tool';
+
 const browserToolTitles: Record<string, { active: string; done: string; error: string; result: string }> = {
   browser_back: {
     done: 'Went back',
@@ -219,7 +226,7 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'ls') return 'Explored folder';
   if (toolName === 'read') return 'Read file';
   if (toolName === 'write') return 'Created file';
-  return `Used ${toolName}`;
+  return `Used ${toolDisplayName(toolName)}`;
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
@@ -253,7 +260,7 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
   if (toolName === 'ls') return `${state === 'active' ? 'Exploring' : 'Explored'} folder ${path}`;
   if (toolName === 'read') return `${state === 'active' ? 'Reading' : 'Read'} ${path}`;
   if (toolName === 'write') return `${state === 'active' ? 'Creating' : 'Created'} ${path}`;
-  return `${state === 'active' ? 'Using' : 'Used'} ${toolName}`;
+  return `${state === 'active' ? 'Using' : 'Used'} ${toolDisplayName(toolName)}`;
 };
 
 export const toolEventDetail = ({

@@ -43,6 +43,7 @@ import {
   thinkingDelta
 } from '@main/helpers';
 import { historyTurns } from '@main/history';
+import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/fff';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
@@ -246,6 +247,7 @@ export class ChatService {
   constructor() {
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
+    this.warmWorkspaceSearch();
   }
 
   setMobileSessionChangeHandler(handler: MobileSessionChangeHandler): void {
@@ -521,6 +523,7 @@ export class ChatService {
       this.setActiveSession(sessionManager);
       this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
+      this.refreshWorkspaceSearch();
       this.shouldCreateSession = false;
       return {
         ok: true,
@@ -597,11 +600,15 @@ export class ChatService {
 
       const sessionId = session.sessionManager.getSessionId();
       const notice = this.notices.get(sessionId);
-      const status = this.sessionIsGenerating(session) ? 'generating' : undefined;
-      const tab = status
-        ? tabFromSessionStatus(session, status, sessionWorkspacePath(session, this.workspaceCwd))
-        : tabFromSession(session, this.workspaceCwd, notice);
-      tabs.set(sessionId, tab);
+      if (this.sessionIsGenerating(session)) {
+        tabs.set(
+          sessionId,
+          tabFromSessionStatus(session, 'generating', sessionWorkspacePath(session, this.workspaceCwd))
+        );
+        continue;
+      }
+
+      tabs.set(sessionId, tabFromSession(session, this.workspaceCwd, notice));
     }
 
     return [...tabs.values()];
@@ -638,6 +645,7 @@ export class ChatService {
     this.setActiveSession(sessionManager);
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
+    this.refreshWorkspaceSearch();
 
     const sessionId = sessionManager.getSessionId();
     return {
@@ -716,6 +724,7 @@ export class ChatService {
     this.shouldCreateSession = false;
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
+    this.warmWorkspaceSearch();
 
     return {
       ok: true,
@@ -838,6 +847,7 @@ export class ChatService {
       this.workspaceCwd = nextCwd;
       this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
+      this.refreshWorkspaceSearch();
 
       return { ok: true, status: await this.getStatus() };
     } catch (error) {
@@ -1295,6 +1305,7 @@ export class ChatService {
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
     this.attachments.clear();
+    disposeWorkspaceFinders();
     closeStartDb();
   }
 
@@ -1309,6 +1320,14 @@ export class ChatService {
 
   private runtimeStateForSession(session: AgentSession): SessionRuntimeState {
     return this.runtimeStateForSessionId(session.sessionManager.getSessionId());
+  }
+
+  private warmWorkspaceSearch(): void {
+    warmWorkspaceFinder(this.workspaceCwd);
+  }
+
+  private refreshWorkspaceSearch(): void {
+    refreshWorkspaceFinder(this.workspaceCwd).catch(() => {});
   }
 
   private activeRuntimeState(): SessionRuntimeState | null {
@@ -1876,10 +1895,10 @@ export class ChatService {
     const hasApiKey = apiKeyStatus.configured;
     const supportsSubscription = key === 'anthropic' || key === 'openai';
     const subscriptionProvider = key === 'openai' ? 'openai-codex' : key;
-    const subscriptionCredential = supportsSubscription ? this.authStorage.get(subscriptionProvider) : undefined;
-    const subscriptionStatus = supportsSubscription ? this.authStorage.getAuthStatus(subscriptionProvider) : undefined;
     const hasSubscription =
-      supportsSubscription && (subscriptionCredential?.type === 'oauth' || subscriptionStatus?.configured === true);
+      supportsSubscription &&
+      (this.authStorage.get(subscriptionProvider)?.type === 'oauth' ||
+        this.authStorage.getAuthStatus(subscriptionProvider).configured);
     const hasCredentials = hasApiKey || hasSubscription;
     const kind = providerAuthKind(hasModels, hasSubscription, hasApiKey);
 

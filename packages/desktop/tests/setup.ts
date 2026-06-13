@@ -9,8 +9,14 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
     SessionManager: fake.SessionManager,
     SettingsManager: fake.SettingsManager,
     createAgentSession: fake.createAgentSession,
+    createFindTool: () => ({
+      execute: async () => ({ content: [{ text: 'fallback find', type: 'text' }] })
+    }),
+    createGrepTool: () => ({
+      execute: async () => ({ content: [{ text: 'fallback grep', type: 'text' }] })
+    }),
     defineTool: <T>(tool: T) => tool,
-    getLastAssistantUsage: () => undefined
+    getLastAssistantUsage: () => {}
   };
 });
 

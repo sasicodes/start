@@ -122,12 +122,12 @@ Available tools:
 ${runtimeToolsList(capabilities)}
 
 Guidelines:
-- Prefer grep/find/ls tools over bash for file exploration (faster, respects .gitignore).
+- Use the listed runtime tools for repository file discovery and code search before broad shell commands.
 - Be concise in your responses.
 ${filePathGuideline}${toolGuidelines}
 
 Project and user resources:
-- Project rules come from AGENTS.md and CLAUDE.md files in or above the current working directory.
+- Project rules come from AGENTS.md files in or above the current working directory.
 - Existing skills can be loaded from ~/.agents/skills/<skill-name>/SKILL.md or <cwd>/.agents/skills/<skill-name>/SKILL.md.
 - Create Start-managed skills in ${skillsDir}/<skill-name>/SKILL.md with YAML frontmatter and instructions.
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
