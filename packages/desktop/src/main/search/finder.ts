@@ -105,10 +105,13 @@ const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null>
   const fff = await loadFffNode();
   if (!fff) return null;
 
-  const result = await Promise.resolve()
-    .then(() => fff.FileFinder.create({ basePath: indexRoot, aiMode: true }))
-    .catch(() => null);
-  if (!result?.ok) return null;
+  let result: ReturnType<typeof fff.FileFinder.create> | null = null;
+  try {
+    result = fff.FileFinder.create({ basePath: indexRoot, aiMode: true });
+  } catch {
+    return null;
+  }
+  if (!result.ok) return null;
 
   const entry: FinderEntry = {
     indexRoot,

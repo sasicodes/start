@@ -51,7 +51,7 @@ export const grepSchema = {
     cursor: {
       type: 'number',
       minimum: 0,
-      description: 'Cursor returned by a previous FFF grep result.'
+      description: 'Cursor returned by a previous grep result.'
     },
     context: {
       type: 'number',
@@ -89,7 +89,7 @@ export const multiGrepSchema = {
     cursor: {
       type: 'number',
       minimum: 0,
-      description: 'Cursor returned by a previous FFF grep result.'
+      description: 'Cursor returned by a previous grep result.'
     },
     context: {
       type: 'number',

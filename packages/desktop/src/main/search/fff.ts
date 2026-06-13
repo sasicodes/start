@@ -30,7 +30,6 @@ import type {
   WorkspacePathMatch
 } from '@main/search/types';
 
-export type { WorkspaceGrepMatch, WorkspaceGrepResult, WorkspacePathMatch } from '@main/search/types';
 export { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder };
 
 const maxStoredCursors = 64;

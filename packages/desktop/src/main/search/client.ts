@@ -12,8 +12,6 @@ import type {
 } from '@main/search/types';
 import electron from 'electron';
 
-export type { WorkspaceGrepMatch, WorkspaceGrepResult, WorkspacePathMatch } from '@main/search/types';
-
 const maxRapidCrashes = 3;
 const refreshWaitMs = 5000;
 const requestSlackMs = 2000;

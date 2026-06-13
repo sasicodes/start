@@ -1,4 +1,5 @@
 import { boundedContext, boundedCount, maxGrepContext, maxGrepPageSize } from '@main/search/limits';
+import * as v from 'valibot';
 
 const maxLineLength = 500;
 const maxOutputLength = 80_000;
@@ -11,15 +12,23 @@ export const maxContext = maxGrepContext;
 export const maxGrepLimit = maxGrepPageSize;
 export const defaultGrepLimit = maxGrepPageSize;
 
-export const positiveLimit = (value: number | null = null, fallback: number, max: number) =>
-  boundedCount(value && Number.isFinite(value) ? value : fallback, max);
+const positiveSchema = v.pipe(v.number(), v.finite(), v.minValue(1));
+const nonNegativeSchema = v.pipe(v.number(), v.finite(), v.minValue(0));
 
-export const positiveCursor = (value: number | null = null) => {
-  if (!value || !Number.isFinite(value)) return 0;
-  return Math.max(0, Math.floor(value));
+export const positiveLimit = (value: number | null = null, fallback: number, max: number) => {
+  const parsed = v.safeParse(positiveSchema, value);
+  return boundedCount(parsed.success ? parsed.output : fallback, max);
 };
 
-export const positiveContext = (value: number | null = null) => boundedContext(value ?? 0);
+export const positiveCursor = (value: number | null = null) => {
+  const parsed = v.safeParse(nonNegativeSchema, value);
+  return parsed.success ? Math.floor(parsed.output) : 0;
+};
+
+export const positiveContext = (value: number | null = null) => {
+  const parsed = v.safeParse(nonNegativeSchema, value);
+  return boundedContext(parsed.success ? parsed.output : 0);
+};
 
 export const boundedPatterns = (patterns: string[]) =>
   patterns

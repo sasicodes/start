@@ -21,7 +21,6 @@ vi.mock('@earendil-works/pi-coding-agent', () => ({
 }));
 
 interface ToolResult {
-  details?: Record<string, unknown>;
   content: Array<{ text: string; type: string }>;
 }
 
@@ -56,7 +55,7 @@ describe('fff provider tools', () => {
     builtinMock.grepExecute.mockClear();
   });
 
-  it('formats FFF find results and marks the backend', async () => {
+  it('formats find results', async () => {
     fffMock.findWorkspacePaths.mockResolvedValue([
       { path: 'src/main/chat.ts', type: 'file' },
       { path: 'src/main', type: 'directory' }
@@ -71,11 +70,6 @@ describe('fff provider tools', () => {
       pattern: 'chat'
     });
     expect(toolText(result)).toBe('src/main/chat.ts\nsrc/main/');
-    expect(result.details).toEqual({
-      backend: 'fff',
-      query: 'chat',
-      resultCount: 2
-    });
   });
 
   it('caps FFF find limits before calling the shared finder', async () => {
@@ -120,7 +114,7 @@ describe('fff provider tools', () => {
     );
   });
 
-  it('formats FFF grep results with context and pagination details', async () => {
+  it('formats grep results with context and pagination', async () => {
     fffMock.grepWorkspace.mockResolvedValue({
       totalFiles: 20,
       nextCursor: 12,
@@ -153,14 +147,6 @@ describe('fff provider tools', () => {
     expect(toolText(result)).toBe(
       'src/main/chat.ts-7- before\nsrc/main/chat.ts:8: const chat = true;\nsrc/main/chat.ts-9- after\n\n[More matches available. Continue with cursor=12.]'
     );
-    expect(result.details).toEqual({
-      backend: 'fff',
-      query: 'chat',
-      totalFiles: 20,
-      matchCount: 1,
-      nextCursor: 12,
-      searchedFiles: 4
-    });
   });
 
   it('keeps the pagination hint after output truncation', async () => {
@@ -253,11 +239,11 @@ describe('fff provider tools', () => {
     const result = await executeTool(grepTool, { cursor: 9, pattern: 'chat' });
 
     expect(toolText(result)).toBe(
-      '[Note: the FFF cursor is no longer available; results restart from the beginning.]\nfallback grep'
+      '[Note: the search cursor is no longer available; results restart from the beginning.]\nfallback grep'
     );
   });
 
-  it('notes the pagination restart when the FFF cursor token has expired', async () => {
+  it('notes the pagination restart when the cursor token has expired', async () => {
     fffMock.grepWorkspace.mockResolvedValue({
       totalFiles: 1,
       nextCursor: 0,
@@ -279,16 +265,8 @@ describe('fff provider tools', () => {
     const result = await executeTool(grepTool, { cursor: 9, pattern: 'chat' });
 
     expect(toolText(result)).toBe(
-      '[Note: the FFF cursor is no longer available; results restart from the beginning.]\nsrc/main/chat.ts:2: const chat = true;'
+      '[Note: the search cursor is no longer available; results restart from the beginning.]\nsrc/main/chat.ts:2: const chat = true;'
     );
-    expect(result.details).toEqual({
-      backend: 'fff',
-      query: 'chat',
-      totalFiles: 1,
-      matchCount: 1,
-      restarted: true,
-      searchedFiles: 1
-    });
   });
 
   it('does not add a restart note to cursor-free fallback results', async () => {
@@ -323,18 +301,7 @@ describe('fff provider tools', () => {
     const unavailable = await executeTool(multiGrepTool, { patterns: ['provider'] });
 
     expect(toolText(result)).toBe('src/main/chat.ts:2: provider');
-    expect(result.details).toEqual({
-      backend: 'fff',
-      totalFiles: 20,
-      matchCount: 1,
-      patterns: ['provider'],
-      searchedFiles: 4
-    });
-    expect(toolText(unavailable)).toBe('FFF multi-grep is unavailable in this workspace. Use grep instead.');
-    expect(unavailable.details).toEqual({
-      backend: 'fff',
-      unavailable: true
-    });
+    expect(toolText(unavailable)).toBe('Multi-pattern search is unavailable in this workspace. Use grep instead.');
   });
 
   it('rejects empty multi-grep patterns as invalid arguments instead of reporting unavailability', async () => {
@@ -343,10 +310,6 @@ describe('fff provider tools', () => {
 
     expect(fffMock.multiGrepWorkspace).not.toHaveBeenCalled();
     expect(toolText(result)).toBe('No valid patterns provided. Pass at least one non-empty pattern.');
-    expect(result.details).toEqual({
-      backend: 'fff',
-      invalidArguments: true
-    });
   });
 
   it('caps multi-grep patterns before calling the shared finder', async () => {

@@ -3,7 +3,7 @@ import { boundedLine, boundedOutput } from '@main/providers/tools/fff/bounds';
 import { hasGlobChars } from '@main/search/path';
 import type { WorkspaceGrepMatch, WorkspaceGrepResult, WorkspacePathMatch } from '@main/search/types';
 
-export const cursorRestartNote = '[Note: the FFF cursor is no longer available; results restart from the beginning.]';
+const cursorRestartNote = '[Note: the search cursor is no longer available; results restart from the beginning.]';
 
 const formatPathResult = (item: WorkspacePathMatch) => (item.type === 'directory' ? `${item.path}/` : item.path);
 
@@ -47,11 +47,3 @@ export const grepText = (result: WorkspaceGrepResult) => {
   if (result.nextCursor <= 0) return output;
   return `${output}\n\n[More matches available. Continue with cursor=${result.nextCursor}.]`;
 };
-
-export const grepDetails = (result: WorkspaceGrepResult) => ({
-  totalFiles: result.totalFiles,
-  matchCount: result.matches.length,
-  searchedFiles: result.searchedFiles,
-  ...(result.restarted ? { restarted: true } : {}),
-  ...(result.nextCursor > 0 ? { nextCursor: result.nextCursor } : {})
-});

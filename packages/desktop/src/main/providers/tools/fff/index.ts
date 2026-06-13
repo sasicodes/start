@@ -9,13 +9,7 @@ import {
   positiveCursor,
   positiveLimit
 } from '@main/providers/tools/fff/bounds';
-import {
-  fallbackFindPattern,
-  findText,
-  grepDetails,
-  grepText,
-  restartedPagination
-} from '@main/providers/tools/fff/format';
+import { fallbackFindPattern, findText, grepText, restartedPagination } from '@main/providers/tools/fff/format';
 import { findSchema, grepSchema, multiGrepSchema } from '@main/providers/tools/fff/schema';
 import { toolResult } from '@main/providers/tools/result';
 import { findWorkspacePaths, grepWorkspace, multiGrepWorkspace } from '@main/search/client';
@@ -30,7 +24,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     label: 'find',
     parameters: findSchema,
     description:
-      'Find files from the shared repository FFF index. Supports fuzzy queries and glob patterns. Falls back to the built-in finder if FFF is unavailable.',
+      'Find files from the shared repository index. Supports fuzzy queries and glob patterns. Falls back to the built-in finder if the index is unavailable.',
     promptSnippet: 'Find files quickly from the shared repository index.',
     async execute(toolCallId, { pattern, path, limit }, signal, onUpdate) {
       const resultLimit = positiveLimit(limit, defaultFindLimit, maxFindLimit);
@@ -50,11 +44,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
         return createFindTool(cwd()).execute(toolCallId, fallbackArgs, signal, onUpdate);
       }
 
-      return toolResult(findText(items), {
-        backend: 'fff',
-        query: pattern,
-        resultCount: items.length
-      });
+      return toolResult(findText(items), null);
     }
   }),
   defineTool({
@@ -62,7 +52,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     label: 'grep',
     parameters: grepSchema,
     description:
-      'Search file contents through the shared repository FFF index. Falls back to built-in content search when FFF is unavailable or forced ignore-case is requested.',
+      'Search file contents through the shared repository index. Falls back to built-in content search when the index is unavailable or a case-insensitive search is requested.',
     promptSnippet: 'Search code quickly from the shared repository index.',
     async execute(toolCallId, { pattern, path, glob, ignoreCase, literal, context, limit, cursor }, signal, onUpdate) {
       const resultLimit = positiveLimit(limit, defaultGrepLimit, maxGrepLimit);
@@ -99,26 +89,19 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
 
       if (!result) return runFallback();
 
-      return toolResult(grepText(result), {
-        backend: 'fff',
-        query: pattern,
-        ...grepDetails(result)
-      });
+      return toolResult(grepText(result), null);
     }
   }),
   defineTool({
     name: 'multi_grep',
     label: 'multi grep',
     parameters: multiGrepSchema,
-    description: 'Search for multiple literal patterns with OR logic through the shared repository FFF index.',
+    description: 'Search for multiple literal patterns with OR logic through the shared repository index.',
     promptSnippet: 'Use for fast OR searches across multiple code identifiers.',
     async execute(_toolCallId, { patterns, constraints, context, limit, cursor }) {
       const resultPatterns = boundedPatterns(patterns);
       if (resultPatterns.length === 0)
-        return toolResult<Record<string, unknown>>('No valid patterns provided. Pass at least one non-empty pattern.', {
-          backend: 'fff',
-          invalidArguments: true
-        });
+        return toolResult('No valid patterns provided. Pass at least one non-empty pattern.', null);
 
       const result = await multiGrepWorkspace({
         cwd: cwd(),
@@ -130,17 +113,9 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
         ...(constraints ? { constraints } : {})
       });
 
-      if (!result)
-        return toolResult('FFF multi-grep is unavailable in this workspace. Use grep instead.', {
-          backend: 'fff',
-          unavailable: true
-        });
+      if (!result) return toolResult('Multi-pattern search is unavailable in this workspace. Use grep instead.', null);
 
-      return toolResult(grepText(result), {
-        backend: 'fff',
-        patterns: resultPatterns,
-        ...grepDetails(result)
-      });
+      return toolResult(grepText(result), null);
     }
   })
 ];
