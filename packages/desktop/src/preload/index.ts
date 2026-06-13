@@ -488,7 +488,6 @@ const api = {
     servers: (): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:servers'),
     connect: (name: string): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:connect', name),
     disconnect: (name: string): Promise<McpServerSnapshot[]> => ipcRenderer.invoke('mcp:disconnect', name),
-    openConfig: (): Promise<void> => ipcRenderer.invoke('mcp:open-config'),
     setWorkspaceTrust: (trusted: boolean): Promise<McpServerSnapshot[]> =>
       ipcRenderer.invoke('mcp:set-workspace-trust', trusted),
     setEnabled: (name: string, enabled: boolean): Promise<McpServerSnapshot[]> =>

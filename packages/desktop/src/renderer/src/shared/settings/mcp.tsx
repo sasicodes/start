@@ -1,4 +1,5 @@
 import type { McpServerSnapshot } from '@preload/index';
+import { composerPrefillState } from '@renderer/state/chat';
 import { PlusIcon } from '@renderer/ui/icons';
 import { Toggle } from '@renderer/ui/toggle';
 import { tw } from '@renderer/utils/tw';
@@ -151,7 +152,7 @@ export const Mcp = () => {
   };
 
   const addCustomMcp = () => {
-    window.pi.mcp.openConfig().catch(() => {});
+    composerPrefillState.value = 'Add this MCP server to my config: ';
   };
 
   return (

@@ -1,6 +1,5 @@
-import { writeFile } from 'node:fs/promises';
 import { connectServer, dropServerClient, serverConnection } from '@main/mcp/clients';
-import { globalMcpConfigPath, loadMcpServers, type McpServer } from '@main/mcp/config';
+import { loadMcpServers, type McpServer } from '@main/mcp/config';
 import { authenticateServer, clearServerAuth, serverHasAuth } from '@main/mcp/oauth';
 import { missingServerVars, writeMcpSecret } from '@main/mcp/secrets';
 import { serverSnapshot } from '@main/mcp/snapshot';
@@ -8,9 +7,7 @@ import { mcpServerEnabled, setMcpServerEnabled, setWorkspaceMcpTrust, trustedFor
 import type { McpServerSnapshot } from '@main/types';
 import electron from 'electron';
 
-const { ipcMain, shell } = electron;
-
-const configTemplate = `${JSON.stringify({ mcpServers: {} }, null, 2)}\n`;
+const { ipcMain } = electron;
 
 interface RegisterMcpIpcOptions {
   workspacePath: () => string;
@@ -47,14 +44,6 @@ const connectByName = async (workspacePath: string, name: string) => {
   await connectServer(server);
 };
 
-const ensureConfigFile = async (path: string) => {
-  try {
-    await writeFile(path, configTemplate, { flag: 'wx' });
-  } catch {
-    return;
-  }
-};
-
 export const registerMcpIpc = ({ workspacePath }: RegisterMcpIpcOptions) => {
   ipcMain.handle('mcp:servers', async () => snapshots(workspacePath()));
 
@@ -84,11 +73,5 @@ export const registerMcpIpc = ({ workspacePath }: RegisterMcpIpcOptions) => {
   ipcMain.handle('mcp:set-workspace-trust', async (_event, trusted: boolean) => {
     setWorkspaceMcpTrust(workspacePath(), trusted);
     return snapshots(workspacePath());
-  });
-
-  ipcMain.handle('mcp:open-config', async () => {
-    const path = globalMcpConfigPath();
-    await ensureConfigFile(path);
-    await shell.openPath(path);
   });
 };
