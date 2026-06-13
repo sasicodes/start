@@ -88,6 +88,26 @@ describe('sessions module', () => {
     expect(row?.title.length).toBe(120);
   });
 
+  it('updateSessionModel replaces the indexed model', async () => {
+    const { getSession, updateSessionModel, upsertSessionOnStart } = await import('@main/sessions');
+    upsertSessionOnStart({
+      id: 's',
+      cwd: '/a',
+      path: '/p',
+      modelId: 'claude-opus-4-7',
+      modelProvider: 'anthropic'
+    });
+
+    updateSessionModel('s', {
+      modelId: 'claude-sonnet-4-6',
+      modelProvider: 'anthropic'
+    });
+
+    const row = getSession('s');
+    expect(row?.modelProvider).toBe('anthropic');
+    expect(row?.modelId).toBe('claude-sonnet-4-6');
+  });
+
   it('archiveSession / unarchiveSession toggle the flag and timestamps', async () => {
     const { archiveSession, getSession, unarchiveSession, upsertSessionOnStart } = await import('@main/sessions');
     upsertSessionOnStart({ id: 's', cwd: '/a', path: '/p' });
