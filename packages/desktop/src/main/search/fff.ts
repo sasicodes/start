@@ -115,21 +115,26 @@ const grepOptions = (
     mode,
     limit,
     context,
+    ignoreCase,
     classifyDefinitions
-  }: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'limit' | 'mode'>,
+  }: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'ignoreCase' | 'limit' | 'mode'>,
   cursor: GrepCursor | null
-): GrepOptions => ({
-  ...(cursor ? { cursor } : {}),
-  mode: mode ?? 'plain',
-  smartCase: true,
-  maxFileSize: maxGrepFileSize,
-  timeBudgetMs: grepTimeBudgetMs,
-  maxMatchesPerFile,
-  pageSize: boundedCount(limit, maxGrepPageSize),
-  beforeContext: boundedContext(context),
-  afterContext: boundedContext(context),
-  classifyDefinitions: Boolean(classifyDefinitions)
-});
+): GrepOptions => {
+  const grepMode = mode ?? 'plain';
+
+  return {
+    ...(cursor ? { cursor } : {}),
+    mode: grepMode,
+    smartCase: !(grepMode === 'regex' && ignoreCase),
+    maxFileSize: maxGrepFileSize,
+    timeBudgetMs: grepTimeBudgetMs,
+    maxMatchesPerFile,
+    pageSize: boundedCount(limit, maxGrepPageSize),
+    beforeContext: boundedContext(context),
+    afterContext: boundedContext(context),
+    classifyDefinitions: Boolean(classifyDefinitions)
+  };
+};
 
 const workspaceGrepResult = (entry: FinderEntry, result: GrepResult, restarted: boolean): WorkspaceGrepResult => ({
   matches: result.items.flatMap((match) => {

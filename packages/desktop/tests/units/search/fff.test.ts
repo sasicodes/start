@@ -334,7 +334,7 @@ describe('fff workspace manager', () => {
       'src/main/ **/*.ts (?i:TASK_TYPE_DIRS)',
       expect.objectContaining({
         mode: 'regex',
-        smartCase: true
+        smartCase: false
       })
     );
   });
