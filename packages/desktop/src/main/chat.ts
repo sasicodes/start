@@ -25,7 +25,7 @@ import { appendLiveAssistantTurn } from '@main/chat/live';
 import { type LiveRecentSession, recentSessionsPage } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
-import { historyDetail, textContent } from '@main/details';
+import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { getGitBranch } from '@main/git';
 import {
@@ -1094,7 +1094,7 @@ export class ChatService {
         }
 
         if (active && event.type === 'message_start' && event.message.role === 'user') {
-          this.emitQueuedTurnStart(textContent(event.message.content), state, webContents);
+          this.emitQueuedTurnStart(event.message.content, state, webContents);
         }
 
         if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {
@@ -1346,6 +1346,11 @@ export class ChatService {
     return Boolean(this.runtimeStateForSession(session).isGenerating || session.isStreaming || session.isBashRunning);
   }
 
+  workInProgress(): boolean {
+    if (this.session && this.sessionIsGenerating(this.session)) return true;
+    return [...this.backgroundSessions.values()].some((session) => this.sessionIsGenerating(session));
+  }
+
   private deleteRuntimeState(sessionId: string): void {
     this.liveTitles.delete(sessionId);
     this.sessionRuntimeStates.delete(sessionId);
@@ -1527,14 +1532,22 @@ export class ChatService {
     return message.text === text || text.startsWith(`${message.text}\n[image`);
   }
 
-  private emitQueuedTurnStart(text: string, runtimeState: SessionRuntimeState, webContents?: WebContents): void {
+  private emitQueuedTurnStart(content: unknown, runtimeState: SessionRuntimeState, webContents?: WebContents): void {
     if (!webContents) return;
 
+    const text = textContent(content);
     const index = runtimeState.queueDeliveryCandidates.findIndex((message) => this.queuedMessageMatches(message, text));
     if (index === -1) return;
 
     const [message] = runtimeState.queueDeliveryCandidates.splice(index, 1);
-    if (message) webContents.send('chat:queued-turn-start', { id: message.id, text: message.text });
+    if (!message) return;
+
+    const attachments = imageAttachments(content, message.id);
+    webContents.send('chat:queued-turn-start', {
+      id: message.id,
+      text: message.text,
+      ...(attachments.length ? { attachments } : {})
+    });
   }
 
   private sessionIsReportable(session: AgentSession | null): boolean {

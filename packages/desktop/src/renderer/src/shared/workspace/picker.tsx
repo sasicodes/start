@@ -107,14 +107,7 @@ export const Workspace = memo(
             </div>
           </Tooltip>
           <AppMenu.Portal>
-            <AppMenu.Positioner
-              side="top"
-              align="start"
-              sideOffset={8}
-              anchor={rootRef}
-              className="z-50"
-              collisionPadding={12}
-            >
+            <AppMenu.Positioner side="top" sideOffset={12} anchor={rootRef} className="z-50" collisionPadding={12}>
               <MenuPanel className="w-64">
                 <WorkspaceMenu
                   folders={folders}

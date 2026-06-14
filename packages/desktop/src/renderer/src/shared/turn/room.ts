@@ -1,24 +1,37 @@
 import { turnScrollIntentState } from '@renderer/shared/turn/scroll';
+import type { VirtualHandle } from '@renderer/ui/virtual';
+import type { RefObject } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface UseTurnRoomOptions {
   turnCount: number;
+  turnIndex: (turnId: string) => number;
+  virtualRef: RefObject<VirtualHandle | null>;
+}
+
+interface TurnStartScrollTop {
+  value: number;
+  measured: boolean;
 }
 
 const scrollToBottom = (element: HTMLElement) => {
   element.scrollTop = element.scrollHeight;
 };
 
-const scrollTopForTurnStart = (element: HTMLElement, turnId: string) => {
+const scrollTopForTurnStart = (
+  element: HTMLElement,
+  turnId: string,
+  fallback: number | null
+): TurnStartScrollTop | null => {
   const target = Array.from(element.querySelectorAll<HTMLElement>('[data-turn-id]')).find(
     (node) => node.dataset.turnId === turnId
   );
-  if (!target) return null;
+  if (!target) return fallback === null ? null : { value: fallback, measured: false };
 
   const topInset = Number.parseFloat(getComputedStyle(element).paddingTop) || 0;
   const elementTop = element.getBoundingClientRect().top;
   const targetTop = target.getBoundingClientRect().top;
-  return element.scrollTop + targetTop - elementTop - topInset;
+  return { value: element.scrollTop + targetTop - elementTop - topInset, measured: true };
 };
 
 const setRoomHeight = (room: HTMLDivElement, height: number) => {
@@ -26,10 +39,11 @@ const setRoomHeight = (room: HTMLDivElement, height: number) => {
   if (room.style.height !== value) room.style.height = value;
 };
 
-export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
+export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOptions) => {
   const frameRef = useRef(0);
   const roomTurnIdRef = useRef('');
   const positionedRef = useRef(false);
+  const alignmentPendingRef = useRef(false);
   const scrollRef = useRef<HTMLElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -44,22 +58,28 @@ export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
     setPositioned(true);
   }, []);
 
-  const syncRoom = useCallback((scroll = false) => {
-    const room = roomRef.current;
-    const element = scrollRef.current;
-    const turnId = roomTurnIdRef.current;
-    if (!room || !element || !turnId) return;
+  const syncRoom = useCallback(
+    (scroll = false) => {
+      const room = roomRef.current;
+      const element = scrollRef.current;
+      const turnId = roomTurnIdRef.current;
+      if (!room || !element || !turnId) return;
 
-    const targetScrollTop = scrollTopForTurnStart(element, turnId);
-    if (targetScrollTop === null) return;
+      const index = turnIndex(turnId);
+      const fallback = index >= 0 ? (virtualRef.current?.scrollTopForIndex(index) ?? null) : null;
+      const targetScrollTop = scrollTopForTurnStart(element, turnId, fallback);
+      if (targetScrollTop === null) return;
 
-    const alignedScrollTop = Math.ceil(targetScrollTop);
-    const naturalScrollHeight = element.scrollHeight - room.offsetHeight;
-    const nextHeight = Math.max(0, alignedScrollTop + element.clientHeight - naturalScrollHeight);
-    setRoomHeight(room, nextHeight);
+      const alignedScrollTop = Math.ceil(targetScrollTop.value);
+      const naturalScrollHeight = element.scrollHeight - room.offsetHeight;
+      const nextHeight = Math.max(0, alignedScrollTop + element.clientHeight - naturalScrollHeight);
+      setRoomHeight(room, nextHeight);
 
-    if (scroll) element.scrollTop = alignedScrollTop;
-  }, []);
+      if (scroll || alignmentPendingRef.current) element.scrollTop = alignedScrollTop;
+      if (targetScrollTop.measured) alignmentPendingRef.current = false;
+    },
+    [turnIndex, virtualRef]
+  );
 
   const scheduleRoomSync = useCallback(
     (scroll = false) => {
@@ -76,8 +96,9 @@ export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
-    if (!element || turnCount === 0) {
+    if (!element || !turnCount) {
       roomTurnIdRef.current = '';
+      alignmentPendingRef.current = false;
       setRoomTurnId('');
       finishPositioning();
       return;
@@ -85,6 +106,7 @@ export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
 
     if (scrollIntent.kind === 'bottom') {
       roomTurnIdRef.current = '';
+      alignmentPendingRef.current = false;
       setRoomTurnId('');
       scrollToBottom(element);
       finishPositioning();
@@ -92,6 +114,7 @@ export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
     }
 
     roomTurnIdRef.current = scrollIntent.turnId;
+    alignmentPendingRef.current = true;
     setRoomTurnId(scrollIntent.turnId);
     scheduleRoomSync(true);
     return () => {
@@ -112,11 +135,17 @@ export const useTurnRoom = ({ turnCount }: UseTurnRoomOptions) => {
     return () => observer.disconnect();
   }, [roomTurnId, scheduleRoomSync]);
 
+  const onVirtualRangeChange = useCallback(() => {
+    if (!roomTurnIdRef.current) return;
+    scheduleRoomSync();
+  }, [scheduleRoomSync]);
+
   return {
     roomRef,
     scrollRef,
     positioned,
     contentRef,
+    onVirtualRangeChange,
     roomVisible: Boolean(roomTurnId)
   };
 };

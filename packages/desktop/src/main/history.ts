@@ -2,11 +2,13 @@ import {
   booleanValue,
   countLabel,
   historyDetail,
+  imageAttachments,
   isRecord,
   numberValue,
   previewValue,
   stringValue,
   textContent,
+  textOnlyContent,
   thinkingContent,
   timestampValue
 } from '@main/details';
@@ -81,7 +83,7 @@ const assistantTurn = (entry: Record<string, unknown>, message: Record<string, u
   const thinking = thinkingContent(message.content);
   const text = textContent(message.content);
 
-  if (!text && !thinking && details.length === 0) return [];
+  if (!text && !thinking && !details.length) return [];
 
   const turn: HistoryTurn = {
     id,
@@ -89,7 +91,7 @@ const assistantTurn = (entry: Record<string, unknown>, message: Record<string, u
     createdAt,
     role: 'assistant'
   };
-  if (details.length > 0) turn.details = details;
+  if (details.length) turn.details = details;
   if (thinking) turn.thinking = thinking;
   return [turn];
 };
@@ -163,8 +165,14 @@ const toolResultTurn = (entry: Record<string, unknown>, message: Record<string, 
 };
 
 const userTurn = (entry: Record<string, unknown>, message: Record<string, unknown>) => {
-  const text = textContent(message.content);
-  return text ? [baseTurn(entry, 'user', text)] : [];
+  const id = entryId(entry);
+  const text = textOnlyContent(message.content);
+  const attachments = imageAttachments(message.content, id);
+  if (!text && !attachments.length) return [];
+
+  const turn = baseTurn(entry, 'user', text);
+  if (attachments.length) turn.attachments = attachments;
+  return [turn];
 };
 
 const branchSummaryTurn = (entry: Record<string, unknown>, message: Record<string, unknown>) => {

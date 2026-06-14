@@ -91,6 +91,7 @@ export type QueuedMessage = {
 export type QueuedTurnStart = {
   id: string;
   text: string;
+  attachments?: ImageAttachment[];
 };
 
 export type TurnDetailKind = 'tool' | 'error' | 'metadata';
@@ -133,6 +134,7 @@ export type HistoryTurn = {
   thinking?: string;
   streaming?: boolean;
   details?: HistoryTurnDetail[];
+  attachments?: ImageAttachment[];
   role: 'user' | 'event' | 'terminal' | 'assistant';
 };
 

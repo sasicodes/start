@@ -68,6 +68,7 @@ import {
   toggleComposerWindow,
   withComposerBlurSuppressed
 } from '@main/window';
+import { setWorkInProgressSource } from '@main/wip';
 import { activateWorkspaceAccess, deactivateWorkspaceAccess } from '@main/workspace/access';
 import { GitChangesService } from '@main/workspace/changes';
 import { getCachedWorkspace, getWorkspace, onWorkspaceChanged } from '@main/workspace/index';
@@ -82,6 +83,7 @@ if (isDev && isMac) app.commandLine.appendSwitch('use-mock-keychain');
 installWindowHardening();
 
 const chat = new ChatService();
+setWorkInProgressSource(() => chat.workInProgress());
 const gitChanges = new GitChangesService({
   currentWorkspace: () => chat.getWorkspaceCwd(),
   notify: (payload) => sendToRendererWindows('app:git-changes-changed', payload)

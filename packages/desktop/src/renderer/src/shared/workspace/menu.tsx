@@ -1,6 +1,7 @@
 import type { WorkspaceFolder } from '@preload/index';
 import { attentionStatus } from '@renderer/shared/attention-status';
 import { Indicator } from '@renderer/shared/indicator';
+import { canSelectWorkspace } from '@renderer/shared/workspace/select';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
@@ -44,7 +45,12 @@ const WorkspaceRow = ({ folder, selected, onSelect }: WorkspaceRowProps) => (
 export const WorkspaceMenu = ({ folders, onSelect, workspacePath, onChooseDirectory }: WorkspaceMenuProps) => (
   <div class="flex flex-col gap-1">
     {folders.map((folder) => (
-      <WorkspaceRow key={folder.path} folder={folder} onSelect={onSelect} selected={folder.path === workspacePath} />
+      <WorkspaceRow
+        key={folder.path}
+        folder={folder}
+        onSelect={onSelect}
+        selected={!canSelectWorkspace(folder.path, workspacePath)}
+      />
     ))}
     <AppMenu.Item
       onClick={onChooseDirectory}

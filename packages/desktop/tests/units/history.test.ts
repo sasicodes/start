@@ -20,6 +20,27 @@ describe('historyTurns', () => {
     expect(historyTurns([messageEntry('u2', 'user', [])])).toHaveLength(0);
   });
 
+  it('restores user image parts as attachments without placeholder text', () => {
+    const turns = historyTurns([
+      messageEntry('u3', 'user', [
+        { type: 'text', text: 'look' },
+        { type: 'image', data: 'aW1hZ2U=', mimeType: 'image/png' }
+      ])
+    ]);
+
+    expect(turns[0]?.text).toBe('look');
+    expect(turns[0]?.attachments).toEqual([
+      {
+        path: '',
+        name: 'image',
+        type: 'image',
+        id: 'u3:image:1',
+        mimeType: 'image/png',
+        previewUrl: 'data:image/png;base64,aW1hZ2U='
+      }
+    ]);
+  });
+
   it('emits assistant turns alongside tool call details when no result exists', () => {
     const turns = historyTurns([
       messageEntry('a1', 'assistant', [
