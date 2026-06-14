@@ -22,7 +22,7 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
-import { recentSessionsPage } from '@main/chat/recents';
+import { type LiveRecentSession, liveSessionModified, recentSessionsPage } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, textContent } from '@main/details';
@@ -55,6 +55,7 @@ import {
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
   updateSessionTitle,
+  truncateTitle,
   upsertSessionOnStart
 } from '@main/sessions';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
@@ -546,6 +547,43 @@ export class ChatService {
     return this.openSession(session.path);
   }
 
+  private liveRecentSession(session: AgentSession, workspacePath: string): LiveRecentSession | null {
+    if (!this.sessionIsReportable(session)) return null;
+
+    const sessionManager = session.sessionManager;
+    const sessionId = sessionManager.getSessionId();
+    const path = sessionManager.getSessionFile();
+    if (!path) return null;
+
+    const entries = sessionManager.getEntries();
+    const firstMessage = firstUserMessageText(entries);
+    const status = this.sessionIsGenerating(session) ? 'generating' : 'idle';
+    const notice = this.notices.get(sessionId);
+
+    return {
+      path,
+      status,
+      workspacePath,
+      id: sessionId,
+      title: truncateTitle(firstMessage),
+      modified: liveSessionModified(status, Date.now(), getSession(sessionId)?.updatedAt),
+      ...(notice ? { noticeKind: notice.kind } : {})
+    };
+  }
+
+  private liveRecentSessions(): LiveRecentSession[] {
+    const sessions: LiveRecentSession[] = [];
+    const activeSession = this.session ? this.liveRecentSession(this.session, this.workspaceCwd) : null;
+    if (activeSession) sessions.push(activeSession);
+
+    for (const session of this.backgroundSessions.values()) {
+      const recentSession = this.liveRecentSession(session, sessionWorkspacePath(session, this.workspaceCwd));
+      if (recentSession) sessions.push(recentSession);
+    }
+
+    return sessions;
+  }
+
   getTabs(): AgentTab[] {
     const tabs = new Map<string, AgentTab>();
     if (this.session && this.sessionIsReportable(this.session)) {
@@ -689,7 +727,7 @@ export class ChatService {
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
-    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices);
+    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices, this.liveRecentSessions());
   }
 
   getStatusItemRecentSessions(limit = 8): StatusItemRecentSession[] {
@@ -782,6 +820,7 @@ export class ChatService {
   async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
+    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: await this.getStatus() };
 
     try {
       this.sessionOpenSequence += 1;
@@ -1337,11 +1376,14 @@ export class ChatService {
   }
 
   private consumeQueuedMessageText(messages: string[], message: QueuedMessage): boolean {
-    const index = messages.findIndex((text) => this.queuedMessageMatches(message, text));
-    if (index === -1) return false;
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      if (!this.queuedMessageMatches(message, messages[index] ?? '')) continue;
 
-    messages.splice(index, 1);
-    return true;
+      messages.splice(index, 1);
+      return true;
+    }
+
+    return false;
   }
 
   private syncQueuedMessages(
@@ -1357,7 +1399,7 @@ export class ChatService {
     const nextMessages: PendingQueuedMessage[] = [];
     const deliveredMessages: PendingQueuedMessage[] = [];
 
-    for (const message of runtimeState.queuedMessages) {
+    for (const message of [...runtimeState.queuedMessages].reverse()) {
       if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
       } else if (message.kind === 'followUp' && this.consumeQueuedMessageText(followUpMessages, message)) {
@@ -1371,6 +1413,8 @@ export class ChatService {
       }
     }
 
+    nextMessages.reverse();
+    deliveredMessages.reverse();
     for (const text of steeringMessages) nextMessages.push({ id: randomUUID(), kind: 'steer', text });
     for (const text of followUpMessages) nextMessages.push({ id: randomUUID(), kind: 'followUp', text });
 

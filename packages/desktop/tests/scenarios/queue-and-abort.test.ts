@@ -73,6 +73,65 @@ describe('queue and abort', () => {
     await firstSend;
   });
 
+  it('moves a delivered follow-up from the queue into the turn stream', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    const queuedResult = await chat.send('queued follow-up', webContents);
+    expect(queuedResult.ok).toBe(true);
+
+    session.followUpQueue = [];
+    session.pushEvent({ type: 'queue_update', steering: [], followUp: [] });
+    session.pushEvent({ type: 'message_start', message: { role: 'user', content: 'queued follow-up' } });
+
+    expect(eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0]).toEqual([]);
+    expect(eventsByChannel(webContents, 'chat:queued-turn-start').at(-1)?.args[0]).toEqual(
+      expect.objectContaining({ text: 'queued follow-up' })
+    );
+
+    await chat.abort(webContents);
+    session.finishPrompt();
+    await firstSend;
+  });
+
+  it('keeps the later duplicate follow-up queued when the first one starts', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    await chat.send('repeat follow-up', webContents);
+    await chat.send('repeat follow-up', webContents);
+
+    const queuedBeforeDelivery = eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0] as { id: string }[];
+    const secondQueuedMessage = queuedBeforeDelivery[1];
+    if (!secondQueuedMessage) throw new Error('Expected duplicate queued message.');
+
+    session.followUpQueue = ['repeat follow-up'];
+    session.pushEvent({ type: 'queue_update', steering: [], followUp: ['repeat follow-up'] });
+    session.pushEvent({ type: 'message_start', message: { role: 'user', content: 'repeat follow-up' } });
+
+    const queuedAfterDelivery = eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0] as { id: string }[];
+    const startedTurn = eventsByChannel(webContents, 'chat:queued-turn-start').at(-1)?.args[0] as { id: string };
+
+    expect(queuedAfterDelivery.map((message) => message.id)).toEqual([secondQueuedMessage.id]);
+    expect(startedTurn.id).not.toBe(secondQueuedMessage.id);
+
+    await chat.abort(webContents);
+    session.finishPrompt();
+    await firstSend;
+  });
+
   it('rejects a queued send when no stream is in flight', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

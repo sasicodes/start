@@ -255,8 +255,9 @@ export type SessionNotice = {
 export type SwitchWorkspaceResult = {
   ok: boolean;
   error?: string;
-  cancelled?: boolean;
   status?: ChatStatus;
+  cancelled?: boolean;
+  unchanged?: boolean;
 };
 
 export type OpenSessionResult = {

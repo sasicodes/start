@@ -252,13 +252,15 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           </div>
         </>
       )}
-      <div class="flex items-center justify-between gap-4">
-        <div class="grid gap-1">
-          <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h3>
-          <p class="m-0 text-xs leading-5 text-soft">Prevent sleep when plugged in and remote access is enabled.</p>
+      {qrAvailable && (
+        <div class="flex items-center justify-between gap-4">
+          <div class="grid gap-1">
+            <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h3>
+            <p class="m-0 text-xs leading-5 text-soft">Prevent sleep when plugged in and remote access is enabled.</p>
+          </div>
+          <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
         </div>
-        <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
-      </div>
+      )}
       {qrOpen && <PairingQrDialog code={relayCode} settings={settings} onClose={() => setQrOpen(false)} />}
     </div>
   );

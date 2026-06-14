@@ -33,7 +33,7 @@ const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   const overflowCount = attachments.length - visibleAttachments.length;
 
   return (
-    <div class="mt-2 flex items-center justify-end -space-x-1.5">
+    <div class="mt-2 flex items-center justify-start -space-x-1.5">
       {visibleAttachments.map((attachment, index) => (
         <button
           key={attachment.id}

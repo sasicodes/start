@@ -1,17 +1,18 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
+import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
-  availableViewModes,
-  emptyGitSummary,
-  type GitPatchViewMode,
-  gitChangesLabel,
+  useGitPatch,
   gitViewLabel,
   nextViewMode,
-  sectionsForViewMode,
-  summaryForViewMode,
   useGitChanges,
-  useGitPatch
+  emptyGitSummary,
+  gitChangesLabel,
+  availableViewModes,
+  sectionsForViewMode,
+  type GitPatchViewMode,
+  summaryForViewMode
 } from '@renderer/shared/workspace/changes/state';
 import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
 import {
@@ -130,8 +131,9 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
     patch.kind === 'ready'
       ? summaryForViewMode(patchSummary, patch.patch.sections, effectiveViewMode)
       : emptyGitSummary;
-  const canCycle = patch.kind === 'ready' && availableModes.length > 1;
   const splitDiffView = diffViewMode === 'split';
+  const hasVisibleDiff = hasGitDiff(visibleSummary);
+  const canCycle = patch.kind === 'ready' && availableModes.length > 1;
 
   return (
     <div class="flex min-h-full flex-col outline-0">
@@ -150,21 +152,25 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
               <span class="min-w-0 truncate">{gitViewLabel(effectiveViewMode, visibleSummary.filesChanged)}</span>
               {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
             </button>
-            <button
-              type="button"
-              aria-pressed={!splitDiffView}
-              aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
-              onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
-              class="group/diff-view relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
-            >
-              <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
-            </button>
+            {hasVisibleDiff && (
+              <button
+                type="button"
+                aria-pressed={!splitDiffView}
+                aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
+                onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
+                class="group/diff-view relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+              >
+                <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
+              </button>
+            )}
           </div>
           <div class="flex items-center gap-3 font-medium">
-            <div class="flex items-center gap-2">
-              <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
-              <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
-            </div>
+            {hasVisibleDiff && (
+              <div class="flex items-center gap-2">
+                <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
+                <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+              </div>
+            )}
             <PanelCloseButton onClick={onClose} />
           </div>
         </header>

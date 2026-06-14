@@ -10,6 +10,12 @@ describe('chat stream errors', () => {
     ).toBe(true);
   });
 
+  it('treats response header timeouts after visible output as completed', () => {
+    expect(
+      shouldCompleteAfterStreamError({ text: 'Done.', thinking: '' }, 'response headers timed out after 10000ms')
+    ).toBe(true);
+  });
+
   it('keeps provider connection errors fatal before any visible output', () => {
     expect(
       shouldCompleteAfterStreamError(

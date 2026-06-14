@@ -32,12 +32,13 @@ describe('historyTurns', () => {
     expect(turns[0]?.details?.[0]?.title).toContain('Read');
   });
 
-  it('represents thinking-level changes as event-kind turns', () => {
+  it('drops settings metadata from visible turns', () => {
     const turns = historyTurns([
-      { id: 't1', type: 'thinking_level_change', timestamp: '2026-05-24T12:00:00Z', thinkingLevel: 'high' }
+      { id: 't1', thinkingLevel: 'high', type: 'thinking_level_change', timestamp: '2026-05-24T12:00:00Z' },
+      { id: 's1', name: 'Renamed', type: 'session_info', timestamp: '2026-05-24T12:00:00Z' }
     ]);
-    expect(turns[0]?.role).toBe('event');
-    expect(turns[0]?.details?.[0]?.title).toContain('Thinking level');
+
+    expect(turns).toEqual([]);
   });
 
   it('keeps thinking after assistant text with the following assistant response', () => {

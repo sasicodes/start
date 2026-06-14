@@ -31,6 +31,29 @@ describe('workspace switching', () => {
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
   });
 
+  it('does not reset the active session when selecting the current workspace', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('one', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    const result = await chat.switchWorkspace('/tmp/workspace-a');
+    const status = await chat.getStatus();
+
+    expect(result).toEqual(expect.objectContaining({ ok: true, unchanged: true }));
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-a');
+    expect(status.sessionId).toBe(tab.id);
+    expect(status.isGenerating).toBe(true);
+
+    await chat.abort(webContents);
+    session.finishPrompt();
+    await send;
+  });
+
   it('persists lastWorkspace whenever the workspace changes', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     await chat.switchWorkspace('/tmp/workspace-c');

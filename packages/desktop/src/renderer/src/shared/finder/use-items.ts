@@ -1,13 +1,8 @@
 import type { RootItem } from '@preload/index';
 import { browserFinderItems, withBrowserFinderItems } from '@renderer/shared/finder/browser';
+import { fallbackRootItemsForFinderToken, type LoadedFinderItems } from '@renderer/shared/finder/items';
 import type { FinderToken } from '@renderer/shared/input';
-import { useEffect, useState } from 'preact/hooks';
-
-interface LoadedFinderItems {
-  key: string;
-  token: FinderToken;
-  items: RootItem[];
-}
+import { useEffect, useMemo, useState } from 'preact/hooks';
 
 const finderItemsCache = new Map<string, RootItem[]>();
 const finderItemsCacheMaxEntries = 80;
@@ -28,6 +23,9 @@ const setFinderItemsCache = (key: string, items: RootItem[]) => {
 };
 
 const finderCacheKey = (token: Pick<FinderToken, 'scope' | 'value'>) => `${token.scope}:${token.value}`;
+
+const folderCacheKey = (token: FinderToken) =>
+  finderCacheKey({ scope: token.scope, value: token.folderPath ? `${token.folderPath}/` : '' });
 
 export const useFinderItems = (token: FinderToken | undefined) => {
   const [loadedItems, setLoadedItems] = useState<LoadedFinderItems | null>(null);
@@ -66,11 +64,20 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     };
   }, [token?.scope, token?.value]);
 
-  if (!token) return [];
+  return useMemo(() => {
+    if (!token) return [];
 
-  const cacheKey = finderCacheKey(token);
-  if (loadedItems?.key === cacheKey) return withBrowserFinderItems(loadedItems.token, loadedItems.items);
+    const cacheKey = finderCacheKey(token);
+    if (loadedItems?.key === cacheKey) return withBrowserFinderItems(loadedItems.token, loadedItems.items);
 
-  const cachedItems = finderItemsCache.get(cacheKey);
-  return cachedItems ? withBrowserFinderItems(token, cachedItems) : browserFinderItems(token);
+    const cachedItems = finderItemsCache.get(cacheKey);
+    if (cachedItems) return withBrowserFinderItems(token, cachedItems);
+
+    const fallbackItems = fallbackRootItemsForFinderToken(
+      token,
+      loadedItems,
+      finderItemsCache.get(folderCacheKey(token)) ?? null
+    );
+    return fallbackItems.length > 0 ? withBrowserFinderItems(token, fallbackItems) : browserFinderItems(token);
+  }, [loadedItems, token]);
 };

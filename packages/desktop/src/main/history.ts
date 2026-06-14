@@ -231,13 +231,6 @@ const metadataTurn = (entry: Record<string, unknown>) => {
   if (type === 'custom') return customEntryTurn(entry);
   if (type === 'custom_message') return customMessageTurn(entry);
   if (type === 'label') return labelTurn(entry);
-  if (type === 'session_info')
-    return detailTurn(entry, compactEvent(`session:${entryId(entry)}`, 'Renamed session', stringValue(entry.name)));
-  if (type === 'thinking_level_change')
-    return detailTurn(
-      entry,
-      compactEvent(`thinking:${entryId(entry)}`, `Thinking level: ${stringValue(entry.thinkingLevel)}`)
-    );
 
   if (type === 'model_change') {
     const model = [stringValue(entry.provider), stringValue(entry.modelId)].filter(Boolean).join('/');
