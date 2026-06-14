@@ -13,9 +13,7 @@ const git = vi.hoisted(() => ({
     branch: '',
     isMain: false,
     locked: false
-  })),
-  listWorktrees: vi.fn(async () => [{ path: '/repo', head: '', branch: 'main', isMain: true, locked: false }]),
-  removeWorktree: vi.fn(async () => true)
+  }))
 }));
 
 vi.mock('@main/git', () => git);
@@ -48,22 +46,13 @@ describe('worktree-backed tabs', () => {
     expect(tab.workspacePath).toBe('/tmp/workspace-a');
   });
 
-  it('removes the managed worktree when its tab is closed', async () => {
+  it('keeps the worktree on disk when its tab is closed', async () => {
     git.gitTopLevel.mockResolvedValue('/repo');
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
 
-    const tab = await chat.createWorktreeTab('cleanup me');
+    const tab = await chat.createWorktreeTab('keep me');
     await chat.closeTab(tab.id);
 
-    expect(git.removeWorktree).toHaveBeenCalledWith('/repo', tab.workspacePath);
-  });
-
-  it('leaves non-worktree tabs untouched on close', async () => {
-    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
-
-    const tab = await chat.createTab('/tmp/workspace-a');
-    await chat.closeTab(tab.id);
-
-    expect(git.removeWorktree).not.toHaveBeenCalled();
+    expect(tab.workspacePath.startsWith(worktreeRoot)).toBe(true);
   });
 });

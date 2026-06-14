@@ -27,7 +27,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { addWorktree, getGitBranch, gitTopLevel, listWorktrees, removeWorktree } from '@main/git';
+import { addWorktree, getGitBranch, gitTopLevel } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -676,16 +676,7 @@ export class ChatService {
     return this.createTab();
   }
 
-  private async removeManagedWorktree(worktreePath: string): Promise<void> {
-    if (!isManagedWorktree(baseDir, worktreePath)) return;
-    const main = (await listWorktrees(worktreePath)).find((tree) => tree.isMain);
-    if (main) await removeWorktree(main.path, worktreePath);
-  }
-
   async closeTab(id: string): Promise<void> {
-    const closing = this.activeSessionId === id ? this.session : this.backgroundSessions.get(id);
-    const worktreePath = closing?.sessionManager.getCwd() ?? '';
-
     if (this.activeSessionId === id && this.session) {
       this.session.abortBash();
       await this.session.abort();
@@ -710,8 +701,6 @@ export class ChatService {
 
     this.deleteWorkspaceSessionReferences(id);
     this.markNoticeSeen(id);
-
-    if (worktreePath) await this.removeManagedWorktree(worktreePath);
   }
 
   async sendToTab(id: string, prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []) {
