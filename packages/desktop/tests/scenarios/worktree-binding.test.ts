@@ -36,14 +36,6 @@ describe('worktree-backed tabs', () => {
     expect(git.addWorktree).toHaveBeenCalledTimes(1);
     expect(git.addWorktree.mock.calls[0]?.[2]).toMatchObject({ branch: expect.stringMatching(/^start\/fix-the-bug-/) });
     expect(tab.workspacePath.startsWith(worktreeRoot)).toBe(true);
-  });
-
-  it('does not persist the ephemeral worktree path as the last workspace', async () => {
-    git.gitTopLevel.mockResolvedValue('/repo');
-    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
-
-    await chat.createWorktreeTab('fix the bug');
-
     expect(getStorageSnapshot().lastWorkspace).toBe('/tmp/workspace-a');
   });
 

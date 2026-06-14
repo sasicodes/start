@@ -651,7 +651,7 @@ export class ChatService {
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
     this.setActiveSession(sessionManager);
-    if (!isManagedWorktree(baseDir, this.workspaceCwd)) this.persistWorkspace(this.workspaceCwd);
+    this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
     this.refreshWorkspaceSearch();
 
@@ -1914,6 +1914,7 @@ export class ChatService {
   }
 
   private persistWorkspace(workspacePath: string): void {
+    if (isManagedWorktree(baseDir, workspacePath)) return;
     this.persistState({
       lastWorkspace: workspacePath,
       workspaceHistory: this.workspaceHistoryFor(workspacePath)
