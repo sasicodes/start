@@ -11,7 +11,7 @@ import {
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
-import { appVersion } from '@main/application';
+import { appVersion, baseDir } from '@main/application';
 import {
   type PreparedImageAttachment,
   prepareClipboardImage as prepareClipboardImageAttachment,
@@ -27,7 +27,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { getGitBranch } from '@main/git';
+import { addWorktree, getGitBranch, gitTopLevel, listWorktrees, removeWorktree } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -95,6 +95,7 @@ import { workspaceDisplayName } from '@main/utils/workspace';
 import { sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
+import { isManagedWorktree, worktreeBranch, worktreePathFor, worktreeSlug } from '@main/workspace/worktree';
 import type { WebContents } from 'electron';
 import electron from 'electron';
 
@@ -663,7 +664,28 @@ export class ChatService {
     };
   }
 
+  async createWorktreeTab(name?: string): Promise<AgentTab> {
+    const repoRoot = await gitTopLevel(this.workspaceCwd);
+    if (repoRoot) {
+      const slug = worktreeSlug(`${name ?? ''} ${randomUUID().slice(0, 8)}`);
+      const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
+        branch: worktreeBranch(slug)
+      });
+      if (worktree) return this.createTab(worktree.path);
+    }
+    return this.createTab();
+  }
+
+  private async removeManagedWorktree(worktreePath: string): Promise<void> {
+    if (!isManagedWorktree(baseDir, worktreePath)) return;
+    const main = (await listWorktrees(worktreePath)).find((tree) => tree.isMain);
+    if (main) await removeWorktree(main.path, worktreePath);
+  }
+
   async closeTab(id: string): Promise<void> {
+    const closing = this.activeSessionId === id ? this.session : this.backgroundSessions.get(id);
+    const worktreePath = closing?.sessionManager.getCwd() ?? '';
+
     if (this.activeSessionId === id && this.session) {
       this.session.abortBash();
       await this.session.abort();
@@ -688,6 +710,8 @@ export class ChatService {
 
     this.deleteWorkspaceSessionReferences(id);
     this.markNoticeSeen(id);
+
+    if (worktreePath) await this.removeManagedWorktree(worktreePath);
   }
 
   async sendToTab(id: string, prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []) {
