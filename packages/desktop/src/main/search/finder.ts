@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { FileFinderApi } from '@ff-labs/fff-node';
 import { uiWaitMs } from '@main/search/limits';
 import { relativeInside } from '@main/search/path';
+import { logger } from '@main/utils/logger';
 
 const finderLimit = 4;
 const defaultWaitMs = 1000;
@@ -51,7 +52,10 @@ const isIndexablePath = (value: string) => {
 
 const loadFffNode = async () => {
   if (!fffNodePromise) {
-    fffNodePromise = import('@ff-labs/fff-node').catch(() => null);
+    fffNodePromise = import('@ff-labs/fff-node').catch((error) => {
+      logger.error('fff load', error);
+      return null;
+    });
   }
 
   return await fffNodePromise;
