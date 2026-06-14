@@ -27,6 +27,8 @@ const shouldShowBody = (turn: Turn) => {
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
 
+type TurnActionText = () => string;
+
 const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   const attachments = turn.attachments ?? [];
   if (turn.role !== 'user' || !attachments.length) return null;
@@ -54,23 +56,24 @@ const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   );
 });
 
-const TurnActions = memo(({ turn, actionText = '' }: { turn: Turn; actionText?: string }) => {
-  const text = turn.role === 'assistant' ? actionText : turn.text;
+const TurnActions = memo(({ actionText, turn }: { actionText?: TurnActionText; turn: Turn }) => {
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
   if (turn.role === 'assistant' && turn.streaming) return null;
+
+  const text = turn.role === 'assistant' ? (actionText?.() ?? '') : turn.text;
   if (!text) return null;
 
   return (
     <div
       class={tw(
-        'mt-1.5 flex items-center gap-1 text-soft opacity-0 transition-opacity ease-in group-hover/turn:opacity-100 group-has-[:focus-visible]/turn:opacity-100',
+        'mt-1.5 flex items-center gap-1 text-soft opacity-0 transition-opacity ease-in group-hover/turn:opacity-100 focus-within:opacity-100',
         turn.role === 'user' && 'flex-row-reverse justify-start self-end',
         turn.role !== 'user' && 'justify-start self-start'
       )}
     >
       <CopyButton
         ariaLabel="Copy turn"
-        text={text}
+        text={turn.role === 'assistant' && actionText ? actionText : text}
         class="grid size-5 place-items-center rounded-md border-0 bg-transparent text-soft transition-colors ease-in hover:bg-line hover:text-hover"
       />
       <time dateTime={new Date(turn.createdAt).toISOString()} class="px-0.5 text-xs leading-none whitespace-nowrap">
@@ -108,15 +111,15 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
 interface TurnArticleProps {
   turn: Turn;
-  actionText?: string;
+  actionText?: TurnActionText;
 }
 
 interface TurnArticleByIdProps {
   turnId: string;
-  actionText?: string;
+  actionText?: TurnActionText;
 }
 
-export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) => {
+export const TurnArticle = memo(({ actionText, turn }: TurnArticleProps) => {
   const details = turn.details ?? [];
   const items = turn.activityItems ?? [];
   const thinking = turn.thinking ?? '';
@@ -129,7 +132,7 @@ export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) =>
     <article
       data-turn-id={turn.id}
       class={tw(
-        'group/turn [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
+        'group/turn [-webkit-app-region:no-drag]',
         isUser &&
           'flex w-fit max-w-[min(38rem,82%)] flex-col items-end self-end @max-chat-narrow/chat:w-full @max-chat-narrow/chat:max-w-full',
         !isUser && !fullWidth && 'max-w-[min(38rem,82%)] self-start',
@@ -146,16 +149,16 @@ export const TurnArticle = memo(({ turn, actionText = '' }: TurnArticleProps) =>
       />
       <UserAttachments turn={turn} />
       <TurnBody turn={turn} />
-      <TurnActions turn={turn} actionText={actionText} />
+      <TurnActions turn={turn} {...(actionText ? { actionText } : {})} />
     </article>
   );
 });
 
-export const TurnArticleById = memo(({ turnId, actionText = '' }: TurnArticleByIdProps) => {
+export const TurnArticleById = memo(({ actionText, turnId }: TurnArticleByIdProps) => {
   const signal = turnSignal(turnId);
   const turn = signal?.value;
 
   if (!turn) return null;
 
-  return <TurnArticle turn={turn} actionText={actionText} />;
+  return <TurnArticle turn={turn} {...(actionText ? { actionText } : {})} />;
 });

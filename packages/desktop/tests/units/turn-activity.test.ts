@@ -3,6 +3,7 @@ import { activityLabelParts } from '@renderer/shared/turn/label';
 import { detailMetric, turnActionText } from '@renderer/shared/turn/sequence';
 import { appendTurnDetails, appendTurnThinking } from '@renderer/shared/turn/state';
 import { thinkingMarkdown } from '@renderer/shared/turn/thinking';
+import { readTurns, replaceTurns } from '@renderer/state/chat';
 import type { Turn, TurnActivityItem } from '@renderer/utils/types';
 import { describe, expect, it } from 'vitest';
 
@@ -55,6 +56,8 @@ const detailWithCount = (count: number) => ({
   createdAt: 0,
   updatedAt: 0
 });
+
+const resetTurns = () => replaceTurns([baseTurn()]);
 
 const subagentDetailWithCount = (count: number) => ({
   ...detailWithCount(count),
@@ -114,19 +117,32 @@ describe('turn activity sequence', () => {
     expect(turnActionText(activeTurns, 2)).toBe('First response.');
   });
 
+  it('derives action text from current turns without storing it in render props', () => {
+    const turns: Turn[] = [
+      { id: 'user', text: 'review this', role: 'user', createdAt: 0 },
+      { id: 'a1', text: 'First response.', role: 'assistant', createdAt: 1 },
+      { id: 'a2', text: '', role: 'assistant', createdAt: 2, details: [detailWithCount(1)] },
+      { id: 'a3', text: 'Final response.', role: 'assistant', createdAt: 3 },
+      { id: 'next', text: 'thanks', role: 'user', createdAt: 4 }
+    ];
+    replaceTurns(turns);
+
+    expect(turnActionText(readTurns(), 1)).toBe('');
+    expect(turnActionText(readTurns(), 2)).toBe('');
+    expect(turnActionText(readTurns(), 3)).toBe('First response.\n\nFinal response.');
+    expect(turnActionText(readTurns(), 4)).toBe('thanks');
+  });
+
   it('interleaves thinking and detail items in arrival order', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnThinking(setTurns, 't1', 'first thought');
-    appendTurnDetails(setTurns, 't1', [toolEvent('read', 'Read file.ts')]);
-    appendTurnThinking(setTurns, 't1', 'second thought');
-    appendTurnDetails(setTurns, 't1', [toolEvent('edit', 'Edit file.ts')]);
-    appendTurnThinking(setTurns, 't1', 'third thought');
+    appendTurnThinking('t1', 'first thought');
+    appendTurnDetails('t1', [toolEvent('read', 'Read file.ts')]);
+    appendTurnThinking('t1', 'second thought');
+    appendTurnDetails('t1', [toolEvent('edit', 'Edit file.ts')]);
+    appendTurnThinking('t1', 'third thought');
 
-    const items = turns[0]?.activityItems ?? [];
+    const items = readTurns()[0]?.activityItems ?? [];
     expect(items.map((item) => item.type)).toEqual(['thinking', 'detail', 'thinking', 'detail', 'thinking']);
     expect(thinkingText(items[0])).toBe('first thought');
     expect(thinkingText(items[2])).toBe('second thought');
@@ -136,76 +152,61 @@ describe('turn activity sequence', () => {
   });
 
   it('merges consecutive thinking deltas into one item', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnThinking(setTurns, 't1', 'hello ');
-    appendTurnThinking(setTurns, 't1', 'world');
+    appendTurnThinking('t1', 'hello ');
+    appendTurnThinking('t1', 'world');
 
-    const items = turns[0]?.activityItems ?? [];
+    const items = readTurns()[0]?.activityItems ?? [];
     expect(items).toHaveLength(1);
     expect(thinkingText(items[0])).toBe('hello world');
   });
 
   it('starts a new thinking item when a detail interrupts the stream', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnThinking(setTurns, 't1', 'before');
-    appendTurnDetails(setTurns, 't1', [toolEvent('read', 'Read file.ts')]);
-    appendTurnThinking(setTurns, 't1', 'after');
+    appendTurnThinking('t1', 'before');
+    appendTurnDetails('t1', [toolEvent('read', 'Read file.ts')]);
+    appendTurnThinking('t1', 'after');
 
-    const items = turns[0]?.activityItems ?? [];
+    const items = readTurns()[0]?.activityItems ?? [];
     expect(items.map((item) => item.type)).toEqual(['thinking', 'detail', 'thinking']);
     expect(thinkingText(items[2])).toBe('after');
   });
 
   it('merges incoming detail events into the existing active item by key', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnDetails(setTurns, 't1', [toolEvent('read', 'Reading', 'active')]);
-    appendTurnDetails(setTurns, 't1', [toolEvent('read', 'Read', 'done')]);
-    appendTurnDetails(setTurns, 't1', [toolEvent('read', 'Reading again', 'active')]);
+    appendTurnDetails('t1', [toolEvent('read', 'Reading', 'active')]);
+    appendTurnDetails('t1', [toolEvent('read', 'Read', 'done')]);
+    appendTurnDetails('t1', [toolEvent('read', 'Reading again', 'active')]);
 
-    const items = turns[0]?.activityItems ?? [];
+    const items = readTurns()[0]?.activityItems ?? [];
     expect(items.map((item) => item.type)).toEqual(['detail', 'detail']);
     expect(detailState(items[0])).toBe('done');
     expect(detailState(items[1])).toBe('active');
   });
 
   it('hides superseded sub-agent failures when a retry starts', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnDetails(setTurns, 't1', [toolEvent('tool:first-subagent', 'Sub-agents failed', 'error')]);
-    appendTurnDetails(setTurns, 't1', [toolEvent('tool:second-subagent', 'Spawning 1 agent', 'active')]);
+    appendTurnDetails('t1', [toolEvent('tool:first-subagent', 'Sub-agents failed', 'error')]);
+    appendTurnDetails('t1', [toolEvent('tool:second-subagent', 'Spawning 1 agent', 'active')]);
 
-    const items = turns[0]?.activityItems ?? [];
+    const items = readTurns()[0]?.activityItems ?? [];
     expect(items).toHaveLength(1);
     expect(detailTitle(items[0])).toBe('Spawning 1 agent');
-    expect(turns[0]?.details).toHaveLength(1);
-    expect(turns[0]?.details?.[0]?.title).toBe('Spawning 1 agent');
+    expect(readTurns()[0]?.details).toHaveLength(1);
+    expect(readTurns()[0]?.details?.[0]?.title).toBe('Spawning 1 agent');
   });
 
   it('keeps repeated browser event titles clean while preserving count metadata', () => {
-    let turns: Turn[] = [baseTurn()];
-    const setTurns = (fn: (current: Turn[]) => Turn[]) => {
-      turns = fn(turns);
-    };
+    resetTurns();
 
-    appendTurnDetails(setTurns, 't1', [toolEvent('browser_snapshot', 'Reading Browser', 'active')]);
-    appendTurnDetails(setTurns, 't1', [toolEvent('browser_snapshot', 'Read Browser')]);
+    appendTurnDetails('t1', [toolEvent('browser_snapshot', 'Reading Browser', 'active')]);
+    appendTurnDetails('t1', [toolEvent('browser_snapshot', 'Read Browser')]);
 
-    const detail = detailItem(turns[0]?.activityItems?.[0]);
+    const detail = detailItem(readTurns()[0]?.activityItems?.[0]);
     expect(detail.title).toBe('Read Browser');
     expect(detail.count).toBe(2);
     expect(detail.title).not.toContain('×');

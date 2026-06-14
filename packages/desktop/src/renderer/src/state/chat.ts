@@ -16,6 +16,8 @@ const isTurn = (turn: Turn | undefined): turn is Turn => Boolean(turn);
 
 export const turnSignal = (id: string) => turnSignals.get(id);
 
+export const readTurn = (id: string) => untracked(() => turnSignals.get(id)?.value ?? null);
+
 export const readTurns = () =>
   untracked(() => turnIdsState.value.map((id) => turnSignals.get(id)?.value).filter(isTurn));
 
@@ -46,4 +48,15 @@ export const updateTurns = (updater: (current: Turn[]) => Turn[]) => {
   const next = updater(current);
   if (next !== current) replaceTurns(next);
   return next;
+};
+
+export const updateTurn = (id: string, updater: (turn: Turn) => Turn) => {
+  const target = turnSignals.get(id);
+  if (!target) return;
+
+  const current = untracked(() => target.value);
+  const next = updater(current);
+  if (next === current) return;
+
+  target.value = next;
 };

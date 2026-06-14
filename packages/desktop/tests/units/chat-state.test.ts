@@ -1,4 +1,12 @@
-import { readTurns, replaceTurns, turnIdsState, turnSignal, updateTurns } from '@renderer/state/chat';
+import {
+  readTurn,
+  readTurns,
+  replaceTurns,
+  turnIdsState,
+  turnSignal,
+  updateTurn,
+  updateTurns
+} from '@renderer/state/chat';
 import type { Turn } from '@renderer/utils/types';
 import { describe, expect, it } from 'vitest';
 
@@ -37,5 +45,28 @@ describe('renderer chat state', () => {
     updateTurns((current) => [...current, turn('b', 'B')]);
     expect(previous.map((entry) => entry.id)).toEqual(['a']);
     expect(readTurns().map((entry) => entry.id)).toEqual(['a', 'b']);
+  });
+
+  it('updates one existing turn without replacing the active turn list', () => {
+    replaceTurns([turn('a', 'A'), turn('b', 'B')]);
+    const ids = turnIdsState.value;
+    const original = turnSignal('a');
+
+    updateTurn('a', (entry) => ({ ...entry, text: `${entry.text}!` }));
+
+    expect(turnIdsState.value).toBe(ids);
+    expect(turnSignal('a')).toBe(original);
+    expect(readTurn('a')?.text).toBe('A!');
+    expect(readTurn('b')?.text).toBe('B');
+  });
+
+  it('reports missing direct turn updates without changing state', () => {
+    replaceTurns([turn('a', 'A')]);
+    const ids = turnIdsState.value;
+
+    updateTurn('missing', (entry) => ({ ...entry, text: 'missing' }));
+
+    expect(turnIdsState.value).toBe(ids);
+    expect(readTurns().map((entry) => entry.text)).toEqual(['A']);
   });
 });
