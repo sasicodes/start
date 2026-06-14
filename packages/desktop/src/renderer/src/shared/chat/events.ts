@@ -14,6 +14,7 @@ import {
   setTurnStreaming,
   turnActivityLabel
 } from '@renderer/shared/turn/state';
+import { batch } from '@preact/signals';
 import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
@@ -77,8 +78,8 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamBuffer = [];
       if (!id || events.length === 0) return;
       drainStreamBuffer(events, {
-        onThinking: (delta) => appendTurnThinking(setTurns, id, delta),
-        onDetails: (batch) => appendTurnDetails(setTurns, id, batch)
+        onThinking: (delta) => appendTurnThinking(id, delta),
+        onDetails: (details) => appendTurnDetails(id, details)
       });
     };
 
@@ -86,14 +87,14 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       const delta = assistantBuffer;
       assistantBuffer = '';
-      if (id && delta) appendTurnDelta(setTurns, id, delta);
+      if (id && delta) appendTurnDelta(id, delta);
     };
 
     const flushTerminalDelta = () => {
       const id = optionsRef.current.terminalIdRef.current;
       const delta = terminalBuffer;
       terminalBuffer = '';
-      if (id && delta) appendTurnDelta(setTurns, id, delta);
+      if (id && delta) appendTurnDelta(id, delta);
     };
 
     const flushTimers = {
@@ -132,13 +133,20 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (!id || textAssistantId !== id) return;
 
       assistantFlush.flushNow();
-      setTurnStreaming(setTurns, id, false);
+      setTurnStreaming(id, false);
 
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
       optionsRef.current.assistantIdRef.current = assistantTurn.id;
       activityClearedAssistantId = null;
       textAssistantId = '';
       setTurns((current) => [...current, assistantTurn]);
+    };
+
+    const finishAssistantTurn = (id: string) => {
+      batch(() => {
+        setTurnActivity(id);
+        setTurnStreaming(id, false);
+      });
     };
 
     const offShowSettings = window.pi.app.onShowSettings((tab) => optionsRef.current.onShowSettings(tab));
@@ -160,7 +168,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (id) {
         streamFlush.flushNow();
         if (activityClearedAssistantId !== id) {
-          setTurnActivity(setTurns, id);
+          setTurnActivity(id);
           activityClearedAssistantId = id;
         }
         queueAssistantDelta(delta);
@@ -183,7 +191,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const currentAssistantId = optionsRef.current.assistantIdRef.current;
       const userTurn = createUserTurn(turn.text, turn.attachments ?? []);
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
-      if (currentAssistantId) setTurnStreaming(setTurns, currentAssistantId, false);
+      if (currentAssistantId) setTurnStreaming(currentAssistantId, false);
       optionsRef.current.assistantIdRef.current = assistantTurn.id;
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -198,8 +206,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.flushNow();
       assistantFlush.flushNow();
       if (id) {
-        setTurnActivity(setTurns, id);
-        setTurnStreaming(setTurns, id, false);
+        finishAssistantTurn(id);
       }
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -233,7 +240,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.flushNow();
       assistantFlush.flushNow();
       terminalFlush.flushNow();
-      if (assistantId) setTurnStreaming(setTurns, assistantId, false);
+      if (assistantId) setTurnStreaming(assistantId, false);
       activityClearedAssistantId = null;
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
@@ -250,7 +257,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       startActivitySegment();
       queueDetail(event);
       const activity = turnActivityLabel(event);
-      if (activity) setTurnActivity(setTurns, optionsRef.current.assistantIdRef.current ?? id, activity);
+      if (activity) setTurnActivity(optionsRef.current.assistantIdRef.current ?? id, activity);
     });
 
     const offScopedDelta = window.pi.chat.onScopedDelta(({ tabId, payload }) => {
@@ -261,7 +268,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
       streamFlush.flushNow();
       if (activityClearedAssistantId !== id) {
-        setTurnActivity(setTurns, id);
+        setTurnActivity(id);
         activityClearedAssistantId = id;
       }
       queueAssistantDelta(payload);
@@ -285,7 +292,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       startActivitySegment();
       queueDetail(payload);
       const activity = turnActivityLabel(payload);
-      if (activity) setTurnActivity(setTurns, optionsRef.current.assistantIdRef.current ?? id, activity);
+      if (activity) setTurnActivity(optionsRef.current.assistantIdRef.current ?? id, activity);
     });
 
     const offScopedDone = window.pi.chat.onScopedDone(({ tabId }) => {
@@ -295,8 +302,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.flushNow();
       assistantFlush.flushNow();
       if (id) {
-        setTurnActivity(setTurns, id);
-        setTurnStreaming(setTurns, id, false);
+        finishAssistantTurn(id);
       }
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -311,7 +317,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const assistantId = optionsRef.current.assistantIdRef.current;
       streamFlush.flushNow();
       assistantFlush.flushNow();
-      if (assistantId) setTurnStreaming(setTurns, assistantId, false);
+      if (assistantId) setTurnStreaming(assistantId, false);
       activityClearedAssistantId = null;
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;

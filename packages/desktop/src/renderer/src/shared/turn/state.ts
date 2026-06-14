@@ -1,8 +1,7 @@
 import type { ChatEvent } from '@preload/index';
+import { updateTurn } from '@renderer/state/chat';
 import { createId } from '@renderer/utils/id';
-import type { Turn, TurnActivityItem, TurnDetail } from '@renderer/utils/types';
-
-type TurnUpdater = (updater: (current: Turn[]) => Turn[]) => void;
+import type { TurnActivityItem, TurnDetail } from '@renderer/utils/types';
 
 const maxTurnDetails = 32;
 
@@ -66,92 +65,53 @@ const appendActivityThinking = (items: TurnActivityItem[], delta: string, update
   );
 };
 
-export const appendTurnDelta = (setTurns: TurnUpdater, id: string, delta: string) => {
+export const appendTurnDelta = (id: string, delta: string) => {
   if (!delta) return;
 
-  setTurns((current) => {
-    let changed = false;
-    const next = current.map((turn) => {
-      if (turn.id !== id) return turn;
-      changed = true;
-      return { ...turn, text: turn.text + delta };
-    });
-    return changed ? next : current;
-  });
+  updateTurn(id, (turn) => ({ ...turn, text: turn.text + delta }));
 };
 
-export const appendTurnDetails = (setTurns: TurnUpdater, id: string, details: ChatEvent[]) => {
+export const appendTurnDetails = (id: string, details: ChatEvent[]) => {
   if (details.length === 0) return;
 
-  setTurns((current) => {
-    let changed = false;
-    const next = current.map((turn) => {
-      if (turn.id !== id) return turn;
+  updateTurn(id, (turn) => {
+    let nextDetails = turn.details ?? [];
+    let activityItems = turn.activityItems ?? [];
+    for (const detail of details) {
+      const updatedAt = Date.now();
+      nextDetails = upsertTurnDetail(nextDetails, detail, updatedAt);
+      activityItems = updateActivityDetail(activityItems, detail, updatedAt);
+    }
 
-      let nextDetails = turn.details ?? [];
-      let activityItems = turn.activityItems ?? [];
-      for (const detail of details) {
-        const updatedAt = Date.now();
-        nextDetails = upsertTurnDetail(nextDetails, detail, updatedAt);
-        activityItems = updateActivityDetail(activityItems, detail, updatedAt);
-      }
-
-      changed = true;
-      return { ...turn, activityItems, details: nextDetails };
-    });
-
-    return changed ? next : current;
+    return { ...turn, activityItems, details: nextDetails };
   });
 };
 
-export const appendTurnThinking = (setTurns: TurnUpdater, id: string, delta: string) => {
+export const appendTurnThinking = (id: string, delta: string) => {
   if (!delta) return;
 
-  setTurns((current) => {
-    let changed = false;
-    const next = current.map((turn) => {
-      if (turn.id !== id) return turn;
-      changed = true;
-      return {
-        ...turn,
-        activityItems: appendActivityThinking(turn.activityItems ?? [], delta, Date.now()),
-        thinking: turn.thinking ? turn.thinking + delta : delta
-      };
-    });
-    return changed ? next : current;
-  });
+  updateTurn(id, (turn) => ({
+    ...turn,
+    activityItems: appendActivityThinking(turn.activityItems ?? [], delta, Date.now()),
+    thinking: turn.thinking ? turn.thinking + delta : delta
+  }));
 };
 
-export const setTurnStreaming = (setTurns: TurnUpdater, id: string, streaming: boolean) => {
-  setTurns((current) => {
-    let changed = false;
-    const next = current.map((turn) => {
-      if (turn.id !== id || turn.streaming === streaming) return turn;
-      changed = true;
-      return { ...turn, streaming };
-    });
-    return changed ? next : current;
-  });
+export const setTurnStreaming = (id: string, streaming: boolean) => {
+  updateTurn(id, (turn) => (turn.streaming === streaming ? turn : { ...turn, streaming }));
 };
 
 export const turnActivityLabel = (event: ChatEvent) => (event.state === 'active' ? event.title : '');
 
-export const setTurnActivity = (setTurns: TurnUpdater, id: string, activity?: string) => {
-  setTurns((current) => {
-    let changed = false;
-    const next = current.map((turn) => {
-      if (turn.id !== id) return turn;
-      if (activity) {
-        if (turn.activity === activity) return turn;
-        changed = true;
-        return { ...turn, activity };
-      }
-      if (!turn.activity) return turn;
+export const setTurnActivity = (id: string, activity?: string) => {
+  updateTurn(id, (turn) => {
+    if (activity) {
+      if (turn.activity === activity) return turn;
+      return { ...turn, activity };
+    }
+    if (!turn.activity) return turn;
 
-      const { activity: _activity, ...rest } = turn;
-      changed = true;
-      return rest;
-    });
-    return changed ? next : current;
+    const { activity: _activity, ...rest } = turn;
+    return rest;
   });
 };

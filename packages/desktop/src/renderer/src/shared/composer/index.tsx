@@ -249,7 +249,7 @@ export const Composer = memo(
         />
         <form
           class={tw(
-            'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag] [&_*]:[-webkit-app-region:no-drag]',
+            'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag]',
             layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
             overlay && 'shadow-composer-overlay',
             (finderVisible || queueVisible) && !isCommandMode && 'shadow-composer-attached',

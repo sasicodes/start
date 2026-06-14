@@ -1,9 +1,8 @@
 import { TurnArticleById } from '@renderer/shared/turn/article';
 import { estimateTurnHeight } from '@renderer/shared/turn/estimate';
 import { turnActionText } from '@renderer/shared/turn/sequence';
-import { turnIdsState, turnSignal } from '@renderer/state/chat';
+import { readTurn, readTurns, turnIdsState } from '@renderer/state/chat';
 import { Virtual, type VirtualHandle } from '@renderer/ui/virtual';
-import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
 import { memo } from 'preact/compat';
 
@@ -13,29 +12,33 @@ interface TurnArticlesProps {
   virtualRef: RefObject<VirtualHandle | null>;
 }
 
-const isTurn = (turn: Turn | null): turn is Turn => Boolean(turn);
+const turnKey = (turnId: string) => turnId;
 
-const turnKey = (turn: Turn) => turn.id;
+const estimateTurnIdHeight = (turnId: string) => {
+  const turn = readTurn(turnId);
+  return turn ? estimateTurnHeight(turn) : 44;
+};
 
 export const TurnArticles = memo(({ virtualRef, onRangeChange, preserveScrollEnd }: TurnArticlesProps) => {
   const turnIds = turnIdsState.value;
-  const turns = turnIds.map((turnId) => turnSignal(turnId)?.value ?? null).filter(isTurn);
 
-  if (!turns.length) return null;
+  if (!turnIds.length) return null;
 
   return (
     <Virtual
       gap={12}
-      items={turns}
+      items={turnIds}
       getKey={turnKey}
       className="w-full"
       apiRef={virtualRef}
       estimateHeightAsMinimum
       onRangeChange={onRangeChange}
       itemClassName="flex flex-col"
-      estimateHeight={estimateTurnHeight}
+      estimateHeight={estimateTurnIdHeight}
       preserveScrollEnd={preserveScrollEnd}
-      renderItem={(turn, index) => <TurnArticleById turnId={turn.id} actionText={turnActionText(turns, index)} />}
+      renderItem={(turnId, index) => (
+        <TurnArticleById turnId={turnId} actionText={() => turnActionText(readTurns(), index)} />
+      )}
     />
   );
 });

@@ -1,6 +1,7 @@
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { AllowElement, StreamdownProps } from 'streamdown';
+import { hasFootnoteProperty } from './footnotes';
 
 interface MarkdownIconProps {
   className?: string;
@@ -8,16 +9,9 @@ interface MarkdownIconProps {
 
 const EmptyIcon = () => null;
 
-const footnoteProperties = ['dataFootnotes', 'data-footnotes', 'dataFootnoteRef', 'data-footnote-ref'] as const;
-
 const MarkdownCopyIcon = ({ className }: MarkdownIconProps) => <CopyIcon class={tw('size-3', className)} />;
 
 const MarkdownCheckIcon = ({ className }: MarkdownIconProps) => <CheckIcon class={tw('size-3', className)} />;
-
-const hasFootnoteProperty = (properties: unknown) =>
-  typeof properties === 'object' &&
-  properties !== null &&
-  footnoteProperties.some((property) => property in properties);
 
 export const allowMarkdownElement: AllowElement = (element) => !hasFootnoteProperty(element.properties);
 
@@ -26,9 +20,9 @@ export const codeThemes: NonNullable<StreamdownProps['shikiTheme']> = ['github-l
 export const markdownAnimation = {
   stagger: 0,
   sep: 'word',
-  duration: 140,
+  duration: 120,
   easing: 'ease-out',
-  animation: 'blurIn'
+  animation: 'fadeIn'
 } as const;
 
 export const markdownControls = {

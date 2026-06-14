@@ -2,11 +2,13 @@ import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
+type CopyText = string | (() => string);
+
 interface CopyButtonProps {
   ariaLabel: string;
   class?: string;
   iconClass?: string;
-  text: string;
+  text: CopyText;
 }
 
 export const useCopied = (duration = 1500) => {
@@ -28,7 +30,7 @@ export const CopyButton = ({ ariaLabel, class: className, iconClass = 'size-3.5'
   const { copied, markCopied } = useCopied();
 
   const copy = async () => {
-    await navigator.clipboard.writeText(text).catch(() => {});
+    await navigator.clipboard.writeText(typeof text === 'function' ? text() : text).catch(() => {});
     markCopied();
   };
 
