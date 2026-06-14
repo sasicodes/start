@@ -48,15 +48,9 @@
       ]
     },
     "overrides": {
-      "tar": "7.5.16",
       "yauzl": "3.3.2",
-      "js-yaml": "4.2.0",
       "esbuild": "0.28.1",
-      "dompurify": "3.4.9",
-      "form-data": "4.0.6",
-      "protobufjs": "7.6.4",
-      "xcode>uuid": "11.1.1",
-      "@babel/core": "7.29.6"
+      "xcode>uuid": "11.1.1"
     },
     "patchedDependencies": {
       "@earendil-works/pi-ai@0.79.6": "patches/@earendil-works__pi-ai@0.79.6.patch"
