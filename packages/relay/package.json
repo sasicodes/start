@@ -13,8 +13,8 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
-    "@hono/node-server": "2.0.4",
-    "hono": "4.12.23",
+    "@hono/node-server": "2.0.5",
+    "hono": "4.12.25",
     "valibot": "1.4.1",
     "ws": "8.21.0"
   },
