@@ -47,6 +47,7 @@ type UntrackedFileData = {
 const maxPatchFiles = 2000;
 const maxUntrackedFiles = 64;
 const gitShowTimeoutMs = 4000;
+const gitWorktreeTimeoutMs = 10_000;
 const maxPatchLines = 200_000;
 const gitMaxBuffer = 32 * 1024 * 1024;
 const maxUntrackedFileBytes = 512 * 1024;
@@ -408,6 +409,110 @@ export const getGitFileBlob = async (
 export const isGitRepository = async (cwd: string) => {
   try {
     return (await git(cwd, ['rev-parse', '--is-inside-work-tree'])).trim() === 'true';
+  } catch {
+    return false;
+  }
+};
+
+export const gitTopLevel = async (cwd: string) => {
+  try {
+    return (await git(cwd, ['rev-parse', '--show-toplevel'])).trim();
+  } catch {
+    return '';
+  }
+};
+
+export interface GitWorktree {
+  path: string;
+  head: string;
+  branch: string;
+  isMain: boolean;
+  locked: boolean;
+}
+
+const shortBranch = (ref: string) => (ref.startsWith('refs/heads/') ? ref.slice('refs/heads/'.length) : ref);
+
+export const parseWorktreeList = (porcelain: string): GitWorktree[] => {
+  const worktrees: GitWorktree[] = [];
+  let path = '';
+  let head = '';
+  let branch = '';
+  let locked = false;
+  let started = false;
+
+  const flush = () => {
+    if (started && path) {
+      worktrees.push({ path, head, branch, locked, isMain: worktrees.length === 0 });
+    }
+    path = '';
+    head = '';
+    branch = '';
+    locked = false;
+    started = false;
+  };
+
+  for (const token of porcelain.split('\0')) {
+    if (token === '') {
+      flush();
+      continue;
+    }
+
+    started = true;
+    const spaceIndex = token.indexOf(' ');
+    const key = spaceIndex === -1 ? token : token.slice(0, spaceIndex);
+    const value = spaceIndex === -1 ? '' : token.slice(spaceIndex + 1);
+
+    if (key === 'worktree') path = value;
+    else if (key === 'HEAD') head = value;
+    else if (key === 'branch') branch = shortBranch(value);
+    else if (key === 'detached') branch = '';
+    else if (key === 'locked') locked = true;
+  }
+  flush();
+
+  return worktrees;
+};
+
+export const listWorktrees = async (cwd: string): Promise<GitWorktree[]> => {
+  try {
+    return parseWorktreeList(await git(cwd, ['worktree', 'list', '--porcelain', '-z'], gitWorktreeTimeoutMs));
+  } catch {
+    return [];
+  }
+};
+
+export const addWorktree = async (
+  cwd: string,
+  worktreePath: string,
+  options: { branch?: string; base?: string } = {}
+): Promise<GitWorktree | undefined> => {
+  try {
+    const args = ['worktree', 'add', '--quiet'];
+    if (options.branch) args.push('-b', options.branch);
+    args.push(worktreePath);
+    if (options.base) args.push(options.base);
+
+    await git(cwd, args, gitWorktreeTimeoutMs);
+    const target = path.resolve(worktreePath);
+    return (await listWorktrees(cwd)).find((tree) => path.resolve(tree.path) === target);
+  } catch {
+    return;
+  }
+};
+
+export const removeWorktree = async (
+  cwd: string,
+  worktreePath: string,
+  options: { force?: boolean } = {}
+): Promise<boolean> => {
+  try {
+    const args = ['worktree', 'remove'];
+    if (options.force) args.push('--force');
+    args.push(worktreePath);
+
+    await git(cwd, args, gitWorktreeTimeoutMs);
+    await git(cwd, ['worktree', 'prune'], gitWorktreeTimeoutMs).catch(() => '');
+    return true;
   } catch {
     return false;
   }
