@@ -651,7 +651,7 @@ export class ChatService {
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
     this.setActiveSession(sessionManager);
-    this.persistWorkspace(this.workspaceCwd);
+    if (!isManagedWorktree(baseDir, this.workspaceCwd)) this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
     this.refreshWorkspaceSearch();
 
@@ -667,7 +667,7 @@ export class ChatService {
   async createWorktreeTab(name?: string): Promise<AgentTab> {
     const repoRoot = await gitTopLevel(this.workspaceCwd);
     if (repoRoot) {
-      const slug = worktreeSlug(`${name ?? ''} ${randomUUID().slice(0, 8)}`);
+      const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
       const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
         branch: worktreeBranch(slug)
       });

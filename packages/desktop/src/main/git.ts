@@ -434,17 +434,17 @@ const shortBranch = (ref: string) => (ref.startsWith('refs/heads/') ? ref.slice(
 
 export const parseWorktreeList = (porcelain: string): GitWorktree[] => {
   const worktrees: GitWorktree[] = [];
-  let path = '';
+  let worktreePath = '';
   let head = '';
   let branch = '';
   let locked = false;
   let started = false;
 
   const flush = () => {
-    if (started && path) {
-      worktrees.push({ path, head, branch, locked, isMain: worktrees.length === 0 });
+    if (started && worktreePath) {
+      worktrees.push({ path: worktreePath, head, branch, locked, isMain: worktrees.length === 0 });
     }
-    path = '';
+    worktreePath = '';
     head = '';
     branch = '';
     locked = false;
@@ -462,7 +462,7 @@ export const parseWorktreeList = (porcelain: string): GitWorktree[] => {
     const key = spaceIndex === -1 ? token : token.slice(0, spaceIndex);
     const value = spaceIndex === -1 ? '' : token.slice(spaceIndex + 1);
 
-    if (key === 'worktree') path = value;
+    if (key === 'worktree') worktreePath = value;
     else if (key === 'HEAD') head = value;
     else if (key === 'branch') branch = shortBranch(value);
     else if (key === 'detached') branch = '';
@@ -511,7 +511,7 @@ export const removeWorktree = async (
     args.push(worktreePath);
 
     await git(cwd, args, gitWorktreeTimeoutMs);
-    await git(cwd, ['worktree', 'prune'], gitWorktreeTimeoutMs).catch(() => '');
+    await git(cwd, ['worktree', 'prune'], gitWorktreeTimeoutMs).catch(() => {});
     return true;
   } catch {
     return false;
