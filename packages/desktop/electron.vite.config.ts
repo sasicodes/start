@@ -21,11 +21,25 @@ export default defineConfig({
       externalizeDeps: false,
       reportCompressedSize: false,
       rollupOptions: {
-        external: ['electron', /^node:/, '@silvia-odwyer/photon-node', 'bufferutil', 'utf-8-validate'],
+        external: [
+          /^node:/,
+          'electron',
+          'ffi-rs',
+          'bufferutil',
+          'utf-8-validate',
+          /^@yuuang\/ffi-rs-/,
+          '@ff-labs/fff-node',
+          /^@ff-labs\/fff-bin-/,
+          '@silvia-odwyer/photon-node'
+        ],
+        input: {
+          index: resolve(root, 'src/main/index.ts'),
+          'search-host': resolve(root, 'src/main/search/host.ts')
+        },
         output: {
           format: 'cjs',
-          codeSplitting: false,
-          entryFileNames: 'index.cjs'
+          entryFileNames: '[name].cjs',
+          chunkFileNames: '[name]-[hash].cjs'
         }
       }
     }

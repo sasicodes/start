@@ -27,7 +27,11 @@ describe('buildStartSystemPrompt', () => {
   it('describes start resource locations without pi docs', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('Project and user resources:');
-    expect(prompt).toContain('Project rules come from AGENTS.md and CLAUDE.md');
+    expect(prompt).toContain('Project rules come from AGENTS.md files');
+    expect(prompt).toContain('Use the listed runtime tools for repository file discovery and code search');
+    expect(prompt).not.toContain('Prefer grep/find/ls tools');
+    expect(prompt).not.toContain('ripgrep');
+    expect(prompt).not.toContain('CLAUDE.md');
     expect(prompt).not.toContain('Pi documentation');
   });
 
@@ -175,9 +179,9 @@ Current date: 2026-05-30`
     expect(prompt).toContain('<cwd>/.agents/skills/<skill-name>/SKILL.md');
   });
 
-  it('mentions AGENTS.md and CLAUDE.md as project-context sources', () => {
+  it('mentions AGENTS.md as the project-context source', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
     expect(prompt).toContain('AGENTS.md');
-    expect(prompt).toContain('CLAUDE.md');
+    expect(prompt).not.toContain('CLAUDE.md');
   });
 });

@@ -105,6 +105,30 @@ describe('tool details', () => {
     });
   });
 
+  it('humanizes fallback tool names', () => {
+    expect(toolResultTitle('multi_grep', false)).toBe('Used Multi Grep');
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        args: {},
+        state: 'active',
+        toolName: 'multi_grep'
+      })
+    ).toMatchObject({
+      title: 'Using Multi Grep'
+    });
+    expect(
+      toolEventDetail({
+        key: 'tool:2',
+        args: {},
+        state: 'done',
+        toolName: 'multi_grep'
+      })
+    ).toMatchObject({
+      title: 'Used Multi Grep'
+    });
+  });
+
   it('keeps failed file and shell tools neutral instead of red errors', () => {
     expect(
       toolEventDetail({

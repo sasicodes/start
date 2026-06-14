@@ -246,6 +246,12 @@ export const resetFakeBrowserWindows = () => {
   windowsByWebContents.clear();
 };
 
+export const utilityProcess = {
+  fork: (_modulePath: string) => {
+    throw new Error('utilityProcess is unavailable in tests');
+  }
+};
+
 const fakeElectronModule = {
   app,
   shell,
@@ -253,6 +259,7 @@ const fakeElectronModule = {
   clipboard,
   nativeImage,
   powerSaveBlocker,
+  utilityProcess,
   BrowserWindow: {
     fromWebContents: (webContents: FakeBrowserWebContents) => windowsByWebContents.get(webContents) ?? null
   },

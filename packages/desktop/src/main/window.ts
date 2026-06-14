@@ -12,6 +12,7 @@ const { app, BrowserWindow, screen, shell } = electron;
 const getRendererUrl = () => (isDev ? (environment.rendererUrl ?? null) : null);
 
 let mainWindow: ElectronBrowserWindow | null = null;
+let mainWindowRevealed = false;
 let composerWindow: ElectronBrowserWindow | null = null;
 let composerVisible = false;
 let composerOpenedFromStart = false;
@@ -97,6 +98,7 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
 
   const window = new BrowserWindow(options);
   mainWindow = window;
+  mainWindowRevealed = false;
   mainWindowCloseConfirmed = false;
 
   window.setBackgroundColor('#00000000');
@@ -105,8 +107,7 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
   }
 
   window.once('ready-to-show', () => {
-    window.maximize();
-    if (showOnReady) window.show();
+    if (showOnReady) revealMainWindow(window);
   });
 
   window.webContents.on('before-input-event', (event, input) => {
@@ -233,8 +234,17 @@ export const withComposerBlurSuppressed = async <T>(action: () => Promise<T>): P
   }
 };
 
+const revealMainWindow = (window: ElectronBrowserWindow) => {
+  if (mainWindowRevealed) return;
+
+  mainWindowRevealed = true;
+  window.maximize();
+  window.show();
+};
+
 export const showMainWindow = () => {
   const window = createMainWindow();
+  revealMainWindow(window);
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();
