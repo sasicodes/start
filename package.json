@@ -36,6 +36,17 @@
       "electron",
       "esbuild"
     ],
+    "supportedArchitectures": {
+      "os": [
+        "darwin",
+        "linux",
+        "win32"
+      ],
+      "cpu": [
+        "x64",
+        "arm64"
+      ]
+    },
     "overrides": {
       "yauzl": "3.3.2",
       "esbuild": "0.28.1",

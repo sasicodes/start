@@ -70,10 +70,8 @@
     "copyright": "Copyright © 2026 Intelligence One",
     "asar": true,
     "asarUnpack": [
-      "node_modules/@ff-labs/fff-bin-*/*.so",
-      "node_modules/@ff-labs/fff-bin-*/*.dll",
-      "node_modules/@ff-labs/fff-bin-*/*.dylib",
-      "node_modules/@yuuang/ffi-rs-*/*.node"
+      "node_modules/@ff-labs/fff-bin-*/**/*.{so,dll,dylib}",
+      "node_modules/@yuuang/ffi-rs-*/**/*.node"
     ],
     "compression": "maximum",
     "detectUpdateChannel": false,
@@ -88,11 +86,6 @@
       "build/icons/tray-icon.png",
       "package.json",
       "!out/renderer/icon-dev.png",
-      "!**/node_modules/**",
-      "node_modules/@ff-labs/fff-bin-*/**/*",
-      "node_modules/@ff-labs/fff-node/**/*",
-      "node_modules/@yuuang/ffi-rs-*/**/*",
-      "node_modules/ffi-rs/**/*",
       "!**/*.map"
     ],
     "extraMetadata": {
