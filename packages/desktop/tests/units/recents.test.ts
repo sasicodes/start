@@ -20,6 +20,23 @@ const sessionRecord = (id: string, updatedAt: number): SessionRecord => ({
   totalOutputTokens: 0
 });
 
+describe('live session modified', () => {
+  it('uses the current time for a generating session', async () => {
+    const { liveSessionModified } = await import('@main/chat/recents');
+    expect(liveSessionModified('generating', 500, 100)).toBe(500);
+  });
+
+  it('uses the persisted last-active time for an idle session', async () => {
+    const { liveSessionModified } = await import('@main/chat/recents');
+    expect(liveSessionModified('idle', 500, 100)).toBe(100);
+  });
+
+  it('falls back to the current time when the session is not yet persisted', async () => {
+    const { liveSessionModified } = await import('@main/chat/recents');
+    expect(liveSessionModified('idle', 500)).toBe(500);
+  });
+});
+
 describe('recent sessions page', () => {
   it('includes live unpersisted sessions for the current workspace', async () => {
     persistedSessions.splice(0, persistedSessions.length, sessionRecord('persisted', 100));

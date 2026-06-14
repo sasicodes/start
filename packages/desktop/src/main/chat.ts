@@ -22,7 +22,7 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
-import { type LiveRecentSession, recentSessionsPage } from '@main/chat/recents';
+import { type LiveRecentSession, liveSessionModified, recentSessionsPage } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, textContent } from '@main/details';
@@ -565,8 +565,8 @@ export class ChatService {
       status,
       workspacePath,
       id: sessionId,
-      modified: Date.now(),
       title: truncateTitle(firstMessage),
+      modified: liveSessionModified(status, Date.now(), getSession(sessionId)?.updatedAt),
       ...(notice ? { noticeKind: notice.kind } : {})
     };
   }

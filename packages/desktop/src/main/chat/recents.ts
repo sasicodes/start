@@ -13,6 +13,9 @@ export type LiveRecentSession = RecentSession & { workspacePath: string };
 
 const defaultRecentSessionLimit = 15;
 
+export const liveSessionModified = (status: RecentSession['status'], now: number, lastActive?: number): number =>
+  status === 'generating' || lastActive === undefined ? now : lastActive;
+
 const pageLimit = (options: RecentSessionsRequest) => Math.max(1, options.limit ?? defaultRecentSessionLimit);
 const pageOffset = (options: RecentSessionsRequest) => Math.max(0, options.offset ?? 0);
 
