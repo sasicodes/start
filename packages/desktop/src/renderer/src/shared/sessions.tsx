@@ -85,7 +85,10 @@ const SessionRow = ({ active, attention, session, onOpen }: SessionRowProps) => 
     )}
   >
     <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
-    <span class="text-xs leading-4 text-soft">{formatRelativeTime(session.modified)}</span>
+    <span class="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-soft">
+      <span class="flex-none">{formatRelativeTime(session.modified)}</span>
+      {session.branch && <span class="truncate font-mono">[{session.branch}]</span>}
+    </span>
     <SessionAttention attention={attention} />
   </AppMenu.Item>
 );

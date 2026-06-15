@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 const persistedSessions: SessionRecord[] = [];
 
 vi.mock('@main/sessions', () => ({
-  listSessionsByCwd: () => persistedSessions
+  listSessionsByCwds: () => persistedSessions
 }));
 
 const sessionRecord = (id: string, updatedAt: number): SessionRecord => ({
@@ -111,6 +111,29 @@ describe('recent sessions page', () => {
 
     expect(page.sessions.map((session) => session.id)).toEqual(['newer', 'idle-open']);
     expect(page.sessions[1]?.modified).toBe(100);
+  });
+
+  it('includes worktree sessions under the repo and labels them with the branch', async () => {
+    persistedSessions.splice(0, persistedSessions.length, sessionRecord('repo', 200), {
+      ...sessionRecord('worktree', 150),
+      cwd: '/workspace/.worktrees/a'
+    });
+    const { recentSessionsPage } = await import('@main/chat/recents');
+
+    const page = await recentSessionsPage(
+      {
+        limit: 10,
+        workspacePath: '/workspace',
+        worktrees: [{ path: '/workspace/.worktrees/a', branch: 'start/fix-bug-1a2b3c4d' }]
+      },
+      new Map(),
+      new Map(),
+      []
+    );
+
+    expect(page.sessions.map((session) => session.id)).toEqual(['repo', 'worktree']);
+    expect(page.sessions.find((session) => session.id === 'repo')?.branch).toBeUndefined();
+    expect(page.sessions.find((session) => session.id === 'worktree')?.branch).toBe('fix-bug-1a2b3c4d');
   });
 
   it('does not resurface idle archived sessions that are still loaded in memory', async () => {

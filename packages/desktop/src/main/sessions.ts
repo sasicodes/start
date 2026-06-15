@@ -211,6 +211,18 @@ export const listSessionsByCwd = (cwd: string, options: ListOptions): SessionRec
   return rows.map(rowToRecord);
 };
 
+export const listSessionsByCwds = (cwds: string[], options: ListOptions): SessionRecord[] => {
+  if (cwds.length === 0) return [];
+  if (cwds.length === 1 && cwds[0]) return listSessionsByCwd(cwds[0], options);
+
+  const placeholders = cwds.map(() => '?').join(', ');
+  const stmt = openStartDb().prepare(
+    `SELECT * FROM sessions WHERE cwd IN (${placeholders}) AND archived = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?`
+  );
+  const rows = stmt.all(...cwds, options.archived ? 1 : 0, options.limit, options.offset).map(toSessionRow);
+  return rows.map(rowToRecord);
+};
+
 export const listRecentSessions = (options: RecentOptions): SessionRecord[] => {
   const rows = statements().listRecentActive.all(options.limit).map(toSessionRow);
   return rows.map(rowToRecord);

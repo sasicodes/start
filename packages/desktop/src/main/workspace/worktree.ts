@@ -12,12 +12,17 @@ export const worktreeSlug = (name: string) =>
 
 export const worktreeBranch = (slug: string) => `start/${slug}`;
 
+export const worktreeBranchLabel = (branch: string) =>
+  branch.startsWith('start/') ? branch.slice('start/'.length) : branch;
+
 export const repoKey = (repoRoot: string) => createHash('sha256').update(repoRoot).digest('hex').slice(0, 12);
+
+export const repoFolderName = (repoRoot: string) => `${worktreeSlug(path.basename(repoRoot))}-${repoKey(repoRoot)}`;
 
 export const managedWorktreeRoot = (baseDir: string) => path.join(baseDir, 'worktrees');
 
 export const worktreePathFor = (baseDir: string, repoRoot: string, slug: string) =>
-  path.join(managedWorktreeRoot(baseDir), repoKey(repoRoot), slug);
+  path.join(managedWorktreeRoot(baseDir), repoFolderName(repoRoot), slug);
 
 export const isManagedWorktree = (baseDir: string, candidate: string) => {
   const relative = relativeInside(managedWorktreeRoot(baseDir), candidate);

@@ -105,6 +105,34 @@ describe('tool details', () => {
     });
   });
 
+  it('renders session and worktree tool titles instead of the used fallback', () => {
+    expect(toolResultTitle('create_session', false)).toBe('Created session');
+    expect(toolResultTitle('send_message_to_session', false)).toBe('Sent message');
+    expect(toolResultTitle('delete_worktree', true)).toBe('Delete worktree failed');
+
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        args: {},
+        state: 'active',
+        toolName: 'create_session'
+      })
+    ).toMatchObject({
+      title: 'Creating session'
+    });
+
+    expect(
+      toolEventDetail({
+        key: 'tool:2',
+        args: {},
+        state: 'done',
+        toolName: 'list_worktrees'
+      })
+    ).toMatchObject({
+      title: 'Listed worktrees'
+    });
+  });
+
   it('humanizes fallback tool names', () => {
     expect(toolResultTitle('multi_grep', false)).toBe('Used Multi Grep');
     expect(

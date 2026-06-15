@@ -1,6 +1,7 @@
 import {
   isManagedWorktree,
   managedWorktreeRoot,
+  repoFolderName,
   repoKey,
   worktreeBranch,
   worktreePathFor,
@@ -35,10 +36,20 @@ describe('repoKey', () => {
   });
 });
 
+describe('repoFolderName', () => {
+  it('combines the readable repo name with a short hash', () => {
+    expect(repoFolderName('/a/my-repo')).toBe(`my-repo-${repoKey('/a/my-repo')}`);
+  });
+
+  it('keeps different repos with the same name distinct', () => {
+    expect(repoFolderName('/a/repo')).not.toBe(repoFolderName('/b/repo'));
+  });
+});
+
 describe('worktreePathFor', () => {
-  it('nests slugs under the managed root keyed by repo', () => {
-    const key = repoKey('/a/repo');
-    expect(worktreePathFor('/data', '/a/repo', 'feature')).toBe(`${managedWorktreeRoot('/data')}/${key}/feature`);
+  it('nests slugs under the managed root keyed by repo name and hash', () => {
+    const folder = repoFolderName('/a/repo');
+    expect(worktreePathFor('/data', '/a/repo', 'feature')).toBe(`${managedWorktreeRoot('/data')}/${folder}/feature`);
   });
 });
 

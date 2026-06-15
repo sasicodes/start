@@ -1,4 +1,4 @@
-import type { AgentTabStatus, SessionNoticeKind } from '@preload/index';
+import type { AgentTabStatus, SessionNoticeKind, WorkspaceFolder } from '@preload/index';
 
 export type AttentionStatus = Exclude<AgentTabStatus, 'idle'>;
 export type AttentionState = AttentionStatus | '';
@@ -32,4 +32,14 @@ export const topAttentionStatus = (statuses: AttentionState[]): AttentionState =
   if (statuses.includes('generating')) return 'generating';
   if (statuses.includes('completed')) return 'completed';
   return '';
+};
+
+export const workspaceFoldersAttention = (
+  folders: WorkspaceFolder[],
+  activeWorkspacePath: string
+): { kind: AttentionState; countLabel: string } => {
+  const statuses = folders
+    .filter((folder) => folder.path !== activeWorkspacePath)
+    .map((folder) => attentionStatus(folder.status, folder.noticeKind));
+  return { kind: topAttentionStatus(statuses), countLabel: attentionCountLabel(attentionStatusCount(statuses)) };
 };
