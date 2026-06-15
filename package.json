@@ -38,9 +38,7 @@
     ],
     "supportedArchitectures": {
       "os": [
-        "darwin",
-        "linux",
-        "win32"
+        "darwin"
       ],
       "cpu": [
         "x64",
