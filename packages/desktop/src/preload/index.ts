@@ -470,6 +470,7 @@ const api = {
     tabs: (): Promise<AgentTab[]> => ipcRenderer.invoke('chat:tabs'),
     listTabs: (): Promise<AgentTab[]> => ipcRenderer.invoke('chat:tabs:list'),
     createTab: (workspacePath?: string): Promise<AgentTab> => ipcRenderer.invoke('chat:tabs:create', workspacePath),
+    createWorktree: (name?: string): Promise<AgentTab> => ipcRenderer.invoke('chat:tabs:create-worktree', name),
     tabStatus: (): Promise<ChatStatus> => ipcRenderer.invoke('chat:tabs:status'),
     activateTab: (id: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:tabs:activate', id),
     openTabSession: (id: string): Promise<OpenSessionResult> => ipcRenderer.invoke('chat:tabs:open-session', id),

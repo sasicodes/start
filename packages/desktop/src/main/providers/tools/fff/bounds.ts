@@ -1,4 +1,5 @@
 import { boundedContext, boundedCount, maxGrepContext, maxGrepPageSize } from '@main/search/limits';
+import { truncate } from '@main/utils/text';
 import * as v from 'valibot';
 
 const maxLineLength = 500;
@@ -36,8 +37,6 @@ export const boundedPatterns = (patterns: string[]) =>
     .filter(Boolean)
     .slice(0, maxMultiGrepPatterns);
 
-export const boundedLine = (text: string) =>
-  text.length > maxLineLength ? `${text.slice(0, maxLineLength)}...` : text;
+export const boundedLine = (text: string) => truncate(text, maxLineLength, '...');
 
-export const boundedOutput = (text: string) =>
-  text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
+export const boundedOutput = (text: string) => truncate(text, maxOutputLength, '\n[Output truncated.]');

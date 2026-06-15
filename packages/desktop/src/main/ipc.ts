@@ -99,6 +99,12 @@ export const registerChatIpc = ({
     notifyWorkspaceChanged(tab.workspacePath);
     return tab;
   });
+  ipcMain.handle('chat:tabs:create-worktree', async (_event, name?: string) => {
+    const tab = await chat.createWorktreeTab(name);
+    trackSessionCreated('tab', tab.workspacePath);
+    notifyWorkspaceChanged(tab.workspacePath);
+    return tab;
+  });
   ipcMain.handle('chat:tabs:status', () => chat.getStatus());
   ipcMain.handle('chat:notices:list', () => chat.getNotices());
   ipcMain.handle('chat:auth-providers', () => chat.getAuthProviders());

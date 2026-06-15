@@ -11,7 +11,7 @@ import {
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
-import { appVersion } from '@main/application';
+import { appVersion, baseDir } from '@main/application';
 import {
   type PreparedImageAttachment,
   prepareClipboardImage as prepareClipboardImageAttachment,
@@ -27,7 +27,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { getGitBranch } from '@main/git';
+import { addWorktree, getGitBranch, gitTopLevel } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -47,11 +47,14 @@ import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
+import type { SessionController, SessionEnvironment, SessionSummary } from '@main/providers/tools/sessions';
+import type { WorktreeOwner } from '@main/providers/tools/worktree';
 import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
 import {
   archiveSession,
   getSession,
   listRecentSessions,
+  listSessionsByCwd,
   truncateTitle,
   unarchiveSession,
   updateSessionOnTurnEnd,
@@ -95,6 +98,7 @@ import { workspaceDisplayName } from '@main/utils/workspace';
 import { sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
+import { isManagedWorktree, worktreeBranch, worktreePathFor, worktreeSlug } from '@main/workspace/worktree';
 import type { WebContents } from 'electron';
 import electron from 'electron';
 
@@ -621,14 +625,10 @@ export class ChatService {
     return [...tabs.values()];
   }
 
-  async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+  private async buildSession(workspacePath: string): Promise<AgentSession> {
     this.refreshAuth();
     const model = this.pickModel();
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
-
-    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
-    this.session = null;
-    this.attachments.clear();
 
     const sessionManager = SessionManager.create(workspacePath);
     const resourceLoader = await createStartResourceLoader(workspacePath);
@@ -645,22 +645,52 @@ export class ChatService {
     });
     enableRegisteredTools(session);
     this.subscribeIndexSync(session, model.provider, model.id);
+    return session;
+  }
+
+  async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+    const session = await this.buildSession(workspacePath);
+    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+    this.attachments.clear();
     this.session = session;
     this.workspaceCwd = workspacePath;
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
-    this.setActiveSession(sessionManager);
+    this.setActiveSession(session.sessionManager);
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
     this.refreshWorkspaceSearch();
 
-    const sessionId = sessionManager.getSessionId();
+    const sessionId = session.sessionManager.getSessionId();
     return {
       id: sessionId,
       sessionId,
       status: 'idle',
       workspacePath
     };
+  }
+
+  private async addManagedWorktree(name?: string, base?: string): Promise<string> {
+    const repoRoot = await gitTopLevel(this.workspaceCwd);
+    if (!repoRoot) return '';
+    const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
+    const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
+      branch: worktreeBranch(slug),
+      ...(base ? { base } : {})
+    });
+    return worktree ? worktree.path : '';
+  }
+
+  async createWorktreeTab(name?: string, base?: string): Promise<AgentTab> {
+    const worktreePath = await this.addManagedWorktree(name, base);
+    return worktreePath ? this.createTab(worktreePath) : this.createTab();
+  }
+
+  private async createBackgroundSession(workspacePath: string): Promise<AgentSession> {
+    const session = await this.buildSession(workspacePath);
+    this.backgroundSessions.set(session.sessionManager.getSessionId(), session);
+    this.runtimeStateForSession(session).isGenerating = false;
+    return session;
   }
 
   async closeTab(id: string): Promise<void> {
@@ -1050,15 +1080,25 @@ export class ChatService {
   }
 
   async send(prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
+    if (!prompt.trim()) return { ok: false, error: 'Prompt is empty.' };
+    return this.generate(await this.getSession(), this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  private async generate(
+    session: AgentSession,
+    workspacePath: string,
+    prompt: string,
+    attachments: ImageAttachment[],
+    webContents?: WebContents
+  ): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     let endError = '';
-    let activeSession: AgentSession | null = null;
+    const activeSession = session;
     let runtimeState: SessionRuntimeState | null = null;
     let sendAbortSequence = 0;
     let startedGeneration = false;
     let sessionId = '';
-    let workspacePath = this.workspaceCwd;
     let lastMobileChangeNotifiedAt = 0;
     const notifyMobileSessionChange = (force = false) => {
       const now = Date.now();
@@ -1069,8 +1109,6 @@ export class ChatService {
     };
 
     try {
-      activeSession = await this.getSession();
-      const session = activeSession;
       sessionId = session.sessionManager.getSessionId();
       runtimeState = this.runtimeStateForSession(session);
       if (runtimeState.isGenerating || session.isStreaming)
@@ -1082,7 +1120,6 @@ export class ChatService {
       startedGeneration = true;
       sendAbortSequence = state.abortSequence;
       const images = await this.resolveAttachments(attachments);
-      workspacePath = this.workspaceCwd;
       this.resetLiveAssistantTurn(session, state);
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
@@ -1180,7 +1217,7 @@ export class ChatService {
       return { ok: true, sessionId };
     } catch (error) {
       if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
-        if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
+        if (this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
           this.emit('done', '', webContents);
         }
@@ -1815,6 +1852,8 @@ export class ChatService {
     return {
       cwd: () => cwd,
       authStorage: this.authStorage,
+      sessions: this.sessionController(),
+      worktreeOwners: (path) => this.worktreeOwners(path),
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
       model: () => this.pickModel() ?? null,
@@ -1832,6 +1871,58 @@ export class ChatService {
           customTools: () => createStartCustomTools(),
           thinkingLevel: () => this.selectedThinkingLevel
         })
+    };
+  }
+
+  private sessionController(): SessionController {
+    const toSummary = (tab: AgentTab) => ({
+      id: tab.id,
+      status: tab.status,
+      workspacePath: tab.workspacePath,
+      isolated: isManagedWorktree(baseDir, tab.workspacePath)
+    });
+
+    return {
+      list: () => this.getTabs().map(toSummary),
+      read: (id) => {
+        const tab = this.getTabs().find((entry) => entry.id === id);
+        if (!tab) return null;
+        return this.mobileSessionTurns(id, tab.workspacePath).map((turn) => ({ role: turn.role, text: turn.text }));
+      },
+      send: (id, prompt) => {
+        const session = this.activeSessionId === id ? this.session : this.backgroundSessions.get(id);
+        if (!session) return;
+        this.generate(session, sessionWorkspacePath(session, this.workspaceCwd), prompt, []).catch(() => {});
+      },
+      create: (input) => this.startSession(input)
+    };
+  }
+
+  private worktreeOwners(path: string): WorktreeOwner[] {
+    return listSessionsByCwd(path, { archived: false, limit: 10, offset: 0 }).map((record) => ({
+      id: record.id,
+      title: record.title,
+      active: record.id === this.activeSessionId
+    }));
+  }
+
+  async startSession({
+    prompt,
+    environment
+  }: {
+    prompt: string;
+    environment: SessionEnvironment;
+  }): Promise<SessionSummary> {
+    const worktreePath =
+      environment.type === 'worktree' ? await this.addManagedWorktree(prompt, environment.branch) : '';
+    const workspacePath = worktreePath || this.workspaceCwd;
+    const session = await this.createBackgroundSession(workspacePath);
+    this.generate(session, workspacePath, prompt, []).catch(() => {});
+    return {
+      workspacePath,
+      status: 'generating',
+      id: session.sessionManager.getSessionId(),
+      isolated: isManagedWorktree(baseDir, workspacePath)
     };
   }
 
@@ -1890,6 +1981,7 @@ export class ChatService {
   }
 
   private persistWorkspace(workspacePath: string): void {
+    if (isManagedWorktree(baseDir, workspacePath)) return;
     this.persistState({
       lastWorkspace: workspacePath,
       workspaceHistory: this.workspaceHistoryFor(workspacePath)
