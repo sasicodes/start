@@ -5,6 +5,7 @@ import { truncate } from '@main/utils/text';
 
 export interface SessionEnvironment {
   type: 'local' | 'worktree';
+  base?: string;
   branch?: string;
 }
 
@@ -113,6 +114,10 @@ const createParameters = {
       additionalProperties: false,
       description: 'Where the session runs. Omit for a local session in the current workspace.',
       properties: {
+        base: {
+          type: 'string',
+          description: 'Base branch or ref to fork the worktree from. Defaults to the current HEAD.'
+        },
         type: {
           type: 'string',
           enum: ['local', 'worktree'],
@@ -120,7 +125,7 @@ const createParameters = {
         },
         branch: {
           type: 'string',
-          description: 'Base branch for a worktree session. Defaults to the current HEAD.'
+          description: 'Name for the new worktree branch, e.g. fix-login-bug. A unique suffix is added automatically.'
         }
       }
     }

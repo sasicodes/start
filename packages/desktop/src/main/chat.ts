@@ -670,10 +670,10 @@ export class ChatService {
     };
   }
 
-  private async addManagedWorktree(name?: string, base?: string): Promise<string> {
+  private async addManagedWorktree(branchName?: string, base?: string): Promise<string> {
     const repoRoot = await gitTopLevel(this.workspaceCwd);
     if (!repoRoot) return '';
-    const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
+    const slug = `${worktreeSlug(branchName ?? '')}-${randomUUID().slice(0, 8)}`;
     const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
       branch: worktreeBranch(slug),
       ...(base ? { base } : {})
@@ -681,8 +681,8 @@ export class ChatService {
     return worktree ? worktree.path : '';
   }
 
-  async createWorktreeTab(name?: string, base?: string): Promise<AgentTab> {
-    const worktreePath = await this.addManagedWorktree(name, base);
+  async createWorktreeTab(branchName?: string, base?: string): Promise<AgentTab> {
+    const worktreePath = await this.addManagedWorktree(branchName, base);
     return worktreePath ? this.createTab(worktreePath) : this.createTab();
   }
 
@@ -1914,7 +1914,7 @@ export class ChatService {
     environment: SessionEnvironment;
   }): Promise<SessionSummary> {
     const worktreePath =
-      environment.type === 'worktree' ? await this.addManagedWorktree(prompt, environment.branch) : '';
+      environment.type === 'worktree' ? await this.addManagedWorktree(environment.branch, environment.base) : '';
     const workspacePath = worktreePath || this.workspaceCwd;
     const session = await this.createBackgroundSession(workspacePath);
     this.generate(session, workspacePath, prompt, []).catch(() => {});
