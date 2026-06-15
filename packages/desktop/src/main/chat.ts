@@ -48,11 +48,13 @@ import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
 import type { SessionController, SessionEnvironment, SessionSummary } from '@main/providers/tools/sessions';
+import type { WorktreeOwner } from '@main/providers/tools/worktree';
 import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
 import {
   archiveSession,
   getSession,
   listRecentSessions,
+  listSessionsByCwd,
   truncateTitle,
   unarchiveSession,
   updateSessionOnTurnEnd,
@@ -1866,6 +1868,7 @@ export class ChatService {
       cwd: () => cwd,
       authStorage: this.authStorage,
       sessions: this.sessionController(),
+      worktreeOwners: (path) => this.worktreeOwners(path),
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
       model: () => this.pickModel() ?? null,
@@ -1906,6 +1909,14 @@ export class ChatService {
       },
       create: (input) => this.startSession(input)
     };
+  }
+
+  private worktreeOwners(path: string): WorktreeOwner[] {
+    return listSessionsByCwd(path, { archived: false, limit: 10, offset: 0 }).map((record) => ({
+      id: record.id,
+      title: record.title,
+      active: record.id === this.activeSessionId
+    }));
   }
 
   async startSession({

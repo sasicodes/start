@@ -1,25 +1,57 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
-import { type GitWorktree, gitTopLevel, listWorktrees, removeWorktree } from '@main/git';
+import { gitTopLevel, listWorktrees, removeWorktree } from '@main/git';
 import { toolResult } from '@main/providers/tools/result';
 import { isManagedWorktree } from '@main/workspace/worktree';
 
 interface CreateWorktreeToolsOptions {
   cwd: () => string;
+  owners?: (path: string) => WorktreeOwner[];
 }
 
-export const formatWorktrees = (worktrees: readonly GitWorktree[]): string => {
+export interface WorktreeOwner {
+  id: string;
+  title: string;
+  active: boolean;
+}
+
+interface WorktreeListing {
+  path: string;
+  branch: string;
+  locked: boolean;
+  owners: WorktreeOwner[] | null;
+}
+
+const ownerSuffix = (owners: WorktreeOwner[] | null) => {
+  if (owners === null) return '';
+  const [first, ...rest] = owners;
+  if (!first) return ' — orphan';
+  const active = owners.some((owner) => owner.active) ? ' (active)' : '';
+  const more = rest.length > 0 ? ` +${rest.length}` : '';
+  return ` session: "${first.title}"${active}${more}`;
+};
+
+export const formatWorktrees = (worktrees: readonly WorktreeListing[]): string => {
   if (worktrees.length === 0) return 'No managed worktrees.';
   return worktrees
-    .map((tree) => `${tree.path} [${tree.branch || 'detached'}]${tree.locked ? ' (locked)' : ''}`)
+    .map(
+      (tree) =>
+        `${tree.path} [${tree.branch || 'detached'}]${tree.locked ? ' (locked)' : ''}${ownerSuffix(tree.owners)}`
+    )
     .join('\n');
 };
 
-export const runListWorktrees = async (cwd: string) => {
+export const runListWorktrees = async (cwd: string, owners?: (path: string) => WorktreeOwner[]) => {
   const repoRoot = await gitTopLevel(cwd);
   if (!repoRoot) return toolResult('The current workspace is not a git repository.', null);
   const managed = (await listWorktrees(repoRoot)).filter((tree) => isManagedWorktree(baseDir, tree.path));
-  return toolResult(formatWorktrees(managed), null);
+  const listings: WorktreeListing[] = managed.map((tree) => ({
+    path: tree.path,
+    branch: tree.branch,
+    locked: tree.locked,
+    owners: owners ? owners(tree.path) : null
+  }));
+  return toolResult(formatWorktrees(listings), null);
 };
 
 export const runDeleteWorktree = async (cwd: string, path: string, force: boolean) => {
@@ -46,14 +78,14 @@ const deleteParameters = {
   }
 } as const;
 
-export const createWorktreeTools = ({ cwd }: CreateWorktreeToolsOptions) => [
+export const createWorktreeTools = ({ cwd, owners }: CreateWorktreeToolsOptions) => [
   defineTool({
     name: 'list_worktrees',
     label: 'list worktrees',
     parameters: listParameters,
-    description: 'List the worktrees created for this repository, with their path and branch.',
+    description: 'List the worktrees created for this repository, with their branch and owning session.',
     promptSnippet: 'List the worktrees created for isolated sessions.',
-    execute: async () => runListWorktrees(cwd())
+    execute: async () => runListWorktrees(cwd(), owners)
   }),
   defineTool({
     name: 'delete_worktree',

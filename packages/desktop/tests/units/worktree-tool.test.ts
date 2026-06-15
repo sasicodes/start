@@ -5,6 +5,14 @@ import { formatWorktrees, runDeleteWorktree, runListWorktrees } from '@main/prov
 import { managedWorktreeRoot } from '@main/workspace/worktree';
 import { describe, expect, it, vi } from 'vitest';
 
+const managedTree = (path: string): GitWorktree => ({
+  path,
+  head: '',
+  branch: 'start/x',
+  isMain: false,
+  locked: false
+});
+
 const managedPath = join(managedWorktreeRoot(baseDir), 'abc123', 'fix-bug');
 
 const git = vi.hoisted(() => ({
@@ -16,9 +24,21 @@ const git = vi.hoisted(() => ({
 vi.mock('@main/git', () => git);
 
 describe('formatWorktrees', () => {
-  it('renders path, branch and locked state', () => {
-    const text = formatWorktrees([{ path: '/repo/.wt', head: 'a', branch: 'start/x', isMain: false, locked: true }]);
+  it('renders path, branch and locked state when owners are unknown', () => {
+    const text = formatWorktrees([{ path: '/repo/.wt', branch: 'start/x', locked: true, owners: null }]);
     expect(text).toBe('/repo/.wt [start/x] (locked)');
+  });
+
+  it('names the owning session and marks the active one', () => {
+    const text = formatWorktrees([
+      { path: '/wt', branch: 'start/x', locked: false, owners: [{ id: 's1', title: 'Fix login', active: true }] }
+    ]);
+    expect(text).toBe('/wt [start/x] session: "Fix login" (active)');
+  });
+
+  it('marks worktrees with no session as orphans', () => {
+    const text = formatWorktrees([{ path: '/wt', branch: 'start/x', locked: false, owners: [] }]);
+    expect(text).toBe('/wt [start/x] — orphan');
   });
 
   it('reports an empty list', () => {
@@ -34,6 +54,12 @@ describe('list_worktrees', () => {
     ]);
     const result = await runListWorktrees('/repo');
     expect(result.content[0]?.text).toBe(`${managedPath} [start/fix-bug]`);
+  });
+
+  it('annotates each worktree with its owning session', async () => {
+    git.listWorktrees.mockResolvedValueOnce([managedTree(managedPath)]);
+    const result = await runListWorktrees('/repo', () => [{ id: 's1', title: 'Task', active: false }]);
+    expect(result.content[0]?.text).toBe(`${managedPath} [start/x] session: "Task"`);
   });
 
   it('reports when the workspace is not a git repository', async () => {
