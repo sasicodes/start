@@ -38,9 +38,11 @@
     ],
     "supportedArchitectures": {
       "os": [
+        "current",
         "darwin"
       ],
       "cpu": [
+        "current",
         "x64",
         "arm64"
       ]
