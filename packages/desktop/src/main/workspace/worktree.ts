@@ -17,8 +17,7 @@ export const worktreeBranchLabel = (branch: string) =>
 
 export const repoKey = (repoRoot: string) => createHash('sha256').update(repoRoot).digest('hex').slice(0, 12);
 
-export const repoFolderName = (repoRoot: string) =>
-  `${worktreeSlug(path.basename(repoRoot))}-${repoKey(repoRoot).slice(0, 8)}`;
+export const repoFolderName = (repoRoot: string) => `${worktreeSlug(path.basename(repoRoot))}-${repoKey(repoRoot)}`;
 
 export const managedWorktreeRoot = (baseDir: string) => path.join(baseDir, 'worktrees');
 

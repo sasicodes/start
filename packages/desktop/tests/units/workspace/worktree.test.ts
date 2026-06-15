@@ -38,7 +38,7 @@ describe('repoKey', () => {
 
 describe('repoFolderName', () => {
   it('combines the readable repo name with a short hash', () => {
-    expect(repoFolderName('/a/my-repo')).toBe(`my-repo-${repoKey('/a/my-repo').slice(0, 8)}`);
+    expect(repoFolderName('/a/my-repo')).toBe(`my-repo-${repoKey('/a/my-repo')}`);
   });
 
   it('keeps different repos with the same name distinct', () => {

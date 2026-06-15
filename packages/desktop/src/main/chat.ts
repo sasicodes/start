@@ -1,6 +1,6 @@
 import '@main/environment';
 
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import {
   type AgentSession,
@@ -674,7 +674,7 @@ export class ChatService {
   private async addManagedWorktree(branchName?: string, base?: string): Promise<string> {
     const repoRoot = await gitTopLevel(this.workspaceCwd);
     if (!repoRoot) return '';
-    const slug = `${worktreeSlug(branchName ?? '')}-${randomUUID().slice(0, 8)}`;
+    const slug = `${worktreeSlug(branchName ?? '')}-${randomBytes(4).toString('hex')}`;
     const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
       branch: worktreeBranch(slug),
       ...(base ? { base } : {})
