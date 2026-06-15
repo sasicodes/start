@@ -70,8 +70,8 @@
     "copyright": "Copyright © 2026 Intelligence One",
     "asar": true,
     "asarUnpack": [
-      "node_modules/@ff-labs/fff-bin-*/**/*.{so,dll,dylib}",
-      "node_modules/@yuuang/ffi-rs-*/**/*.node"
+      "node_modules/@yuuang/ffi-rs-*/**/*.node",
+      "node_modules/@ff-labs/fff-bin-*/**/*.{so,dll,dylib}"
     ],
     "compression": "maximum",
     "detectUpdateChannel": false,
