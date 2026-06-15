@@ -75,6 +75,12 @@ describe('delete_worktree', () => {
     expect(result.content[0]?.text).toContain('not a managed worktree');
   });
 
+  it("refuses to delete the calling session's own worktree", async () => {
+    const result = await runDeleteWorktree(managedPath, managedPath, true);
+    expect(git.removeWorktree).not.toHaveBeenCalled();
+    expect(result.content[0]?.text).toContain("current session's worktree");
+  });
+
   it('deletes a managed worktree', async () => {
     await runDeleteWorktree('/repo', managedPath, true);
     expect(git.removeWorktree).toHaveBeenCalledWith('/repo', managedPath, { force: true });

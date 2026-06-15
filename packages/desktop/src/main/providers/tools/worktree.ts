@@ -2,6 +2,7 @@ import { defineTool } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
 import { gitTopLevel, listWorktrees, removeWorktree } from '@main/git';
 import { toolResult } from '@main/providers/tools/result';
+import { relativeInside } from '@main/search/path';
 import { isManagedWorktree } from '@main/workspace/worktree';
 
 interface CreateWorktreeToolsOptions {
@@ -58,6 +59,8 @@ export const runDeleteWorktree = async (cwd: string, path: string, force: boolea
   if (!path) return toolResult('Provide the worktree path to delete.', null);
   if (!isManagedWorktree(baseDir, path))
     return toolResult(`${path} is not a managed worktree; refusing to delete.`, null);
+  if (relativeInside(path, cwd) !== null)
+    return toolResult(`${path} is the current session's worktree; switch sessions before deleting it.`, null);
   const repoRoot = await gitTopLevel(cwd);
   if (!repoRoot) return toolResult('The current workspace is not a git repository.', null);
   const removed = await removeWorktree(repoRoot, path, force ? { force: true } : {});
