@@ -3,7 +3,6 @@ import { join, sep } from 'node:path';
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
-import { worktreeSessionGuidance } from '@main/prompt/worktree';
 
 const piConfigSegment = `${sep}.pi${sep}`;
 const startAgentDir = join(baseDir, 'agent');
@@ -24,7 +23,7 @@ export const createStartResourceLoader = async (cwd: string) => {
     noSkills: false,
     noExtensions: false,
     noContextFiles: false,
-    appendSystemPrompt: worktreeSessionGuidance(cwd),
+    appendSystemPrompt: [],
     agentDir: startAgentDir,
     noPromptTemplates: false,
     skillsOverride: (base) => ({

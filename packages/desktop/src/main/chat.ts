@@ -47,6 +47,7 @@ import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
+import type { SessionController } from '@main/providers/tools/sessions';
 import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
 import {
   archiveSession,
@@ -664,12 +665,13 @@ export class ChatService {
     };
   }
 
-  async createWorktreeTab(name?: string): Promise<AgentTab> {
+  async createWorktreeTab(name?: string, base?: string): Promise<AgentTab> {
     const repoRoot = await gitTopLevel(this.workspaceCwd);
     if (repoRoot) {
       const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
       const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
-        branch: worktreeBranch(slug)
+        branch: worktreeBranch(slug),
+        ...(base ? { base } : {})
       });
       if (worktree) return this.createTab(worktree.path);
     }
@@ -1828,6 +1830,7 @@ export class ChatService {
     return {
       cwd: () => cwd,
       authStorage: this.authStorage,
+      sessions: this.sessionController(),
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
       model: () => this.pickModel() ?? null,
@@ -1845,6 +1848,28 @@ export class ChatService {
           customTools: () => createStartCustomTools(),
           thinkingLevel: () => this.selectedThinkingLevel
         })
+    };
+  }
+
+  private sessionController(): SessionController {
+    return {
+      list: () => this.getTabs().map((tab) => ({ id: tab.id, status: tab.status, workspacePath: tab.workspacePath })),
+      read: (id) => {
+        const tab = this.getTabs().find((entry) => entry.id === id);
+        if (!tab) return null;
+        return this.mobileSessionTurns(id, tab.workspacePath).map((turn) => ({ role: turn.role, text: turn.text }));
+      },
+      send: (id, prompt) => {
+        this.sendToTab(id, prompt).catch(() => {});
+      },
+      create: async ({ prompt, environment }) => {
+        const tab =
+          environment.type === 'worktree'
+            ? await this.createWorktreeTab(prompt, environment.branch)
+            : await this.createTab();
+        this.send(prompt).catch(() => {});
+        return { id: tab.id, status: tab.status, workspacePath: tab.workspacePath };
+      }
     };
   }
 
