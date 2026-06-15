@@ -1,9 +1,19 @@
+import type { WorkspaceFolder } from '@preload/index';
 import {
   attentionCountLabel,
   attentionLabel,
   attentionStatusCount,
-  sessionAttentionStatus
+  sessionAttentionStatus,
+  workspaceFoldersAttention
 } from '@renderer/shared/attention-status';
+
+const folder = (path: string, status?: WorkspaceFolder['status']): WorkspaceFolder => ({
+  path,
+  name: path,
+  modified: 0,
+  sessionCount: 0,
+  ...(status ? { status } : {})
+});
 
 describe('attention status', () => {
   it('hides status for the active session', () => {
@@ -29,5 +39,23 @@ describe('attention status', () => {
   it('formats attention count labels', () => {
     expect(attentionCountLabel(3)).toBe('3');
     expect(attentionCountLabel(100)).toBe('99+');
+  });
+
+  it('summarizes folder attention while excluding the active workspace', () => {
+    const folders = [
+      folder('/active', 'generating'),
+      folder('/other', 'completed'),
+      folder('/failing', 'failed'),
+      folder('/idle')
+    ];
+
+    expect(workspaceFoldersAttention(folders, '/active')).toEqual({ kind: 'failed', countLabel: '2' });
+  });
+
+  it('reports no attention when only the active workspace is busy', () => {
+    expect(workspaceFoldersAttention([folder('/active', 'generating')], '/active')).toEqual({
+      kind: '',
+      countLabel: '0'
+    });
   });
 });

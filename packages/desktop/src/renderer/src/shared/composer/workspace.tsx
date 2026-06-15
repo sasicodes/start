@@ -1,5 +1,5 @@
-import { attentionStatus, topAttentionStatus } from '@renderer/shared/attention-status';
-import { Indicator } from '@renderer/shared/indicator';
+import { AttentionBadge } from '@renderer/shared/attention-badge';
+import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
@@ -17,11 +17,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
   const [open, setOpen] = useState(false);
   const workspace = useWorkspace(workspacePath);
   const { folders } = useWorkspaceFolders({ workspacePath });
-  const attention = topAttentionStatus(
-    folders
-      .filter((folder) => folder.path !== workspacePath)
-      .map((folder) => attentionStatus(folder.status, folder.noticeKind))
-  );
+  const { kind: attention, countLabel } = workspaceFoldersAttention(folders, workspacePath);
 
   if (!workspace) return null;
 
@@ -40,11 +36,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
               draggable={false}
               class="relative z-10 size-full rounded-full object-cover"
             />
-            {attention && (
-              <span class="pointer-events-none absolute top-[3px] right-[3px] z-10">
-                <Indicator kind={attention} />
-              </span>
-            )}
+            <AttentionBadge kind={attention} countLabel={countLabel} />
           </AppMenu.Trigger>
         </Tooltip>
         <AppMenu.Portal>

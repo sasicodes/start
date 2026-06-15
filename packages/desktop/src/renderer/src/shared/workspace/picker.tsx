@@ -1,10 +1,5 @@
 import { AttentionBadge } from '@renderer/shared/attention-badge';
-import {
-  attentionCountLabel,
-  attentionStatus,
-  attentionStatusCount,
-  topAttentionStatus
-} from '@renderer/shared/attention-status';
+import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
@@ -31,12 +26,10 @@ export const Workspace = memo(
     const rootRef = useRef<HTMLDivElement>(null);
     const workspace = useWorkspace(workspacePath);
     const { folders } = useWorkspaceFolders({ workspacePath });
-    const attentionStatuses = folders
-      .filter((folder) => folder.path !== workspacePath)
-      .map((folder) => attentionStatus(folder.status, folder.noticeKind));
-    const attention = topAttentionStatus(attentionStatuses);
-    const visibleAttentionCount = attentionStatusCount(attentionStatuses);
-    const visibleAttentionCountLabel = attentionCountLabel(visibleAttentionCount);
+    const { kind: attention, countLabel: visibleAttentionCountLabel } = workspaceFoldersAttention(
+      folders,
+      workspacePath
+    );
 
     if (!workspace) return null;
 
