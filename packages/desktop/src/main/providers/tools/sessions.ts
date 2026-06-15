@@ -4,9 +4,9 @@ import { toolResult } from '@main/providers/tools/result';
 import { truncate } from '@main/utils/text';
 
 export interface SessionEnvironment {
-  type: 'local' | 'worktree';
   base?: string;
   branch?: string;
+  type: 'local' | 'worktree';
 }
 
 export interface SessionSummary {
