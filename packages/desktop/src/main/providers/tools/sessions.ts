@@ -51,21 +51,17 @@ const formatTurns = (turns: readonly SessionTurn[], maxChars: number) => {
 
 interface CreateArgs {
   prompt: string;
-  environment?: { type: 'local' | 'worktree'; branch?: string };
+  environment?: SessionEnvironment;
 }
 
 export const runCreateSession = async (controller: SessionController, { prompt, environment }: CreateArgs) => {
   const env: SessionEnvironment = environment ?? { type: 'local' };
   const session = await controller.create({ prompt, environment: env });
-  if (env.type === 'worktree' && !session.isolated)
-    return toolResult(
-      `Could not isolate a worktree (not a git repository or git failed). Started a local session ${session.id} at ${session.workspacePath} instead.`,
-      null
-    );
-  return toolResult(
-    `Created ${session.isolated ? 'worktree' : 'local'} session ${session.id} at ${session.workspacePath}`,
-    null
-  );
+  const message =
+    env.type === 'worktree' && !session.isolated
+      ? `Could not isolate a worktree (not a git repository or git failed). Started a local session ${session.id} at ${session.workspacePath} instead.`
+      : `Created ${session.isolated ? 'worktree' : 'local'} session ${session.id} at ${session.workspacePath}`;
+  return toolResult(message, null);
 };
 
 export const runListSessions = (
