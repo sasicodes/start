@@ -45,6 +45,13 @@ describe('create_session', () => {
     expect(result.content[0]?.text).toContain('Created worktree session');
   });
 
+  it('rejects an empty prompt without creating a session', async () => {
+    const ctrl = controller();
+    const result = await runCreateSession(ctrl, { prompt: '  ' });
+    expect(ctrl.create).not.toHaveBeenCalled();
+    expect(result.content[0]?.text).toContain('non-empty prompt');
+  });
+
   it('reports the fallback when isolation is not honored', async () => {
     const ctrl = controller({ create: async () => summary({ isolated: false, workspacePath: '/repo' }) });
     const result = await runCreateSession(ctrl, { prompt: 'do x', environment: { type: 'worktree' } });
@@ -85,6 +92,12 @@ describe('send_message_to_session', () => {
     const ctrl = controller();
     runSendMessage(ctrl, { id: 's1', prompt: 'more' });
     expect(ctrl.send).toHaveBeenCalledWith('s1', 'more');
+  });
+
+  it('rejects an empty message without sending', () => {
+    const ctrl = controller();
+    runSendMessage(ctrl, { id: 's1', prompt: '   ' });
+    expect(ctrl.send).not.toHaveBeenCalled();
   });
 
   it('refuses an unknown session', () => {

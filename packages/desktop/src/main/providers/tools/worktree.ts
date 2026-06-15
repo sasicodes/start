@@ -83,17 +83,16 @@ export const createWorktreeTools = ({ cwd, owners }: CreateWorktreeToolsOptions)
     name: 'list_worktrees',
     label: 'list worktrees',
     parameters: listParameters,
-    description: 'List the worktrees created for this repository, with their branch and owning session.',
-    promptSnippet: 'List the worktrees created for isolated sessions.',
+    description: 'List the managed worktrees, with their branch and owning sessions.',
+    promptSnippet: 'List the managed worktrees.',
     execute: async () => runListWorktrees(cwd(), owners)
   }),
   defineTool({
     name: 'delete_worktree',
     label: 'delete worktree',
     parameters: deleteParameters,
-    description:
-      'Delete a worktree by path once its work is no longer needed. Only worktrees created by the app can be deleted. Ask the user before deleting; deletion is not reversible.',
-    promptSnippet: 'Delete a worktree once its work is done.',
+    description: 'Delete a managed worktree by path. Ask the user first; deletion cannot be undone.',
+    promptSnippet: 'Delete a managed worktree.',
     execute: async (_toolCallId, { path, force }) => runDeleteWorktree(cwd(), path, force ?? false)
   })
 ];

@@ -21,10 +21,10 @@ export interface SessionTurn {
 }
 
 export interface SessionController {
-  create(input: { prompt: string; environment: SessionEnvironment }): Promise<SessionSummary>;
-  send(id: string, prompt: string): void;
   list(): SessionSummary[];
+  send(id: string, prompt: string): void;
   read(id: string): SessionTurn[] | null;
+  create(input: { prompt: string; environment: SessionEnvironment }): Promise<SessionSummary>;
 }
 
 const defaultListLimit = 30;
@@ -54,6 +54,7 @@ interface CreateArgs {
 }
 
 export const runCreateSession = async (controller: SessionController, { prompt, environment }: CreateArgs) => {
+  if (!prompt.trim()) return toolResult('Provide a non-empty prompt.', null);
   const env: SessionEnvironment = environment ?? { type: 'local' };
   const session = await controller.create({ prompt, environment: env });
   const message =
@@ -94,6 +95,7 @@ export const runReadSession = (controller: SessionController, { id, turnLimit, m
 };
 
 export const runSendMessage = (controller: SessionController, { id, prompt }: { id: string; prompt: string }) => {
+  if (!prompt.trim()) return toolResult('Provide a non-empty message.', null);
   if (!controller.list().some((session) => session.id === id)) return toolResult(`No session found for ${id}.`, null);
   controller.send(id, prompt);
   return toolResult(`Message sent to session ${id}.`, null);
@@ -160,33 +162,32 @@ export const createSessionTools = ({ sessions }: { sessions: SessionController }
     name: 'create_session',
     label: 'create session',
     parameters: createParameters,
-    description:
-      'Start a new session for a parallel task, seeded with a prompt. Use environment "worktree" to run it on an isolated branch and directory; omit for the current workspace.',
-    promptSnippet: 'Start a new parallel session, optionally isolated in a worktree.',
+    description: 'Start a new parallel session for a task. It runs in the background and does not take focus.',
+    promptSnippet: 'Start a parallel session, optionally isolated in a worktree.',
     execute: (_toolCallId, args) => runCreateSession(sessions, args)
   }),
   defineTool({
     name: 'list_sessions',
     label: 'list sessions',
     parameters: listParameters,
-    description: 'List the current sessions with their status and workspace path.',
-    promptSnippet: 'List open sessions and their status.',
+    description: 'List sessions with their status and workspace.',
+    promptSnippet: 'List sessions with status and workspace.',
     execute: async (_toolCallId, args) => runListSessions(sessions, args)
   }),
   defineTool({
     name: 'read_session',
     label: 'read session',
     parameters: readParameters,
-    description: 'Read the most recent turns of a session by id.',
-    promptSnippet: 'Read another session to check its progress.',
+    description: 'Read the most recent turns of a session.',
+    promptSnippet: 'Read recent messages from a session.',
     execute: async (_toolCallId, args) => runReadSession(sessions, args)
   }),
   defineTool({
     name: 'send_message_to_session',
     label: 'send to session',
     parameters: sendParameters,
-    description: 'Send a follow-up message to an existing session by id.',
-    promptSnippet: 'Send a follow-up message to another session.',
+    description: 'Send a message to a session by id.',
+    promptSnippet: 'Send a message to a session.',
     execute: async (_toolCallId, args) => runSendMessage(sessions, args)
   })
 ];

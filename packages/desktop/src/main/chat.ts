@@ -625,14 +625,10 @@ export class ChatService {
     return [...tabs.values()];
   }
 
-  async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+  private async buildSession(workspacePath: string): Promise<AgentSession> {
     this.refreshAuth();
     const model = this.pickModel();
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
-
-    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
-    this.session = null;
-    this.attachments.clear();
 
     const sessionManager = SessionManager.create(workspacePath);
     const resourceLoader = await createStartResourceLoader(workspacePath);
@@ -649,16 +645,23 @@ export class ChatService {
     });
     enableRegisteredTools(session);
     this.subscribeIndexSync(session, model.provider, model.id);
+    return session;
+  }
+
+  async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+    const session = await this.buildSession(workspacePath);
+    if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+    this.attachments.clear();
     this.session = session;
     this.workspaceCwd = workspacePath;
     this.runtimeStateForSession(session).isGenerating = false;
     this.shouldCreateSession = false;
-    this.setActiveSession(sessionManager);
+    this.setActiveSession(session.sessionManager);
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
     this.refreshWorkspaceSearch();
 
-    const sessionId = sessionManager.getSessionId();
+    const sessionId = session.sessionManager.getSessionId();
     return {
       id: sessionId,
       sessionId,
@@ -684,26 +687,8 @@ export class ChatService {
   }
 
   private async createBackgroundSession(workspacePath: string): Promise<AgentSession> {
-    this.refreshAuth();
-    const model = this.pickModel();
-    if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
-
-    const sessionManager = SessionManager.create(workspacePath);
-    const resourceLoader = await createStartResourceLoader(workspacePath);
-    const { session } = await createAgentSession({
-      cwd: workspacePath,
-      model,
-      sessionManager,
-      resourceLoader,
-      authStorage: this.authStorage,
-      modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
-      settingsManager: this.settingsManager,
-      thinkingLevel: this.selectedThinkingLevel
-    });
-    enableRegisteredTools(session);
-    this.subscribeIndexSync(session, model.provider, model.id);
-    this.backgroundSessions.set(sessionManager.getSessionId(), session);
+    const session = await this.buildSession(workspacePath);
+    this.backgroundSessions.set(session.sessionManager.getSessionId(), session);
     this.runtimeStateForSession(session).isGenerating = false;
     return session;
   }
@@ -1905,7 +1890,9 @@ export class ChatService {
         return this.mobileSessionTurns(id, tab.workspacePath).map((turn) => ({ role: turn.role, text: turn.text }));
       },
       send: (id, prompt) => {
-        this.sendToTab(id, prompt).catch(() => {});
+        const session = this.activeSessionId === id ? this.session : this.backgroundSessions.get(id);
+        if (!session) return;
+        this.generate(session, sessionWorkspacePath(session, this.workspaceCwd), prompt, []).catch(() => {});
       },
       create: (input) => this.startSession(input)
     };
@@ -1932,8 +1919,8 @@ export class ChatService {
     const session = await this.createBackgroundSession(workspacePath);
     this.generate(session, workspacePath, prompt, []).catch(() => {});
     return {
-      status: 'generating',
       workspacePath,
+      status: 'generating',
       id: session.sessionManager.getSessionId(),
       isolated: isManagedWorktree(baseDir, workspacePath)
     };
