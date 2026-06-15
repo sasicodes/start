@@ -1,6 +1,7 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import { positiveLimit } from '@main/providers/tools/fff/bounds';
 import { toolResult } from '@main/providers/tools/result';
+import { truncate } from '@main/utils/text';
 
 export interface SessionEnvironment {
   type: 'local' | 'worktree';
@@ -32,8 +33,6 @@ const defaultTurnLimit = 20;
 const maxTurnLimit = 100;
 const defaultTurnChars = 2000;
 const maxTurnChars = 8000;
-
-const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 
 const formatSessions = (sessions: readonly SessionSummary[]) => {
   if (sessions.length === 0) return 'No sessions.';

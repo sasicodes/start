@@ -3,6 +3,7 @@ import { createFffTools } from '@main/providers/tools/fff/index';
 import { type CreateWebSearchToolsOptions, createWebSearchTools } from '@main/providers/tools/search/index';
 import { type SessionController, createSessionTools } from '@main/providers/tools/sessions';
 import { createSubagentTools } from '@main/providers/tools/subagents';
+import { createWorktreeTools } from '@main/providers/tools/worktree';
 
 type SubagentToolsOptions = Parameters<typeof createSubagentTools>[0];
 
@@ -14,6 +15,7 @@ type StartCustomToolsOptions = SubagentToolsOptions &
 
 export const createStartCustomTools = (options?: StartCustomToolsOptions) => [
   ...(options ? createFffTools({ cwd: options.cwd }) : []),
+  ...(options ? createWorktreeTools({ cwd: options.cwd }) : []),
   ...(options?.sessions ? createSessionTools({ sessions: options.sessions }) : []),
   ...createBrowserTools(),
   ...(options ? createWebSearchTools({ model: options.model, modelRegistry: options.modelRegistry }) : []),
