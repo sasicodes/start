@@ -7,13 +7,15 @@ import { freshChatService } from '../helpers/chat-service.js';
 const git = vi.hoisted(() => ({
   getGitBranch: vi.fn(async () => undefined),
   gitTopLevel: vi.fn(async () => ''),
-  addWorktree: vi.fn(async (_repoRoot: string, worktreePath: string, _options?: { branch?: string; base?: string }) => ({
-    path: worktreePath,
-    head: '',
-    branch: '',
-    isMain: false,
-    locked: false
-  }))
+  addWorktree: vi.fn(
+    async (_repoRoot: string, worktreePath: string, _options?: { branch?: string; base?: string }) => ({
+      path: worktreePath,
+      head: '',
+      branch: '',
+      isMain: false,
+      locked: false
+    })
+  )
 }));
 
 vi.mock('@main/git', () => git);

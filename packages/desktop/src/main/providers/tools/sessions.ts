@@ -10,6 +10,7 @@ export interface SessionEnvironment {
 export interface SessionSummary {
   id: string;
   status: string;
+  isolated: boolean;
   workspacePath: string;
 }
 
@@ -36,7 +37,11 @@ const truncate = (text: string, max: number) => (text.length > max ? `${text.sli
 
 const formatSessions = (sessions: readonly SessionSummary[]) => {
   if (sessions.length === 0) return 'No sessions.';
-  return sessions.map((session) => `${session.id} [${session.status}] ${session.workspacePath}`).join('\n');
+  return sessions
+    .map(
+      (session) => `${session.id} [${session.status}]${session.isolated ? ' (worktree)' : ''} ${session.workspacePath}`
+    )
+    .join('\n');
 };
 
 const formatTurns = (turns: readonly SessionTurn[], maxChars: number) => {
@@ -52,7 +57,15 @@ interface CreateArgs {
 export const runCreateSession = async (controller: SessionController, { prompt, environment }: CreateArgs) => {
   const env: SessionEnvironment = environment ?? { type: 'local' };
   const session = await controller.create({ prompt, environment: env });
-  return toolResult(`Created ${env.type} session ${session.id} at ${session.workspacePath}`, null);
+  if (env.type === 'worktree' && !session.isolated)
+    return toolResult(
+      `Could not isolate a worktree (not a git repository or git failed). Started a local session ${session.id} at ${session.workspacePath} instead.`,
+      null
+    );
+  return toolResult(
+    `Created ${session.isolated ? 'worktree' : 'local'} session ${session.id} at ${session.workspacePath}`,
+    null
+  );
 };
 
 export const runListSessions = (

@@ -11,13 +11,18 @@ import { describe, expect, it, vi } from 'vitest';
 const summary = (over: Partial<SessionSummary> = {}): SessionSummary => ({
   id: 's1',
   status: 'idle',
+  isolated: false,
   workspacePath: '/repo',
   ...over
 });
 
 const controller = (over: Partial<SessionController> = {}): SessionController => ({
   create: vi.fn(async ({ environment }) =>
-    summary({ id: 'new', workspacePath: environment.type === 'worktree' ? '/wt' : '/repo' })
+    summary({
+      id: 'new',
+      isolated: environment.type === 'worktree',
+      workspacePath: environment.type === 'worktree' ? '/wt' : '/repo'
+    })
   ),
   send: vi.fn(),
   list: vi.fn(() => [summary()]),
@@ -35,8 +40,15 @@ describe('create_session', () => {
 
   it('passes the base branch for a worktree session', async () => {
     const ctrl = controller();
-    await runCreateSession(ctrl, { prompt: 'do x', environment: { type: 'worktree', branch: 'main' } });
+    const result = await runCreateSession(ctrl, { prompt: 'do x', environment: { type: 'worktree', branch: 'main' } });
     expect(ctrl.create).toHaveBeenCalledWith({ prompt: 'do x', environment: { type: 'worktree', branch: 'main' } });
+    expect(result.content[0]?.text).toContain('Created worktree session');
+  });
+
+  it('reports the fallback when isolation is not honored', async () => {
+    const ctrl = controller({ create: async () => summary({ isolated: false, workspacePath: '/repo' }) });
+    const result = await runCreateSession(ctrl, { prompt: 'do x', environment: { type: 'worktree' } });
+    expect(result.content[0]?.text).toContain('Could not isolate a worktree');
   });
 });
 
@@ -47,6 +59,11 @@ describe('list_sessions', () => {
     });
     const result = runListSessions(ctrl, { query: '/y' });
     expect(result.content[0]?.text).toBe('b [idle] /y');
+  });
+
+  it('marks isolated sessions', () => {
+    const ctrl = controller({ list: () => [summary({ id: 'w', isolated: true, workspacePath: '/wt' })] });
+    expect(runListSessions(ctrl, {}).content[0]?.text).toBe('w [idle] (worktree) /wt');
   });
 });
 

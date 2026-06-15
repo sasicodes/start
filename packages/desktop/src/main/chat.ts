@@ -1852,8 +1852,15 @@ export class ChatService {
   }
 
   private sessionController(): SessionController {
+    const toSummary = (tab: AgentTab) => ({
+      id: tab.id,
+      status: tab.status,
+      workspacePath: tab.workspacePath,
+      isolated: isManagedWorktree(baseDir, tab.workspacePath)
+    });
+
     return {
-      list: () => this.getTabs().map((tab) => ({ id: tab.id, status: tab.status, workspacePath: tab.workspacePath })),
+      list: () => this.getTabs().map(toSummary),
       read: (id) => {
         const tab = this.getTabs().find((entry) => entry.id === id);
         if (!tab) return null;
@@ -1868,7 +1875,7 @@ export class ChatService {
             ? await this.createWorktreeTab(prompt, environment.branch)
             : await this.createTab();
         this.send(prompt).catch(() => {});
-        return { id: tab.id, status: tab.status, workspacePath: tab.workspacePath };
+        return toSummary(tab);
       }
     };
   }
