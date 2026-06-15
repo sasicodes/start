@@ -74,6 +74,45 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
   }
 };
 
+const sessionToolTitles: Record<string, { active: string; done: string; error: string; result: string }> = {
+  read_session: {
+    done: 'Read session',
+    error: 'Read session failed',
+    active: 'Reading session',
+    result: 'Read session'
+  },
+  list_sessions: {
+    done: 'Listed sessions',
+    error: 'List sessions failed',
+    active: 'Listing sessions',
+    result: 'Listed sessions'
+  },
+  create_session: {
+    done: 'Created session',
+    error: 'Create session failed',
+    active: 'Creating session',
+    result: 'Created session'
+  },
+  list_worktrees: {
+    done: 'Listed worktrees',
+    error: 'List worktrees failed',
+    active: 'Listing worktrees',
+    result: 'Listed worktrees'
+  },
+  delete_worktree: {
+    done: 'Deleted worktree',
+    error: 'Delete worktree failed',
+    active: 'Deleting worktree',
+    result: 'Deleted worktree'
+  },
+  send_message_to_session: {
+    done: 'Sent message',
+    error: 'Send message failed',
+    active: 'Sending message',
+    result: 'Sent message'
+  }
+};
+
 const fileLanguages: Record<string, string> = {
   c: 'c',
   h: 'c',
@@ -218,6 +257,9 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
 
+  const sessionTitle = sessionToolTitles[toolName];
+  if (sessionTitle) return error ? sessionTitle.error : sessionTitle.result;
+
   if (toolName === 'bash') return 'Ran command';
   if (toolName === 'web_search') return 'Searched the web';
   if (toolName === 'edit') return 'Edited file';
@@ -240,6 +282,12 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
   if (browserTitle) {
     if (state === 'error') return browserTitle.error;
     return state === 'active' ? browserTitle.active : browserTitle.done;
+  }
+
+  const sessionTitle = sessionToolTitles[toolName];
+  if (sessionTitle) {
+    if (state === 'error') return sessionTitle.error;
+    return state === 'active' ? sessionTitle.active : sessionTitle.done;
   }
 
   const path = recordPath(args);
