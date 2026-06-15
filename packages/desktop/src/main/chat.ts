@@ -22,12 +22,12 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
-import { type LiveRecentSession, recentSessionsPage } from '@main/chat/recents';
+import { type LiveRecentSession, recentSessionsPage, type WorktreeRef } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { addWorktree, getGitBranch, gitTopLevel } from '@main/git';
+import { addWorktree, getGitBranch, gitTopLevel, listWorktrees } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -246,6 +246,7 @@ export class ChatService {
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
   private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
   private readonly subagentNameAllocators = new Map<string, SubagentNameAllocator>();
+  private readonly worktreeRepoCache = new Map<string, string>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
   private mobileSessionChangeHandler: MobileSessionChangeHandler = () => {};
 
@@ -770,10 +771,37 @@ export class ChatService {
     };
   }
 
+  private async workspaceRootForCwd(cwd: string): Promise<string> {
+    if (!cwd || !isManagedWorktree(baseDir, cwd)) return cwd;
+
+    const cached = this.worktreeRepoCache.get(cwd);
+    if (cached) return cached;
+
+    const repoRoot = (await listWorktrees(cwd)).find((tree) => tree.isMain)?.path ?? cwd;
+    this.worktreeRepoCache.set(cwd, repoRoot);
+    return repoRoot;
+  }
+
+  private async warmWorkspaceRoots(cwds: string[]): Promise<void> {
+    await Promise.all([...new Set(cwds)].map((cwd) => this.workspaceRootForCwd(cwd)));
+  }
+
+  private async managedWorktreesFor(repoRoot: string): Promise<WorktreeRef[]> {
+    return (await listWorktrees(repoRoot))
+      .filter((tree) => isManagedWorktree(baseDir, tree.path))
+      .map((tree) => ({ path: tree.path, branch: tree.branch }));
+  }
+
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
-    const workspacePath = options.workspacePath ?? this.workspaceCwd;
+    const workspacePath = await this.workspaceRootForCwd(options.workspacePath ?? this.workspaceCwd);
+    const worktrees = await this.managedWorktreesFor(workspacePath);
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
-    return recentSessionsPage({ ...options, workspacePath }, statuses, this.notices, this.liveRecentSessions());
+    return recentSessionsPage(
+      { ...options, workspacePath, worktrees },
+      statuses,
+      this.notices,
+      this.liveRecentSessions()
+    );
   }
 
   getStatusItemRecentSessions(limit = 8): StatusItemRecentSession[] {
@@ -787,13 +815,20 @@ export class ChatService {
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
-    const attentionStatuses = this.workspaceAttentionStatuses();
-    folders.set(this.workspaceCwd, {
+    const rawAttention = this.workspaceAttentionStatuses();
+    await this.warmWorkspaceRoots([
+      this.workspaceCwd,
+      ...rawAttention.keys(),
+      ...sessions.flatMap((session) => (session.cwd ? [session.cwd] : []))
+    ]);
+    const attentionStatuses = await this.resolvedAttentionStatuses(rawAttention);
+    const activeRoot = await this.workspaceRootForCwd(this.workspaceCwd);
+    folders.set(activeRoot, {
       sessionCount: 0,
-      path: this.workspaceCwd,
+      path: activeRoot,
       modified: Date.now(),
-      name: workspaceDisplayName(this.workspaceCwd),
-      ...this.workspaceAttention(this.workspaceCwd, attentionStatuses)
+      name: workspaceDisplayName(activeRoot),
+      ...this.workspaceAttention(activeRoot, attentionStatuses)
     });
 
     const workspaceHistory = this.appState.workspaceHistory ?? {};
@@ -812,19 +847,20 @@ export class ChatService {
     for (const session of sessions) {
       if (!session.cwd || session.messageCount === 0) continue;
 
-      const current = folders.get(session.cwd);
+      const root = await this.workspaceRootForCwd(session.cwd);
+      const current = folders.get(root);
       const modified = session.modified.getTime();
       if (current) {
         current.modified = Math.max(current.modified, modified);
         current.sessionCount += 1;
-        Object.assign(current, this.workspaceAttention(session.cwd, attentionStatuses));
+        Object.assign(current, this.workspaceAttention(root, attentionStatuses));
       } else {
-        folders.set(session.cwd, {
+        folders.set(root, {
           modified,
           sessionCount: 1,
-          path: session.cwd,
-          name: workspaceDisplayName(session.cwd),
-          ...this.workspaceAttention(session.cwd, attentionStatuses)
+          path: root,
+          name: workspaceDisplayName(root),
+          ...this.workspaceAttention(root, attentionStatuses)
         });
       }
     }
@@ -1795,6 +1831,15 @@ export class ChatService {
     };
   }
 
+  private collapseTopStatuses(grouped: Map<string, AgentTabStatus[]>): Map<string, AgentTabStatus> {
+    return new Map(
+      [...grouped.entries()].flatMap(([workspacePath, statuses]) => {
+        const status = this.topAttentionStatus(statuses);
+        return status ? [[workspacePath, status]] : [];
+      })
+    );
+  }
+
   private workspaceAttentionStatuses(): Map<string, AgentTabStatus> {
     const statuses = new Map<string, AgentTabStatus[]>();
     const addStatus = (workspacePath: string, status: AgentTabStatus) => {
@@ -1805,12 +1850,17 @@ export class ChatService {
     for (const tab of this.getTabs()) addStatus(tab.workspacePath, tab.status);
     for (const notice of this.notices.values()) addStatus(notice.workspacePath, notice.kind);
 
-    return new Map(
-      [...statuses.entries()].flatMap(([workspacePath, statuses]) => {
-        const status = this.topAttentionStatus(statuses);
-        return status ? [[workspacePath, status]] : [];
-      })
-    );
+    return this.collapseTopStatuses(statuses);
+  }
+
+  private async resolvedAttentionStatuses(raw: Map<string, AgentTabStatus>): Promise<Map<string, AgentTabStatus>> {
+    const grouped = new Map<string, AgentTabStatus[]>();
+    for (const [workspacePath, status] of raw) {
+      const root = await this.workspaceRootForCwd(workspacePath);
+      grouped.set(root, [...(grouped.get(root) ?? []), status]);
+    }
+
+    return this.collapseTopStatuses(grouped);
   }
 
   private async getSession(): Promise<AgentSession> {

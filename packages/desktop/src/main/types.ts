@@ -144,6 +144,7 @@ export type RecentSession = {
   id: string;
   path: string;
   title: string;
+  branch?: string;
   modified: number;
   status?: AgentTabStatus;
   noticeKind?: SessionNoticeKind;
