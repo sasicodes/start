@@ -47,7 +47,7 @@ import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
-import type { SessionController } from '@main/providers/tools/sessions';
+import type { SessionController, SessionEnvironment, SessionSummary } from '@main/providers/tools/sessions';
 import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
 import {
   archiveSession,
@@ -665,17 +665,45 @@ export class ChatService {
     };
   }
 
-  async createWorktreeTab(name?: string, base?: string): Promise<AgentTab> {
+  private async addManagedWorktree(name?: string, base?: string): Promise<string> {
     const repoRoot = await gitTopLevel(this.workspaceCwd);
-    if (repoRoot) {
-      const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
-      const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
-        branch: worktreeBranch(slug),
-        ...(base ? { base } : {})
-      });
-      if (worktree) return this.createTab(worktree.path);
-    }
-    return this.createTab();
+    if (!repoRoot) return '';
+    const slug = `${worktreeSlug(name ?? '')}-${randomUUID().slice(0, 8)}`;
+    const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
+      branch: worktreeBranch(slug),
+      ...(base ? { base } : {})
+    });
+    return worktree ? worktree.path : '';
+  }
+
+  async createWorktreeTab(name?: string, base?: string): Promise<AgentTab> {
+    const worktreePath = await this.addManagedWorktree(name, base);
+    return worktreePath ? this.createTab(worktreePath) : this.createTab();
+  }
+
+  private async createBackgroundSession(workspacePath: string): Promise<AgentSession> {
+    this.refreshAuth();
+    const model = this.pickModel();
+    if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+
+    const sessionManager = SessionManager.create(workspacePath);
+    const resourceLoader = await createStartResourceLoader(workspacePath);
+    const { session } = await createAgentSession({
+      cwd: workspacePath,
+      model,
+      sessionManager,
+      resourceLoader,
+      authStorage: this.authStorage,
+      modelRegistry: this.modelRegistry,
+      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
+      settingsManager: this.settingsManager,
+      thinkingLevel: this.selectedThinkingLevel
+    });
+    enableRegisteredTools(session);
+    this.subscribeIndexSync(session, model.provider, model.id);
+    this.backgroundSessions.set(sessionManager.getSessionId(), session);
+    this.runtimeStateForSession(session).isGenerating = false;
+    return session;
   }
 
   async closeTab(id: string): Promise<void> {
@@ -1065,15 +1093,25 @@ export class ChatService {
   }
 
   async send(prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
+    if (!prompt.trim()) return { ok: false, error: 'Prompt is empty.' };
+    return this.generate(await this.getSession(), this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  private async generate(
+    session: AgentSession,
+    workspacePath: string,
+    prompt: string,
+    attachments: ImageAttachment[],
+    webContents?: WebContents
+  ): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     let endError = '';
-    let activeSession: AgentSession | null = null;
+    const activeSession = session;
     let runtimeState: SessionRuntimeState | null = null;
     let sendAbortSequence = 0;
     let startedGeneration = false;
     let sessionId = '';
-    let workspacePath = this.workspaceCwd;
     let lastMobileChangeNotifiedAt = 0;
     const notifyMobileSessionChange = (force = false) => {
       const now = Date.now();
@@ -1084,8 +1122,6 @@ export class ChatService {
     };
 
     try {
-      activeSession = await this.getSession();
-      const session = activeSession;
       sessionId = session.sessionManager.getSessionId();
       runtimeState = this.runtimeStateForSession(session);
       if (runtimeState.isGenerating || session.isStreaming)
@@ -1097,7 +1133,6 @@ export class ChatService {
       startedGeneration = true;
       sendAbortSequence = state.abortSequence;
       const images = await this.resolveAttachments(attachments);
-      workspacePath = this.workspaceCwd;
       this.resetLiveAssistantTurn(session, state);
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
@@ -1195,7 +1230,7 @@ export class ChatService {
       return { ok: true, sessionId };
     } catch (error) {
       if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
-        if (activeSession && this.isActiveSession(sessionId, workspacePath)) {
+        if (this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
           this.emit('done', '', webContents);
         }
@@ -1869,14 +1904,27 @@ export class ChatService {
       send: (id, prompt) => {
         this.sendToTab(id, prompt).catch(() => {});
       },
-      create: async ({ prompt, environment }) => {
-        const tab =
-          environment.type === 'worktree'
-            ? await this.createWorktreeTab(prompt, environment.branch)
-            : await this.createTab();
-        this.send(prompt).catch(() => {});
-        return toSummary(tab);
-      }
+      create: (input) => this.startSession(input)
+    };
+  }
+
+  async startSession({
+    prompt,
+    environment
+  }: {
+    prompt: string;
+    environment: SessionEnvironment;
+  }): Promise<SessionSummary> {
+    const worktreePath =
+      environment.type === 'worktree' ? await this.addManagedWorktree(prompt, environment.branch) : '';
+    const workspacePath = worktreePath || this.workspaceCwd;
+    const session = await this.createBackgroundSession(workspacePath);
+    this.generate(session, workspacePath, prompt, []).catch(() => {});
+    return {
+      status: 'generating',
+      workspacePath,
+      id: session.sessionManager.getSessionId(),
+      isolated: isManagedWorktree(baseDir, workspacePath)
     };
   }
 
