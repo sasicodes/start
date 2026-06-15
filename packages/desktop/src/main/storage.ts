@@ -54,7 +54,6 @@ const defaultStartState = {
 
 export const startDir = () => baseDir;
 export const startCacheDir = () => join(startDir(), 'cache');
-export const startLogPath = () => join(startDir(), 'logs', 'app.log');
 
 const trimmedOptionalStringSchema = v.pipe(v.string(), v.trim());
 const trimmedStringSchema = v.pipe(trimmedOptionalStringSchema, v.minLength(1));

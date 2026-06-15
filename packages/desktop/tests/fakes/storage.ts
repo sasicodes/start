@@ -62,5 +62,4 @@ export const parseStartState = (value: unknown): StartState => {
 
 export const startDir = () => '/tmp/start-test';
 export const startCacheDir = () => '/tmp/start-test/cache';
-export const startLogPath = () => '/tmp/start-test/logs/app.log';
 export const startStatePath = () => '/tmp/start-test/state.json';
