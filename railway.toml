@@ -1,8 +1,0 @@
-[build]
-builder = "dockerfile"
-dockerfilePath = "packages/relay/Dockerfile"
-
-[deploy]
-numReplicas = 1
-healthcheckPath = "/health"
-restartPolicyType = "always"
