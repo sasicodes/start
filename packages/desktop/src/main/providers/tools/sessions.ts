@@ -1,4 +1,5 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
+import { positiveLimit } from '@main/providers/tools/fff/bounds';
 import { toolResult } from '@main/providers/tools/result';
 
 export interface SessionEnvironment {
@@ -31,9 +32,6 @@ const maxTurnLimit = 100;
 const defaultTurnChars = 2000;
 const maxTurnChars = 8000;
 
-const clamp = (value: number | undefined, fallback: number, max: number) =>
-  typeof value === 'number' && value > 0 ? Math.min(value, max) : fallback;
-
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 
 const formatSessions = (sessions: readonly SessionSummary[]) => {
@@ -52,10 +50,7 @@ interface CreateArgs {
 }
 
 export const runCreateSession = async (controller: SessionController, { prompt, environment }: CreateArgs) => {
-  const worktree = environment?.type === 'worktree';
-  const env: SessionEnvironment = worktree
-    ? { type: 'worktree', ...(environment?.branch ? { branch: environment.branch } : {}) }
-    : { type: 'local' };
+  const env: SessionEnvironment = environment ?? { type: 'local' };
   const session = await controller.create({ prompt, environment: env });
   return toolResult(`Created ${env.type} session ${session.id} at ${session.workspacePath}`, null);
 };
@@ -68,7 +63,10 @@ export const runListSessions = (
   const matched = query
     ? sessions.filter((session) => session.id.includes(query) || session.workspacePath.includes(query))
     : sessions;
-  return toolResult(formatSessions(matched.slice(0, clamp(limit, defaultListLimit, maxListLimit))), null);
+  return toolResult(
+    formatSessions(matched.slice(0, positiveLimit(limit ?? null, defaultListLimit, maxListLimit))),
+    null
+  );
 };
 
 interface ReadArgs {
@@ -80,8 +78,11 @@ interface ReadArgs {
 export const runReadSession = (controller: SessionController, { id, turnLimit, maxOutputCharsPerItem }: ReadArgs) => {
   const turns = controller.read(id);
   if (!turns) return toolResult(`No session found for ${id}.`, null);
-  const recent = turns.slice(-clamp(turnLimit, defaultTurnLimit, maxTurnLimit));
-  return toolResult(formatTurns(recent, clamp(maxOutputCharsPerItem, defaultTurnChars, maxTurnChars)), null);
+  const recent = turns.slice(-positiveLimit(turnLimit ?? null, defaultTurnLimit, maxTurnLimit));
+  return toolResult(
+    formatTurns(recent, positiveLimit(maxOutputCharsPerItem ?? null, defaultTurnChars, maxTurnChars)),
+    null
+  );
 };
 
 export const runSendMessage = (controller: SessionController, { id, prompt }: { id: string; prompt: string }) => {
