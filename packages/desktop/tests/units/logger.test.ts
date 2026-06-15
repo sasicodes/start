@@ -21,6 +21,8 @@ describe('logger', () => {
     const write = vi.spyOn(process.stderr, 'write').mockReturnValue(true);
     logger.error('storage parse', 'corrupt row');
 
-    expect(write).toHaveBeenCalledWith('[start] storage parse: corrupt row\n');
+    expect(write).toHaveBeenCalledWith(
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T.*\[start\] storage parse: corrupt row\n$/)
+    );
   });
 });

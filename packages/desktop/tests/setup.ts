@@ -34,6 +34,7 @@ vi.mock('electron', async () => {
   };
 });
 
+vi.mock('@main/utils/sink', () => ({ recordError: () => {} }));
 vi.mock('@main/storage', () => import('./fakes/storage.js'));
 vi.mock('@main/window', () => import('./fakes/window.js'));
 vi.mock('@main/workspace/access', () => import('./fakes/workspace-access.js'));
