@@ -7,7 +7,7 @@ import { freshChatService } from '../helpers/chat-service.js';
 const git = vi.hoisted(() => ({
   getGitBranch: vi.fn(async () => undefined),
   gitTopLevel: vi.fn(async () => ''),
-  addWorktree: vi.fn(async (_repoRoot: string, worktreePath: string, _options?: { branch?: string }) => ({
+  addWorktree: vi.fn(async (_repoRoot: string, worktreePath: string, _options?: { branch?: string; base?: string }) => ({
     path: worktreePath,
     head: '',
     branch: '',
@@ -35,6 +35,15 @@ describe('worktree-backed tabs', () => {
     expect(git.addWorktree.mock.calls[0]?.[2]).toMatchObject({ branch: expect.stringMatching(/^start\/fix-the-bug-/) });
     expect(tab.workspacePath.startsWith(worktreeRoot)).toBe(true);
     expect(getStorageSnapshot().lastWorkspace).toBe('/tmp/workspace-a');
+  });
+
+  it('forks the worktree from the requested base branch', async () => {
+    git.gitTopLevel.mockResolvedValue('/repo');
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+
+    await chat.createWorktreeTab('fix the bug', 'develop');
+
+    expect(git.addWorktree.mock.calls[0]?.[2]).toMatchObject({ base: 'develop' });
   });
 
   it('falls back to a normal tab outside a git repository', async () => {
