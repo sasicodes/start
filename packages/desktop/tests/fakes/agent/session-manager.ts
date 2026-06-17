@@ -70,4 +70,14 @@ export class FakeSessionManager {
   appendEntry(entry: unknown) {
     this.entries.push(entry);
   }
+
+  appendModelChange(provider: string, modelId: string) {
+    this.appendEntry({
+      provider,
+      modelId,
+      id: `model:${randomUUID()}`,
+      type: 'model_change',
+      timestamp: new Date().toISOString()
+    });
+  }
 }

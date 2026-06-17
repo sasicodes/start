@@ -240,11 +240,6 @@ const metadataTurn = (entry: Record<string, unknown>) => {
   if (type === 'custom_message') return customMessageTurn(entry);
   if (type === 'label') return labelTurn(entry);
 
-  if (type === 'model_change') {
-    const model = [stringValue(entry.provider), stringValue(entry.modelId)].filter(Boolean).join('/');
-    return model ? detailTurn(entry, compactEvent(`model:${entryId(entry)}`, `Model changed: ${model}`)) : [];
-  }
-
   if (type !== 'compaction') return [];
 
   return compactionTurn(entry, stringValue(entry.summary), numberValue(entry.tokensBefore));

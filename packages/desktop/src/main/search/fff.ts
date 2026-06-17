@@ -83,6 +83,12 @@ const constraintPath = (entry: FinderEntry, relativePath = '') => {
 const grepQuery = (pattern: string, pathConstraint = '', globConstraint = '') =>
   [pathConstraint.trim(), globConstraint.trim(), pattern].filter(Boolean).join(' ');
 
+const grepPattern = (pattern: string, mode: GrepOptions['mode'], ignoreCase: boolean) => {
+  if (!ignoreCase) return pattern;
+  if (mode === 'regex') return `(?i:${pattern})`;
+  return pattern.toLowerCase();
+};
+
 let lastCursorToken = 0;
 
 const storedCursors = new Map<number, GrepCursor>();
@@ -109,21 +115,26 @@ const grepOptions = (
     mode,
     limit,
     context,
+    ignoreCase,
     classifyDefinitions
-  }: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'limit' | 'mode'>,
+  }: Pick<GrepOptionsInput, 'classifyDefinitions' | 'context' | 'ignoreCase' | 'limit' | 'mode'>,
   cursor: GrepCursor | null
-): GrepOptions => ({
-  ...(cursor ? { cursor } : {}),
-  mode: mode ?? 'plain',
-  smartCase: true,
-  maxFileSize: maxGrepFileSize,
-  timeBudgetMs: grepTimeBudgetMs,
-  maxMatchesPerFile,
-  pageSize: boundedCount(limit, maxGrepPageSize),
-  beforeContext: boundedContext(context),
-  afterContext: boundedContext(context),
-  classifyDefinitions: Boolean(classifyDefinitions)
-});
+): GrepOptions => {
+  const grepMode = mode ?? 'plain';
+
+  return {
+    ...(cursor ? { cursor } : {}),
+    mode: grepMode,
+    smartCase: !(grepMode === 'regex' && ignoreCase),
+    maxFileSize: maxGrepFileSize,
+    timeBudgetMs: grepTimeBudgetMs,
+    maxMatchesPerFile,
+    pageSize: boundedCount(limit, maxGrepPageSize),
+    beforeContext: boundedContext(context),
+    afterContext: boundedContext(context),
+    classifyDefinitions: Boolean(classifyDefinitions)
+  };
+};
 
 const workspaceGrepResult = (entry: FinderEntry, result: GrepResult, restarted: boolean): WorkspaceGrepResult => ({
   matches: result.items.flatMap((match) => {
@@ -213,8 +224,13 @@ export const grepWorkspace = async (options: GrepOptionsInput): Promise<Workspac
 
   const cursor = storedCursor(options.cursor);
   const restarted = Boolean(options.cursor) && !cursor;
+  const mode = options.mode ?? 'plain';
   const result = entry.finder.grep(
-    grepQuery(options.pattern, constraintPath(entry, searchPath), options.glob),
+    grepQuery(
+      grepPattern(options.pattern, mode, Boolean(options.ignoreCase)),
+      constraintPath(entry, searchPath),
+      options.glob
+    ),
     grepOptions(options, cursor)
   );
   if (!result.ok) return null;

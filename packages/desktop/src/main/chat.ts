@@ -57,6 +57,7 @@ import {
   listSessionsByCwd,
   truncateTitle,
   unarchiveSession,
+  updateSessionModel,
   updateSessionOnTurnEnd,
   updateSessionThinkingLevel,
   updateSessionTitle,
@@ -1053,15 +1054,36 @@ export class ChatService {
     }
 
     const nextModelKey = modelKey(model);
-    this.selectedThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
+    const nextThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
     if (this.selectedModelKey !== nextModelKey) {
+      const activeSession = this.session;
+      if (activeSession && this.sessionIsReportable(activeSession)) {
+        try {
+          await activeSession.setModel(model);
+        } catch (error) {
+          return {
+            ready: false,
+            workspacePath: this.workspaceCwd,
+            thinkingLevel: this.selectedThinkingLevel,
+            error: error instanceof Error ? error.message : 'Selected model could not be used.'
+          };
+        }
+        updateSessionModel(activeSession.sessionManager.getSessionId(), {
+          modelId: model.id,
+          modelProvider: model.provider
+        });
+        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
+        this.notifyMobileSessionChanged(activeSession.sessionManager.getSessionId(), this.workspaceCwd);
+      } else {
+        this.sessionOpenSequence += 1;
+        if (activeSession) this.storeBackgroundSession(this.workspaceCwd, activeSession);
+        this.session = null;
+        this.activeSessionId = '';
+        this.shouldCreateSession = true;
+      }
       this.selectedModelKey = nextModelKey;
-      this.sessionOpenSequence += 1;
-      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
-      this.session = null;
-      this.activeSessionId = '';
-      this.shouldCreateSession = true;
     }
+    this.selectedThinkingLevel = nextThinkingLevel;
     this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
 
     return {

@@ -24,8 +24,12 @@ const twoAnthropicModels: FakeModel[] = [
 ];
 
 describe('model and thinking level', () => {
-  it('swaps the active session out to background when the model changes', async () => {
-    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a', models: twoAnthropicModels });
+  it('keeps the active session when the model changes', async () => {
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      models: twoAnthropicModels,
+      selectedModelKey: 'anthropic:claude-opus-4-7'
+    });
     const webContents = newWebContents();
 
     const tab = await chat.createTab('/tmp/workspace-a');
@@ -39,7 +43,17 @@ describe('model and thinking level', () => {
     expect(swap.ready).toBe(true);
     expect(swap.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
     expect(getStorageSnapshot().selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
+    expect(session?.model.id).toBe('claude-sonnet-4-6');
+    expect(session?.sessionManager.getEntries()).toContainEqual(
+      expect.objectContaining({
+        type: 'model_change',
+        provider: 'anthropic',
+        modelId: 'claude-sonnet-4-6'
+      })
+    );
 
+    const status = await chat.getStatus();
+    expect(status.sessionId).toBe(tab.id);
     const tabs = chat.getTabs();
     expect(tabs.some((entry) => entry.id === tab.id)).toBe(true);
   });

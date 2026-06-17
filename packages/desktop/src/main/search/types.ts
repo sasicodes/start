@@ -43,12 +43,13 @@ export interface FindOptions extends SearchWaitOptions {
 export interface GrepOptionsInput extends SearchWaitOptions {
   cwd: string;
   glob?: string;
-  limit: number;
   path?: string;
+  limit: number;
   mode?: GrepMode;
   cursor?: number;
   pattern: string;
   context?: number;
+  ignoreCase?: boolean;
   classifyDefinitions?: boolean;
 }
 

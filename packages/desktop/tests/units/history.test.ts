@@ -62,6 +62,20 @@ describe('historyTurns', () => {
     expect(turns).toEqual([]);
   });
 
+  it('drops model changes from visible turns', () => {
+    const turns = historyTurns([
+      {
+        id: 'm1',
+        modelId: 'claude-sonnet-4-6',
+        provider: 'anthropic',
+        type: 'model_change',
+        timestamp: '2026-05-24T12:00:00Z'
+      }
+    ]);
+
+    expect(turns).toEqual([]);
+  });
+
   it('keeps thinking after assistant text with the following assistant response', () => {
     const turns = historyTurns([
       messageEntry('a1', 'assistant', [{ type: 'text', text: 'first result' }]),

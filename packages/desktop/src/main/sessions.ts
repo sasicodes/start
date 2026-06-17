@@ -59,6 +59,11 @@ interface UpdateOnTurnEndInput {
   firstMessage?: string;
 }
 
+interface UpdateModelInput {
+  modelId: string;
+  modelProvider: string;
+}
+
 interface ListOptions {
   limit: number;
   offset: number;
@@ -81,6 +86,7 @@ interface Statements {
   archive: StartStatement;
   unarchive: StartStatement;
   selectById: StartStatement;
+  updateModel: StartStatement;
   updateTitle: StartStatement;
   updateTurnEnd: StartStatement;
   updateThinking: StartStatement;
@@ -104,6 +110,7 @@ const statements = (): Statements => {
     archive: db.prepare('UPDATE sessions SET archived = 1, archived_at = ?, updated_at = ? WHERE id = ?'),
     unarchive: db.prepare('UPDATE sessions SET archived = 0, archived_at = NULL, updated_at = ? WHERE id = ?'),
     selectById: db.prepare('SELECT * FROM sessions WHERE id = ?'),
+    updateModel: db.prepare('UPDATE sessions SET model_provider = ?, model_id = ?, updated_at = ? WHERE id = ?'),
     updateTitle: db.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?'),
     updateTurnEnd: db.prepare(
       `UPDATE sessions
@@ -180,6 +187,10 @@ export const updateSessionOnTurnEnd = (id: string, input: UpdateOnTurnEndInput):
   if (input.firstMessage !== undefined) {
     statements().updateTitleIfEmpty.run(truncateTitle(input.firstMessage), now, id);
   }
+};
+
+export const updateSessionModel = (id: string, input: UpdateModelInput): void => {
+  statements().updateModel.run(input.modelProvider, input.modelId, Date.now(), id);
 };
 
 export const updateSessionThinkingLevel = (id: string, level: string): void => {

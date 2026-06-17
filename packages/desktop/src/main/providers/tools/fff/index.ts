@@ -1,13 +1,14 @@
 import { createFindTool, createGrepTool, defineTool } from '@earendil-works/pi-coding-agent';
 import {
-  boundedPatterns,
-  defaultFindLimit,
-  defaultGrepLimit,
   maxFindLimit,
   maxGrepLimit,
-  positiveContext,
+  positiveLimit,
   positiveCursor,
-  positiveLimit
+  optionalBoolean,
+  positiveContext,
+  boundedPatterns,
+  defaultFindLimit,
+  defaultGrepLimit
 } from '@main/providers/tools/fff/bounds';
 import { fallbackFindPattern, findText, grepText, restartedPagination } from '@main/providers/tools/fff/format';
 import { findSchema, grepSchema, multiGrepSchema } from '@main/providers/tools/fff/schema';
@@ -52,39 +53,40 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     label: 'grep',
     parameters: grepSchema,
     description:
-      'Search file contents through the shared repository index. Falls back to built-in content search when the index is unavailable or a case-insensitive search is requested.',
+      'Search file contents through the shared repository index. Falls back to built-in content search when the index is unavailable.',
     promptSnippet: 'Search code quickly from the shared repository index.',
     async execute(toolCallId, { pattern, path, glob, ignoreCase, literal, context, limit, cursor }, signal, onUpdate) {
       const resultLimit = positiveLimit(limit, defaultGrepLimit, maxGrepLimit);
+      const resultLiteral = optionalBoolean(literal);
       const resultContext = positiveContext(context);
       const resultCursor = positiveCursor(cursor);
+      const resultIgnoreCase = optionalBoolean(ignoreCase);
 
       const runFallback = async () => {
         const fallbackArgs = {
           pattern,
           limit: resultLimit,
-          context: resultContext,
           ...(path ? { path } : {}),
           ...(glob ? { glob } : {}),
-          ...(typeof literal === 'boolean' ? { literal } : {}),
-          ...(typeof ignoreCase === 'boolean' ? { ignoreCase } : {})
+          context: resultContext,
+          ...(resultLiteral !== null ? { literal: resultLiteral } : {}),
+          ...(resultIgnoreCase !== null ? { ignoreCase: resultIgnoreCase } : {})
         };
         const result = await createGrepTool(cwd()).execute(toolCallId, fallbackArgs, signal, onUpdate);
         return resultCursor > 0 ? restartedPagination(result) : result;
       };
 
-      if (ignoreCase) return runFallback();
-
       const result = await grepWorkspace({
-        cwd: cwd(),
-        cursor: resultCursor,
-        limit: resultLimit,
-        mode: literal ? 'plain' : 'regex',
         pattern,
+        cwd: cwd(),
+        limit: resultLimit,
+        cursor: resultCursor,
         context: resultContext,
-        classifyDefinitions: true,
         ...(path ? { path } : {}),
-        ...(glob ? { glob } : {})
+        ...(glob ? { glob } : {}),
+        classifyDefinitions: true,
+        mode: resultLiteral ? 'plain' : 'regex',
+        ...(resultIgnoreCase !== null ? { ignoreCase: resultIgnoreCase } : {})
       });
 
       if (!result) return runFallback();

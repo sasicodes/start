@@ -3,12 +3,12 @@ import { flyoutRisePx } from '@renderer/shared/animation';
 import { type ModelProviderId, modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
-import { AnthropicIcon, CheckIcon, ChevronRightIcon, GearIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, CheckIcon, ChevronRightIcon, GeminiIcon, OpenAIIcon, SettingsIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSurface } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import type { JSX } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 
 interface ProviderGroup {
   name: string;
@@ -114,7 +114,7 @@ const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<
       onPointerDown={openProviderSettings}
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
-      <GearIcon class="size-4" />
+      <SettingsIcon class="size-4" />
       <span>Set up {name}</span>
     </AppMenu.Item>
   );
@@ -134,19 +134,16 @@ const ModelMenuContent = ({
 
 interface ProviderRowProps extends Pick<ProviderGroup, 'id' | 'name'> {
   active: boolean;
-  onHover: () => void;
-  onHoverEnd: () => void;
   onActivate: () => void;
 }
 
-const ProviderRow = ({ id, name, active, onHover, onHoverEnd, onActivate }: ProviderRowProps) => {
+const ProviderRow = ({ id, name, active, onActivate }: ProviderRowProps) => {
   return (
     <AppMenu.Item
       closeOnClick={false}
-      onFocus={onHover}
+      onFocus={onActivate}
       onClick={onActivate}
-      onMouseEnter={onHover}
-      onMouseLeave={onHoverEnd}
+      onMouseEnter={onActivate}
       className={tw(
         'grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control',
         active && 'bg-control'
@@ -159,14 +156,10 @@ const ProviderRow = ({ id, name, active, onHover, onHoverEnd, onActivate }: Prov
   );
 };
 
-const hoverIntentMs = 100;
 const providerRowStep = 36;
 
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
-  const switchTimer = useRef(0);
   const [active, setActive] = useState(-1);
-
-  useEffect(() => () => window.clearTimeout(switchTimer.current), []);
 
   const providers = useMemo<ProviderGroup[]>(() => {
     const grouped: Record<ModelProviderId, ModelOption[]> = { google: [], openai: [], anthropic: [] };
@@ -179,25 +172,6 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
     ];
   }, [models]);
 
-  const cancelPendingHover = () => window.clearTimeout(switchTimer.current);
-
-  const activateProvider = (index: number) => {
-    cancelPendingHover();
-    setActive(index);
-  };
-
-  const hoverProvider = (index: number) => {
-    cancelPendingHover();
-    if (index === active) return;
-
-    if (active === -1) {
-      setActive(index);
-      return;
-    }
-
-    switchTimer.current = window.setTimeout(() => setActive(index), hoverIntentMs);
-  };
-
   const flyout = providers[active];
 
   return (
@@ -208,9 +182,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
           id={provider.id}
           name={provider.name}
           active={index === active}
-          onHover={() => hoverProvider(index)}
-          onHoverEnd={cancelPendingHover}
-          onActivate={() => activateProvider(index)}
+          onActivate={() => setActive(index)}
         />
       ))}
       {flyout && (
@@ -218,7 +190,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
           style={
             { '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` } as JSX.CSSProperties
           }
-          class="absolute bottom-1 left-full ml-2 w-56 -translate-y-(--flyout-rise) transition-[translate] duration-150 ease-out"
+          class="absolute bottom-1 left-full ml-2 w-56 -translate-y-(--flyout-rise)"
         >
           <MenuSurface>
             <ModelMenuContent

@@ -46,6 +46,7 @@ export class FakeAgentSession {
   isBashRunning = false;
   disposed = false;
   reloadCount = 0;
+  model: FakeModel;
   thinkingLevel = 'medium';
 
   followUpQueue: string[] = [];
@@ -64,6 +65,7 @@ export class FakeAgentSession {
 
   constructor(options: CreateAgentSessionOptions) {
     this.sessionManager = options.sessionManager;
+    this.model = options.model;
     this.thinkingLevel = options.thinkingLevel;
     this.tools = [{ name: 'fake-tool' }, ...(options.customTools ?? [])];
     sessionRegistry.set(options.sessionManager.getSessionId(), this);
@@ -91,6 +93,11 @@ export class FakeAgentSession {
 
   setThinkingLevel(level: string) {
     this.thinkingLevel = level;
+  }
+
+  async setModel(model: FakeModel): Promise<void> {
+    this.model = model;
+    this.sessionManager.appendModelChange(model.provider, model.id);
   }
 
   subscribe(listener: Listener): () => void {
