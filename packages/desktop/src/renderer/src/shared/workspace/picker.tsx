@@ -1,4 +1,4 @@
-import { AttentionBadge } from '@renderer/shared/attention-badge';
+import { AttentionBadge } from '@renderer/shared/badge';
 import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
