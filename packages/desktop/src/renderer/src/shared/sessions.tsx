@@ -1,5 +1,4 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
-import { AttentionBadge } from '@renderer/shared/badge';
 import {
   type AttentionState,
   attentionCountLabel,
@@ -7,6 +6,7 @@ import {
   sessionAttentionStatus,
   topAttentionStatus
 } from '@renderer/shared/attention-status';
+import { AttentionBadge } from '@renderer/shared/badge';
 import { Indicator } from '@renderer/shared/indicator';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
@@ -63,7 +63,7 @@ interface RecentSessionsProps {
 const SessionAttention = ({ attention }: { attention: AttentionState }) => {
   if (!attention) return null;
   return (
-    <span class="flex items-center justify-end">
+    <span class="flex items-center">
       <Indicator kind={attention} />
     </span>
   );
