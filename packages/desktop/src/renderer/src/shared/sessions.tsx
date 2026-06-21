@@ -1,5 +1,5 @@
 import type { RecentSession, RecentSessionsChanged } from '@preload/index';
-import { AttentionBadge } from '@renderer/shared/attention-badge';
+import { AttentionBadge } from '@renderer/shared/badge';
 import {
   type AttentionState,
   attentionCountLabel,
