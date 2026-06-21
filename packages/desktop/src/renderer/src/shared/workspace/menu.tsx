@@ -9,7 +9,11 @@ import { tw } from '@renderer/utils/tw';
 const WorkspaceAttention = ({ folder }: { folder: WorkspaceFolder }) => {
   const attention = attentionStatus(folder.status, folder.noticeKind);
   if (!attention) return null;
-  return <Indicator kind={attention} />;
+  return (
+    <span class="flex h-5 items-center">
+      <Indicator kind={attention} />
+    </span>
+  );
 };
 
 interface WorkspaceRowProps {
@@ -30,7 +34,7 @@ const WorkspaceRow = ({ folder, selected, onSelect }: WorkspaceRowProps) => (
     disabled={selected}
     onClick={() => onSelect(folder.path)}
     className={tw(
-      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
       selected ? 'bg-control text-hover' : 'bg-transparent'
     )}
   >
