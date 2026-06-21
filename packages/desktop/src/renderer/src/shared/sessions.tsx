@@ -3,11 +3,11 @@ import { AttentionBadge } from '@renderer/shared/badge';
 import {
   type AttentionState,
   attentionCountLabel,
-  attentionLabel,
   attentionStatusCount,
   sessionAttentionStatus,
   topAttentionStatus
 } from '@renderer/shared/attention-status';
+import { Indicator } from '@renderer/shared/indicator';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -63,15 +63,8 @@ interface RecentSessionsProps {
 const SessionAttention = ({ attention }: { attention: AttentionState }) => {
   if (!attention) return null;
   return (
-    <span
-      class={tw(
-        'font-mono text-[10px] leading-4 font-semibold uppercase',
-        attention === 'failed' && 'text-danger',
-        attention === 'completed' && 'text-success',
-        attention === 'generating' && 'text-progress'
-      )}
-    >
-      {attentionLabel(attention)}
+    <span class="flex items-center justify-end">
+      <Indicator kind={attention} />
     </span>
   );
 };
