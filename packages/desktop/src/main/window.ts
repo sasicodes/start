@@ -45,6 +45,15 @@ export const allowMainWindowClose = () => {
 
 export const getMainWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 
+let mainWindowChangedListener: (() => void) | null = null;
+
+export const onMainWindowChanged = (listener: () => void) => {
+  mainWindowChangedListener = listener;
+  return () => {
+    if (mainWindowChangedListener === listener) mainWindowChangedListener = null;
+  };
+};
+
 interface MainWindowOptions {
   showOnReady?: boolean;
 }
@@ -146,11 +155,13 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
 
   window.on('closed', () => {
     if (mainWindow === window) mainWindow = null;
+    mainWindowChangedListener?.();
     if (!isMac) app.quit();
   });
 
   loadRenderer(window, 'main');
 
+  mainWindowChangedListener?.();
   return window;
 };
 

@@ -1,6 +1,24 @@
-import { setStayAwake } from '@main/utils/power';
+import { setStayAwake, shouldStayAwake } from '@main/utils/power';
 import electron from 'electron';
 import { afterAll, describe, expect, it, vi } from 'vitest';
+
+describe('shouldStayAwake', () => {
+  it('stays awake only when enabled, relay active, and on AC power', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: true })).toBe(true);
+  });
+
+  it('never stays awake while the relay is inactive', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: false })).toBe(false);
+  });
+
+  it('never stays awake on battery', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: true, relayActive: true })).toBe(false);
+  });
+
+  it('never stays awake when keep-awake is off', () => {
+    expect(shouldStayAwake({ keepAwake: false, onBattery: false, relayActive: true })).toBe(false);
+  });
+});
 
 describe('setStayAwake', () => {
   afterAll(() => setStayAwake(false));
