@@ -54,13 +54,14 @@ import {
 import type { ChatStatus } from '@main/types';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
 import { logger } from '@main/utils/logger';
-import { setStayAwake } from '@main/utils/power';
+import { setStayAwake, shouldStayAwake } from '@main/utils/power';
 import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
   createMainWindow,
   getMainWindow,
   hideComposerWindow,
+  onMainWindowChanged,
   sendToMainWindow,
   sendToRendererWindows,
   showMainWindow,
@@ -95,6 +96,7 @@ let quitCleanupStarted = false;
 let appQuitConfirmationOpen = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
+let stopMainWindowChanged: (() => void) | null = null;
 
 const mobileResult = (
   command: Extract<MobileRelayCommand, { requestId: string }>,
@@ -234,8 +236,22 @@ chat.setMobileSessionChangeHandler(({ sessionId, workspacePath }) => {
 let stopWorkspaceChanged: (() => void) | null = null;
 
 const refreshStayAwake = () => {
-  const keepAwake = appSettings?.keepAwake ?? defaultAppSettings.keepAwake;
-  setStayAwake(keepAwake && desktopRelay.isActive && !powerMonitor.isOnBatteryPower());
+  setStayAwake(
+    shouldStayAwake({
+      keepAwake: appSettings?.keepAwake ?? defaultAppSettings.keepAwake,
+      onBattery: powerMonitor.isOnBatteryPower(),
+      relayActive: desktopRelay.isActive
+    })
+  );
+};
+
+const applyBackgroundWork = () => {
+  if (getMainWindow()) {
+    desktopRelay.sync(appSettings?.mobileRelay ?? defaultAppSettings.mobileRelay);
+  } else {
+    desktopRelay.stop();
+  }
+  refreshStayAwake();
 };
 
 const notifyRecentSessionsChanged = (workspacePath = chat.getWorkspaceCwd()) => {
@@ -397,10 +413,9 @@ if (!singleInstanceLock) {
     }
 
     appSettings = await readAppSettings();
-    desktopRelay.sync(appSettings.mobileRelay);
+    stopMainWindowChanged = onMainWindowChanged(applyBackgroundWork);
     powerMonitor.on('on-ac', refreshStayAwake);
     powerMonitor.on('on-battery', refreshStayAwake);
-    refreshStayAwake();
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
@@ -518,8 +533,7 @@ if (!singleInstanceLock) {
         mobileRelay
       });
       appSettings = nextSettings;
-      desktopRelay.sync(nextSettings.mobileRelay);
-      refreshStayAwake();
+      applyBackgroundWork();
       return { ok: true, settings: nextSettings };
     });
     ipcMain.handle('app:set-keep-awake', async (_event, keepAwake: boolean) => {
@@ -589,6 +603,8 @@ const startQuitCleanup = async () => {
   stopWorkspaceChanged = null;
   stopResourceRefresh?.();
   stopResourceRefresh = null;
+  stopMainWindowChanged?.();
+  stopMainWindowChanged = null;
   stopAutoUpdateChecks();
   desktopRelay.stop();
   gitChanges.dispose();
