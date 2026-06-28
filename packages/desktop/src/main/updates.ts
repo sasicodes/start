@@ -18,7 +18,7 @@ export type UpdateState =
   | { status: 'checking' }
   | { status: 'available' }
   | { status: 'downloaded' }
-  | { status: 'downloading' };
+  | { status: 'downloading'; percent: number };
 
 let checking = false;
 let downloadPending = false;
@@ -107,7 +107,7 @@ const downloadUpdate = () => {
   if (state.status !== 'available') return { ok: false };
 
   downloadPending = true;
-  setUpdateState({ status: 'downloading' });
+  setUpdateState({ status: 'downloading', percent: 0 });
   autoUpdater.downloadUpdate().catch(() => {});
   return { ok: true };
 };
@@ -137,9 +137,9 @@ export const startAutoUpdateChecks = () => {
     setUpdateState({ status: 'available' });
     stopUpdateCheckSchedule();
   };
-  const onDownloadProgress = () => {
+  const onDownloadProgress = (progress: electronUpdater.ProgressInfo) => {
     downloadPending = true;
-    if (state.status !== 'downloading') setUpdateState({ status: 'downloading' });
+    setUpdateState({ status: 'downloading', percent: Math.round(progress.percent) });
   };
   const onUpdateDownloaded = () => {
     downloadPending = false;
