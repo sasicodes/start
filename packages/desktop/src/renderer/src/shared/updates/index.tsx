@@ -27,6 +27,7 @@ export const Update = memo(() => {
   const downloading = status === 'downloading';
   const downloaded = status === 'downloaded';
   const active = animationActive(appFocused) && !downloading;
+  const label = state.status === 'downloading' ? `Downloading (${state.percent}%)` : 'Update';
 
   return (
     <Tooltip label={updateTooltip(downloading, downloaded)}>
@@ -46,10 +47,10 @@ export const Update = memo(() => {
               aria-hidden="true"
               class="pointer-events-none absolute inset-0 animate-[activity-text-shimmer_2.4s_linear_infinite] bg-[image:var(--shimmer-gradient-brand)] [background-size:240%_100%] bg-clip-text text-transparent [-webkit-background-clip:text] motion-reduce:hidden"
             >
-              Update
+              {label}
             </span>
           )}
-          Update
+          {label}
         </span>
       </motion.button>
     </Tooltip>
