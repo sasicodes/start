@@ -138,7 +138,7 @@ export const startAutoUpdateChecks = () => {
     stopUpdateCheckSchedule();
   };
   const onDownloadProgress = (progress: electronUpdater.ProgressInfo) => {
-    downloadPending = true;
+    if (state.status !== 'downloading') return;
     setUpdateState({ status: 'downloading', percent: Math.round(progress.percent) });
   };
   const onUpdateDownloaded = () => {
