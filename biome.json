@@ -14,7 +14,7 @@
       "!**/release",
       "!**/dist",
       "!**/*.tsbuildinfo",
-      "!**/*.xcassets",
+      "!**/*.xcassets/**/*.svg",
       "!packages/mobile/expo-env.d.ts"
     ]
   },
