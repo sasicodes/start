@@ -79,7 +79,5 @@ const newSessionMentionStrip = new RegExp(newSessionMentionSource, 'gi');
 
 export const newSessionMention = (draft: string): { prompt: string } | undefined => {
   if (!newSessionMentionMatch.test(draft)) return;
-  const prompt = draft.replace(newSessionMentionStrip, ' ').replace(/\s+/g, ' ').trim();
-  if (!prompt) return;
-  return { prompt };
+  return { prompt: draft.replace(newSessionMentionStrip, ' ').replace(/\s+/g, ' ').trim() };
 };

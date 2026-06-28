@@ -132,7 +132,7 @@ export const App = () => {
       clearPendingAttachments();
       const mention = newSessionMention(prompt);
       if (mention) {
-        void startSession(mention.prompt, incomingAttachments);
+        if (mention.prompt) void startSession(mention.prompt, incomingAttachments);
         return;
       }
       navigate(routeForSession(activeSessionId), true);
@@ -240,7 +240,7 @@ export const App = () => {
     const mention = newSessionMention(draft);
     if (mention) {
       setDraft('');
-      void startSession(mention.prompt, pendingAttachments);
+      if (mention.prompt) void startSession(mention.prompt, pendingAttachments);
       return;
     }
     void send(pendingAttachments);

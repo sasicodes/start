@@ -19,8 +19,8 @@ describe('newSessionMention', () => {
     expect(newSessionMention('@Browser open example.com')).toBeUndefined();
   });
 
-  it('returns undefined when the mention has no remaining prompt', () => {
-    expect(newSessionMention('@New Session')).toBeUndefined();
-    expect(newSessionMention('  @New Session  ')).toBeUndefined();
+  it('reports an empty prompt when only the mention is present', () => {
+    expect(newSessionMention('@New Session')).toEqual({ prompt: '' });
+    expect(newSessionMention('  @New Session  ')).toEqual({ prompt: '' });
   });
 });
