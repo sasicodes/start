@@ -526,6 +526,8 @@ const api = {
       ipcRenderer.invoke('chat:command', command, excludeFromContext),
     abort: (): Promise<void> => ipcRenderer.invoke('chat:abort'),
     newSession: (): Promise<void> => ipcRenderer.invoke('chat:new-session'),
+    startSession: (prompt: string, attachments: ImageAttachment[] = []): Promise<void> =>
+      ipcRenderer.invoke('chat:start-session', prompt, attachments),
     onNewSession: (listener: () => void): IpcDisposer => onIpc<[]>('chat:new-session', listener),
     onDelta: (listener: (delta: string) => void): IpcDisposer => onIpc<[string]>('chat:delta', listener),
     onThinkingDelta: (listener: (delta: string) => void): IpcDisposer =>

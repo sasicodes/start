@@ -84,6 +84,11 @@ export const registerChatIpc = ({
   });
   ipcMain.handle('chat:tabs:list', () => chat.getTabs());
   ipcMain.handle('chat:new-session', () => startNewSession());
+  ipcMain.handle('chat:start-session', async (_event, prompt: string, attachments = []) => {
+    const summary = await chat.startSession({ prompt, attachments, environment: { type: 'local' } });
+    trackSessionCreated('renderer', summary.workspacePath);
+    notifyRecentSessionsChanged(summary.workspacePath);
+  });
   ipcMain.handle('chat:tabs:abort', async (_event, id: string) => {
     await chat.abortTab(id);
     notifyStatusChanged();
