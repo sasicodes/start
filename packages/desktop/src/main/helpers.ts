@@ -52,7 +52,6 @@ export const providerAuthKind = (
 export const providerAuthLabel = (kind: ProviderAuthKind, hasCredentials: boolean) => {
   if (kind === 'subscription') return 'Connected via subscription';
   if (kind === 'api_key') return 'Connected via API key';
-  if (kind === 'unknown') return 'Connected';
   if (hasCredentials) return 'Credentials found, no models available';
   return 'Not connected';
 };

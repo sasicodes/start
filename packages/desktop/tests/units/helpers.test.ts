@@ -37,8 +37,14 @@ describe('helpers', () => {
     expect(providerAuthKind(false, false, false)).toBe('none');
     expect(providerAuthKind(true, true, false)).toBe('subscription');
     expect(providerAuthKind(true, false, true)).toBe('api_key');
+    expect(providerAuthKind(true, false, false)).toBe('unknown');
     expect(providerAuthLabel('subscription', true)).toBe('Connected via subscription');
+    expect(providerAuthLabel('api_key', true)).toBe('Connected via API key');
     expect(providerAuthLabel('none', false)).toBe('Not connected');
+  });
+
+  it('does not treat environment-only model availability as a connected provider', () => {
+    expect(providerAuthLabel('unknown', false)).toBe('Not connected');
   });
 
   it('classifies OpenAI, Anthropic, and Google models from identifiers', () => {
