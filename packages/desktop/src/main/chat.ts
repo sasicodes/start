@@ -2094,7 +2094,7 @@ export class ChatService {
       key,
       name,
       kind,
-      connected: hasModels,
+      connected: hasCredentials && hasModels,
       hasCredentials,
       label: providerAuthLabel(kind, hasCredentials)
     };
