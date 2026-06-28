@@ -9,7 +9,7 @@
   "scripts": {
     "audit": "pnpm run audit:deps && pnpm run audit:signatures",
     "audit:deps": "pnpm audit && pnpm --dir packages/desktop audit",
-    "audit:signatures": "npm audit signatures && npm --prefix packages/desktop audit signatures",
+    "audit:signatures": "node scripts/audit-signatures.js",
     "build": "pnpm run build:desktop && pnpm run build:web",
     "build:desktop": "pnpm --filter @start/desktop build",
     "build:web": "pnpm --filter @start/web build",
