@@ -14,6 +14,7 @@ import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
+import { newSessionMention } from '@renderer/shared/input';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { canSelectWorkspace } from '@renderer/shared/workspace/select';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
@@ -89,6 +90,7 @@ export const App = () => {
     setDraft,
     saveApiKey,
     selectModel,
+    startSession,
     modelsLoaded,
     newSession,
     isGenerating,
@@ -128,10 +130,15 @@ export const App = () => {
     return window.pi.app.onSubmitComposer((prompt, incomingAttachments) => {
       setSurface('main');
       clearPendingAttachments();
+      const mention = newSessionMention(prompt);
+      if (mention) {
+        void startSession(mention.prompt, incomingAttachments);
+        return;
+      }
       navigate(routeForSession(activeSessionId), true);
       void sendText(prompt, incomingAttachments);
     });
-  }, [activeSessionId, clearPendingAttachments, navigate, sendText]);
+  }, [activeSessionId, clearPendingAttachments, navigate, sendText, setSurface, startSession]);
 
   useEffect(() => {
     if (settingsPanelVisible) refreshSettings();
@@ -230,8 +237,14 @@ export const App = () => {
     }
 
     setAttachments([]);
+    const mention = newSessionMention(draft);
+    if (mention) {
+      setDraft('');
+      void startSession(mention.prompt, pendingAttachments);
+      return;
+    }
     void send(pendingAttachments);
-  }, [attachments, composerExiting, draft, finishComposerExit, send, setDraft, surface]);
+  }, [attachments, composerExiting, draft, finishComposerExit, send, setDraft, startSession, surface]);
 
   const discardComposerOverlay = useCallback(() => {
     if (surface !== 'composer' || composerExiting) return;

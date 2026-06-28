@@ -70,3 +70,14 @@ export const activeSlashCommandToken = (draft: string): SlashCommandToken | unde
 };
 
 export const finderTokenPrefix = (marker: '@' | '~') => (marker === '~' ? '~/' : '@');
+
+export const newSessionMentionLabel = 'New Session';
+
+const newSessionMentionSource = `(?:^|\\s)@${newSessionMentionLabel}(?=\\s|$)`;
+const newSessionMentionMatch = new RegExp(newSessionMentionSource, 'i');
+const newSessionMentionStrip = new RegExp(newSessionMentionSource, 'gi');
+
+export const newSessionMention = (draft: string): { prompt: string } | undefined => {
+  if (!newSessionMentionMatch.test(draft)) return;
+  return { prompt: draft.replace(newSessionMentionStrip, ' ').replace(/\s+/g, ' ').trim() };
+};

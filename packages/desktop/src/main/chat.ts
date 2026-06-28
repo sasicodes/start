@@ -1980,16 +1980,18 @@ export class ChatService {
 
   async startSession({
     prompt,
-    environment
+    environment,
+    attachments = []
   }: {
     prompt: string;
     environment: SessionEnvironment;
+    attachments?: ImageAttachment[];
   }): Promise<SessionSummary> {
     const worktreePath =
       environment.type === 'worktree' ? await this.addManagedWorktree(environment.branch, environment.base) : '';
     const workspacePath = worktreePath || this.workspaceCwd;
     const session = await this.createBackgroundSession(workspacePath);
-    this.generate(session, workspacePath, prompt, []).catch(() => {});
+    this.generate(session, workspacePath, prompt, attachments).catch(() => {});
     return {
       workspacePath,
       status: 'generating',

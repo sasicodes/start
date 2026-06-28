@@ -1,6 +1,7 @@
 import type {
   ChatStatus,
   EffortLevel,
+  ImageAttachment,
   ModelOption,
   OpenSessionResult,
   ProviderAuthStatus,
@@ -152,6 +153,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       if (newSessionRequestRef.current === requestId) newSessionRequestRef.current = 0;
     }
   }, [clearSession]);
+
+  const startSession = useCallback(async (prompt: string, attachments: ImageAttachment[] = []) => {
+    try {
+      await window.pi.chat.startSession(prompt, attachments);
+    } catch {}
+  }, []);
 
   useChatEvents({
     setTurns,
@@ -399,6 +406,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     sendText,
     setDraft,
     newSession,
+    startSession,
     saveApiKey,
     selectModel,
     openSession,

@@ -1,5 +1,5 @@
 import type { RootItem } from '@preload/index';
-import { browserFinderItems, withBrowserFinderItems } from '@renderer/shared/finder/browser';
+import { staticFinderItems, withStaticFinderItems } from '@renderer/shared/finder/static';
 import { fallbackRootItemsForFinderToken, type LoadedFinderItems } from '@renderer/shared/finder/items';
 import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useMemo, useState } from 'preact/hooks';
@@ -68,16 +68,16 @@ export const useFinderItems = (token: FinderToken | undefined) => {
     if (!token) return [];
 
     const cacheKey = finderCacheKey(token);
-    if (loadedItems?.key === cacheKey) return withBrowserFinderItems(loadedItems.token, loadedItems.items);
+    if (loadedItems?.key === cacheKey) return withStaticFinderItems(loadedItems.token, loadedItems.items);
 
     const cachedItems = finderItemsCache.get(cacheKey);
-    if (cachedItems) return withBrowserFinderItems(token, cachedItems);
+    if (cachedItems) return withStaticFinderItems(token, cachedItems);
 
     const fallbackItems = fallbackRootItemsForFinderToken(
       token,
       loadedItems,
       finderItemsCache.get(folderCacheKey(token)) ?? null
     );
-    return fallbackItems.length > 0 ? withBrowserFinderItems(token, fallbackItems) : browserFinderItems(token);
+    return fallbackItems.length > 0 ? withStaticFinderItems(token, fallbackItems) : staticFinderItems(token);
   }, [loadedItems, token]);
 };
