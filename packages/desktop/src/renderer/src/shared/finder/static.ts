@@ -29,7 +29,7 @@ export const newSessionFinderItem: NewSessionFinderItem = {
   key: 'new-session',
   type: 'new-session',
   name: newSessionMentionLabel,
-  description: 'Start A New Session'
+  description: 'Start as a new session'
 };
 
 const staticFinderEntries: { item: StaticFinderItem; terms: string[] }[] = [
