@@ -4,10 +4,13 @@ import type { RefObject } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface UseTurnRoomOptions {
+  streaming: boolean;
   turnCount: number;
   turnIndex: (turnId: string) => number;
   virtualRef: RefObject<VirtualHandle | null>;
 }
+
+export const shouldFreezeRoom = (streaming: boolean, hasRoomTurn: boolean) => !streaming && hasRoomTurn;
 
 interface TurnStartScrollTop {
   value: number;
@@ -39,8 +42,9 @@ const setRoomHeight = (room: HTMLDivElement, height: number) => {
   if (room.style.height !== value) room.style.height = value;
 };
 
-export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOptions) => {
+export const useTurnRoom = ({ streaming, turnCount, turnIndex, virtualRef }: UseTurnRoomOptions) => {
   const frameRef = useRef(0);
+  const frozenRef = useRef(false);
   const roomTurnIdRef = useRef('');
   const positionedRef = useRef(false);
   const alignmentPendingRef = useRef(false);
@@ -63,7 +67,7 @@ export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOpt
       const room = roomRef.current;
       const element = scrollRef.current;
       const turnId = roomTurnIdRef.current;
-      if (!room || !element || !turnId) return;
+      if (!room || !element || !turnId || frozenRef.current) return;
 
       const index = turnIndex(turnId);
       const fallback = index >= 0 ? (virtualRef.current?.scrollTopForIndex(index) ?? null) : null;
@@ -98,6 +102,7 @@ export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOpt
     const element = scrollRef.current;
     if (!element || !turnCount) {
       roomTurnIdRef.current = '';
+      frozenRef.current = false;
       alignmentPendingRef.current = false;
       setRoomTurnId('');
       finishPositioning();
@@ -106,6 +111,7 @@ export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOpt
 
     if (scrollIntent.kind === 'bottom') {
       roomTurnIdRef.current = '';
+      frozenRef.current = false;
       alignmentPendingRef.current = false;
       setRoomTurnId('');
       scrollToBottom(element);
@@ -114,6 +120,7 @@ export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOpt
     }
 
     roomTurnIdRef.current = scrollIntent.turnId;
+    frozenRef.current = false;
     alignmentPendingRef.current = true;
     setRoomTurnId(scrollIntent.turnId);
     scheduleRoomSync(true);
@@ -134,6 +141,10 @@ export const useTurnRoom = ({ turnCount, turnIndex, virtualRef }: UseTurnRoomOpt
     scheduleRoomSync();
     return () => observer.disconnect();
   }, [roomTurnId, scheduleRoomSync]);
+
+  useEffect(() => {
+    if (shouldFreezeRoom(streaming, Boolean(roomTurnIdRef.current))) frozenRef.current = true;
+  }, [streaming]);
 
   const onVirtualRangeChange = useCallback(() => {
     if (!roomTurnIdRef.current) return;

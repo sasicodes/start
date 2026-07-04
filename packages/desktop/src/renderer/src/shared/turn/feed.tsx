@@ -1,7 +1,7 @@
 import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
 import { useScrollToBottom } from '@renderer/shared/turn/use-scroll-to-bottom';
-import { turnIdsState } from '@renderer/state/chat';
+import { turnIdsState, turnSignal } from '@renderer/state/chat';
 import type { VirtualHandle } from '@renderer/ui/virtual';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -9,6 +9,8 @@ import { useCallback, useMemo, useRef } from 'preact/hooks';
 
 export const TurnFeed = memo(() => {
   const turnIds = turnIdsState.value;
+  const lastTurnId = turnIds.at(-1) ?? '';
+  const streaming = Boolean(lastTurnId ? turnSignal(lastTurnId)?.value.streaming : false);
   const virtualRef = useRef<VirtualHandle | null>(null);
   const turnIndexes = useMemo(() => new Map(turnIds.map((turnId, index) => [turnId, index])), [turnIds]);
   const turnIndexesRef = useRef(turnIndexes);
@@ -17,6 +19,7 @@ export const TurnFeed = memo(() => {
   turnIndexesRef.current = turnIndexes;
 
   const { roomRef, scrollRef, contentRef, positioned, roomVisible, onVirtualRangeChange } = useTurnRoom({
+    streaming,
     turnIndex,
     virtualRef,
     turnCount: turnIds.length
