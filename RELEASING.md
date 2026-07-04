@@ -20,7 +20,9 @@ git push -u origin chore/bump-alpha-4
 gh pr create --title "chore: bump desktop version to 0.1.0-alpha.4"
 ```
 
-Do not pass `--push` to the bump script — the tag would point at the pre-merge commit, which may be rewritten when the PR merges.
+The bump script also creates a local tag at the current (pre-merge) commit. Leave it; step 4 deletes and recreates it on the merged commit. Do not pass `--push` — the pushed tag would point at the pre-merge commit, which changes when the PR squash-merges.
+
+If a batch of feature PRs is going out together, the bump can ride along in the last PR instead of a standalone `chore/bump-*` branch. Rebase that PR on the merged `main` first, then run the bump script on it so the version change is the final commit.
 
 ## 3. Merge the PR
 
@@ -34,6 +36,8 @@ git push origin v0.1.0-alpha.4
 ```
 
 The release workflow runs on the tag push and publishes the macOS artifacts.
+
+`git tag -v` may fail locally with `gpg.ssh.allowedSignersFile needs to be configured` — that is a local verification config, not a signing failure. The pushed tag is still signed, and GitHub shows it as Verified.
 
 ## Script version arguments
 
