@@ -120,7 +120,7 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
   });
 
   window.webContents.on('before-input-event', (event, input) => {
-    if (!isCloseWindowInput(input)) return;
+    if (!isCloseWindowInput(input, isMac)) return;
 
     event.preventDefault();
     window.close();
