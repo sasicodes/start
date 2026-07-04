@@ -56,6 +56,8 @@ const nextQueuedMessages = (current: QueuedMessage[], messages: QueuedMessage[])
 const streamingAssistantId = (turns: OpenSessionResult['turns']) =>
   turns?.findLast((turn) => turn.role === 'assistant' && turn.streaming)?.id ?? null;
 
+const supersededOpenError = 'Session open was superseded.';
+
 export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOptions) => {
   const [draft, setDraft] = useState('');
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -212,7 +214,19 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applyOpenSession = useCallback(
     async (result: OpenSessionResult, requestId: number) => {
-      if (!result.ok) return false;
+      if (!result.ok) {
+        const staleRequest = sessionRequestRef.current !== requestId;
+        const message = result.error ?? '';
+        if (!staleRequest && message && message !== supersededOpenError) {
+          assistantIdRef.current = null;
+          terminalIdRef.current = null;
+          setIsGenerating(false);
+          setLoadedSessionId('');
+          updateActiveSessionId('');
+          setTurns(() => [createTurn('system', message)]);
+        }
+        return false;
+      }
 
       let nextStatus: ChatStatus;
       try {
