@@ -20,7 +20,7 @@ interface TurnActivityProps {
 export const TurnActivity = ({ items, details, working, thinking, createdAt }: TurnActivityProps) => {
   const [override, setOverride] = useState<boolean | null>(null);
   const hasDetails = hasActivityDetails(details, thinking, items);
-  const open = override !== null ? override : working;
+  const open = override ?? false;
 
   if (!working && !hasDetails) return null;
 
