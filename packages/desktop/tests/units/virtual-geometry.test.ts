@@ -1,4 +1,5 @@
 import {
+  prependShift,
   totalHeight,
   visibleRange,
   cumulativeHeights,
@@ -109,6 +110,27 @@ describe('visibleRange', () => {
 
   it('keeps the start at 0 when overscan reaches above the list', () => {
     expect(visibleRange(cumulative, 20, 80, 100)).toEqual({ end: 2, start: 0 });
+  });
+});
+
+describe('prependShift', () => {
+  const cumulative = cumulativeHeights([100, 100, 100, 100, 100]);
+
+  it('returns 0 when nothing was inserted above the anchor', () => {
+    expect(prependShift(cumulative, 0)).toBe(0);
+  });
+
+  it('returns 0 for non-positive anchors', () => {
+    expect(prependShift(cumulative, -1)).toBe(0);
+  });
+
+  it('returns the height of the region above the anchor', () => {
+    expect(prependShift(cumulative, 2)).toBe(200);
+    expect(prependShift(cumulative, 5)).toBe(500);
+  });
+
+  it('returns 0 when the anchor is out of range', () => {
+    expect(prependShift(cumulative, 99)).toBe(0);
   });
 });
 

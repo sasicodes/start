@@ -1,4 +1,5 @@
 import {
+  prependShift,
   totalHeight,
   visibleRange,
   cumulativeHeights,
@@ -158,6 +159,7 @@ export const Virtual = <T,>({
 }: VirtualProps<T>) => {
   const itemsRef = useRef(items);
   const pinnedRef = useRef(true);
+  const firstKeyRef = useRef('');
   const appliedScrollDeltaRef = useRef(0);
   const totalRef = useRef<number | null>(null);
   const estimateHeightRef = useRef(estimateHeight);
@@ -258,6 +260,26 @@ export const Virtual = <T,>({
     }
     setHeightRevision((revision) => revision + 1);
   }, []);
+
+  useLayoutEffect(() => {
+    const firstItem = items[0];
+    const firstKey = firstItem ? getKey(firstItem) : '';
+    const previousFirstKey = firstKeyRef.current;
+    firstKeyRef.current = firstKey;
+    if (!previousFirstKey || previousFirstKey === firstKey) return;
+    if (preserveScrollEnd && pinnedRef.current) return;
+
+    const anchorIndex = itemIndexRef.current.get(previousFirstKey) ?? 0;
+    const shift = prependShift(cumulativeRef.current, anchorIndex);
+    if (shift <= 0) return;
+
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    if (!scrollAncestor) return;
+
+    scrollAncestor.scrollTop += shift;
+    appliedScrollDeltaRef.current += shift;
+  }, [items, getKey, preserveScrollEnd]);
 
   useLayoutEffect(() => {
     if (totalRef.current === null) {
