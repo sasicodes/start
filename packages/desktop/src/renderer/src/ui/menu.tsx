@@ -13,10 +13,11 @@ export const MenuSurface = ({ className, children }: MenuChromeProps) => {
   return <div class={tw('rounded-2xl bg-panel p-1 shadow-panel', className)}>{children}</div>;
 };
 
-export const MenuPanel = ({ className, children }: MenuChromeProps) => {
+export const MenuPanel = ({ className, children, finalFocus }: MenuChromeProps & { finalFocus?: boolean }) => {
   return (
     <Menu.Popup
       onMouseDown={(event: MouseEvent) => event.stopPropagation()}
+      {...(finalFocus !== undefined ? { finalFocus } : {})}
       className="outline-0 transition-[opacity,translate] duration-75 ease-out data-[ending-style]:translate-y-1 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-1 data-[starting-style]:opacity-0"
     >
       <MenuSurface {...(className ? { className } : {})}>{children}</MenuSurface>

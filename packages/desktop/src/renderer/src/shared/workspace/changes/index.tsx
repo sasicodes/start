@@ -169,7 +169,7 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
               </button>
             )}
             {hasVisibleDiff && (
-              <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'}>
+              <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'} side="right">
                 <button
                   type="button"
                   onClick={toggleFoldAll}

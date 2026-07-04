@@ -193,7 +193,7 @@ export const RecentSessions = memo(
       [onOpenSession]
     );
 
-    useAppHotkey(appHotkeys.recents, () => updateOpen(!open));
+    useAppHotkey(appHotkeys.recents, () => updateOpen(!open), { capture: open });
 
     const attentionStatuses = recentSessionsAttentionStatuses(sessions, activeSessionId);
     const attention = topAttentionStatus(attentionStatuses);
@@ -234,7 +234,7 @@ export const RecentSessions = memo(
 
     return (
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
-        <Tooltip label="Recents" disabled={open}>
+        <Tooltip label="Recents" shortcut="R" disabled={open}>
           <div class="block size-11.5 rounded-full">
             <AppMenu.Trigger
               aria-label="Recent sessions"
@@ -247,7 +247,7 @@ export const RecentSessions = memo(
         </Tooltip>
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
-            <MenuPanel className="w-90">
+            <MenuPanel className="w-90" finalFocus={false}>
               <div
                 class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
                 onScroll={handleSessionsScroll}

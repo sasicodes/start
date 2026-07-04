@@ -20,7 +20,7 @@ export const Settings = memo(({ open, onOpen }: SettingsProps) => {
   const appFocused = useAppFocusState();
 
   return (
-    <Tooltip label="Settings" disabled={open || !appFocused}>
+    <Tooltip label="Settings" shortcut="Command+," disabled={open || !appFocused}>
       <motion.button
         type="button"
         animate={appFocused ? bottomBubbleVisibleMotion : bottomBubbleHiddenMotion}

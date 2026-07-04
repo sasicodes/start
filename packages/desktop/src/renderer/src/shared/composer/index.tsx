@@ -6,7 +6,6 @@ import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
 import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import type { ComposerProps } from '@renderer/shared/composer/types';
-import { useComposerHeight } from '@renderer/shared/composer/use-height';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
@@ -63,11 +62,8 @@ export const Composer = memo(
   }: ComposerProps) => {
     const isCommandMode = commandMode(draft);
     const singleLine = overlay;
-    const shellRef = useRef<HTMLDivElement>(null);
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaLayoutRef = useRef(initialComposerTextareaLayoutState());
-
-    useComposerHeight(shellRef, !overlay);
     const [isMultiline, setIsMultiline] = useState(false);
     const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
     const resetTextareaLayout = useCallback((element: HTMLTextAreaElement) => {
@@ -219,7 +215,6 @@ export const Composer = memo(
 
     return (
       <motion.div
-        ref={shellRef}
         {...(overlay ? { key: revealKey } : {})}
         {...(!overlay
           ? { layout: 'position' as const, layoutDependency: centered, transition: { layout: composerDockTransition } }

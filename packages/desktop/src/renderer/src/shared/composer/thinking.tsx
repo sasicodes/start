@@ -11,7 +11,7 @@ interface ThinkingProps {
 
 export const Thinking = ({ disabled, label, level, onNext }: ThinkingProps) => {
   return (
-    <Tooltip label={label}>
+    <Tooltip label={label} shortcut="E">
       <button
         type="button"
         disabled={disabled}

@@ -1,4 +1,5 @@
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip';
+import { shortcutKeys } from '@renderer/shared/shortcuts/format';
 import type { ComponentChildren, VNode } from 'preact';
 
 export const TooltipProvider = ({ children }: { children: ComponentChildren }) => {
@@ -8,12 +9,14 @@ export const TooltipProvider = ({ children }: { children: ComponentChildren }) =
 export const Tooltip = ({
   label,
   children,
+  shortcut = '',
   disabled = false,
   side = 'top',
   align = 'center'
 }: {
   label: ComponentChildren;
   children: VNode;
+  shortcut?: string;
   disabled?: boolean;
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'right' | 'bottom' | 'left';
@@ -29,8 +32,20 @@ export const Tooltip = ({
           collisionPadding={12}
           className="tooltip-positioner z-50"
         >
-          <BaseTooltip.Popup className="tooltip-popup pointer-events-none rounded-full border-0 bg-tooltip px-3 py-1.75 text-xs leading-none font-medium whitespace-nowrap text-zinc-950 opacity-100 shadow-sm transition-[opacity,transform] duration-100 ease-out select-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <BaseTooltip.Popup className="tooltip-popup pointer-events-none flex items-center gap-2 rounded-full border-0 bg-tooltip px-3 py-1.75 text-xs leading-none font-medium whitespace-nowrap text-zinc-950 opacity-100 shadow-sm transition-[opacity,transform] duration-100 ease-out select-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             {label}
+            {shortcut && (
+              <span class="flex items-center gap-0.5">
+                {shortcutKeys(shortcut).map((key, index) => (
+                  <kbd
+                    key={`${shortcut}-${index}`}
+                    class="grid h-4 min-w-4 place-items-center rounded bg-black/10 px-1 font-sans text-[10px] leading-none font-semibold text-zinc-950/60"
+                  >
+                    {key}
+                  </kbd>
+                ))}
+              </span>
+            )}
           </BaseTooltip.Popup>
         </BaseTooltip.Positioner>
       </BaseTooltip.Portal>

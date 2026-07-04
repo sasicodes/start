@@ -1,15 +1,11 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { isEditableTarget } from '@renderer/utils/dom';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
 interface SessionPanelsOptions {
   surface: AppSurface;
 }
-
-const isEditableTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName);
-};
 
 const isBracketToggle = (event: KeyboardEvent) => {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false;
