@@ -31,7 +31,6 @@ export const TurnArticles = memo(({ virtualRef, onRangeChange, preserveScrollEnd
       getKey={turnKey}
       className="w-full"
       apiRef={virtualRef}
-      estimateHeightAsMinimum
       onRangeChange={onRangeChange}
       itemClassName="flex flex-col"
       estimateHeight={estimateTurnIdHeight}

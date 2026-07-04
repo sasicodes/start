@@ -2,6 +2,7 @@ import {
   prependShift,
   totalHeight,
   visibleRange,
+  resolveItemHeight,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
@@ -110,6 +111,21 @@ describe('visibleRange', () => {
 
   it('keeps the start at 0 when overscan reaches above the list', () => {
     expect(visibleRange(cumulative, 20, 80, 100)).toEqual({ end: 2, start: 0 });
+  });
+});
+
+describe('resolveItemHeight', () => {
+  it('trusts a measured height even when the estimate overshoots it', () => {
+    expect(resolveItemHeight(120, 300, 0)).toBe(120);
+  });
+
+  it('falls back to the estimate when the item is unmeasured', () => {
+    expect(resolveItemHeight(undefined, 300, 0)).toBe(300);
+  });
+
+  it('adds the trailing gap to either source', () => {
+    expect(resolveItemHeight(120, 300, 12)).toBe(132);
+    expect(resolveItemHeight(undefined, 300, 12)).toBe(312);
   });
 });
 

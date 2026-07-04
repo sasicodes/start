@@ -48,6 +48,9 @@ export const totalHeight = (cumulative: Float64Array) => cumulative[cumulative.l
 export const prependShift = (cumulative: Float64Array, anchorIndex: number) =>
   anchorIndex > 0 ? (cumulative[anchorIndex] ?? 0) : 0;
 
+export const resolveItemHeight = (cachedHeight: number | undefined, estimatedHeight: number, gap: number) =>
+  (cachedHeight ?? estimatedHeight) + gap;
+
 export const initialVisibleEnd = (cumulative: Float64Array, viewportGuess: number) => {
   const last = cumulative.length - 1;
   for (let index = 0; index < last; index += 1) {

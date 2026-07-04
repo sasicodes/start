@@ -2,6 +2,7 @@ import {
   prependShift,
   totalHeight,
   visibleRange,
+  resolveItemHeight,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
@@ -26,7 +27,6 @@ interface VirtualProps<T> {
   items: ReadonlyArray<T>;
   preserveScrollEnd?: boolean;
   getKey: (item: T) => string;
-  estimateHeightAsMinimum?: boolean;
   estimateHeight: (item: T) => number;
   apiRef?: RefObject<VirtualHandle | null>;
   onRangeChange?: (range: VisibleRange) => void;
@@ -154,8 +154,7 @@ export const Virtual = <T,>({
   estimateHeight,
   itemClassName = '',
   preserveScrollEnd = false,
-  overscan = defaultOverscan,
-  estimateHeightAsMinimum = false
+  overscan = defaultOverscan
 }: VirtualProps<T>) => {
   const itemsRef = useRef(items);
   const pinnedRef = useRef(true);
@@ -179,19 +178,13 @@ export const Virtual = <T,>({
     const nextIndexes = new Map<string, number>();
     const nextHeights = items.map((item, index) => {
       const key = getKey(item);
-      const cachedHeight = heightCacheRef.current.get(key);
-      const estimatedHeight = estimateHeight(item);
-      const contentHeight =
-        estimateHeightAsMinimum && typeof cachedHeight === 'number'
-          ? Math.max(cachedHeight, estimatedHeight)
-          : (cachedHeight ?? estimatedHeight);
       nextIndexes.set(key, index);
-      return contentHeight + (index < last ? gap : 0);
+      return resolveItemHeight(heightCacheRef.current.get(key), estimateHeight(item), index < last ? gap : 0);
     });
 
     itemIndexRef.current = nextIndexes;
     return nextHeights;
-  }, [gap, items, getKey, estimateHeight, heightRevision, estimateHeightAsMinimum]);
+  }, [gap, items, getKey, estimateHeight, heightRevision]);
   const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
   const total = totalHeight(cumulative);
   const range = useVisibleRange(cumulative, overscan, containerRef);
