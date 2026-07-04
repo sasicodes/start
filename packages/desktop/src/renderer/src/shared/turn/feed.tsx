@@ -40,13 +40,16 @@ export const TurnFeed = memo(() => {
       ref={scrollRef}
       aria-live="polite"
       data-turn-scroll="true"
-      style={{ paddingBottom }}
       class={tw(
         'absolute inset-0 overflow-y-auto pt-9 [overflow-anchor:none] [&::-webkit-scrollbar]:hidden',
         !positioned && 'opacity-0'
       )}
     >
-      <div ref={contentRef} class="mx-auto flex min-h-full max-w-3xl flex-col justify-end px-5">
+      <div
+        ref={contentRef}
+        style={{ paddingBottom }}
+        class="mx-auto flex min-h-full max-w-3xl flex-col justify-end px-5"
+      >
         <TurnArticles virtualRef={virtualRef} preserveScrollEnd={!roomVisible} onRangeChange={onVirtualRangeChange} />
         {roomVisible && <div ref={roomRef} class="shrink-0" aria-hidden="true" />}
       </div>
