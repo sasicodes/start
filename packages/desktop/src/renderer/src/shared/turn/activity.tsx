@@ -18,9 +18,8 @@ interface TurnActivityProps {
 }
 
 export const TurnActivity = ({ items, details, working, thinking, createdAt }: TurnActivityProps) => {
-  const [override, setOverride] = useState<boolean | null>(null);
+  const [open, setOpen] = useState(false);
   const hasDetails = hasActivityDetails(details, thinking, items);
-  const open = override ?? false;
 
   if (!working && !hasDetails) return null;
 
@@ -37,7 +36,7 @@ export const TurnActivity = ({ items, details, working, thinking, createdAt }: T
     <div class="mb-1.5 max-w-full text-sm text-soft">
       <button
         type="button"
-        {...(hasDetails ? { 'aria-expanded': open, onClick: () => setOverride(!open) } : { disabled: true })}
+        {...(hasDetails ? { 'aria-expanded': open, onClick: () => setOpen(!open) } : { disabled: true })}
         class={tw(
           'inline-flex max-w-full items-center gap-1 border-0 bg-transparent p-0 text-left text-sm text-soft outline-0 transition-colors disabled:cursor-default',
           hasDetails && 'hover:text-hover focus-visible:text-hover',

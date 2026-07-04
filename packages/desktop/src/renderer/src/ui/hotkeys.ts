@@ -41,12 +41,11 @@ export const useAppHotkey = (hotkey: AppHotkey, callback: AppHotkeyCallback, { c
   callbackRef.current = callback;
 
   useEffect(() => {
+    const invoke: AppHotkeyCallback = (event, context) => callbackRef.current(event, context);
+
     if (capture) {
       const handlers = hotkey.shortcuts.map((shortcut) =>
-        createHotkeyHandler(shortcut, (event, context) => callbackRef.current(event, context), {
-          preventDefault: true,
-          stopPropagation: true
-        })
+        createHotkeyHandler(shortcut, invoke, { preventDefault: true, stopPropagation: true })
       );
 
       const onKeyDown = (event: KeyboardEvent) => {
@@ -59,7 +58,7 @@ export const useAppHotkey = (hotkey: AppHotkey, callback: AppHotkeyCallback, { c
     }
 
     const handles = hotkey.shortcuts.map((shortcut) =>
-      getHotkeyManager().register(shortcut, (event, context) => callbackRef.current(event, context), {
+      getHotkeyManager().register(shortcut, invoke, {
         meta: {
           name: hotkey.name
         },
