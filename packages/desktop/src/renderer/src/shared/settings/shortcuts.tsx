@@ -15,6 +15,7 @@ export const Shortcuts = memo(() => {
     { label: 'Keyboard shortcuts', chords: ['Command+/'] },
     { label: 'Toggle workspace folders', chords: ['W'] },
     { label: 'Toggle recent sessions', chords: ['R'] },
+    { label: 'Toggle model picker', chords: ['M'] },
     { label: 'Toggle effort level', chords: ['E'] },
     { label: 'Toggle side panel', chords: [']'] },
     { label: 'Submit prompt', chords: ['Enter'] },

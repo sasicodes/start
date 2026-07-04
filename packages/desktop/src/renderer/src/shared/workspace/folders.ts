@@ -34,10 +34,10 @@ const emitWorkspaceFolders = () => {
 export const cachedWorkspaceFolders = (workspacePath?: string) =>
   withCurrentWorkspace(workspaceFoldersCache ?? [], workspacePath);
 
-export const loadWorkspaceFolders = async () => {
+export const loadWorkspaceFolders = async (prune = false) => {
   if (!workspaceFoldersRequest) {
     workspaceFoldersRequest = window.pi.chat
-      .workspaceFolders()
+      .workspaceFolders(prune)
       .then((folders) => {
         workspaceFoldersCache = folders;
         emitWorkspaceFolders();
@@ -51,14 +51,14 @@ export const loadWorkspaceFolders = async () => {
   return workspaceFoldersRequest;
 };
 
-export const primeWorkspaceFolders = (workspacePath: string | undefined) => {
+export const primeWorkspaceFolders = (workspacePath: string | undefined, prune = false) => {
   const nextFolders = cachedWorkspaceFolders(workspacePath);
   if (nextFolders !== workspaceFoldersCache) {
     workspaceFoldersCache = nextFolders;
     emitWorkspaceFolders();
   }
 
-  loadWorkspaceFolders().catch(emitWorkspaceFolders);
+  loadWorkspaceFolders(prune).catch(emitWorkspaceFolders);
 };
 
 const refreshWorkspaceFolders = () => {
@@ -98,9 +98,12 @@ export const useWorkspaceFolders = ({ active = true, workspacePath }: UseWorkspa
     setFolders(cachedWorkspaceFolders(workspacePath));
   }, [workspacePath]);
 
-  const refreshFolders = useCallback(() => {
-    primeWorkspaceFolders(workspacePath);
-  }, [workspacePath]);
+  const refreshFolders = useCallback(
+    (prune = false) => {
+      primeWorkspaceFolders(workspacePath, prune);
+    },
+    [workspacePath]
+  );
 
   useEffect(() => {
     if (!active) return;

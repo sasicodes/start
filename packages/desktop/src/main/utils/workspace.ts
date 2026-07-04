@@ -1,5 +1,14 @@
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { relativeInside } from '@main/search/path';
+
+export const directoryExists = async (workspacePath: string) => {
+  try {
+    return (await stat(workspacePath)).isDirectory();
+  } catch {
+    return false;
+  }
+};
 
 export const normalizeWorkspacePath = (workspacePath: string) => workspacePath.replace(/[/\\]+$/u, '');
 

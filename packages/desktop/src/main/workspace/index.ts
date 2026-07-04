@@ -1,9 +1,9 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { type GitChangeSummary, getGitBranch, getGitChangeSummary, isGitRepository } from '@main/git';
 import { startCacheDir } from '@main/storage';
 import { logger } from '@main/utils/logger';
-import { workspaceDisplayName } from '@main/utils/workspace';
+import { directoryExists, workspaceDisplayName } from '@main/utils/workspace';
 import { generatedWorkspaceIconDataUrl, workspaceIconDataUrl } from '@main/workspace/icons';
 
 export type WorkspaceInfo = {
@@ -99,11 +99,6 @@ const sameWorkspaceInfo = (first: WorkspaceInfo | undefined, second: WorkspaceIn
   );
 };
 
-const workspaceExists = async (cwd: string) => {
-  const details = await stat(cwd).catch(() => {});
-  return Boolean(details?.isDirectory());
-};
-
 const trimWorkspaceCache = () => {
   while (workspaceCache.size > maxWorkspaceCacheSize) {
     const oldestKey = workspaceCache.keys().next().value;
@@ -160,7 +155,7 @@ const storeWorkspace = (workspace: WorkspaceInfo) => {
 
 const readWorkspace = async (cwd: string): Promise<WorkspaceInfo> => {
   const folderName = workspaceDisplayName(cwd);
-  if (!(await workspaceExists(cwd))) {
+  if (!(await directoryExists(cwd))) {
     return workspaceInfo(cwd, folderName, generatedWorkspaceIconDataUrl(folderName));
   }
 
@@ -211,7 +206,7 @@ export const getCachedWorkspace = async (cwd = process.cwd()) => {
   await loadWorkspaceCache();
 
   const cached = workspaceCache.get(key);
-  if (cached && (await workspaceExists(key))) return visibleWorkspaceInfo(cached);
+  if (cached && (await directoryExists(key))) return visibleWorkspaceInfo(cached);
   return;
 };
 
@@ -220,7 +215,7 @@ export const getWorkspace = async (cwd = process.cwd()) => {
   await loadWorkspaceCache();
 
   const cached = workspaceCache.get(key);
-  if (cached && (await workspaceExists(key))) {
+  if (cached && (await directoryExists(key))) {
     void refreshWorkspace(key, true);
     return visibleWorkspaceInfo(cached);
   }

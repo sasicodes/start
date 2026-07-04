@@ -96,7 +96,7 @@ import {
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
-import { workspaceDisplayName } from '@main/utils/workspace';
+import { directoryExists, workspaceDisplayName } from '@main/utils/workspace';
 import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
@@ -814,7 +814,7 @@ export class ChatService {
     }));
   }
 
-  async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
+  async getWorkspaceFolders(prune = false): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
@@ -879,7 +879,11 @@ export class ChatService {
       });
     }
 
-    return [...folders.values()].sort((a, b) => b.modified - a.modified);
+    const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
+    if (!prune) return list;
+
+    const existing = await Promise.all(list.map((folder) => directoryExists(folder.path)));
+    return list.filter((folder, index) => folder.path === activeRoot || existing[index]);
   }
 
   async prepareDroppedFiles(paths: string[]): Promise<PreparedDropFiles> {
