@@ -55,6 +55,7 @@ const FinderRow = ({ item, onSelect, activeItemKey }: FinderRowProps) => {
   const selected = itemKey === activeItemKey;
   const isDirectory = item.type === 'directory';
   const isFile = isDirectory || item.type === 'file';
+  const isStatic = item.type === 'browser' || item.type === 'new-session';
   const label = isDirectory ? `${item.name}/` : item.name;
   const description = item.description ? (isFile ? `[${item.description}]` : item.description) : '';
 
@@ -80,7 +81,8 @@ const FinderRow = ({ item, onSelect, activeItemKey }: FinderRowProps) => {
       {description && (
         <span
           class={tw(
-            'min-w-0 truncate text-xs leading-5 font-medium text-soft',
+            'min-w-0 truncate text-xs leading-5 font-medium',
+            isStatic ? 'text-progress' : 'text-soft',
             isCommand ? 'max-w-full' : 'max-w-[68%] flex-none text-right'
           )}
         >
