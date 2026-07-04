@@ -614,6 +614,7 @@ const startQuitCleanup = async () => {
   stopMainWindowChanged = null;
   stopAutoUpdateChecks();
   desktopRelay.stop();
+  setStayAwake(false);
   gitChanges.dispose();
   chat.dispose();
   deactivateWorkspaceAccess();
