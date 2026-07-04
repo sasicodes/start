@@ -44,7 +44,7 @@ describe('estimateTurnHeight', () => {
     ).toBe(62);
   });
 
-  it('uses activity items instead of double-counting legacy thinking', () => {
+  it('estimates activity as one collapsed header regardless of legacy thinking', () => {
     expect(
       estimateTurnHeight(
         turn({
@@ -61,6 +61,18 @@ describe('estimateTurnHeight', () => {
           ]
         })
       )
-    ).toBe(74);
+    ).toBe(70);
+  });
+
+  it('does not inflate the estimate for turns with many activity items', () => {
+    const activityItems = Array.from({ length: 12 }, (_, index) => ({
+      createdAt: 0,
+      updatedAt: 0,
+      id: `activity-${index}`,
+      type: 'thinking' as const,
+      text: 'step'
+    }));
+
+    expect(estimateTurnHeight(turn({ text: 'short', activityItems }))).toBe(70);
   });
 });
