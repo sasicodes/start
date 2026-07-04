@@ -1,7 +1,7 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
-import { requestDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
+import { diffFold, nextDiffFold, setDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
   useGitPatch,
@@ -106,21 +106,18 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
 export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState<DiffReadyState>({ path, ready: false });
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
-  const [allCollapsed, setAllCollapsed] = useState(false);
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
   const ready = diffReady.path === path && diffReady.ready;
   const patch = useGitPatch(path, Boolean(path && ready));
+  const allCollapsed = diffFold.value === 'collapsed';
 
   useEffect(() => {
-    setAllCollapsed(false);
+    setDiffFold(null);
     const timer = window.setTimeout(() => setDiffReady({ path, ready: true }), 190);
     return () => window.clearTimeout(timer);
   }, [path]);
 
-  const toggleFoldAll = () => {
-    requestDiffFold(allCollapsed ? 'expand' : 'collapse');
-    setAllCollapsed((collapsed) => !collapsed);
-  };
+  const toggleFoldAll = () => setDiffFold(nextDiffFold(diffFold.value));
 
   useEffect(() => {
     if (patch.kind !== 'ready' || patch.patch.sections.length === 0) return;

@@ -1,24 +1,36 @@
-import { diffFoldCommand, requestDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
+import { diffFold, foldOpenDefault, nextDiffFold, setDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-describe('requestDiffFold', () => {
+describe('nextDiffFold', () => {
+  it('toggles between collapsed and expanded, starting from collapse', () => {
+    expect(nextDiffFold(null)).toBe('collapsed');
+    expect(nextDiffFold('collapsed')).toBe('expanded');
+    expect(nextDiffFold('expanded')).toBe('collapsed');
+  });
+});
+
+describe('foldOpenDefault', () => {
+  it('uses the per-file default when no bulk fold is set', () => {
+    expect(foldOpenDefault(null, true)).toBe(true);
+    expect(foldOpenDefault(null, false)).toBe(false);
+  });
+
+  it('overrides every file when a bulk fold is set', () => {
+    expect(foldOpenDefault('collapsed', true)).toBe(false);
+    expect(foldOpenDefault('expanded', false)).toBe(true);
+  });
+});
+
+describe('setDiffFold', () => {
   beforeEach(() => {
-    diffFoldCommand.value = null;
+    diffFold.value = null;
   });
 
-  it('emits the requested action with an incrementing nonce', () => {
-    requestDiffFold('collapse');
-    expect(diffFoldCommand.value).toEqual({ action: 'collapse', nonce: 1 });
+  it('writes the shared fold state so late-mounting viewers read it', () => {
+    setDiffFold('collapsed');
+    expect(diffFold.value).toBe('collapsed');
 
-    requestDiffFold('expand');
-    expect(diffFoldCommand.value).toEqual({ action: 'expand', nonce: 2 });
-  });
-
-  it('changes identity on every request so repeated actions still notify', () => {
-    requestDiffFold('collapse');
-    const first = diffFoldCommand.value;
-    requestDiffFold('collapse');
-    expect(diffFoldCommand.value).not.toBe(first);
-    expect(diffFoldCommand.value?.nonce).toBe(2);
+    setDiffFold(null);
+    expect(diffFold.value).toBeNull();
   });
 });

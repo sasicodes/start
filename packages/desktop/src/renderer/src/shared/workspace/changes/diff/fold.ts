@@ -1,14 +1,15 @@
 import { signal } from '@preact/signals';
 
-export type DiffFoldAction = 'collapse' | 'expand';
+export type DiffFold = 'collapsed' | 'expanded';
 
-export interface DiffFoldCommand {
-  nonce: number;
-  action: DiffFoldAction;
-}
+export const diffFold = signal<DiffFold | null>(null);
 
-export const diffFoldCommand = signal<DiffFoldCommand | null>(null);
-
-export const requestDiffFold = (action: DiffFoldAction) => {
-  diffFoldCommand.value = { action, nonce: (diffFoldCommand.value?.nonce ?? 0) + 1 };
+export const setDiffFold = (fold: DiffFold | null) => {
+  diffFold.value = fold;
 };
+
+export const nextDiffFold = (current: DiffFold | null): DiffFold =>
+  current === 'collapsed' ? 'expanded' : 'collapsed';
+
+export const foldOpenDefault = (fold: DiffFold | null, byDefault: boolean) =>
+  fold === null ? byDefault : fold === 'expanded';

@@ -2,7 +2,7 @@ import type { GitPatchSection } from '@preload/index';
 import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
 import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
-import { diffFoldCommand } from '@renderer/shared/workspace/changes/diff/fold';
+import { type DiffFold, diffFold, foldOpenDefault } from '@renderer/shared/workspace/changes/diff/fold';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
@@ -19,6 +19,13 @@ interface LoadedDiffEntriesState {
   sections: GitPatchSection[];
   state: DiffEntriesState;
 }
+
+interface FoldToggles {
+  fold: DiffFold | null;
+  map: ReadonlyMap<string, boolean>;
+}
+
+const emptyToggles: ReadonlyMap<string, boolean> = new Map();
 
 const entryKey = (entry: DiffEntry) => entry.key;
 const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
@@ -81,31 +88,29 @@ export const GitDiffViewer = ({
   const entries = ready ? entryState.entries : [];
   const limited = sections.some((section) => section.limited && !section.patch);
   const [highlightRevision, setHighlightRevision] = useState(0);
-  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+  const [toggled, setToggled] = useState<FoldToggles>(() => ({ fold: diffFold.value, map: new Map() }));
 
-  const foldCommand = diffFoldCommand.value;
-  const entriesRef = useRef(entries);
-  entriesRef.current = entries;
-  const appliedFoldNonceRef = useRef(foldCommand?.nonce ?? 0);
-
-  useEffect(() => {
-    if (!foldCommand || foldCommand.nonce === appliedFoldNonceRef.current) return;
-    appliedFoldNonceRef.current = foldCommand.nonce;
-    const open = foldCommand.action === 'expand';
-    setToggled(new Map(entriesRef.current.map((entry) => [entry.key, open])));
-  }, [foldCommand]);
+  const fold = diffFold.value;
+  const overrides = toggled.fold === fold ? toggled.map : emptyToggles;
 
   const onHighlight = useCallback(() => {
     setHighlightRevision((value) => value + 1);
   }, []);
 
-  const onToggle = useCallback((key: string, currentlyOpen: boolean) => {
-    setToggled((previous) => toggleOpen(previous, key, currentlyOpen));
-  }, []);
+  const onToggle = useCallback(
+    (key: string, currentlyOpen: boolean) => {
+      setToggled((previous) => {
+        const base = previous.fold === fold ? previous.map : emptyToggles;
+        return { fold, map: toggleOpen(base, key, currentlyOpen) };
+      });
+    },
+    [fold]
+  );
 
   const renderEntry = useCallback(
     (entry: DiffEntry) => {
-      const open = effectiveOpen(toggled, entry.key, isOpenByDefault(entry.file, patchFileKind(entry.file)));
+      const byDefault = foldOpenDefault(fold, isOpenByDefault(entry.file, patchFileKind(entry.file)));
+      const open = effectiveOpen(overrides, entry.key, byDefault);
       return (
         <DiffFile
           cwd={cwd}
@@ -121,7 +126,7 @@ export const GitDiffViewer = ({
         />
       );
     },
-    [cwd, toggled, onToggle, viewMode, onHighlight, highlightRevision]
+    [cwd, fold, overrides, onToggle, viewMode, onHighlight, highlightRevision]
   );
 
   return (
