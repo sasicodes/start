@@ -128,7 +128,7 @@ export const startAutoUpdateChecks = () => {
   if (!isProd || stopUpdateEvents) return;
 
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = app.getVersion().includes('-');
 
   const onCheckingForUpdate = () => setUpdateState({ status: 'checking' });
