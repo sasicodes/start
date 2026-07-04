@@ -18,6 +18,11 @@ describe('isCloseWindowInput', () => {
     expect(isCloseWindowInput({ key: 'W', type: 'keyDown', meta: true }, false)).toBe(false);
   });
 
+  it('still closes when both modifier bits are reported', () => {
+    expect(isCloseWindowInput({ key: 'w', type: 'keyDown', meta: true, control: true }, true)).toBe(true);
+    expect(isCloseWindowInput({ key: 'w', type: 'keyDown', meta: true, control: true }, false)).toBe(true);
+  });
+
   it('accepts key codes', () => {
     expect(isCloseWindowInput({ code: 'KeyW', type: 'keyDown', meta: true }, true)).toBe(true);
     expect(isCloseWindowInput({ code: 'KeyW', type: 'keyDown', control: true }, false)).toBe(true);
