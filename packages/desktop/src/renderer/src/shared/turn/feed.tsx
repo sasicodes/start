@@ -1,4 +1,5 @@
 import { useComputed } from '@preact/signals';
+import { composerHeight } from '@renderer/shared/composer/state';
 import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
 import { useScrollToBottom } from '@renderer/shared/turn/use-scroll-to-bottom';
@@ -7,6 +8,9 @@ import type { VirtualHandle } from '@renderer/ui/virtual';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
 import { useCallback, useMemo, useRef } from 'preact/hooks';
+
+const composerFeedClearance = 34;
+const defaultFeedPaddingBottom = 112;
 
 export const TurnFeed = memo(() => {
   const turnIds = turnIdsState.value;
@@ -26,13 +30,19 @@ export const TurnFeed = memo(() => {
   });
   useScrollToBottom(scrollRef, contentRef);
 
+  const measuredComposerHeight = composerHeight.value;
+  const paddingBottom = measuredComposerHeight
+    ? measuredComposerHeight + composerFeedClearance
+    : defaultFeedPaddingBottom;
+
   return (
     <section
       ref={scrollRef}
       aria-live="polite"
       data-turn-scroll="true"
+      style={{ paddingBottom }}
       class={tw(
-        'absolute inset-0 overflow-y-auto pt-9 pb-28 [overflow-anchor:none] [&::-webkit-scrollbar]:hidden',
+        'absolute inset-0 overflow-y-auto pt-9 [overflow-anchor:none] [&::-webkit-scrollbar]:hidden',
         !positioned && 'opacity-0'
       )}
     >
