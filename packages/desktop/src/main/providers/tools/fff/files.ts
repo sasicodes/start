@@ -49,6 +49,7 @@ export const findPathsWithRg = async ({
     });
     return pathMatchesFromLines(stdout, limit);
   } catch (error) {
+    if (signal?.aborted) throw error;
     if (v.safeParse(noMatchesSchema, error).success) return [];
     return null;
   }

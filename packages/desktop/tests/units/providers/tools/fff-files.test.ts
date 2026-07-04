@@ -93,6 +93,16 @@ describe('findPathsWithRg', () => {
     );
   });
 
+  it('propagates cancellation failures', async () => {
+    failWith(new Error('cancelled'));
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      findPathsWithRg({ limit: 10, cwd: '/repo', pattern: 'chat', signal: controller.signal })
+    ).rejects.toThrow('cancelled');
+  });
+
   it('treats a no-match exit as an empty result', async () => {
     failWith(Object.assign(new Error('no matches'), { code: 1 }));
 
