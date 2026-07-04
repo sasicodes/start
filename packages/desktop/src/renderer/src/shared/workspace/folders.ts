@@ -12,6 +12,10 @@ interface UseWorkspaceFoldersOptions {
 let stopWorkspaceFolderEvents: (() => void) | undefined;
 let workspaceFoldersCache: WorkspaceFolder[] | undefined;
 let workspaceFoldersRequest: Promise<WorkspaceFolder[]> | undefined;
+let workspaceFoldersRequestPrune = false;
+let pruneWorkspaceFolders = false;
+let workspaceFoldersSeq = 0;
+let appliedWorkspaceFoldersSeq = 0;
 
 const workspaceFoldersListeners = new Set<WorkspaceFoldersListener>();
 
@@ -34,35 +38,45 @@ const emitWorkspaceFolders = () => {
 export const cachedWorkspaceFolders = (workspacePath?: string) =>
   withCurrentWorkspace(workspaceFoldersCache ?? [], workspacePath);
 
-const applyWorkspaceFolders = (folders: WorkspaceFolder[]) => {
+export const setWorkspaceFoldersPrune = (prune: boolean) => {
+  pruneWorkspaceFolders = prune;
+};
+
+const applyWorkspaceFolders = (folders: WorkspaceFolder[], seq: number) => {
+  if (seq < appliedWorkspaceFoldersSeq) return workspaceFoldersCache ?? folders;
+  appliedWorkspaceFoldersSeq = seq;
   workspaceFoldersCache = folders;
   emitWorkspaceFolders();
   return folders;
 };
 
-export const loadWorkspaceFolders = async (prune = false) => {
-  if (prune) return window.pi.chat.workspaceFolders(true).then(applyWorkspaceFolders);
-
-  if (!workspaceFoldersRequest) {
-    workspaceFoldersRequest = window.pi.chat
-      .workspaceFolders(false)
-      .then(applyWorkspaceFolders)
-      .finally(() => {
-        workspaceFoldersRequest = undefined;
-      });
+export const loadWorkspaceFolders = async () => {
+  if (workspaceFoldersRequest && workspaceFoldersRequestPrune === pruneWorkspaceFolders) {
+    return workspaceFoldersRequest;
   }
 
-  return workspaceFoldersRequest;
+  workspaceFoldersSeq += 1;
+  const seq = workspaceFoldersSeq;
+  workspaceFoldersRequestPrune = pruneWorkspaceFolders;
+  const request = window.pi.chat
+    .workspaceFolders(pruneWorkspaceFolders)
+    .then((folders) => applyWorkspaceFolders(folders, seq))
+    .finally(() => {
+      if (workspaceFoldersRequest === request) workspaceFoldersRequest = undefined;
+    });
+  workspaceFoldersRequest = request;
+
+  return request;
 };
 
-export const primeWorkspaceFolders = (workspacePath: string | undefined, prune = false) => {
+export const primeWorkspaceFolders = (workspacePath: string | undefined) => {
   const nextFolders = cachedWorkspaceFolders(workspacePath);
   if (nextFolders !== workspaceFoldersCache) {
     workspaceFoldersCache = nextFolders;
     emitWorkspaceFolders();
   }
 
-  loadWorkspaceFolders(prune).catch(emitWorkspaceFolders);
+  loadWorkspaceFolders().catch(emitWorkspaceFolders);
 };
 
 const refreshWorkspaceFolders = () => {
@@ -102,12 +116,9 @@ export const useWorkspaceFolders = ({ active = true, workspacePath }: UseWorkspa
     setFolders(cachedWorkspaceFolders(workspacePath));
   }, [workspacePath]);
 
-  const refreshFolders = useCallback(
-    (prune = false) => {
-      primeWorkspaceFolders(workspacePath, prune);
-    },
-    [workspacePath]
-  );
+  const refreshFolders = useCallback(() => {
+    primeWorkspaceFolders(workspacePath);
+  }, [workspacePath]);
 
   useEffect(() => {
     if (!active) return;

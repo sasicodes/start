@@ -1,6 +1,6 @@
 import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { AttentionBadge } from '@renderer/shared/badge';
-import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { setWorkspaceFoldersPrune, useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
@@ -34,7 +34,8 @@ export const Workspace = memo(
 
     const handleOpenChange = (next: boolean) => {
       setOpen(next);
-      if (next) refreshFolders(true);
+      setWorkspaceFoldersPrune(next);
+      if (next) refreshFolders();
     };
 
     useAppHotkey(appHotkeys.workspace, () => handleOpenChange(!open), { capture: open });
