@@ -98,10 +98,10 @@ describe('fff provider tools', () => {
 
     expect(toolText(result)).toBe('src/config.ts');
     expect(filesMock.findPathsWithRg).toHaveBeenCalledWith({
-      cwd: '/repo',
-      path: 'src',
-      limit: 200,
       signal,
+      limit: 200,
+      path: 'src',
+      cwd: '/repo',
       pattern: 'src config'
     });
   });

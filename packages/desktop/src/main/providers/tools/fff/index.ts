@@ -31,20 +31,20 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     async execute(_toolCallId, { pattern, path, limit }, signal) {
       const resultLimit = positiveLimit(limit, defaultFindLimit, maxFindLimit);
       const items = await findWorkspacePaths({
+        pattern,
         cwd: cwd(),
         limit: resultLimit,
-        pattern,
         ...(path ? { path } : {})
       });
 
       const results =
         items ??
         (await findPathsWithRg({
+          pattern,
           cwd: cwd(),
           limit: resultLimit,
-          pattern,
-          ...(signal ? { signal } : {}),
-          ...(path ? { path } : {})
+          ...(path ? { path } : {}),
+          ...(signal ? { signal } : {})
         }));
       if (!results) return toolResult('File search is unavailable in this workspace.', null);
 

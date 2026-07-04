@@ -65,7 +65,7 @@ describe('findPathsWithRg', () => {
   it('lists files through the bundled rg binary', async () => {
     succeedWith('src/chat.ts\nsrc/chat/tabs.ts\n');
 
-    const items = await findPathsWithRg({ cwd: '/repo', path: 'src', limit: 10, pattern: 'chat' });
+    const items = await findPathsWithRg({ limit: 10, cwd: '/repo', path: 'src', pattern: 'chat' });
 
     expect(items).toEqual([
       { path: 'src/chat.ts', type: 'file' },
@@ -83,7 +83,7 @@ describe('findPathsWithRg', () => {
     succeedWith('src/chat.ts\n');
     const controller = new AbortController();
 
-    await findPathsWithRg({ cwd: '/repo', limit: 10, signal: controller.signal, pattern: 'chat' });
+    await findPathsWithRg({ limit: 10, cwd: '/repo', pattern: 'chat', signal: controller.signal });
 
     expect(execFileMock).toHaveBeenCalledWith(
       '/bundled/rg',
@@ -96,12 +96,12 @@ describe('findPathsWithRg', () => {
   it('treats a no-match exit as an empty result', async () => {
     failWith(Object.assign(new Error('no matches'), { code: 1 }));
 
-    expect(await findPathsWithRg({ cwd: '/repo', limit: 10, pattern: 'nope' })).toEqual([]);
+    expect(await findPathsWithRg({ limit: 10, cwd: '/repo', pattern: 'nope' })).toEqual([]);
   });
 
   it('returns null when rg cannot run', async () => {
     failWith(Object.assign(new Error('spawn failed'), { code: 'ENOENT' }));
 
-    expect(await findPathsWithRg({ cwd: '/repo', limit: 10, pattern: 'chat' })).toBeNull();
+    expect(await findPathsWithRg({ limit: 10, cwd: '/repo', pattern: 'chat' })).toBeNull();
   });
 });

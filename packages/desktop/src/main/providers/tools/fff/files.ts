@@ -13,8 +13,8 @@ const noMatchesSchema = v.object({ code: v.literal(1) });
 
 interface RgFindOptions {
   cwd: string;
-  limit: number;
   path?: string;
+  limit: number;
   pattern: string;
   signal?: AbortSignal | null;
 }
