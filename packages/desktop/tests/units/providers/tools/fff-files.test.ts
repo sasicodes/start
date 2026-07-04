@@ -79,6 +79,20 @@ describe('findPathsWithRg', () => {
     );
   });
 
+  it('passes cancellation through to rg', async () => {
+    succeedWith('src/chat.ts\n');
+    const controller = new AbortController();
+
+    await findPathsWithRg({ cwd: '/repo', limit: 10, signal: controller.signal, pattern: 'chat' });
+
+    expect(execFileMock).toHaveBeenCalledWith(
+      '/bundled/rg',
+      ['--files', '--iglob', '**/*chat*'],
+      expect.objectContaining({ signal: controller.signal }),
+      expect.any(Function)
+    );
+  });
+
   it('treats a no-match exit as an empty result', async () => {
     failWith(Object.assign(new Error('no matches'), { code: 1 }));
 

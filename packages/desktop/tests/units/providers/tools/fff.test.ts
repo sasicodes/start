@@ -101,6 +101,7 @@ describe('fff provider tools', () => {
       cwd: '/repo',
       path: 'src',
       limit: 200,
+      signal,
       pattern: 'src config'
     });
   });

@@ -28,7 +28,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     description:
       'Find files from the shared repository index. Supports fuzzy queries and glob patterns. Falls back to the built-in finder if the index is unavailable.',
     promptSnippet: 'Find files quickly from the shared repository index.',
-    async execute(_toolCallId, { pattern, path, limit }) {
+    async execute(_toolCallId, { pattern, path, limit }, signal) {
       const resultLimit = positiveLimit(limit, defaultFindLimit, maxFindLimit);
       const items = await findWorkspacePaths({
         cwd: cwd(),
@@ -43,6 +43,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
           cwd: cwd(),
           limit: resultLimit,
           pattern,
+          ...(signal ? { signal } : {}),
           ...(path ? { path } : {})
         }));
       if (!results) return toolResult('File search is unavailable in this workspace.', null);

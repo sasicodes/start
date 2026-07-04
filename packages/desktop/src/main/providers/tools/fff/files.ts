@@ -16,6 +16,7 @@ interface RgFindOptions {
   limit: number;
   path?: string;
   pattern: string;
+  signal?: AbortSignal | null;
 }
 
 export const rgFilesGlob = (pattern: string) => {
@@ -34,6 +35,7 @@ export const findPathsWithRg = async ({
   cwd,
   path,
   limit,
+  signal,
   pattern
 }: RgFindOptions): Promise<WorkspacePathMatch[] | null> => {
   const args = ['--files', '--iglob', rgFilesGlob(pattern), ...(path ? ['--', path] : [])];
@@ -42,7 +44,8 @@ export const findPathsWithRg = async ({
     const { stdout } = await run(rgBinaryPath || 'rg', args, {
       cwd,
       timeout: rgTimeoutMs,
-      maxBuffer: rgMaxBufferBytes
+      maxBuffer: rgMaxBufferBytes,
+      ...(signal ? { signal } : {})
     });
     return pathMatchesFromLines(stdout, limit);
   } catch (error) {
