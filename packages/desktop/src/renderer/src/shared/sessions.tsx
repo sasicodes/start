@@ -193,7 +193,7 @@ export const RecentSessions = memo(
       [onOpenSession]
     );
 
-    useAppHotkey(appHotkeys.recents, () => updateOpen(!open));
+    useAppHotkey(appHotkeys.recents, () => updateOpen(!open), { capture: true });
 
     const attentionStatuses = recentSessionsAttentionStatuses(sessions, activeSessionId);
     const attention = topAttentionStatus(attentionStatuses);
@@ -234,7 +234,7 @@ export const RecentSessions = memo(
 
     return (
       <AppMenu.Root open={open} modal={false} onOpenChange={updateOpen}>
-        <Tooltip label="Recents" disabled={open}>
+        <Tooltip label="Recents" shortcut="R" disabled={open}>
           <div class="block size-11.5 rounded-full">
             <AppMenu.Trigger
               aria-label="Recent sessions"

@@ -32,7 +32,7 @@ export const Workspace = memo(
       workspacePath
     );
 
-    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current));
+    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current), { capture: true });
 
     if (!workspace) return null;
 
@@ -49,7 +49,7 @@ export const Workspace = memo(
         )}
       >
         <AppMenu.Root open={open} onOpenChange={setOpen}>
-          <Tooltip label={tooltipLabel} disabled={open}>
+          <Tooltip label={tooltipLabel} shortcut="W" disabled={open}>
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger
                 aria-label="Workspace folders"
