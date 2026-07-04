@@ -1,6 +1,6 @@
 import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { AttentionBadge } from '@renderer/shared/badge';
-import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { setWorkspaceFoldersPrune, useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
@@ -26,13 +26,19 @@ export const Workspace = memo(
     const [open, setOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
     const workspace = useWorkspace(workspacePath);
-    const { folders } = useWorkspaceFolders({ workspacePath });
+    const { folders, refreshFolders } = useWorkspaceFolders({ workspacePath });
     const { kind: attention, countLabel: visibleAttentionCountLabel } = workspaceFoldersAttention(
       folders,
       workspacePath
     );
 
-    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current), { capture: open });
+    const handleOpenChange = (next: boolean) => {
+      setOpen(next);
+      setWorkspaceFoldersPrune(next);
+      if (next) refreshFolders();
+    };
+
+    useAppHotkey(appHotkeys.workspace, () => handleOpenChange(!open), { capture: open });
 
     if (!workspace) return null;
 
@@ -48,7 +54,7 @@ export const Workspace = memo(
           collapsed ? 'w-11.5' : 'w-64 max-w-[calc(100vw-2.25rem)] @max-workspace-dock/chat:size-11.5'
         )}
       >
-        <AppMenu.Root open={open} onOpenChange={setOpen}>
+        <AppMenu.Root open={open} onOpenChange={handleOpenChange}>
           <Tooltip label={tooltipLabel} shortcut="W" disabled={open}>
             <div class="block h-full w-full rounded-full">
               <AppMenu.Trigger

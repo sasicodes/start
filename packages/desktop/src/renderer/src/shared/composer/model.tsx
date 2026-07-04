@@ -10,7 +10,7 @@ import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { playCycleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
-import { useMemo } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
 
 interface ModelProps {
   layered: boolean;
@@ -35,6 +35,7 @@ export const Model = ({
   selectedModelKey,
   onSelectThinkingLevel
 }: ModelProps) => {
+  const [open, setOpen] = useState(false);
   const activeModelKey = selectedModelKeyState.value || selectedModelKey;
   const selectedModel = useMemo(
     () => models.find((model) => model.key === activeModelKey) ?? models[0],
@@ -65,11 +66,12 @@ export const Model = ({
   };
 
   useAppHotkey(appHotkeys.effort, nextEffort);
+  useAppHotkey(appHotkeys.model, () => !disabled && setOpen((current) => !current), { capture: open });
 
   return (
     <div class={tw('flex flex-none items-center gap-px', layered && 'order-2')}>
-      <Menu.Root modal={false}>
-        <Tooltip label={selectedModelLabel}>
+      <Menu.Root modal={false} open={open} onOpenChange={setOpen}>
+        <Tooltip label={selectedModelLabel} shortcut="M" disabled={open}>
           <Menu.Trigger
             disabled={disabled}
             aria-label="Choose model"

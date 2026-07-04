@@ -18,6 +18,10 @@ export const appHotkeys = {
     name: 'Effort Level',
     shortcuts: ['E']
   },
+  model: {
+    name: 'Model Picker',
+    shortcuts: ['M']
+  },
   recents: {
     name: 'Recent Sessions',
     shortcuts: ['R']
