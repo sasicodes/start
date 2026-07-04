@@ -479,7 +479,7 @@ if (!singleInstanceLock) {
     );
     ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
     ipcMain.handle('app:browser-close', () => destroyBrowser());
-    registerUpdateIpc();
+    registerUpdateIpc({ prepareQuit: prepareQuitForUpdate });
     ipcMain.handle('app:hide-composer', () => {
       hideComposerWindow();
     });
@@ -600,9 +600,7 @@ const destroyBrowserSilently = async () => {
   }
 };
 
-const startQuitCleanup = async () => {
-  if (quitCleanupStarted) return;
-
+const runQuitCleanup = async () => {
   quitCleanupStarted = true;
   globalShortcut.unregisterAll();
   clearAppFocusTimer();
@@ -620,7 +618,21 @@ const startQuitCleanup = async () => {
   deactivateWorkspaceAccess();
 
   await Promise.all([shutdownAnalyticsSilently(), destroyBrowserSilently()]);
+};
+
+const startQuitCleanup = async () => {
+  if (quitCleanupStarted) return;
+
+  await runQuitCleanup();
   app.quit();
+};
+
+const prepareQuitForUpdate = async () => {
+  if (quitCleanupStarted) return;
+
+  appQuitConfirmed = true;
+  allowMainWindowClose();
+  await runQuitCleanup();
 };
 
 app.on('before-quit', (event) => {

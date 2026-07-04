@@ -112,13 +112,18 @@ const downloadUpdate = () => {
   return { ok: true };
 };
 
-export const registerUpdateIpc = () => {
+interface RegisterUpdateIpcOptions {
+  prepareQuit: () => Promise<void>;
+}
+
+export const registerUpdateIpc = ({ prepareQuit }: RegisterUpdateIpcOptions) => {
   ipcMain.handle('app:update-state', () => state);
   ipcMain.handle('app:download-update', downloadUpdate);
-  ipcMain.handle('app:install-update', () => {
+  ipcMain.handle('app:install-update', async () => {
     if (state.status !== 'downloaded') return { ok: false };
 
     trackUpdateInstalled();
+    await prepareQuit();
     autoUpdater.quitAndInstall(false, true);
     return { ok: true };
   });
