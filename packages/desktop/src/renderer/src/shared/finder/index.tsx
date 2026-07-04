@@ -1,6 +1,6 @@
 import { Attached } from '@renderer/shared/composer/attached';
 import type { StaticFinderItem } from '@renderer/shared/finder/static';
-import { BrowserIcon, EditIcon, FolderIcon } from '@renderer/ui/icons';
+import { BrowserIcon, ComposeIcon, FolderIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
@@ -44,7 +44,7 @@ export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`
 
 const FinderRowIcon = ({ type }: { type: FinderItem['type'] }) => {
   if (type === 'browser') return <BrowserIcon class="size-4 shrink-0 text-soft" />;
-  if (type === 'new-session') return <EditIcon class="size-4 shrink-0 text-soft" />;
+  if (type === 'new-session') return <ComposeIcon class="size-4 shrink-0 text-soft" />;
   if (type === 'directory') return <FolderIcon class="size-4 shrink-0 text-soft" />;
   return null;
 };
