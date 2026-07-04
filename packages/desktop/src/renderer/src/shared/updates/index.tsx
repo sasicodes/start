@@ -41,7 +41,7 @@ export const Update = memo(() => {
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class="flex h-11.5 shrink-0 items-center justify-center overflow-hidden rounded-full border-0 bg-composer px-5 text-sm leading-5 font-medium whitespace-nowrap text-ink shadow-shell outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control disabled:bg-muted disabled:text-soft"
       >
-        <span class="relative inline-block max-w-full truncate leading-5">
+        <span class="relative inline-block max-w-full truncate leading-5 tabular-nums">
           {active && (
             <span
               aria-hidden="true"
