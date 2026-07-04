@@ -2,6 +2,7 @@ import type { GitPatchSection } from '@preload/index';
 import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
 import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
+import { diffFoldCommand } from '@renderer/shared/workspace/changes/diff/fold';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
@@ -81,6 +82,18 @@ export const GitDiffViewer = ({
   const limited = sections.some((section) => section.limited && !section.patch);
   const [highlightRevision, setHighlightRevision] = useState(0);
   const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+
+  const foldCommand = diffFoldCommand.value;
+  const entriesRef = useRef(entries);
+  entriesRef.current = entries;
+  const appliedFoldNonceRef = useRef(foldCommand?.nonce ?? 0);
+
+  useEffect(() => {
+    if (!foldCommand || foldCommand.nonce === appliedFoldNonceRef.current) return;
+    appliedFoldNonceRef.current = foldCommand.nonce;
+    const open = foldCommand.action === 'expand';
+    setToggled(new Map(entriesRef.current.map((entry) => [entry.key, open])));
+  }, [foldCommand]);
 
   const onHighlight = useCallback(() => {
     setHighlightRevision((value) => value + 1);

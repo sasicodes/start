@@ -1,6 +1,7 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
+import { requestDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
   useGitPatch,
@@ -14,7 +15,7 @@ import {
   type GitPatchViewMode,
   summaryForViewMode
 } from '@renderer/shared/workspace/changes/state';
-import { ChangesIcon, CycleVerticalIcon, DiffSplitIcon } from '@renderer/ui/icons';
+import { ChangesIcon, CollapseAllIcon, CycleVerticalIcon, DiffSplitIcon, ExpandAllIcon } from '@renderer/ui/icons';
 import {
   bottomBubbleHiddenMotion,
   bottomBubbleHideTransition,
@@ -105,14 +106,21 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
 export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) => {
   const [diffReady, setDiffReady] = useState<DiffReadyState>({ path, ready: false });
   const [viewMode, setViewMode] = useState<GitPatchViewMode>('all');
+  const [allCollapsed, setAllCollapsed] = useState(false);
   const [diffViewMode, setDiffViewMode] = useState<DiffViewMode>('unified');
   const ready = diffReady.path === path && diffReady.ready;
   const patch = useGitPatch(path, Boolean(path && ready));
 
   useEffect(() => {
+    setAllCollapsed(false);
     const timer = window.setTimeout(() => setDiffReady({ path, ready: true }), 190);
     return () => window.clearTimeout(timer);
   }, [path]);
+
+  const toggleFoldAll = () => {
+    requestDiffFold(allCollapsed ? 'expand' : 'collapse');
+    setAllCollapsed((collapsed) => !collapsed);
+  };
 
   useEffect(() => {
     if (patch.kind !== 'ready' || patch.patch.sections.length === 0) return;
@@ -162,6 +170,18 @@ export const GitChangesPanel = memo(({ path, onClose }: GitChangesPanelProps) =>
               >
                 <DiffSplitIcon class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')} />
               </button>
+            )}
+            {hasVisibleDiff && (
+              <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'}>
+                <button
+                  type="button"
+                  onClick={toggleFoldAll}
+                  aria-label={allCollapsed ? 'Expand all files' : 'Collapse all files'}
+                  class="relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+                >
+                  {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
+                </button>
+              </Tooltip>
             )}
           </div>
           <div class="flex items-center gap-3 font-medium">
