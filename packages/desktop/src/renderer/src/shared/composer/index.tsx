@@ -63,11 +63,10 @@ export const Composer = memo(
   }: ComposerProps) => {
     const isCommandMode = commandMode(draft);
     const singleLine = overlay;
-    const shellRef = useRef<HTMLDivElement>(null);
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaLayoutRef = useRef(initialComposerTextareaLayoutState());
 
-    useComposerHeight(shellRef, !overlay);
+    const setShellRef = useComposerHeight(!overlay);
     const [isMultiline, setIsMultiline] = useState(false);
     const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
     const resetTextareaLayout = useCallback((element: HTMLTextAreaElement) => {
@@ -219,7 +218,6 @@ export const Composer = memo(
 
     return (
       <motion.div
-        ref={shellRef}
         {...(overlay ? { key: revealKey } : {})}
         {...(!overlay
           ? { layout: 'position' as const, layoutDependency: centered, transition: { layout: composerDockTransition } }
@@ -236,84 +234,86 @@ export const Composer = memo(
           !overlay && hasTurns && 'bottom-4.5'
         )}
       >
-        {overlay && (
-          <Workspace
-            workspacePath={workspacePath}
-            onSelectWorkspace={onSelectWorkspace}
-            onChooseDirectory={onChooseWorkspaceDirectory}
-          />
-        )}
-        {!centered && <ScrollToBottom />}
-        <Finder
-          items={finderItems}
-          visible={finderVisible}
-          activeItemKey={selectedFinderKey}
-          ariaLabel={slashCommandToken ? 'Slash commands' : 'Project files'}
-          onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
-          emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
-        />
-        <Queue
-          messages={queuedMessages}
-          visible={queueVisible}
-          onSteer={onSteerQueuedMessage}
-          onDelete={onDeleteQueuedMessage}
-        />
-        <form
-          class={tw(
-            'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag]',
-            layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
-            overlay && 'shadow-composer-overlay',
-            (finderVisible || queueVisible) && !isCommandMode && 'shadow-composer-attached',
-            !finderVisible && !queueVisible && !overlay && 'shadow-shell'
-          )}
-          onMouseDown={(event) => {
-            if (overlay) event.stopPropagation();
-          }}
-          onSubmit={handleSubmit}
-        >
-          <div class={tw('flex min-h-11.5 items-center gap-2 p-1', layered && 'flex-wrap items-end gap-y-1.5 pt-2')}>
-            <Model
-              models={models}
-              layered={layered}
-              disabled={isGenerating}
-              modelsLoaded={modelsLoaded}
-              thinkingLevel={thinkingLevel}
-              onSelectModel={onSelectModel}
-              onOpenSettings={onOpenSettings}
-              selectedModelKey={selectedModelKey}
-              onSelectThinkingLevel={onSelectThinkingLevel}
+        <div ref={setShellRef}>
+          {overlay && (
+            <Workspace
+              workspacePath={workspacePath}
+              onSelectWorkspace={onSelectWorkspace}
+              onChooseDirectory={onChooseWorkspaceDirectory}
             />
-            <div class={tw('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
-              <Prompt
-                draft={draft}
-                label={promptPlaceholder.label}
-                onPaste={onPaste}
-                onInput={handleDraftInput}
-                expanded={finderVisible}
-                inputRef={setPromptInputRef}
-                singleLine={singleLine}
-                onKeyDown={handleKeyDown}
+          )}
+          {!centered && <ScrollToBottom />}
+          <Finder
+            items={finderItems}
+            visible={finderVisible}
+            activeItemKey={selectedFinderKey}
+            ariaLabel={slashCommandToken ? 'Slash commands' : 'Project files'}
+            onSelect={(item) => completeFinderItem(item, item.type === 'directory')}
+            emptyLabel={slashCommandToken ? 'No matching commands' : 'No matching items'}
+          />
+          <Queue
+            messages={queuedMessages}
+            visible={queueVisible}
+            onSteer={onSteerQueuedMessage}
+            onDelete={onDeleteQueuedMessage}
+          />
+          <form
+            class={tw(
+              'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag]',
+              layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
+              overlay && 'shadow-composer-overlay',
+              (finderVisible || queueVisible) && !isCommandMode && 'shadow-composer-attached',
+              !finderVisible && !queueVisible && !overlay && 'shadow-shell'
+            )}
+            onMouseDown={(event) => {
+              if (overlay) event.stopPropagation();
+            }}
+            onSubmit={handleSubmit}
+          >
+            <div class={tw('flex min-h-11.5 items-center gap-2 p-1', layered && 'flex-wrap items-end gap-y-1.5 pt-2')}>
+              <Model
+                models={models}
                 layered={layered}
-                placeholder={promptPlaceholder.placeholder}
-                {...(selectedFinderKey ? { activeDescendant: finderItemId(selectedFinderKey) } : {})}
+                disabled={isGenerating}
+                modelsLoaded={modelsLoaded}
+                thinkingLevel={thinkingLevel}
+                onSelectModel={onSelectModel}
+                onOpenSettings={onOpenSettings}
+                selectedModelKey={selectedModelKey}
+                onSelectThinkingLevel={onSelectThinkingLevel}
               />
+              <div class={tw('relative min-w-0', layered && 'order-1 w-full flex-none', !layered && 'flex-1')}>
+                <Prompt
+                  draft={draft}
+                  label={promptPlaceholder.label}
+                  onPaste={onPaste}
+                  onInput={handleDraftInput}
+                  expanded={finderVisible}
+                  inputRef={setPromptInputRef}
+                  singleLine={singleLine}
+                  onKeyDown={handleKeyDown}
+                  layered={layered}
+                  placeholder={promptPlaceholder.placeholder}
+                  {...(selectedFinderKey ? { activeDescendant: finderItemId(selectedFinderKey) } : {})}
+                />
+              </div>
+              <div class={tw('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
+                <Attachments
+                  attachments={attachments}
+                  onOpenAttachment={onOpenAttachment}
+                  onRemoveAttachment={onRemoveAttachment}
+                />
+                <Generate
+                  draft={draft}
+                  onStop={onStop}
+                  commandMode={isCommandMode}
+                  isGenerating={isGenerating}
+                  {...(noProvidersConfigured ? { disabledReason: 'Choose a model' } : {})}
+                />
+              </div>
             </div>
-            <div class={tw('relative flex items-center gap-1.5', layered && 'order-2 ml-auto')}>
-              <Attachments
-                attachments={attachments}
-                onOpenAttachment={onOpenAttachment}
-                onRemoveAttachment={onRemoveAttachment}
-              />
-              <Generate
-                draft={draft}
-                onStop={onStop}
-                commandMode={isCommandMode}
-                isGenerating={isGenerating}
-                {...(noProvidersConfigured ? { disabledReason: 'Choose a model' } : {})}
-              />
-            </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </motion.div>
     );
   }
