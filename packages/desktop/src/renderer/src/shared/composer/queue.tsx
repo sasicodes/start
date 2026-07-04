@@ -1,5 +1,6 @@
 import type { QueuedMessage } from '@preload/index';
 import { Attached } from '@renderer/shared/composer/attached';
+import { parseSkillBlock } from '@renderer/shared/skill/parse';
 import { TrashIcon } from '@renderer/ui/icons';
 
 interface QueueProps {
@@ -17,6 +18,7 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
       <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
         {messages.map((message) => {
           const steering = message.kind === 'steer';
+          const skill = parseSkillBlock(message.text);
 
           return (
             <li
@@ -24,7 +26,17 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
               class="group/queue flex min-w-0 items-center gap-2 rounded-xl bg-transparent px-3 py-2 transition-colors hover:bg-control focus-within:bg-control"
             >
               <div class="min-w-0 flex-1 px-1">
-                <div class="truncate text-sm leading-5 font-medium text-ink">{message.text}</div>
+                <div class="flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium text-ink">
+                  {skill ? (
+                    <>
+                      <span class="flex-none text-soft">Skill</span>
+                      <span class="flex-none">{skill.name}</span>
+                      {skill.userMessage && <span class="min-w-0 truncate text-soft">{skill.userMessage}</span>}
+                    </>
+                  ) : (
+                    <span class="truncate">{message.text}</span>
+                  )}
+                </div>
               </div>
               <div class="flex flex-none items-center gap-1">
                 <button
