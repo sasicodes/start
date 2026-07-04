@@ -10,7 +10,6 @@ export interface ComposerProps {
   onStop: () => void;
   revealKey?: number;
   onSubmit: () => void;
-  previousTurn: string;
   onCancel?: () => void;
   models: ModelOption[];
   modelsLoaded: boolean;
@@ -20,9 +19,9 @@ export interface ComposerProps {
   thinkingLevel: EffortLevel;
   onOpenSettings: (tab?: SettingsTab) => void;
   onExitComplete: () => void;
-  onRefillPrevious: () => void;
   noProvidersConfigured: boolean;
   attachments: ImageAttachment[];
+  recallMessages: string[];
   queuedMessages: QueuedMessage[];
   onDraftChange: (value: string) => void;
   onChooseWorkspaceDirectory: () => void;

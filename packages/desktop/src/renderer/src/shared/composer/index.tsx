@@ -6,6 +6,7 @@ import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
 import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import type { ComposerProps } from '@renderer/shared/composer/types';
+import { useMessageRecall } from '@renderer/shared/composer/use-recall';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
 import { useFinderItems } from '@renderer/shared/finder/use-items';
@@ -45,14 +46,13 @@ export const Composer = memo(
     revealKey = 0,
     onDraftChange,
     onSelectModel,
-    previousTurn,
+    recallMessages,
     workspacePath,
     onOpenSettings,
     onExitComplete,
     onSteerQueuedMessage,
     onDeleteQueuedMessage,
     selectedModelKey,
-    onRefillPrevious,
     onOpenAttachment,
     onRemoveAttachment,
     onSelectWorkspace,
@@ -153,6 +153,8 @@ export const Composer = memo(
       onDraftChange(`${draft.slice(0, finderToken.start)}${nextToken}`);
     };
 
+    const recall = useMessageRecall(recallMessages, draft, onDraftChange);
+
     const handleSubmit = (event: SubmitEvent) => {
       event.preventDefault();
       if (!draft.trim() || noProvidersConfigured) return;
@@ -177,6 +179,16 @@ export const Composer = memo(
         return;
       }
 
+      if (event.key === 'ArrowUp' && !finderVisible && recall.older()) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.key === 'ArrowDown' && !finderVisible && recall.newer()) {
+        event.preventDefault();
+        return;
+      }
+
       if (event.key === 'Escape' && overlay) {
         event.preventDefault();
         onCancel?.();
@@ -192,12 +204,6 @@ export const Composer = memo(
       if (event.key === 'Enter' && finderVisible && selectedFinderItem) {
         event.preventDefault();
         completeFinderItem(selectedFinderItem, true);
-        return;
-      }
-
-      if (event.key === 'ArrowUp' && !draft.trim() && previousTurn) {
-        event.preventDefault();
-        onRefillPrevious();
         return;
       }
 
