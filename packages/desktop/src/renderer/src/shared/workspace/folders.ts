@@ -34,15 +34,19 @@ const emitWorkspaceFolders = () => {
 export const cachedWorkspaceFolders = (workspacePath?: string) =>
   withCurrentWorkspace(workspaceFoldersCache ?? [], workspacePath);
 
+const applyWorkspaceFolders = (folders: WorkspaceFolder[]) => {
+  workspaceFoldersCache = folders;
+  emitWorkspaceFolders();
+  return folders;
+};
+
 export const loadWorkspaceFolders = async (prune = false) => {
+  if (prune) return window.pi.chat.workspaceFolders(true).then(applyWorkspaceFolders);
+
   if (!workspaceFoldersRequest) {
     workspaceFoldersRequest = window.pi.chat
-      .workspaceFolders(prune)
-      .then((folders) => {
-        workspaceFoldersCache = folders;
-        emitWorkspaceFolders();
-        return folders;
-      })
+      .workspaceFolders(false)
+      .then(applyWorkspaceFolders)
       .finally(() => {
         workspaceFoldersRequest = undefined;
       });
