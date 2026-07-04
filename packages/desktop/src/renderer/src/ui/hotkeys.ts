@@ -13,9 +13,21 @@ export const appHotkeys = {
     name: 'New Session',
     shortcuts: ['Mod+N', 'Mod+T']
   },
+  effort: {
+    name: 'Effort Level',
+    shortcuts: ['E']
+  },
+  recents: {
+    name: 'Recent Sessions',
+    shortcuts: ['R']
+  },
   settings: {
     name: 'Settings',
     shortcuts: ['Mod+,']
+  },
+  workspace: {
+    name: 'Workspace Folders',
+    shortcuts: ['W']
   },
   shortcuts: {
     name: 'Keyboard Shortcuts',

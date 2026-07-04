@@ -8,6 +8,7 @@ import {
 } from '@renderer/shared/attention-status';
 import { AttentionBadge } from '@renderer/shared/badge';
 import { Indicator } from '@renderer/shared/indicator';
+import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -191,6 +192,8 @@ export const RecentSessions = memo(
       },
       [onOpenSession]
     );
+
+    useAppHotkey(appHotkeys.recents, () => updateOpen(!open));
 
     const attentionStatuses = recentSessionsAttentionStatuses(sessions, activeSessionId);
     const attention = topAttentionStatus(attentionStatuses);

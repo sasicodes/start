@@ -3,6 +3,7 @@ import { AttentionBadge } from '@renderer/shared/badge';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
+import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
 import { Tooltip } from '@renderer/ui/tooltip';
@@ -30,6 +31,8 @@ export const Workspace = memo(
       folders,
       workspacePath
     );
+
+    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current));
 
     if (!workspace) return null;
 

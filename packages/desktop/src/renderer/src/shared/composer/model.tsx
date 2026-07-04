@@ -6,6 +6,7 @@ import { Models, ProviderIcon, ProviderIconTicker } from '@renderer/shared/model
 import { modelProviderId } from '@renderer/shared/models/provider';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
+import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { playCycleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
@@ -62,6 +63,8 @@ export const Model = ({
     playCycleSound();
     onSelectThinkingLevel(availableEfforts[nextIndex]?.id ?? selectedEffort.id);
   };
+
+  useAppHotkey(appHotkeys.effort, nextEffort);
 
   return (
     <div class={tw('flex flex-none items-center gap-px', layered && 'order-2')}>

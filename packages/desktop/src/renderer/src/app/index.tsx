@@ -103,8 +103,8 @@ export const App = () => {
     loadedSessionId,
     switchWorkspace,
     refreshSettings,
+    recallMessages,
     selectedModelKey,
-    previousUserTurn,
     loginSubscription,
     disconnectProvider,
     steerQueuedMessage,
@@ -143,11 +143,6 @@ export const App = () => {
   useEffect(() => {
     if (settingsPanelVisible) refreshSettings();
   }, [refreshSettings, settingsPanelVisible]);
-
-  const refillPrevious = useCallback(() => {
-    setDraft(previousUserTurn);
-    textareaRef.current?.focus();
-  }, [previousUserTurn, setDraft]);
 
   const appendInspectToComposer = useCallback(
     (text: string) => {
@@ -316,9 +311,8 @@ export const App = () => {
       onOpenSettings={showSettings}
       onPaste={fileHandlers.onPaste}
       queuedMessages={queuedMessages}
-      previousTurn={previousUserTurn}
+      recallMessages={recallMessages}
       onCancel={discardComposerOverlay}
-      onRefillPrevious={refillPrevious}
       onOpenAttachment={openAttachment}
       selectedModelKey={selectedModelKey}
       exiting={overlay && composerExiting}

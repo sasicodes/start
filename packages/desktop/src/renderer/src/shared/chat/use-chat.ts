@@ -10,6 +10,7 @@ import type {
 } from '@preload/index';
 import { createTurn } from '@renderer/functions/chat';
 import { useChatEvents } from '@renderer/shared/chat/events';
+import { buildRecallList } from '@renderer/shared/chat/recall';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
@@ -20,7 +21,7 @@ import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/c
 import { primeWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { contextPercentState, selectedModelKeyState } from '@renderer/state/chat';
 import type { RefObject } from 'preact';
-import { useCallback, useRef, useState } from 'preact/hooks';
+import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 
 interface UseChatOptions {
   onShowChat: () => void;
@@ -72,7 +73,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const terminalIdRef = useRef<string | null>(null);
   const assistantIdRef = useRef<string | null>(null);
   const newSessionRequestRef = useRef(0);
-  const { setTurns, turnCount, previousUserTurn } = useTurnSummary();
+  const { setTurns, turnCount, userTurns } = useTurnSummary();
+  const recallMessages = useMemo(() => buildRecallList(queuedMessages, userTurns), [queuedMessages, userTurns]);
 
   const updateActiveSessionId = useCallback((sessionId = '') => {
     setActiveSessionId(sessionId);
@@ -422,8 +424,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     loadedSessionId,
     switchWorkspace,
     refreshSettings,
+    recallMessages,
     selectedModelKey,
-    previousUserTurn,
     loginSubscription,
     disconnectProvider,
     steerQueuedMessage,
