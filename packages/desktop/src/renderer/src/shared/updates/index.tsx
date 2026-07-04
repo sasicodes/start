@@ -1,6 +1,6 @@
 import { animationActive } from '@renderer/shared/animation';
 import { useAppFocusState } from '@renderer/shared/app-focus';
-import { downloadUpdate, installUpdate, useUpdateState } from '@renderer/shared/updates/state';
+import { downloadUpdate, installUpdate, updateLabel, useUpdateState } from '@renderer/shared/updates/state';
 import {
   bottomBubbleHiddenMotion,
   bottomBubbleHideTransition,
@@ -27,13 +27,13 @@ export const Update = memo(() => {
   const downloading = status === 'downloading';
   const downloaded = status === 'downloaded';
   const active = animationActive(appFocused) && !downloading;
-  const label = state.status === 'downloading' ? `Downloading (${state.percent}%)` : 'Update';
+  const label = updateLabel(state);
 
   return (
     <Tooltip label={updateTooltip(downloading, downloaded)}>
       <motion.button
         type="button"
-        aria-label="Update"
+        aria-label={label}
         disabled={downloading}
         initial={bottomBubbleHiddenMotion}
         onClick={downloaded ? installUpdate : downloadUpdate}

@@ -8,7 +8,7 @@ import {
 import { toolResult } from '@main/providers/tools/result';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
-import { normalizeSubagentTasks } from '@main/subagents/utils/input';
+import { maxSubagentTasks, normalizeSubagentTasks } from '@main/subagents/utils/input';
 import type { EffortLevel } from '@main/types';
 
 const spawnToolParameters = {
@@ -16,6 +16,7 @@ const spawnToolParameters = {
     tasks: {
       type: 'array',
       minItems: 1,
+      maxItems: maxSubagentTasks,
       description: 'Focused tasks to run in parallel sub-agents.',
       items: {
         type: 'object',

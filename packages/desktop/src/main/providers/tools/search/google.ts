@@ -1,6 +1,6 @@
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { providerHeaders, setMissingHeader } from '@main/providers/tools/search/auth';
-import { postSse } from '@main/providers/tools/search/fetcher';
+import { postSse, throwStreamError } from '@main/providers/tools/search/fetcher';
 import {
   addSource,
   addString,
@@ -12,6 +12,11 @@ import {
   trimTrailingSlash
 } from '@main/providers/tools/search/helpers';
 import type { SearchModel, SearchResult, SearchSource } from '@main/providers/tools/search/types';
+
+const streamErrorStatuses: Record<string, number> = {
+  UNAVAILABLE: 503,
+  RESOURCE_EXHAUSTED: 429
+};
 
 export const searchGoogle = async (
   query: string,
@@ -44,7 +49,10 @@ export const searchGoogle = async (
     },
     ({ data }) => {
       const error = recordValue(data, 'error') || recordValue(recordValue(data, 'response'), 'error');
-      if (error) throw new Error(stringValue(recordValue(error, 'message')) || 'Google web search failed.');
+      if (error) {
+        const message = stringValue(recordValue(error, 'message')) || 'Google web search failed.';
+        throwStreamError(stringValue(recordValue(error, 'status')), message, streamErrorStatuses);
+      }
 
       const payload = recordValue(data, 'response') || data;
       const candidate = recordItems(recordValue(payload, 'candidates'))[0];

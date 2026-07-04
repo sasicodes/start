@@ -15,12 +15,16 @@ const taskSchema = v.pipe(
   v.transform((prompt) => ({ prompt }) satisfies SubagentTaskInput)
 );
 
+export const maxSubagentTasks = 8;
+
 export const normalizeSubagentTasks = (args: unknown): SubagentTaskInput[] => {
   const raw = isRecord(args) && 'tasks' in args ? args.tasks : args;
   const list = Array.isArray(raw) ? raw : [raw];
 
-  return list.flatMap((task) => {
-    const result = v.safeParse(taskSchema, task);
-    return result.success ? [result.output] : [];
-  });
+  return list
+    .flatMap((task) => {
+      const result = v.safeParse(taskSchema, task);
+      return result.success ? [result.output] : [];
+    })
+    .slice(0, maxSubagentTasks);
 };

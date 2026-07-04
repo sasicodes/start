@@ -101,7 +101,7 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
 
   if (isMac) {
     options.vibrancy = 'under-window';
-    options.visualEffectState = 'active';
+    options.visualEffectState = 'followWindow';
     options.trafficLightPosition = { x: 16, y: 16 };
   }
 
@@ -289,6 +289,12 @@ export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
   }
 };
 
+export const sendToMainWindowIfOpen = (channel: string, ...args: unknown[]) => {
+  const window = getMainWindow();
+  if (!window) return;
+  runWhenReady(window.webContents, () => window.webContents.send(channel, ...args));
+};
+
 type HideComposerWindowOptions = {
   discard?: boolean;
   keepAppActive?: boolean;
@@ -306,6 +312,7 @@ export const hideComposerWindow = ({ discard = true, keepAppActive = false }: Hi
   composerWindow.setFocusable(false);
   composerWindow.setIgnoreMouseEvents(true);
   composerWindow.hide();
+  composerWindow.webContents.setBackgroundThrottling(true);
   if (shouldHideApp) app.hide();
 };
 
@@ -329,6 +336,7 @@ export const showComposerWindow = () => {
   };
 
   composerVisible = true;
+  window.webContents.setBackgroundThrottling(false);
   window.setOpacity(0);
   window.setFocusable(true);
   fitComposerWindowToActiveDisplay(window);

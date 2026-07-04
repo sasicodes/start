@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch } from '@main/git';
+import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch, gitEnv } from '@main/git';
 
 export interface GitChangesPayload {
   workspacePath: string;
@@ -16,8 +16,10 @@ interface GitChangesEntry {
   watchers: Map<string, FSWatcher>;
   refreshTimer?: ReturnType<typeof setTimeout>;
   patch?: GitPatch;
+  lastUsedAt: number;
   patchLoaded: boolean;
   patchRequest?: Promise<MaybeGitPatch>;
+  refreshPending?: true;
   summary?: GitChangeSummary;
   summaryLoaded: boolean;
   summaryRequest?: Promise<MaybeGitChangeSummary>;
@@ -25,6 +27,7 @@ interface GitChangesEntry {
 }
 
 interface GitChangesServiceOptions {
+  focused: () => boolean;
   currentWorkspace: () => string;
   notify: (payload: GitChangesPayload) => void;
 }
@@ -36,6 +39,7 @@ interface GitWatchTarget {
 
 const gitChangesDebounceMs = 180;
 const gitDirectoryName = '.git';
+const entryIdleMs = 10 * 60 * 1000;
 const maxWorkspaceWatchDirectories = 512;
 const gitWatchDirectoryArgs = ['ls-files', '-co', '--exclude-standard', '-z'];
 const execFileAsync = promisify(execFile);
@@ -86,6 +90,7 @@ const gitWatchDirectories = async (workspacePath: string) => {
     const { stdout } = await execFileAsync('git', gitWatchDirectoryArgs, {
       cwd: workspacePath,
       encoding: 'utf8',
+      env: gitEnv(),
       maxBuffer: 4 * 1024 * 1024,
       timeout: 1200
     });
@@ -120,11 +125,13 @@ const gitWatchTargets = async (workspacePath: string): Promise<GitWatchTarget[]>
 
 export class GitChangesService {
   private readonly entries = new Map<string, GitChangesEntry>();
+  private readonly focused: () => boolean;
   private readonly currentWorkspace: () => string;
   private readonly notify: (payload: GitChangesPayload) => void;
 
   constructor(options: GitChangesServiceOptions) {
     this.notify = options.notify;
+    this.focused = options.focused;
     this.currentWorkspace = options.currentWorkspace;
   }
 
@@ -138,6 +145,14 @@ export class GitChangesService {
     return this.loadPatch(entry);
   }
 
+  flushPendingRefreshes(): void {
+    for (const entry of this.entries.values()) {
+      if (!entry.refreshPending) continue;
+      delete entry.refreshPending;
+      this.scheduleRefresh(entry);
+    }
+  }
+
   dispose(): void {
     for (const entry of this.entries.values()) {
       this.closeWatchers(entry);
@@ -147,20 +162,38 @@ export class GitChangesService {
   }
 
   private entryFor(workspacePath: string): GitChangesEntry {
+    this.pruneIdleEntries();
+
     const key = path.resolve(workspacePath);
     const current = this.entries.get(key);
-    if (current) return current;
+    if (current) {
+      current.lastUsedAt = Date.now();
+      return current;
+    }
 
     const entry: GitChangesEntry = {
       patchLoaded: false,
       summaryLoaded: false,
       watchers: new Map(),
-      workspacePath: key
+      workspacePath: key,
+      lastUsedAt: Date.now()
     };
     this.entries.set(key, entry);
     this.applyWatchTargets(entry, fallbackGitWatchTargets(entry.workspacePath));
     this.watchWorkspace(entry);
     return entry;
+  }
+
+  private pruneIdleEntries(): void {
+    const cutoff = Date.now() - entryIdleMs;
+    const activePath = path.resolve(this.currentWorkspace());
+
+    for (const [key, entry] of this.entries) {
+      if (entry.lastUsedAt >= cutoff || key === activePath) continue;
+      this.closeWatchers(entry);
+      if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
+      this.entries.delete(key);
+    }
   }
 
   private async loadSummary(entry: GitChangesEntry): Promise<MaybeGitChangeSummary> {
@@ -198,6 +231,11 @@ export class GitChangesService {
   }
 
   private scheduleRefresh(entry: GitChangesEntry): void {
+    if (!this.focused()) {
+      entry.refreshPending = true;
+      return;
+    }
+
     if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
     entry.refreshTimer = setTimeout(() => {
       delete entry.refreshTimer;

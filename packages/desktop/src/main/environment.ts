@@ -1,5 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { delimiter, join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { delimiter, dirname, join, sep } from 'node:path';
 import { baseDir, isMac } from '@main/application';
 import { logger } from '@main/utils/logger';
 
@@ -9,7 +11,7 @@ const shellEnvironmentTimeoutMs = 1500;
 
 process.env.PI_OAUTH_CALLBACK_HOST ??= 'localhost';
 process.env.PI_CODING_AGENT_DIR ??= join(baseDir, 'agent');
-process.env.PI_OFFLINE ??= '1';
+process.env.PI_OFFLINE = '1';
 process.env.PI_SKIP_VERSION_CHECK ??= '1';
 process.env.PI_TELEMETRY ??= '0';
 
@@ -55,6 +57,24 @@ export const mergePathValues = (primary: string, fallback: string) => {
   return entries.join(delimiter);
 };
 
+const unpackedResourcePath = (value: string) => {
+  const unpacked = value.replace(`.asar${sep}`, `.asar.unpacked${sep}`);
+  if (unpacked !== value && existsSync(unpacked)) return unpacked;
+  return value;
+};
+
+const resolveRgBinaryPath = () => {
+  try {
+    const nodeRequire = createRequire(import.meta.url);
+    const { rgPath } = nodeRequire('@vscode/ripgrep') as { rgPath: string };
+    const binaryPath = unpackedResourcePath(rgPath);
+    return existsSync(binaryPath) ? binaryPath : '';
+  } catch (error) {
+    logger.error('ripgrep resolve', error);
+    return '';
+  }
+};
+
 const shellEnvironmentDisabled = () => readEnvironmentValue('NODE_ENV') === 'test';
 
 const shellForEnvironment = () => readEnvironmentValue('SHELL') ?? '/bin/zsh';
@@ -81,7 +101,16 @@ const installShellEnvironment = () => {
   }
 };
 
+const installSearchToolPath = () => {
+  if (!rgBinaryPath) return;
+  process.env.PATH = mergePathValues(readEnvironmentValue('PATH') ?? '', dirname(rgBinaryPath));
+};
+
 installShellEnvironment();
+
+export const rgBinaryPath = resolveRgBinaryPath();
+
+installSearchToolPath();
 
 export const environment = {
   rendererUrl: readEnvironmentValue('ELECTRON_RENDERER_URL')

@@ -1,6 +1,6 @@
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { anthropicHeaders } from '@main/providers/tools/search/auth';
-import { postSse } from '@main/providers/tools/search/fetcher';
+import { postSse, throwStreamError } from '@main/providers/tools/search/fetcher';
 import {
   addSource,
   addString,
@@ -12,6 +12,11 @@ import {
   trimTrailingSlash
 } from '@main/providers/tools/search/helpers';
 import type { SearchModel, SearchResult, SearchSource } from '@main/providers/tools/search/types';
+
+const streamErrorStatuses: Record<string, number> = {
+  rate_limit_error: 429,
+  overloaded_error: 529
+};
 
 const messagesUrl = (baseUrl: string) => {
   const base = trimTrailingSlash(baseUrl);
@@ -74,9 +79,9 @@ export const searchAnthropic = async (
         if (url) addSource(sources, sourceFromUrl(url, stringValue(recordValue(citation, 'title'))));
       }
     } else if (type === 'error') {
-      throw new Error(
-        stringValue(recordValue(recordValue(event, 'error'), 'message')) || 'Anthropic web search failed.'
-      );
+      const errorRecord = recordValue(event, 'error');
+      const message = stringValue(recordValue(errorRecord, 'message')) || 'Anthropic web search failed.';
+      throwStreamError(stringValue(recordValue(errorRecord, 'type')), message, streamErrorStatuses);
     }
   });
 

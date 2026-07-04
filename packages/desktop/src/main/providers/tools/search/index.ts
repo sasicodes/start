@@ -1,5 +1,6 @@
 import { defineTool, type ModelRegistry } from '@earendil-works/pi-coding-agent';
 import { toolResult } from '@main/providers/tools/result';
+import { SearchApiError } from '@main/providers/tools/search/fetcher';
 import { withSources, withUngroundedWarning } from '@main/providers/tools/search/helpers';
 import { runWebSearch, unsupportedWebSearchMessage } from '@main/providers/tools/search/providers';
 import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
@@ -74,6 +75,17 @@ export const createWebSearchTools = ({ model, modelRegistry }: CreateWebSearchTo
           return toolResult(unsupportedWebSearchMessage, {
             query: searchQuery,
             error: 'unsupported_provider'
+          });
+        }
+        if (error instanceof SearchApiError) {
+          const rateLimited = error.status === 429 || error.status === 529;
+          const text = rateLimited
+            ? 'Web search is rate limited right now. Wait a moment and retry.'
+            : 'Web search failed upstream. Try again shortly.';
+          return toolResult(text, {
+            query: searchQuery,
+            status: error.status,
+            error: rateLimited ? 'rate_limited' : 'search_failed'
           });
         }
         throw error;

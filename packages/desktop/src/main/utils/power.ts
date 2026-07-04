@@ -8,10 +8,11 @@ interface StayAwakeConditions {
   keepAwake: boolean;
   onBattery: boolean;
   relayActive: boolean;
+  mobileConnected: boolean;
 }
 
-export const shouldStayAwake = ({ keepAwake, onBattery, relayActive }: StayAwakeConditions) =>
-  keepAwake && relayActive && !onBattery;
+export const shouldStayAwake = ({ keepAwake, onBattery, relayActive, mobileConnected }: StayAwakeConditions) =>
+  keepAwake && relayActive && mobileConnected && !onBattery;
 
 export const setStayAwake = (awake: boolean) => {
   const active = blockerId >= 0 && powerSaveBlocker.isStarted(blockerId);

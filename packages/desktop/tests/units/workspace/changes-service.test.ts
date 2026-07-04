@@ -12,19 +12,9 @@ const fsMocks = vi.hoisted(() => ({
   watch: vi.fn()
 }));
 
-const childProcessMocks = vi.hoisted(() => {
-  const execFile = vi.fn();
-  Object.defineProperty(execFile, Symbol.for('nodejs.util.promisify.custom'), {
-    value: (command: string, args: string[], options: object) =>
-      new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
-        execFile(command, args, options, (error: Error | null, stdout: string, stderr: string) => {
-          if (error) reject(error);
-          else resolve({ stdout, stderr });
-        });
-      })
-  });
-  return { execFile };
-});
+const childProcessMocks = vi.hoisted(() =>
+  import('../../fakes/exec.js').then((exec) => ({ execFile: exec.createExecFileMock() }))
+);
 
 class FakeWatcher extends EventEmitter {
   closed = false;
@@ -44,9 +34,14 @@ class FakeWatcher extends EventEmitter {
   unref = () => this;
 }
 
-vi.mock('@main/git', () => gitMocks);
+vi.mock('@main/git', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/git')>()),
+  ...gitMocks
+}));
 
 vi.mock('node:child_process', () => childProcessMocks);
+
+const { execFile: execFileMock } = await childProcessMocks;
 
 vi.mock('node:fs', async () => {
   const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
@@ -91,7 +86,7 @@ describe('GitChangesService', () => {
       fsMocks.watchers.push(watcher);
       return watcher;
     });
-    childProcessMocks.execFile.mockImplementation(
+    execFileMock.mockImplementation(
       (
         _command: string,
         _args: string[],
@@ -114,7 +109,7 @@ describe('GitChangesService', () => {
 
   it('coalesces concurrent summary reads for a workspace', async () => {
     const { GitChangesService } = await import('@main/workspace/changes');
-    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
 
     const [first, second] = await Promise.all([service.getSummary(), service.getSummary('/repo')]);
 
@@ -125,7 +120,7 @@ describe('GitChangesService', () => {
 
   it('caches unavailable summary reads for a workspace', async () => {
     const { GitChangesService } = await import('@main/workspace/changes');
-    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
     gitMocks.getGitChangeSummary.mockImplementationOnce(async () => {
       return;
     });
@@ -140,6 +135,7 @@ describe('GitChangesService', () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
     const service = new GitChangesService({
+      focused: () => true,
       currentWorkspace: () => '/repo',
       notify: (payload) => notifications.push(payload)
     });
@@ -156,7 +152,7 @@ describe('GitChangesService', () => {
 
   it('watches git-visible workspace directories and the git directory', async () => {
     const { GitChangesService } = await import('@main/workspace/changes');
-    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
 
     await service.getSummary();
     await Promise.resolve();
@@ -172,6 +168,7 @@ describe('GitChangesService', () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
     const service = new GitChangesService({
+      focused: () => true,
       currentWorkspace: () => '/repo',
       notify: (payload) => notifications.push(payload)
     });
@@ -195,6 +192,7 @@ describe('GitChangesService', () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
     const service = new GitChangesService({
+      focused: () => true,
       currentWorkspace: () => '/repo',
       notify: (payload) => notifications.push(payload)
     });
@@ -211,6 +209,7 @@ describe('GitChangesService', () => {
     const notifications: unknown[] = [];
     const { GitChangesService } = await import('@main/workspace/changes');
     const service = new GitChangesService({
+      focused: () => true,
       currentWorkspace: () => '/repo',
       notify: (payload) => notifications.push(payload)
     });
@@ -223,9 +222,43 @@ describe('GitChangesService', () => {
     expect(notifications).toEqual([{ workspacePath: '/repo' }]);
   });
 
+  it('defers watcher refreshes while unfocused and runs them once refocused', async () => {
+    let focused = false;
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({
+      notify: () => {},
+      focused: () => focused,
+      currentWorkspace: () => '/repo'
+    });
+    await service.getSummary();
+    gitMocks.getGitChangeSummary.mockResolvedValue(changedSummary);
+
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(1);
+
+    focused = true;
+    service.flushPendingRefreshes();
+    await vi.advanceTimersByTimeAsync(180);
+    expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it('evicts idle workspaces other than the active one', async () => {
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
+    await service.getSummary('/other');
+    const otherWatchers = [...fsMocks.watchers];
+
+    await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+    await service.getSummary('/repo');
+
+    expect(otherWatchers.length).toBeGreaterThan(0);
+    expect(otherWatchers.every((watcher) => watcher.closed)).toBe(true);
+  });
+
   it('closes workspace watchers on dispose', async () => {
     const { GitChangesService } = await import('@main/workspace/changes');
-    const service = new GitChangesService({ currentWorkspace: () => '/repo', notify: () => {} });
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
     await service.getSummary();
 
     service.dispose();

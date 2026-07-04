@@ -1,5 +1,5 @@
+import { maxSubagentTasks, normalizeSubagentTasks } from '@main/subagents/utils/input';
 import { toolEventDetail } from '@main/tools/details';
-import { normalizeSubagentTasks } from '@main/subagents/utils/input';
 import { subagentExpandable, subagentSummary } from '@renderer/shared/turn/subagent';
 import { describe, expect, it } from 'vitest';
 
@@ -88,6 +88,15 @@ describe('sub-agent tool details', () => {
     });
 
     expect(detail.title).toBe('Spawning 1 agent');
+  });
+
+  it('caps normalized tasks at the spawn limit', () => {
+    const tasks = Array.from({ length: 12 }, (_, index) => ({ prompt: `Task ${index}` }));
+    const normalized = normalizeSubagentTasks({ tasks });
+
+    expect(maxSubagentTasks).toBe(8);
+    expect(normalized).toHaveLength(maxSubagentTasks);
+    expect(normalized.at(-1)).toEqual({ prompt: 'Task 7' });
   });
 
   it('expands completed summaries', () => {

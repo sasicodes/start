@@ -64,11 +64,11 @@ describe('helpers', () => {
 
   it('sorts the latest provider models into the configured display order', () => {
     const sorted = getLatestProviderModels('anthropic', [
-      { id: 'claude-sonnet-4-6', name: 'Sonnet', provider: 'anthropic' },
-      { id: 'claude-haiku-4-5', name: 'Haiku 4 5', provider: 'anthropic' },
+      { id: 'claude-sonnet-5', name: 'Sonnet 5', provider: 'anthropic' },
+      { id: 'claude-fable-5', name: 'Fable 5', provider: 'anthropic' },
       { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5']);
   });
 
   it('orders Google models smartest to cheapest', () => {

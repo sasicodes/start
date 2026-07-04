@@ -8,6 +8,12 @@ let stopUpdateEvents: (() => void) | undefined;
 
 const updateState = signal<UpdateState>({ status: 'idle' });
 
+export const updateLabel = (state: UpdateState) => {
+  if (state.status === 'downloading') return `Downloading (${state.percent}%)`;
+  if (state.status === 'downloaded') return 'Restart';
+  return 'Update';
+};
+
 const applyUpdateState = (state: UpdateState) => {
   updateState.value = state;
 };

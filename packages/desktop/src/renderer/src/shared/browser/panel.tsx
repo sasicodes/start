@@ -161,7 +161,13 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
     [applyStatus]
   );
 
-  useEffect(() => window.pi.app.onBrowserStatus(applyStatus), [applyStatus]);
+  useEffect(() => {
+    window.pi.app
+      .browserStatus()
+      .then(applyStatus)
+      .catch(() => {});
+    return window.pi.app.onBrowserStatus(applyStatus);
+  }, [applyStatus]);
 
   useEffect(() => {
     if (navigation.tabId && !navigation.url) {

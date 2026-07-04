@@ -76,6 +76,7 @@ let activeTabId = '';
 let attachedTabId = '';
 let browserTabUseOrder = 0;
 let lastBounds: BrowserBounds | null = null;
+let statusBroadcastTimer: ReturnType<typeof setTimeout> | null = null;
 let ownerWindow: ElectronBrowserWindow | null = null;
 let ownerWindowClosedHandler: (() => void) | null = null;
 let ownerWindowGoneHandler: (() => void) | null = null;
@@ -85,6 +86,7 @@ const browserTabs = new Map<string, BrowserTab>();
 const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
 const maxBrowserTabs = 8;
+const statusBroadcastDelayMs = 80;
 const allowedKeyCodes = new Set([
   'Tab',
   'End',
@@ -165,8 +167,22 @@ const statusFromView = (): BrowserStatus => {
   };
 };
 
-const sendStatus = () => {
+const broadcastStatus = () => {
   sendToRendererWindows('app:browser-status', statusFromView());
+};
+
+const sendStatus = () => {
+  if (statusBroadcastTimer) return;
+  statusBroadcastTimer = setTimeout(() => {
+    statusBroadcastTimer = null;
+    broadcastStatus();
+  }, statusBroadcastDelayMs);
+};
+
+const clearPendingStatusBroadcast = () => {
+  if (!statusBroadcastTimer) return;
+  clearTimeout(statusBroadcastTimer);
+  statusBroadcastTimer = null;
 };
 
 const externalUrl = (url: string) => {
@@ -232,6 +248,7 @@ const nextActiveTabIdAfterClose = (tabId: string) => {
 const detachAttachedTab = () => {
   const tab = browserTabs.get(attachedTabId);
   if (ownerWindow && tab && !ownerWindow.isDestroyed()) ownerWindow.contentView.removeChildView(tab.view);
+  if (tab && !tab.view.webContents.isDestroyed()) tab.view.webContents.setAudioMuted(true);
   attachedTabId = '';
 };
 
@@ -279,6 +296,7 @@ const detachBrowserWindow = () => {
 
 const closeBrowserTabs = () => {
   if (browserTabs.size === 0 && !ownerWindow) return;
+  clearPendingStatusBroadcast();
   detachBrowserWindow();
   for (const tab of browserTabs.values()) {
     tab.view.webContents.stop();
@@ -289,7 +307,7 @@ const closeBrowserTabs = () => {
   nextBrowserTabId = 1;
   lastBounds = null;
   browserTabUseOrder = 0;
-  sendStatus();
+  broadcastStatus();
   sendToRendererWindows('app:browser-inspect-state', false);
 };
 
@@ -322,6 +340,7 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
   }
 
   touchBrowserTab(tab);
+  tab.view.webContents.setAudioMuted(false);
   window.contentView.addChildView(tab.view);
   attachedTabId = tab.id;
   if (lastBounds) tab.view.setBounds(lastBounds);
@@ -339,7 +358,7 @@ export const getBrowserStatus = (): BrowserStatus => statusFromView();
 
 export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | null): BrowserActionResult => {
   if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-    detachBrowserWindow();
+    detachAttachedTab();
     return { ok: true, status: statusFromView() };
   }
 

@@ -1,7 +1,7 @@
 import { TurnArticleById } from '@renderer/shared/turn/article';
 import { estimateTurnHeight } from '@renderer/shared/turn/estimate';
-import { turnActionText } from '@renderer/shared/turn/sequence';
-import { readTurn, readTurns, turnIdsState } from '@renderer/state/chat';
+import { turnActionTextAt } from '@renderer/shared/turn/sequence';
+import { readTurn, turnIdsState } from '@renderer/state/chat';
 import { Virtual, type VirtualHandle } from '@renderer/ui/virtual';
 import type { RefObject } from 'preact';
 import { memo } from 'preact/compat';
@@ -31,14 +31,15 @@ export const TurnArticles = memo(({ virtualRef, onRangeChange, preserveScrollEnd
       getKey={turnKey}
       className="w-full"
       apiRef={virtualRef}
-      estimateHeightAsMinimum
       onRangeChange={onRangeChange}
       itemClassName="flex flex-col"
       estimateHeight={estimateTurnIdHeight}
       preserveScrollEnd={preserveScrollEnd}
-      renderItem={(turnId, index) => (
-        <TurnArticleById turnId={turnId} actionText={() => turnActionText(readTurns(), index)} />
-      )}
+      renderItem={(turnId, index) => {
+        const assistant = readTurn(turnId)?.role === 'assistant';
+        const actionText = assistant ? turnActionTextAt((i) => readTurn(turnIds[i] ?? ''), index) : '';
+        return <TurnArticleById turnId={turnId} {...(actionText ? { actionText } : {})} />;
+      }}
     />
   );
 });

@@ -1,5 +1,5 @@
 import type { WebContents } from 'electron';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
 import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 
@@ -264,7 +264,7 @@ describe('browser panel view', () => {
       ok: true,
       status: {
         url: '',
-        open: false,
+        open: true,
         title: '',
         loading: false,
         canGoBack: false,
@@ -273,6 +273,110 @@ describe('browser panel view', () => {
         tabs: [{ id: 'tab-1', url: '', title: '', loading: false }]
       }
     });
+  });
+
+  it('closes live tabs when the owner window closes after bounds were cleared', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    await openBrowserUrl(webContents, 'https://example.com');
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://start.intelligence.one', { newTab: true });
+    const secondView = window.contentView.children[0];
+    if (!secondView) throw new Error('Expected browser view.');
+
+    setBrowserBounds(webContents, null);
+    window.close();
+
+    expect(firstView.webContents.closed).toBe(true);
+    expect(secondView.webContents.closed).toBe(true);
+    expect(reloadBrowser()).toMatchObject({ ok: false, error: 'Open the in-app browser panel first.' });
+  });
+
+  it('mutes the browser tab while detached and unmutes it on attach', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+    expect(view.webContents.audioMuted).toBe(false);
+
+    setBrowserBounds(webContents, null);
+    expect(view.webContents.audioMuted).toBe(true);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    expect(view.webContents.audioMuted).toBe(false);
+  });
+
+  it('mutes the background tab when switching browser tabs', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    await openBrowserUrl(webContents, 'https://example.com');
+    const firstView = window.contentView.children[0];
+    if (!firstView) throw new Error('Expected browser view.');
+
+    await openBrowserUrl(webContents, 'https://start.intelligence.one', { newTab: true });
+    const secondView = window.contentView.children[0];
+    if (!secondView) throw new Error('Expected browser view.');
+
+    expect(firstView.webContents.audioMuted).toBe(true);
+    expect(secondView.webContents.audioMuted).toBe(false);
+
+    selectBrowserTab(webContents, 'tab-1');
+
+    expect(firstView.webContents.audioMuted).toBe(false);
+    expect(secondView.webContents.audioMuted).toBe(true);
+  });
+
+  it('coalesces rapid page status events into one broadcast', () => {
+    vi.useFakeTimers();
+    try {
+      const window = createFakeBrowserWindow();
+      const webContents = webContentsForTest(window);
+
+      setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+      const view = window.contentView.children[0];
+      if (!view) throw new Error('Expected browser view.');
+      resetBroadcasts();
+
+      for (let index = 0; index < 5; index += 1) view.webContents.emit('page-title-updated');
+      expect(broadcastsByChannel('app:browser-status')).toHaveLength(0);
+
+      vi.advanceTimersByTime(80);
+      expect(broadcastsByChannel('app:browser-status')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drops the pending broadcast and reports closure immediately when the browser closes', () => {
+    vi.useFakeTimers();
+    try {
+      const window = createFakeBrowserWindow();
+      const webContents = webContentsForTest(window);
+
+      setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+      const view = window.contentView.children[0];
+      if (!view) throw new Error('Expected browser view.');
+      resetBroadcasts();
+
+      view.webContents.emit('page-title-updated');
+      window.close();
+
+      expect(broadcastsByChannel('app:browser-status')).toHaveLength(1);
+      expect(broadcastsByChannel('app:browser-status')[0]?.args[0]).toMatchObject({ open: false, tabs: [] });
+
+      vi.advanceTimersByTime(200);
+      expect(broadcastsByChannel('app:browser-status')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('returns a structured error when screenshot capture fails', async () => {

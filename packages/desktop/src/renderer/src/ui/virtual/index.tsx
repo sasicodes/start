@@ -1,10 +1,13 @@
 import {
   totalHeight,
   visibleRange,
+  resolveItemHeight,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
-  shouldPreserveScrollEnd
+  measuredPrependShift,
+  shouldPreserveScrollEnd,
+  shouldCompensateMeasuredDelta
 } from '@renderer/ui/virtual/geometry';
 import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import { tw } from '@renderer/utils/tw';
@@ -25,7 +28,6 @@ interface VirtualProps<T> {
   items: ReadonlyArray<T>;
   preserveScrollEnd?: boolean;
   getKey: (item: T) => string;
-  estimateHeightAsMinimum?: boolean;
   estimateHeight: (item: T) => number;
   apiRef?: RefObject<VirtualHandle | null>;
   onRangeChange?: (range: VisibleRange) => void;
@@ -153,15 +155,16 @@ export const Virtual = <T,>({
   estimateHeight,
   itemClassName = '',
   preserveScrollEnd = false,
-  overscan = defaultOverscan,
-  estimateHeightAsMinimum = false
+  overscan = defaultOverscan
 }: VirtualProps<T>) => {
   const itemsRef = useRef(items);
   const pinnedRef = useRef(true);
+  const firstKeyRef = useRef('');
   const appliedScrollDeltaRef = useRef(0);
   const totalRef = useRef<number | null>(null);
   const estimateHeightRef = useRef(estimateHeight);
   const containerRef = useRef<HTMLDivElement>(null);
+  const committedKeysRef = useRef(new Set<string>());
   const itemIndexRef = useRef(new Map<string, number>());
   const heightCacheRef = useRef(new Map<string, number>());
   const [heightRevision, setHeightRevision] = useState(0);
@@ -177,19 +180,13 @@ export const Virtual = <T,>({
     const nextIndexes = new Map<string, number>();
     const nextHeights = items.map((item, index) => {
       const key = getKey(item);
-      const cachedHeight = heightCacheRef.current.get(key);
-      const estimatedHeight = estimateHeight(item);
-      const contentHeight =
-        estimateHeightAsMinimum && typeof cachedHeight === 'number'
-          ? Math.max(cachedHeight, estimatedHeight)
-          : (cachedHeight ?? estimatedHeight);
       nextIndexes.set(key, index);
-      return contentHeight + (index < last ? gap : 0);
+      return resolveItemHeight(heightCacheRef.current.get(key), estimateHeight(item), index < last ? gap : 0);
     });
 
     itemIndexRef.current = nextIndexes;
     return nextHeights;
-  }, [gap, items, getKey, estimateHeight, heightRevision, estimateHeightAsMinimum]);
+  }, [gap, items, getKey, estimateHeight, heightRevision]);
   const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
   const total = totalHeight(cumulative);
   const range = useVisibleRange(cumulative, overscan, containerRef);
@@ -245,19 +242,55 @@ export const Virtual = <T,>({
       ? scrollAncestor.scrollHeight - scrollAncestor.clientHeight - scrollAncestor.scrollTop
       : 0;
 
+    const committed = committedKeysRef.current.has(key);
     const anchorAbove = typeof index === 'number' && index < firstVisible;
     const pinnedToEnd =
       preserveScrollEndRef.current &&
       (pinnedRef.current || shouldPreserveScrollEnd(distanceFromEnd, heightDelta, pinnedThreshold));
 
     heightCacheRef.current.set(key, height);
-    if (scrollAncestor && (anchorAbove || pinnedToEnd)) {
+    if (scrollAncestor && shouldCompensateMeasuredDelta(committed, anchorAbove, pinnedToEnd)) {
       scrollAncestor.scrollTop += heightDelta;
       appliedScrollDeltaRef.current += heightDelta;
       if (pinnedToEnd) pinnedRef.current = true;
     }
     setHeightRevision((revision) => revision + 1);
   }, []);
+
+  useLayoutEffect(() => {
+    const firstItem = items[0];
+    const firstKey = firstItem ? getKey(firstItem) : '';
+    const previousFirstKey = firstKeyRef.current;
+    firstKeyRef.current = firstKey;
+    if (!previousFirstKey || previousFirstKey === firstKey) return;
+    if (preserveScrollEnd && pinnedRef.current) return;
+
+    const anchorIndex = itemIndexRef.current.get(previousFirstKey) ?? 0;
+    const shift = measuredPrependShift(
+      items,
+      anchorIndex,
+      gap,
+      getKey,
+      heightCacheRef.current,
+      estimateHeightRef.current
+    );
+    if (shift <= 0) return;
+
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    if (!scrollAncestor) return;
+
+    scrollAncestor.scrollTop += shift;
+    appliedScrollDeltaRef.current += shift;
+  }, [gap, items, getKey, preserveScrollEnd]);
+
+  useLayoutEffect(() => {
+    const keys = new Set(items.map(getKey));
+    committedKeysRef.current = keys;
+    for (const key of heightCacheRef.current.keys()) {
+      if (!keys.has(key)) heightCacheRef.current.delete(key);
+    }
+  }, [items, getKey]);
 
   useLayoutEffect(() => {
     if (totalRef.current === null) {
@@ -303,13 +336,6 @@ export const Virtual = <T,>({
     syncPinned();
     return () => scrollAncestor.removeEventListener('scroll', syncPinned);
   }, [preserveScrollEnd]);
-
-  useEffect(() => {
-    const keys = new Set(items.map(getKey));
-    for (const key of heightCacheRef.current.keys()) {
-      if (!keys.has(key)) heightCacheRef.current.delete(key);
-    }
-  }, [items, getKey]);
 
   useLayoutEffect(() => {
     if (!apiRef) return;

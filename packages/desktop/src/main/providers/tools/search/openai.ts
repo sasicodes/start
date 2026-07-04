@@ -7,7 +7,7 @@ import {
   codexSearchInstructions,
   isCodexModel
 } from '@main/providers/tools/search/codex';
-import { postSse } from '@main/providers/tools/search/fetcher';
+import { postSse, throwStreamError } from '@main/providers/tools/search/fetcher';
 import {
   addSource,
   addString,
@@ -20,6 +20,12 @@ import {
   trimTrailingSlash
 } from '@main/providers/tools/search/helpers';
 import type { JsonRecord, SearchModel, SearchResult, SearchSource } from '@main/providers/tools/search/types';
+
+const streamErrorStatuses: Record<string, number> = {
+  server_error: 500,
+  rate_limit_error: 429,
+  rate_limit_exceeded: 429
+};
 
 const openAiCitation = (annotation: JsonRecord): SearchSource | null => {
   const nested = recordValue(annotation, 'url_citation');
@@ -115,7 +121,9 @@ export const searchOpenAi = async (
       }
     } else if (type === 'response.failed' || type === 'error') {
       const error = recordValue(event, 'error') || recordValue(recordValue(event, 'response'), 'error');
-      throw new Error(stringValue(recordValue(error, 'message')) || 'OpenAI web search failed.');
+      const message = stringValue(recordValue(error, 'message')) || 'OpenAI web search failed.';
+      const code = stringValue(recordValue(error, 'code')) || stringValue(recordValue(error, 'type'));
+      throwStreamError(code, message, streamErrorStatuses);
     }
   });
 

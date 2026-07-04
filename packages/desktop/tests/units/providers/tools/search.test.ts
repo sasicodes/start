@@ -4,6 +4,7 @@ import { createWebSearchTools, noModelWebSearchMessage } from '@main/providers/t
 import { runWebSearch, unsupportedWebSearchMessage } from '@main/providers/tools/search/providers';
 import type { SearchModel } from '@main/providers/tools/search/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { responseFromSse } from '../../../fakes/sse.js';
 
 interface TestToolResult {
   details: Record<string, unknown>;
@@ -69,19 +70,6 @@ const requestBody = (index = 0) => {
   const value: unknown = JSON.parse(body);
   if (!isRecord(value)) throw new Error('Expected object request body.');
   return value;
-};
-
-const responseFromSse = (events: readonly Record<string, unknown>[]) => {
-  const encoder = new TextEncoder();
-  return new Response(
-    new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')));
-        controller.close();
-      }
-    }),
-    { status: 200 }
-  );
 };
 
 const fetchMock = vi.fn();
@@ -447,5 +435,51 @@ describe('web_search tool', () => {
     expect(result.content[0]?.text).toContain('Plain answer');
     expect(result.content[0]?.text).toContain('Search Verification');
     expect(result.details).toMatchObject({ grounded: false, provider: 'openai', resultCount: 0 });
+  });
+
+  it('returns a graceful rate-limited result when the provider keeps returning 429', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(
+        async () => new Response('{"error":{"type":"rate_limit_error","message":"Too many requests"}}', { status: 429 })
+      );
+
+      const pending = tool(model({ provider: 'openai' })).execute('call-1', { query: 'busy' });
+      await vi.advanceTimersByTimeAsync(30_000);
+      const result = await pending;
+
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(result.content[0]?.text).toBe('Web search is rate limited right now. Wait a moment and retry.');
+      expect(result.details).toMatchObject({ error: 'rate_limited', query: 'busy', status: 429 });
+      expect(result.details).not.toHaveProperty('resultCount');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('returns a graceful failure result for non-retryable provider errors', async () => {
+    fetchMock.mockResolvedValue(new Response('bad request', { status: 400 }));
+
+    const result = await tool(model({ provider: 'openai' })).execute('call-1', { query: 'broken' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.content[0]?.text).toBe('Web search failed upstream. Try again shortly.');
+    expect(result.details).toMatchObject({ error: 'search_failed', query: 'broken', status: 400 });
+  });
+
+  it('maps mid-stream rate limits to a graceful result once content has streamed', async () => {
+    fetchMock.mockResolvedValue(
+      responseFromSse([
+        { type: 'content_block_delta', delta: { type: 'text_delta', text: 'partial' } },
+        { type: 'error', error: { type: 'rate_limit_error', message: 'Too many requests' } }
+      ])
+    );
+
+    const result = await tool(model({ provider: 'anthropic', api: 'anthropic-messages' })).execute('call-1', {
+      query: 'busy'
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.details).toMatchObject({ error: 'rate_limited', query: 'busy', status: 429 });
   });
 });
