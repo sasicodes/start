@@ -268,6 +268,30 @@ export const DiffSplitIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { str
   </svg>
 );
 
+export const CollapseAllIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M9.5 16.25L12 13.75L14.5 16.25M14.5 7.75L12 10.25L9.5 7.75M12 20.25V14.5M12 9.5V3.75M7.25 4.75H5.75C4.09315 4.75 2.75 6.09315 2.75 7.75V16.25C2.75 17.9069 4.09315 19.25 5.75 19.25H7.25M16.75 4.75H18.25C19.9069 4.75 21.25 6.09315 21.25 7.75V16.25C21.25 17.9069 19.9069 19.25 18.25 19.25H16.75"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
+export const ExpandAllIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M9.5 5.25L12 2.75L14.5 5.25M14.5 18.75L12 21.25L9.5 18.75M12 9.25V3.5M12 20.5V14.75M7.25 8.75H5.75C4.09315 8.75 2.75 10.0931 2.75 11.75V12.25C2.75 13.9069 4.09315 15.25 5.75 15.25H7.25M16.75 8.75H18.25C19.9069 8.75 21.25 10.0931 21.25 11.75V12.25C21.25 13.9069 19.9069 15.25 18.25 15.25H16.75"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const ChangesIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
