@@ -20,6 +20,7 @@ export interface RelaySocket {
 
 export interface DesktopRelayCallbacks {
   onCode: (code: string) => void;
+  onPairedChanged?: () => void;
   onCommand: (command: MobileRelayCommand, context: DesktopRelayCommandContext) => Promise<void> | void;
   onPairingRequest?: (request: DesktopRelayPairingRequest) => void;
   onPairingResume?: (request: DesktopRelayPairingResumeRequest) => boolean;
@@ -55,6 +56,7 @@ export type RelaySocketFactory = (url: string, handlers: RelaySocketHandlers) =>
 const reconnectDelayMs = 3000;
 const minRefreshDelayMs = 5000;
 const codeRefreshBufferMs = 30000;
+const maxReconnectDelayMs = 60_000;
 
 export const isRelayUrl = (value: string) => {
   try {
@@ -85,6 +87,7 @@ export class DesktopRelay {
   private desktopName = '';
   private relayToken = '';
   private socket: RelaySocket | null = null;
+  private reconnectDelay = reconnectDelayMs;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly pairedMobileIds = new Set<string>();
@@ -100,6 +103,10 @@ export class DesktopRelay {
 
   get isActive() {
     return this.active;
+  }
+
+  get hasPairedMobile() {
+    return this.pairedMobileIds.size > 0;
   }
 
   sync(settings: MobileRelaySettings) {
@@ -127,7 +134,7 @@ export class DesktopRelay {
 
   stop() {
     this.active = false;
-    this.pairedMobileIds.clear();
+    this.clearPairedMobiles();
     this.clearTimers();
     this.socket?.close();
     this.socket = null;
@@ -142,10 +149,31 @@ export class DesktopRelay {
 
   private open() {
     this.socket = this.createSocket(this.relayUrl, {
-      onOpen: () => this.send(helloDesktopMessage(this.desktopId, this.relayToken, this.desktopName)),
+      onOpen: () => {
+        this.reconnectDelay = reconnectDelayMs;
+        this.send(helloDesktopMessage(this.desktopId, this.relayToken, this.desktopName));
+      },
       onClose: () => this.scheduleReconnect(),
       onMessage: (data) => this.receive(data)
     });
+  }
+
+  private mutatePairedMobiles(mutate: () => void) {
+    const hadPaired = this.hasPairedMobile;
+    mutate();
+    if (hadPaired !== this.hasPairedMobile) this.callbacks.onPairedChanged?.();
+  }
+
+  private addPairedMobile(mobileId: string) {
+    this.mutatePairedMobiles(() => this.pairedMobileIds.add(mobileId));
+  }
+
+  private removePairedMobile(mobileId: string) {
+    this.mutatePairedMobiles(() => this.pairedMobileIds.delete(mobileId));
+  }
+
+  private clearPairedMobiles() {
+    this.mutatePairedMobiles(() => this.pairedMobileIds.clear());
   }
 
   private receive(raw: string) {
@@ -156,7 +184,7 @@ export class DesktopRelay {
       this.scheduleRefresh(message.expiresAt);
     }
     if (message.type === 'pairing.request') {
-      this.pairedMobileIds.add(message.mobileId);
+      this.addPairedMobile(message.mobileId);
       this.callbacks.onPairingRequest?.({
         mobileId: message.mobileId,
         ...(message.name ? { name: message.name } : {}),
@@ -165,10 +193,10 @@ export class DesktopRelay {
     }
     if (message.type === 'pairing.resume') this.handlePairingResume(message);
     if (message.type === 'mobile.disconnected') {
-      this.pairedMobileIds.delete(message.mobileId);
+      this.removePairedMobile(message.mobileId);
     }
     if (message.type === 'mobile.command') {
-      this.pairedMobileIds.add(message.mobileId);
+      this.addPairedMobile(message.mobileId);
       this.handleCommand(message.mobileId, message.payload);
     }
 
@@ -190,7 +218,7 @@ export class DesktopRelay {
       return;
     }
 
-    this.pairedMobileIds.add(request.mobileId);
+    this.addPairedMobile(request.mobileId);
     this.send(pairingApproveMessage(request.mobileId));
   }
 
@@ -242,14 +270,15 @@ export class DesktopRelay {
   private scheduleReconnect() {
     this.socket = null;
     this.setCode('');
-    this.pairedMobileIds.clear();
+    this.clearPairedMobiles();
     if (this.refreshTimer) clearTimeout(this.refreshTimer);
     this.refreshTimer = null;
     if (!this.active || this.reconnectTimer) return;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.active) this.open();
-    }, reconnectDelayMs);
+    }, this.reconnectDelay);
+    this.reconnectDelay = Math.min(this.reconnectDelay * 2, maxReconnectDelayMs);
   }
 
   private clearTimers() {

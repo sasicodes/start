@@ -79,7 +79,7 @@ describe('tool details', () => {
 
   it('renders web search labels and query detail', () => {
     expect(toolResultTitle('web_search', false)).toBe('Searched the web');
-    expect(toolResultTitle('web_search', true)).toBe('Searched the web');
+    expect(toolResultTitle('web_search', true)).toBe('Search failed');
     expect(
       toolEventDetail({
         key: 'tool:1',
@@ -183,6 +183,22 @@ describe('tool details', () => {
       kind: 'tool',
       state: 'done',
       title: 'Edited src/app.ts'
+    });
+  });
+
+  it('keeps failed web searches as errors', () => {
+    expect(
+      toolEventDetail({
+        key: 'tool:1',
+        state: 'error',
+        toolName: 'web_search',
+        args: { query: 'package release notes' }
+      })
+    ).toMatchObject({
+      kind: 'error',
+      state: 'error',
+      title: 'Search failed',
+      detail: 'package release notes'
     });
   });
 

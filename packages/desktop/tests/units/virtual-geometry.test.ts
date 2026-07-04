@@ -1,13 +1,14 @@
 import {
-  prependShift,
   totalHeight,
   visibleRange,
   resolveItemHeight,
+  lastVisibleIndex,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
-  lastVisibleIndex,
-  shouldPreserveScrollEnd
+  measuredPrependShift,
+  shouldPreserveScrollEnd,
+  shouldCompensateMeasuredDelta
 } from '@renderer/ui/virtual/geometry';
 import { describe, expect, it } from 'vitest';
 
@@ -129,24 +130,140 @@ describe('resolveItemHeight', () => {
   });
 });
 
-describe('prependShift', () => {
-  const cumulative = cumulativeHeights([100, 100, 100, 100, 100]);
+const itemKey = (item: string) => item;
+
+describe('measuredPrependShift', () => {
+  const estimate = () => 100;
+  const items = ['p1', 'p2', 'a', 'b'];
 
   it('returns 0 when nothing was inserted above the anchor', () => {
-    expect(prependShift(cumulative, 0)).toBe(0);
+    expect(measuredPrependShift(items, 0, 12, itemKey, new Map(), estimate)).toBe(0);
   });
 
   it('returns 0 for non-positive anchors', () => {
-    expect(prependShift(cumulative, -1)).toBe(0);
+    expect(measuredPrependShift(items, -1, 12, itemKey, new Map(), estimate)).toBe(0);
   });
 
-  it('returns the height of the region above the anchor', () => {
-    expect(prependShift(cumulative, 2)).toBe(200);
-    expect(prependShift(cumulative, 5)).toBe(500);
+  it('sums measured heights and gaps for the prepended block', () => {
+    const measured = new Map([
+      ['p1', 37],
+      ['p2', 253]
+    ]);
+    expect(measuredPrependShift(items, 2, 12, itemKey, measured, estimate)).toBe(37 + 12 + 253 + 12);
   });
 
-  it('returns 0 when the anchor is out of range', () => {
-    expect(prependShift(cumulative, 99)).toBe(0);
+  it('falls back to estimates for prepended items that never mounted', () => {
+    expect(measuredPrependShift(items, 2, 12, itemKey, new Map(), estimate)).toBe(224);
+  });
+
+  it('mixes measured and estimated heights per item', () => {
+    const measured = new Map([['p1', 40]]);
+    expect(measuredPrependShift(items, 2, 12, itemKey, measured, estimate)).toBe(40 + 12 + 100 + 12);
+  });
+
+  it('ignores measurements at and below the anchor', () => {
+    const measured = new Map([
+      ['p1', 40],
+      ['a', 999],
+      ['b', 999]
+    ]);
+    expect(measuredPrependShift(items, 1, 0, itemKey, measured, estimate)).toBe(40);
+  });
+});
+
+describe('shouldCompensateMeasuredDelta', () => {
+  it('skips keys that were absent from the previous commit', () => {
+    expect(shouldCompensateMeasuredDelta(false, true, false)).toBe(false);
+    expect(shouldCompensateMeasuredDelta(false, false, true)).toBe(false);
+    expect(shouldCompensateMeasuredDelta(false, true, true)).toBe(false);
+  });
+
+  it('compensates committed items above the viewport', () => {
+    expect(shouldCompensateMeasuredDelta(true, true, false)).toBe(true);
+  });
+
+  it('compensates committed items while pinned to the end', () => {
+    expect(shouldCompensateMeasuredDelta(true, false, true)).toBe(true);
+  });
+
+  it('leaves committed items below an unpinned viewport alone', () => {
+    expect(shouldCompensateMeasuredDelta(true, false, false)).toBe(false);
+  });
+});
+
+describe('prepend anchoring', () => {
+  const gap = 12;
+  const scrollTop = 40;
+  const anchorIndex = 2;
+  const items = ['p1', 'p2', 'a', 'b', 'c'];
+  const estimates = new Map([
+    ['p1', 100],
+    ['p2', 100]
+  ]);
+  const estimate = (item: string) => estimates.get(item) ?? 0;
+  const mountedCache = () =>
+    new Map([
+      ['a', 50],
+      ['b', 60],
+      ['c', 70]
+    ]);
+
+  const measureMountedItems = (cache: Map<string, number>, committedKeys: Set<string>) => {
+    let compensation = 0;
+    for (const [key, height] of [
+      ['p1', 37],
+      ['p2', 253]
+    ] as const) {
+      const delta = height - estimate(key);
+      cache.set(key, height);
+      if (shouldCompensateMeasuredDelta(committedKeys.has(key), true, false)) compensation += delta;
+    }
+    return compensation;
+  };
+
+  const anchorOffset = (cache: Map<string, number>) => {
+    const heights = items.map((item, index) => {
+      const base = cache.get(item) ?? estimate(item);
+      return index < items.length - 1 ? base + gap : base;
+    });
+    return cumulativeHeights(heights)[anchorIndex] ?? 0;
+  };
+
+  it('keeps the anchor stationary when prepended items measure differently from their estimates', () => {
+    const cache = mountedCache();
+
+    const compensation = measureMountedItems(cache, new Set(['a', 'b', 'c']));
+    const shift = measuredPrependShift(items, anchorIndex, gap, itemKey, cache, estimate);
+
+    expect(compensation).toBe(0);
+    expect(scrollTop + compensation + shift - anchorOffset(cache)).toBe(scrollTop);
+  });
+
+  it('drifts the anchor when the shift trusts estimates over fresh measurements', () => {
+    const cache = mountedCache();
+    const estimatedShift = measuredPrependShift(items, anchorIndex, gap, itemKey, new Map(), estimate);
+
+    measureMountedItems(cache, new Set(['a', 'b', 'c']));
+
+    expect(scrollTop + estimatedShift - anchorOffset(cache)).not.toBe(scrollTop);
+  });
+
+  it('double-compensates when measured deltas also adjust scroll for prepended keys', () => {
+    const cache = mountedCache();
+
+    const compensation = measureMountedItems(cache, new Set(items));
+    const shift = measuredPrependShift(items, anchorIndex, gap, itemKey, cache, estimate);
+
+    expect(compensation).not.toBe(0);
+    expect(scrollTop + compensation + shift - anchorOffset(cache)).not.toBe(scrollTop);
+  });
+
+  it('stays stable when prepended items remain unmounted above the range', () => {
+    const cache = mountedCache();
+
+    const shift = measuredPrependShift(items, anchorIndex, gap, itemKey, cache, estimate);
+
+    expect(scrollTop + shift - anchorOffset(cache)).toBe(scrollTop);
   });
 });
 

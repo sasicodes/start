@@ -72,8 +72,10 @@ const mimeFromPath = (filePath: string) => {
   return mimeByExtension[basename.slice(dot + 1).toLowerCase()] ?? 'application/octet-stream';
 };
 
+export const gitEnv = () => ({ ...process.env, GIT_OPTIONAL_LOCKS: '0' });
+
 const git = async (cwd: string, args: string[], timeout = 1200) => {
-  const { stdout } = await execFileAsync('git', args, { cwd, timeout, maxBuffer: gitMaxBuffer });
+  const { stdout } = await execFileAsync('git', args, { cwd, timeout, env: gitEnv(), maxBuffer: gitMaxBuffer });
   return stdout;
 };
 

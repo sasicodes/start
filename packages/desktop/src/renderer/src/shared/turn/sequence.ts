@@ -88,19 +88,20 @@ export const splitDiffMetric = (value: string) => {
   return { label: match[1], added: match[2], removed: match[3] };
 };
 
-export const turnActionText = (turns: Turn[], index: number) => {
-  const turn = turns[index];
+export const turnActionTextAt = (turnAt: (index: number) => Turn | null, index: number) => {
+  const turn = turnAt(index);
   if (!turn) return '';
   if (turn.role !== 'assistant') return turn.text;
+  if (turnAt(index + 1)?.role === 'assistant') return '';
 
   let text = '';
   for (let i = index; i >= 0; i--) {
-    const item = turns[i];
+    const item = turnAt(i);
     if (item?.role !== 'assistant') break;
     if (item.text) text = text ? `${item.text}\n\n${text}` : item.text;
   }
 
-  if (turns[index + 1]?.role === 'assistant') return '';
-
   return text;
 };
+
+export const turnActionText = (turns: Turn[], index: number) => turnActionTextAt((i) => turns[i] ?? null, index);

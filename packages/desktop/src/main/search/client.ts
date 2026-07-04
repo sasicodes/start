@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { agentWaitMs, grepTimeBudgetMs, uiWaitMs } from '@main/search/limits';
+import { logger } from '@main/utils/logger';
 import type {
   FindOptions,
   GrepOptionsInput,
@@ -57,12 +58,16 @@ const spawnHost = () => {
       serviceName: 'start-search-host'
     });
     child.on('message', (message: SearchHostResponse) => settle(message.id, message.value));
-    child.once('exit', () => {
-      if (host === child) host = null;
+    child.once('exit', (code) => {
+      if (host === child) {
+        host = null;
+        logger.error('search host exit', code);
+      }
       recordHostExit();
     });
     return child;
-  } catch {
+  } catch (error) {
+    logger.error('search host spawn', error);
     return null;
   }
 };

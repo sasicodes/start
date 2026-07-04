@@ -8,14 +8,18 @@ const fffMock = vi.hoisted(() => ({
 }));
 
 const builtinMock = vi.hoisted(() => ({
-  findExecute: vi.fn(async () => ({ content: [{ text: 'fallback find', type: 'text' }] })),
   grepExecute: vi.fn(async () => ({ content: [{ text: 'fallback grep', type: 'text' }] }))
+}));
+
+const filesMock = vi.hoisted(() => ({
+  findPathsWithRg: vi.fn()
 }));
 
 vi.mock('@main/search/client', () => fffMock);
 
+vi.mock('@main/providers/tools/fff/files', () => filesMock);
+
 vi.mock('@earendil-works/pi-coding-agent', () => ({
-  createFindTool: () => ({ execute: builtinMock.findExecute }),
   createGrepTool: () => ({ execute: builtinMock.grepExecute }),
   defineTool: <T>(tool: T) => tool
 }));
@@ -51,7 +55,7 @@ describe('fff provider tools', () => {
     fffMock.grepWorkspace.mockReset();
     fffMock.findWorkspacePaths.mockReset();
     fffMock.multiGrepWorkspace.mockReset();
-    builtinMock.findExecute.mockClear();
+    filesMock.findPathsWithRg.mockReset();
     builtinMock.grepExecute.mockClear();
   });
 
@@ -85,33 +89,30 @@ describe('fff provider tools', () => {
     });
   });
 
-  it('translates fuzzy patterns into globs for the built-in find fallback', async () => {
+  it('falls back to rg file listing when the index is unavailable', async () => {
     fffMock.findWorkspacePaths.mockResolvedValue(null);
+    filesMock.findPathsWithRg.mockResolvedValue([{ path: 'src/config.ts', type: 'file' }]);
 
     const { findTool } = tools();
-    const result = await executeTool(findTool, { pattern: 'src config' });
+    const result = await executeTool(findTool, { path: 'src', pattern: 'src config' });
 
-    expect(toolText(result)).toBe('fallback find');
-    expect(builtinMock.findExecute).toHaveBeenCalledWith(
-      'tool-call',
-      { limit: 200, pattern: '*src*config*' },
-      signal,
-      expect.any(Function)
-    );
+    expect(toolText(result)).toBe('src/config.ts');
+    expect(filesMock.findPathsWithRg).toHaveBeenCalledWith({
+      cwd: '/repo',
+      path: 'src',
+      limit: 200,
+      pattern: 'src config'
+    });
   });
 
-  it('passes glob patterns to the built-in find fallback unchanged', async () => {
+  it('reports unavailable file search when the rg fallback fails', async () => {
     fffMock.findWorkspacePaths.mockResolvedValue(null);
+    filesMock.findPathsWithRg.mockResolvedValue(null);
 
     const { findTool } = tools();
-    await executeTool(findTool, { path: 'src', pattern: '*.ts' });
+    const result = await executeTool(findTool, { pattern: 'chat' });
 
-    expect(builtinMock.findExecute).toHaveBeenCalledWith(
-      'tool-call',
-      { path: 'src', limit: 200, pattern: '*.ts' },
-      signal,
-      expect.any(Function)
-    );
+    expect(toolText(result)).toBe('File search is unavailable in this workspace.');
   });
 
   it('formats grep results with context and pagination', async () => {

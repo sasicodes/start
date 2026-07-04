@@ -20,6 +20,7 @@ import {
 } from '@main/attachments';
 import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/commands';
 import { contextPercent } from '@main/chat/context';
+import { createDeltaCoalescer } from '@main/chat/deltas';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
 import { appendLiveAssistantTurn } from '@main/chat/live';
 import { type LiveRecentSession, recentSessionsPage, type WorktreeRef } from '@main/chat/recents';
@@ -96,7 +97,7 @@ import {
   type WorkspaceFolder
 } from '@main/types';
 import { workspaceDisplayName } from '@main/utils/workspace';
-import { sendToRendererWindows } from '@main/window';
+import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
 import { isManagedWorktree, worktreeBranch, worktreePathFor, worktreeSlug } from '@main/workspace/worktree';
@@ -107,6 +108,7 @@ const { shell } = electron;
 
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 const mobileMaxPageLimit = 50;
+const streamDeltaFlushMs = 50;
 const mobileDefaultMessageLimit = 10;
 const mobileDefaultSessionLimit = 40;
 const mobileStreamNotifyMinIntervalMs = 750;
@@ -254,7 +256,6 @@ export class ChatService {
   constructor() {
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
-    this.warmWorkspaceSearch();
   }
 
   setMobileSessionChangeHandler(handler: MobileSessionChangeHandler): void {
@@ -1181,14 +1182,24 @@ export class ChatService {
       this.resetLiveAssistantTurn(session, state);
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
+
+      const deltas = createDeltaCoalescer(streamDeltaFlushMs, (flushed) => {
+        if (flushed.senderText) this.emit('delta', flushed.senderText, webContents);
+        if (flushed.text) this.emitScoped('chat:scoped-delta', sessionId, workspacePath, flushed.text);
+        if (flushed.senderThinking) this.emit('thinking-delta', flushed.senderThinking, webContents);
+        if (flushed.thinking) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, flushed.thinking);
+      });
+
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
         if (event.type === 'queue_update') {
+          deltas.flush();
           if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);
           return;
         }
 
         if (active && event.type === 'message_start' && event.message.role === 'user') {
+          deltas.flush();
           this.emitQueuedTurnStart(event.message.content, state, webContents);
         }
 
@@ -1200,20 +1211,21 @@ export class ChatService {
         if ('toolCallId' in event) previousToolArgs = toolArgs.get(event.toolCallId);
         const eventContext = previousToolArgs ? { toolArgs: previousToolArgs } : {};
         const renderedEvent = chatEvent(event, eventContext);
-        if (renderedEvent) this.appendLiveAssistantDetail(state, renderedEvent);
-        if (active) this.emitEvent(renderedEvent, webContents);
-        if (renderedEvent) this.emitScoped('chat:scoped-event', sessionId, workspacePath, renderedEvent);
+        if (renderedEvent) {
+          deltas.flush();
+          this.appendLiveAssistantDetail(state, renderedEvent);
+          if (active) this.emitEvent(renderedEvent, webContents);
+          this.emitScoped('chat:scoped-event', sessionId, workspacePath, renderedEvent);
+        }
         if (event.type === 'tool_execution_end') toolArgs.delete(event.toolCallId);
 
         const delta = textDelta(event);
         if (delta) this.appendLiveAssistantText(state, delta);
-        if (active && delta) this.emit('delta', delta, webContents);
-        if (delta) this.emitScoped('chat:scoped-delta', sessionId, workspacePath, delta);
+        if (delta) deltas.push('text', delta, active);
 
         const thought = thinkingDelta(event);
         if (thought) this.appendLiveAssistantThinking(state, thought);
-        if (active && thought) this.emit('thinking-delta', thought, webContents);
-        if (thought) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, thought);
+        if (thought) deltas.push('thinking', thought, active);
         if (renderedEvent || delta || thought) notifyMobileSessionChange();
 
         const error = agentEndError(event);
@@ -1228,6 +1240,7 @@ export class ChatService {
         }
       } finally {
         unsubscribe();
+        deltas.flush();
       }
 
       if (endError) {
@@ -1425,7 +1438,7 @@ export class ChatService {
     return this.runtimeStateForSessionId(session.sessionManager.getSessionId());
   }
 
-  private warmWorkspaceSearch(): void {
+  warmWorkspaceSearch(): void {
     warmWorkspaceFinder(this.workspaceCwd);
   }
 
@@ -1920,29 +1933,23 @@ export class ChatService {
 
   private subagentToolsOptions(sessionId: string, cwd: string): Parameters<typeof createStartCustomTools>[0] {
     const allocator = this.subagentNameAllocator(sessionId);
-
-    return {
+    const base = {
       cwd: () => cwd,
       authStorage: this.authStorage,
-      sessions: this.sessionController(),
-      worktreeOwners: (path) => this.worktreeOwners(path),
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
       model: () => this.pickModel() ?? null,
       settingsManager: this.settingsManager,
-      thinkingLevel: () => this.selectedThinkingLevel,
-      customTools: () =>
-        createStartCustomTools({
-          cwd: () => cwd,
-          includeSubagents: false,
-          authStorage: this.authStorage,
-          nameAllocator: () => allocator,
-          modelRegistry: this.modelRegistry,
-          model: () => this.pickModel() ?? null,
-          settingsManager: this.settingsManager,
-          customTools: () => createStartCustomTools(),
-          thinkingLevel: () => this.selectedThinkingLevel
-        })
+      thinkingLevel: () => this.selectedThinkingLevel
+    };
+    const subagentSessionTools = (): ReturnType<typeof createStartCustomTools> =>
+      createStartCustomTools({ ...base, includeSubagents: false, customTools: subagentSessionTools });
+
+    return {
+      ...base,
+      sessions: this.sessionController(),
+      customTools: subagentSessionTools,
+      worktreeOwners: (path) => this.worktreeOwners(path)
     };
   }
 
@@ -2113,6 +2120,6 @@ export class ChatService {
 
   private emitScoped<T>(channel: string, tabId: string, workspacePath: string, payload: T): void {
     if (!tabId) return;
-    sendToRendererWindows(channel, { tabId, workspacePath, payload });
+    sendToMainWindowIfOpen(channel, { tabId, workspacePath, payload });
   }
 }

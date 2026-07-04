@@ -27,8 +27,6 @@ const shouldShowBody = (turn: Turn) => {
 
 const shouldUseMarkdown = (turn: Turn) => turn.role === 'assistant' && Boolean(turn.text);
 
-type TurnActionText = () => string;
-
 const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   const attachments = turn.attachments ?? [];
   if (turn.role !== 'user' || !attachments.length) return null;
@@ -56,11 +54,11 @@ const UserAttachments = memo(({ turn }: { turn: Turn }) => {
   );
 });
 
-const TurnActions = memo(({ actionText, turn }: { actionText?: TurnActionText; turn: Turn }) => {
+const TurnActions = memo(({ actionText = '', turn }: { turn: Turn; actionText?: string }) => {
   if (turn.role !== 'user' && turn.role !== 'assistant' && turn.role !== 'terminal') return null;
   if (turn.role === 'assistant' && turn.streaming) return null;
 
-  const text = turn.role === 'assistant' ? (actionText?.() ?? '') : turn.text;
+  const text = turn.role === 'assistant' ? actionText : turn.text;
   if (!text) return null;
 
   return (
@@ -72,8 +70,8 @@ const TurnActions = memo(({ actionText, turn }: { actionText?: TurnActionText; t
       )}
     >
       <CopyButton
+        text={text}
         ariaLabel="Copy turn"
-        text={turn.role === 'assistant' && actionText ? actionText : text}
         class="grid size-5 place-items-center rounded-md border-0 bg-transparent text-soft transition-colors ease-in hover:bg-line hover:text-hover"
       />
       <time dateTime={new Date(turn.createdAt).toISOString()} class="px-0.5 text-xs leading-none whitespace-nowrap">
@@ -111,12 +109,12 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
 interface TurnArticleProps {
   turn: Turn;
-  actionText?: TurnActionText;
+  actionText?: string;
 }
 
 interface TurnArticleByIdProps {
   turnId: string;
-  actionText?: TurnActionText;
+  actionText?: string;
 }
 
 export const TurnArticle = memo(({ actionText, turn }: TurnArticleProps) => {

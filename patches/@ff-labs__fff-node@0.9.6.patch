@@ -1,0 +1,27 @@
+diff --git a/dist/src/binary.js b/dist/src/binary.js
+index ee181aef5007e4bf34a49479c089ca30f73a320b..98446df48149e732ae31ece87c4f893a8bf8bcfa 100644
+--- a/dist/src/binary.js
++++ b/dist/src/binary.js
+@@ -7,7 +7,7 @@
+  */
+ import { existsSync, readFileSync } from "node:fs";
+ import { createRequire } from "node:module";
+-import { dirname, join } from "node:path";
++import { dirname, join, sep } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { getLibFilename, getNpmPackageName } from "./platform.js";
+ /**
+@@ -68,6 +68,13 @@ function resolveFromNpmPackage() {
+         const packageJsonPath = require.resolve(`${packageName}/package.json`);
+         const packageDir = dirname(packageJsonPath);
+         const binaryPath = join(packageDir, getLibFilename());
++        // Electron packs this package inside app.asar, where require.resolve
++        // returns a virtual path that a native dlopen cannot read. The binary
++        // is unpacked to app.asar.unpacked, so prefer that real file.
++        const unpackedPath = binaryPath.replace(`.asar${sep}`, `.asar.unpacked${sep}`);
++        if (unpackedPath !== binaryPath && existsSync(unpackedPath)) {
++            return unpackedPath;
++        }
+         if (existsSync(binaryPath)) {
+             return binaryPath;
+         }

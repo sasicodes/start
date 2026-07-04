@@ -249,7 +249,8 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
   return '';
 };
 
-export const keepsErrorState = (toolName: string) => toolName === 'subagent_spawn' || toolName.startsWith('browser_');
+export const keepsErrorState = (toolName: string) =>
+  toolName === 'web_search' || toolName === 'subagent_spawn' || toolName.startsWith('browser_');
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
   if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
@@ -261,7 +262,7 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
   if (sessionTitle) return error ? sessionTitle.error : sessionTitle.result;
 
   if (toolName === 'bash') return 'Ran command';
-  if (toolName === 'web_search') return 'Searched the web';
+  if (toolName === 'web_search') return error ? 'Search failed' : 'Searched the web';
   if (toolName === 'edit') return 'Edited file';
   if (toolName === 'find') return 'Found files';
   if (toolName === 'grep') return 'Searched code';
@@ -303,8 +304,10 @@ const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnD
     return `${state === 'active' ? 'Finding' : 'Found'} files${pattern ? ` matching ${pattern}` : ''}`;
   if (toolName === 'grep')
     return `${state === 'active' ? 'Searching' : 'Searched'} code${pattern ? ` for ${pattern}` : ''}`;
-  if (toolName === 'web_search')
+  if (toolName === 'web_search') {
+    if (state === 'error') return 'Search failed';
     return `${state === 'active' ? 'Searching' : 'Searched'} the web${command ? ` for ${command}` : ''}`;
+  }
   if (toolName === 'ls') return `${state === 'active' ? 'Exploring' : 'Explored'} folder ${path}`;
   if (toolName === 'read') return `${state === 'active' ? 'Reading' : 'Read'} ${path}`;
   if (toolName === 'write') return `${state === 'active' ? 'Creating' : 'Created'} ${path}`;

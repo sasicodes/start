@@ -30,6 +30,8 @@ interface RunSubagentsOptions {
   model: ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 }
 
+const maxConcurrentAgents = 4;
+
 const resultText = (agents: SubagentActivity[]) =>
   agents
     .map((agent) => {
@@ -160,7 +162,11 @@ export const runSubagents = async ({
     }
   };
 
-  await Promise.all(agents.map((agent) => runAgent(agent)));
+  const pending = [...agents];
+  const worker = async () => {
+    for (let agent = pending.shift(); agent; agent = pending.shift()) await runAgent(agent);
+  };
+  await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, agents.length) }, worker));
 
   return {
     text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`,

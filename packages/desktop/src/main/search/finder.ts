@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import type { FileFinderApi } from '@ff-labs/fff-node';
 import { uiWaitMs } from '@main/search/limits';
 import { relativeInside } from '@main/search/path';
@@ -9,9 +10,13 @@ import { logger } from '@main/utils/logger';
 
 const finderLimit = 4;
 const defaultWaitMs = 1000;
+const readyProbeMs = 50;
+const idlePruneMs = 60 * 1000;
 const refreshIntervalMs = 60 * 1000;
-const readyPollMs = 10 * 60 * 1000;
+const maxReadyWatchDelayMs = 2000;
 const finderIdleMs = 15 * 60 * 1000;
+const initialReadyWatchDelayMs = 250;
+const readyWatchBudgetMs = 2 * 60 * 1000;
 const homePath = path.resolve(homedir());
 
 type FffNode = typeof import('@ff-labs/fff-node');
@@ -28,12 +33,20 @@ interface FinderOptions {
   waitMs?: number;
 }
 
+let pruneTimer: NodeJS.Timeout | null = null;
 let fffNodePromise: Promise<FffNode | null> | null = null;
 
 const finders = new Map<string, FinderEntry>();
+const loggedCreateErrors = new Set<string>();
 const creatingFinders = new Map<string, Promise<FinderEntry | null>>();
 
 const now = () => Date.now();
+
+const logCreateError = (indexRoot: string, error: unknown) => {
+  if (loggedCreateErrors.has(indexRoot)) return;
+  loggedCreateErrors.add(indexRoot);
+  logger.error('fff create', error);
+};
 
 const canonicalPath = async (value: string) => {
   const resolved = path.resolve(value);
@@ -86,6 +99,21 @@ const pruneFinders = () => {
   }
 };
 
+const stopPruneTimer = () => {
+  if (!pruneTimer) return;
+  clearInterval(pruneTimer);
+  pruneTimer = null;
+};
+
+const ensurePruneTimer = () => {
+  if (pruneTimer) return;
+  pruneTimer = setInterval(() => {
+    pruneFinders();
+    if (finders.size === 0) stopPruneTimer();
+  }, idlePruneMs);
+  pruneTimer.unref();
+};
+
 const markReady = async (entry: FinderEntry, timeoutMs: number) => {
   if (entry.ready) return true;
 
@@ -105,6 +133,18 @@ const indexReady = async (entry: FinderEntry, waitMs: number) => {
   return markReady(entry, waitMs);
 };
 
+const watchEntryReady = async (entry: FinderEntry) => {
+  const startedAt = now();
+  let delay = initialReadyWatchDelayMs;
+
+  while (!entry.ready && now() - startedAt < readyWatchBudgetMs) {
+    if (finders.get(entry.indexRoot) !== entry && !creatingFinders.has(entry.indexRoot)) return;
+    if (await markReady(entry, readyProbeMs)) return;
+    await sleep(delay);
+    delay = Math.min(delay * 2, maxReadyWatchDelayMs);
+  }
+};
+
 const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null> => {
   const fff = await loadFffNode();
   if (!fff) return null;
@@ -112,10 +152,14 @@ const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null>
   let result: ReturnType<typeof fff.FileFinder.create> | null = null;
   try {
     result = fff.FileFinder.create({ basePath: indexRoot, aiMode: true });
-  } catch {
+  } catch (error) {
+    logCreateError(indexRoot, error);
     return null;
   }
-  if (!result.ok) return null;
+  if (!result.ok) {
+    logCreateError(indexRoot, result.error);
+    return null;
+  }
 
   const entry: FinderEntry = {
     indexRoot,
@@ -124,7 +168,7 @@ const createFinderEntry = async (indexRoot: string): Promise<FinderEntry | null>
     lastRefreshAt: now(),
     finder: result.value
   };
-  markReady(entry, readyPollMs);
+  watchEntryReady(entry);
   return entry;
 };
 
@@ -150,6 +194,7 @@ export const workspaceFinder = async (workspaceRoot: string, options: FinderOpti
     if (!nextEntry) return null;
     entry = finders.get(indexRoot) ?? nextEntry;
     if (entry === nextEntry) finders.set(indexRoot, nextEntry);
+    ensurePruneTimer();
   }
 
   const waitMs = options.waitMs ?? defaultWaitMs;
@@ -181,6 +226,7 @@ export const refreshWorkspaceFinder = async (workspaceRoot: string): Promise<boo
 };
 
 export const disposeWorkspaceFinders = () => {
+  stopPruneTimer();
   for (const entry of finders.values()) destroyEntry(entry);
   finders.clear();
   creatingFinders.clear();

@@ -1,3 +1,4 @@
+import '@main/environment';
 import nodePath from 'node:path';
 import {
   trackAppOpened,
@@ -63,6 +64,7 @@ import {
   hideComposerWindow,
   onMainWindowChanged,
   sendToMainWindow,
+  sendToMainWindowIfOpen,
   sendToRendererWindows,
   showMainWindow,
   submitComposerToMainWindow,
@@ -86,8 +88,9 @@ installWindowHardening();
 const chat = new ChatService();
 setWorkInProgressSource(() => chat.workInProgress());
 const gitChanges = new GitChangesService({
+  focused: () => getAppFocusState().focused,
   currentWorkspace: () => chat.getWorkspaceCwd(),
-  notify: (payload) => sendToRendererWindows('app:git-changes-changed', payload)
+  notify: (payload) => sendToMainWindowIfOpen('app:git-changes-changed', payload)
 });
 const initialCliRequest = parseCliLaunchArgv(process.argv);
 
@@ -227,6 +230,7 @@ const runMobileCommand = (command: MobileRelayCommand, context: DesktopRelayComm
 const desktopRelay = new DesktopRelay({
   onCode: (code) => sendToRendererWindows('app:mobile-relay-code', code),
   onCommand: runMobileCommand,
+  onPairedChanged: () => refreshStayAwake(),
   onPairingRequest: trustMobileDevice,
   onPairingResume: verifyMobileResume
 });
@@ -240,7 +244,8 @@ const refreshStayAwake = () => {
     shouldStayAwake({
       keepAwake: appSettings?.keepAwake ?? defaultAppSettings.keepAwake,
       onBattery: powerMonitor.isOnBatteryPower(),
-      relayActive: desktopRelay.isActive
+      relayActive: desktopRelay.isActive,
+      mobileConnected: desktopRelay.hasPairedMobile
     })
   );
 };
@@ -396,6 +401,7 @@ if (!singleInstanceLock) {
 
   app.whenReady().then(async () => {
     initAnalytics();
+    chat.warmWorkspaceSearch();
 
     nativeTheme.themeSource = 'system';
     app.setAppUserModelId(appId);
@@ -428,6 +434,7 @@ if (!singleInstanceLock) {
     stopResourceRefresh = onAppFocusChanged((focused) => {
       if (!focused) return;
 
+      gitChanges.flushPendingRefreshes();
       chat
         .refreshActiveSessionResources()
         .then((refreshed) => {

@@ -21,6 +21,11 @@ export const readTurn = (id: string) => untracked(() => turnSignals.get(id)?.val
 export const readTurns = () =>
   untracked(() => turnIdsState.value.map((id) => turnSignals.get(id)?.value).filter(isTurn));
 
+export const lastTurnStreaming = () => {
+  const lastTurnId = turnIdsState.value.at(-1) ?? '';
+  return Boolean(lastTurnId && turnSignals.get(lastTurnId)?.value.streaming);
+};
+
 export const replaceTurns = (nextTurns: Turn[]) => {
   const nextIds = nextTurns.map((turn) => turn.id);
   const nextIdSet = new Set(nextIds);

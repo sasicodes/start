@@ -1,5 +1,6 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
+  type BrowserStatus,
   captureBrowserScreenshot,
   captureBrowserSnapshot,
   clickInBrowser,
@@ -120,12 +121,27 @@ const requiredString = (value: unknown, label: string) => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export const browserOpenSettled = (
+  status: BrowserStatus,
+  expectedUrl: string,
+  initialUrl: string,
+  sawLoading: boolean
+): boolean => {
+  if (!status.open) return false;
+  if (status.url === expectedUrl) return true;
+  if (status.loading || !status.url) return false;
+  return sawLoading || status.url !== initialUrl;
+};
+
 const waitForBrowserOpen = async (expectedUrl: string) => {
   const startedAt = Date.now();
+  const initialUrl = getBrowserStatus().url;
+  let sawLoading = false;
 
   while (Date.now() - startedAt < openTimeoutMs) {
     const status = getBrowserStatus();
-    if (status.open && status.url === expectedUrl) return status;
+    if (browserOpenSettled(status, expectedUrl, initialUrl, sawLoading)) return status;
+    sawLoading = sawLoading || status.loading;
     await wait(openPollMs);
   }
 

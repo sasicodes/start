@@ -1,3 +1,4 @@
+import type { BrowserStatus } from '@main/browser/index';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { broadcastsByChannel, resetBroadcasts } from '../../../fakes/window.js';
 
@@ -23,7 +24,7 @@ vi.mock('@main/browser/index', () => ({
   captureBrowserScreenshot: captureBrowserScreenshotMock
 }));
 
-const { createBrowserTools } = await import('@main/providers/tools/browser');
+const { browserOpenSettled, createBrowserTools } = await import('@main/providers/tools/browser');
 
 interface TestToolResult {
   details: null;
@@ -145,6 +146,45 @@ describe('browser tools', () => {
     expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
   });
 
+  it('accepts a redirected page once it settles instead of polling out', async () => {
+    getBrowserStatusMock
+      .mockReturnValueOnce({
+        url: '',
+        open: false,
+        title: '',
+        activeTabId: '',
+        loading: false,
+        tabs: [],
+        canGoBack: false,
+        canGoForward: false
+      })
+      .mockReturnValueOnce({
+        url: 'https://example.com/',
+        open: true,
+        title: '',
+        activeTabId: 'tab-1',
+        loading: true,
+        tabs: [{ id: 'tab-1', url: 'https://example.com/', title: '', loading: true }],
+        canGoBack: false,
+        canGoForward: false
+      })
+      .mockReturnValueOnce({
+        url: 'https://example.com/',
+        open: true,
+        title: 'Example',
+        activeTabId: 'tab-1',
+        loading: false,
+        tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
+        canGoBack: false,
+        canGoForward: false
+      });
+
+    const result = await toolByName('browser_open').execute('call-1', { url: 'http://example.com' });
+
+    expect(getBrowserStatusMock).toHaveBeenCalledTimes(3);
+    expect(result.content[0]?.text).toBe('Opened http://example.com/ in the in-app browser.');
+  });
+
   it('opens URLs in a requested existing browser tab', async () => {
     getBrowserStatusMock.mockReturnValue({
       url: 'https://example.com/',
@@ -237,5 +277,53 @@ describe('browser tools', () => {
       elements: [{ ref: 'e1', tag: 'button', text: 'Continue', role: 'button', label: '', disabled: false }],
       headings: [{ text: 'Example heading', level: 1 }]
     });
+  });
+});
+
+describe('browserOpenSettled', () => {
+  const openStatus = (overrides: Partial<BrowserStatus> = {}): BrowserStatus => ({
+    url: 'https://example.com/',
+    open: true,
+    title: 'Example',
+    loading: false,
+    canGoBack: false,
+    activeTabId: 'tab-1',
+    canGoForward: false,
+    tabs: [],
+    ...overrides
+  });
+
+  it('fails while the browser panel is closed', () => {
+    expect(browserOpenSettled(openStatus({ open: false }), 'https://example.com/', '', false)).toBe(false);
+  });
+
+  it('succeeds on an exact URL match even while loading', () => {
+    expect(browserOpenSettled(openStatus({ loading: true }), 'https://example.com/', '', false)).toBe(true);
+  });
+
+  it('waits while a redirected page is still loading', () => {
+    const status = openStatus({ url: 'https://example.com/home', loading: true });
+
+    expect(browserOpenSettled(status, 'http://example.com/', '', false)).toBe(false);
+  });
+
+  it('succeeds once a redirected page settles on a new URL', () => {
+    expect(browserOpenSettled(openStatus(), 'http://example.com/', '', false)).toBe(true);
+  });
+
+  it('ignores the settled pre-request page before navigation starts', () => {
+    const status = openStatus({ url: 'https://old.example.com/' });
+
+    expect(browserOpenSettled(status, 'https://new.example.com/', 'https://old.example.com/', false)).toBe(false);
+  });
+
+  it('succeeds when observed navigation lands back on the initial URL', () => {
+    const status = openStatus({ url: 'https://old.example.com/' });
+
+    expect(browserOpenSettled(status, 'https://new.example.com/', 'https://old.example.com/', true)).toBe(true);
+  });
+
+  it('waits while the tab has no URL yet', () => {
+    expect(browserOpenSettled(openStatus({ url: '' }), 'https://example.com/', '', true)).toBe(false);
   });
 });

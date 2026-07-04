@@ -1,4 +1,4 @@
-import { createFindTool, createGrepTool, defineTool } from '@earendil-works/pi-coding-agent';
+import { createGrepTool, defineTool } from '@earendil-works/pi-coding-agent';
 import {
   maxFindLimit,
   maxGrepLimit,
@@ -10,7 +10,8 @@ import {
   defaultFindLimit,
   defaultGrepLimit
 } from '@main/providers/tools/fff/bounds';
-import { fallbackFindPattern, findText, grepText, restartedPagination } from '@main/providers/tools/fff/format';
+import { findPathsWithRg } from '@main/providers/tools/fff/files';
+import { findText, grepText, restartedPagination } from '@main/providers/tools/fff/format';
 import { findSchema, grepSchema, multiGrepSchema } from '@main/providers/tools/fff/schema';
 import { toolResult } from '@main/providers/tools/result';
 import { findWorkspacePaths, grepWorkspace, multiGrepWorkspace } from '@main/search/client';
@@ -27,7 +28,7 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
     description:
       'Find files from the shared repository index. Supports fuzzy queries and glob patterns. Falls back to the built-in finder if the index is unavailable.',
     promptSnippet: 'Find files quickly from the shared repository index.',
-    async execute(toolCallId, { pattern, path, limit }, signal, onUpdate) {
+    async execute(_toolCallId, { pattern, path, limit }) {
       const resultLimit = positiveLimit(limit, defaultFindLimit, maxFindLimit);
       const items = await findWorkspacePaths({
         cwd: cwd(),
@@ -36,16 +37,17 @@ export const createFffTools = ({ cwd }: CreateFffToolsOptions) => [
         ...(path ? { path } : {})
       });
 
-      if (!items) {
-        const fallbackArgs = {
+      const results =
+        items ??
+        (await findPathsWithRg({
+          cwd: cwd(),
           limit: resultLimit,
-          pattern: fallbackFindPattern(pattern),
+          pattern,
           ...(path ? { path } : {})
-        };
-        return createFindTool(cwd()).execute(toolCallId, fallbackArgs, signal, onUpdate);
-      }
+        }));
+      if (!results) return toolResult('File search is unavailable in this workspace.', null);
 
-      return toolResult(findText(items), null);
+      return toolResult(findText(results), null);
     }
   }),
   defineTool({

@@ -3,7 +3,13 @@ import { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
 import type { SubagentRunSnapshot } from '@main/subagents/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FakeAuthStorage, FakeModelRegistry, listFakeSessions, resetAgentRegistry } from '../fakes/agent/index.js';
+import {
+  FakeAuthStorage,
+  FakeModelRegistry,
+  FakeSessionManager,
+  listFakeSessions,
+  resetAgentRegistry
+} from '../fakes/agent/index.js';
 
 const authStorage = new FakeAuthStorage() as unknown as AuthStorage;
 const modelRegistry = new FakeModelRegistry() as unknown as ModelRegistry;
@@ -49,5 +55,45 @@ describe('sub-agent runtime', () => {
 
     await expect(run).resolves.toMatchObject({ agents: [{ status: 'completed' }] });
     expect(snapshots.at(-1)?.agents[0]?.status).toBe('completed');
+  });
+
+  it('runs at most four sub-agents at once', async () => {
+    const run = runSubagents({
+      model,
+      authStorage,
+      modelRegistry,
+      settingsManager,
+      onUpdate: () => {},
+      customTools: () => [],
+      thinkingLevel: 'medium',
+      cwd: '/workspace/project',
+      nameAllocator: new SubagentNameAllocator(),
+      tasks: Array.from({ length: 6 }, (_, index) => ({ prompt: `Task ${index}.` }))
+    });
+
+    await vi.waitFor(() => expect(listFakeSessions()).toHaveLength(4));
+    await Promise.all(listFakeSessions().map((session) => session.awaitPromptCall()));
+    await expect(FakeSessionManager.listAll()).resolves.toHaveLength(4);
+
+    const [first] = listFakeSessions();
+    if (!first) throw new Error('Expected a running sub-agent session.');
+    first.finishPrompt();
+
+    await vi.waitFor(async () => expect(await FakeSessionManager.listAll()).toHaveLength(5));
+    await vi.waitFor(() => expect(listFakeSessions()).toHaveLength(4));
+
+    for (let remaining = 5; remaining > 0; remaining -= 1) {
+      await vi.waitFor(() => expect(listFakeSessions().length).toBeGreaterThan(0));
+      const session = listFakeSessions()[0];
+      if (!session) throw new Error('Expected a live sub-agent session.');
+      await session.awaitPromptCall();
+      session.finishPrompt();
+      await vi.waitFor(() => expect(listFakeSessions()).not.toContain(session));
+    }
+
+    const result = await run;
+    expect(result.agents).toHaveLength(6);
+    expect(result.agents.every((agent) => agent.status === 'completed')).toBe(true);
+    await expect(FakeSessionManager.listAll()).resolves.toHaveLength(6);
   });
 });

@@ -101,6 +101,7 @@ interface FakeWindowOpenResult {
 type WindowOpenHandler = (input: FakeWindowOpenInput) => FakeWindowOpenResult;
 
 export interface FakeBrowserWebContents extends FakeWebContents {
+  audioMuted: boolean;
   closed: boolean;
   capturePage: () => Promise<{ isEmpty: () => boolean }>;
   close: () => void;
@@ -112,6 +113,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   getURL: () => string;
   getZoomFactor: () => number;
   inputEvents: unknown[];
+  isDestroyed: () => boolean;
   isLoading: () => boolean;
   loadURL: (url: string) => Promise<void>;
   navigationHistory: {
@@ -124,6 +126,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   on: (event: string, handler: Handler) => void;
   reload: () => void;
   sendInputEvent: (event: unknown) => void;
+  setAudioMuted: (muted: boolean) => void;
   setWindowOpenHandler: (handler: WindowOpenHandler) => void;
   stop: () => void;
 }
@@ -152,6 +155,7 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
   const handlersByEvent = new Map<string, Set<Handler>>();
   const webContents: FakeBrowserWebContents = {
     ...base,
+    audioMuted: false,
     closed: false,
     capturePage: async () => ({ isEmpty: () => false }),
     close: () => {
@@ -169,6 +173,7 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     getURL: () => currentUrl,
     getZoomFactor: () => 1,
     inputEvents: [],
+    isDestroyed: () => webContents.closed,
     isLoading: () => false,
     loadURL: async (url: string) => {
       currentUrl = url;
@@ -190,6 +195,9 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     reload: () => {},
     sendInputEvent: (event) => {
       webContents.inputEvents.push(event);
+    },
+    setAudioMuted: (muted: boolean) => {
+      webContents.audioMuted = muted;
     },
     setWindowOpenHandler: (_handler: WindowOpenHandler) => {},
     stop: () => {}

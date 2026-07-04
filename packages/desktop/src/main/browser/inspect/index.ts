@@ -1,5 +1,6 @@
 import { resolveInspectRelay, routeInspectRelay } from '@main/browser/inspect/relay';
 import { inspectScript } from '@main/browser/inspect/script';
+import { withTimeout } from '@main/browser/timeout';
 import { sendToRendererWindows } from '@main/window';
 import type { WebContents } from 'electron';
 
@@ -8,7 +9,9 @@ interface InspectResult {
   error?: string;
 }
 
+const inspectTimeoutMs = 3000;
 const noPanelError = 'Open the in-app browser panel first.';
+const overlayError: InspectResult = { ok: false, error: 'Could not run the inspect overlay.' };
 const instrumented = new WeakSet<WebContents>();
 const activeInspect = new WeakSet<WebContents>();
 
@@ -28,10 +31,14 @@ export const attachInspectListener = (webContents: WebContents) => {
 
 const runInPage = async (webContents: WebContents, code: string): Promise<InspectResult> => {
   try {
-    await webContents.executeJavaScript(code, true);
+    const completed = await withTimeout(
+      webContents.executeJavaScript(code, true).then(() => true),
+      inspectTimeoutMs
+    );
+    if (!completed) return overlayError;
     return { ok: true };
   } catch {
-    return { ok: false, error: 'Could not run the inspect overlay.' };
+    return overlayError;
   }
 };
 

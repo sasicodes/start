@@ -30,6 +30,8 @@ export default defineConfig({
           /^@yuuang\/ffi-rs-/,
           '@ff-labs/fff-node',
           /^@ff-labs\/fff-bin-/,
+          '@vscode/ripgrep',
+          /^@vscode\/ripgrep-/,
           '@silvia-odwyer/photon-node'
         ],
         input: {
