@@ -247,7 +247,7 @@ export const RecentSessions = memo(
         </Tooltip>
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
-            <MenuPanel className="w-90">
+            <MenuPanel className="w-90" finalFocus={false}>
               <div
                 class="flex max-h-[520px] flex-col gap-1 overflow-y-auto [&::-webkit-scrollbar]:hidden"
                 onScroll={handleSessionsScroll}
