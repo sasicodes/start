@@ -193,7 +193,7 @@ export const RecentSessions = memo(
       [onOpenSession]
     );
 
-    useAppHotkey(appHotkeys.recents, () => updateOpen(!open), { capture: true });
+    useAppHotkey(appHotkeys.recents, () => updateOpen(!open), { capture: open });
 
     const attentionStatuses = recentSessionsAttentionStatuses(sessions, activeSessionId);
     const attention = topAttentionStatus(attentionStatuses);

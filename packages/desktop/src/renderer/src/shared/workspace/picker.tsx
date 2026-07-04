@@ -32,7 +32,7 @@ export const Workspace = memo(
       workspacePath
     );
 
-    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current), { capture: true });
+    useAppHotkey(appHotkeys.workspace, () => setOpen((current) => !current), { capture: open });
 
     if (!workspace) return null;
 
