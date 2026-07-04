@@ -8,11 +8,11 @@ export interface KeyboardInput {
   control?: boolean;
 }
 
-export const isCloseWindowInput = (input: KeyboardInput) => {
+export const isCloseWindowInput = (input: KeyboardInput, isMac: boolean) => {
   const key = input.key?.toLowerCase() ?? '';
   const code = input.code?.toLowerCase() ?? '';
   const isWKey = key === 'w' || code === 'keyw';
-  const hasCloseModifier = Boolean(input.control || input.meta);
+  const hasCloseModifier = isMac ? Boolean(input.meta) && !input.control : Boolean(input.control) && !input.meta;
 
   return input.type === 'keyDown' && isWKey && hasCloseModifier && !input.alt && !input.shift;
 };
