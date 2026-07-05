@@ -116,7 +116,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const queueAssistantDelta = (delta: string) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (id && delta) {
-        if (textAssistantId !== id) lastAssistantChar = '';
         textAssistantId = id;
         lastAssistantChar = delta.slice(-1);
       }

@@ -24,11 +24,7 @@ const discoverToolFiles = async (harnessDir: string, name: string): Promise<stri
 };
 
 const frontmatterPattern = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/u;
-
-const readFrontmatterField = (frontmatter: string, key: string) => {
-  const match = frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, 'mu'));
-  return match?.[1]?.trim().replace(/^["']|["']$/gu, '') ?? '';
-};
+const descriptionPattern = /^description:\s*(.+)$/mu;
 
 export const parseHarnessFile = (fileName: string, text: string): Harness | null => {
   const name = fileName.replace(/\.md$/u, '');
@@ -39,7 +35,11 @@ export const parseHarnessFile = (fileName: string, text: string): Harness | null
   const body = (match?.[2] ?? text).trim();
   if (!body) return null;
 
-  const description = readFrontmatterField(frontmatter, 'description');
+  const description =
+    frontmatter
+      .match(descriptionPattern)?.[1]
+      ?.trim()
+      .replace(/^["']|["']$/gu, '') ?? '';
   return { name, body, description: description || `Custom harness "${name}".` };
 };
 

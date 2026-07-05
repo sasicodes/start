@@ -171,7 +171,7 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
         const cleanHarness = harnessName.trim();
         const isDefaultHarness = cleanHarness === defaultHarness.name;
         if (!isDefaultHarness && !isValidHarnessName(cleanHarness)) {
-          return toolResult(harnessNameError(cleanHarness) || `Invalid harness name "${cleanHarness}".`, null);
+          return toolResult(harnessNameError(cleanHarness), null);
         }
         if (!isValidHarnessName(extensionName)) {
           return toolResult(`Extension name "${extensionName}" must be kebab-case.`, null);

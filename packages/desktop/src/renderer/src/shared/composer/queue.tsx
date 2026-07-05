@@ -1,6 +1,6 @@
 import type { QueuedMessage } from '@preload/index';
 import { Attached } from '@renderer/shared/composer/attached';
-import { parseSkillBlock, skillCommandText } from '@renderer/shared/skill/parse';
+import { skillDisplayText } from '@renderer/shared/skill/parse';
 import { TrashIcon } from '@renderer/ui/icons';
 
 interface QueueProps {
@@ -18,8 +18,7 @@ export const Queue = ({ messages, visible, onDelete, onSteer }: QueueProps) => {
       <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
         {messages.map((message) => {
           const steering = message.kind === 'steer';
-          const skill = parseSkillBlock(message.text);
-          const text = skill ? skillCommandText(skill) : message.text;
+          const text = skillDisplayText(message.text);
 
           return (
             <li

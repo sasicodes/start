@@ -1,17 +1,12 @@
 import type { QueuedMessage } from '@preload/index';
-import { parseSkillBlock, skillCommandText } from '@renderer/shared/skill/parse';
+import { skillDisplayText } from '@renderer/shared/skill/parse';
 import type { Turn } from '@renderer/utils/types';
-
-const recallText = (text: string): string => {
-  const skill = parseSkillBlock(text);
-  return skill ? skillCommandText(skill) : text;
-};
 
 export const userTurnTexts = (turns: Turn[]): string[] => {
   const texts: string[] = [];
   for (let index = turns.length - 1; index >= 0; index--) {
     const turn = turns[index];
-    if (turn?.role === 'user' && turn.text) texts.push(recallText(turn.text));
+    if (turn?.role === 'user' && turn.text) texts.push(skillDisplayText(turn.text));
   }
   return texts;
 };
@@ -24,7 +19,7 @@ export const buildRecallList = (queued: QueuedMessage[], userTurns: string[]): s
     .reverse()
     .map((message) => message.text)
     .filter((text) => text.length > 0)
-    .map(recallText);
+    .map(skillDisplayText);
   return [...queuedTexts, ...userTurns];
 };
 
