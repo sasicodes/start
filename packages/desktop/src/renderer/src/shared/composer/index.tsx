@@ -174,8 +174,7 @@ export const Composer = memo(
       if (!draft.trim() || noProvidersConfigured) return;
 
       const editingId = recall.editingId();
-      const editable = editingId && queuedMessages.some((message) => message.id === editingId);
-      if (editable) {
+      if (editingId && queuedMessages.some((message) => message.id === editingId)) {
         editQueued(editingId, draft.trim());
         return;
       }

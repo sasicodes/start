@@ -13,6 +13,7 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
   const [dragId, setDragId] = useState('');
   const listRef = useRef<HTMLUListElement>(null);
   const metricsRef = useRef({ top: 0, pitch: 1 });
+  const indexRef = useRef(-1);
   const order = dragOrder ?? ids;
 
   useEffect(() => {
@@ -24,7 +25,10 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
 
     const move = (event: PointerEvent) => {
       const { top, pitch } = metricsRef.current;
-      const index = Math.floor((event.clientY - top) / pitch);
+      const index = Math.max(0, Math.min(Math.floor((event.clientY - top) / pitch), ids.length - 1));
+      if (index === indexRef.current) return;
+
+      indexRef.current = index;
       setDragOrder(reorder(ids, dragId, index));
     };
 
@@ -54,6 +58,7 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
     const first = rows?.[0]?.getBoundingClientRect();
     const second = rows?.[1]?.getBoundingClientRect();
     if (first) metricsRef.current = { top: first.top, pitch: second ? second.top - first.top : first.height };
+    indexRef.current = ids.indexOf(id);
     setDragId(id);
     setDragOrder(ids);
   };
