@@ -196,7 +196,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
 
   return (
     <MenuPanel className="relative w-44" finalFocus={false}>
-      <div ref={rowsRef} onKeyDown={enterFlyout}>
+      <div ref={rowsRef} role="presentation" onKeyDown={enterFlyout}>
         {providers.map((provider, index) => (
           <ProviderRow
             key={provider.id}
@@ -210,6 +210,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
       {flyout && (
         <div
           ref={flyoutRef}
+          role="presentation"
           onKeyDown={exitFlyout}
           style={
             { '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` } as JSX.CSSProperties
