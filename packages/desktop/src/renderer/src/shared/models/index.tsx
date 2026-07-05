@@ -195,7 +195,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
   const flyout = providers[active];
 
   return (
-    <MenuPanel className="relative w-44">
+    <MenuPanel className="relative w-44" finalFocus={false}>
       <div ref={rowsRef} onKeyDown={enterFlyout}>
         {providers.map((provider, index) => (
           <ProviderRow
