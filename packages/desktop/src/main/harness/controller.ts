@@ -109,6 +109,12 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
     await activateHarness(harnesses.get(name) ?? defaultHarness);
   };
 
+  const restoreOnSessionStart = async () => {
+    try {
+      await restore();
+    } catch {}
+  };
+
   const tools: ToolDefinition[] = [
     defineTool({
       label: 'harness',
@@ -197,9 +203,10 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
   const extension = (pi: ExtensionAPI) => {
     api = pi;
     for (const tool of tools) pi.registerTool(tool);
+    pi.on('session_start', restoreOnSessionStart);
   };
 
-  return { getBody, extension, restore };
+  return { getBody, extension };
 };
 
 export type HarnessController = ReturnType<typeof createHarnessController>;
