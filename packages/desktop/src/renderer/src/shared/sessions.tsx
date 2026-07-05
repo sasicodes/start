@@ -61,29 +61,20 @@ interface RecentSessionsProps {
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
 
-const SessionAttention = ({ attention }: { attention: AttentionState }) => {
-  if (!attention) return null;
-  return (
-    <span class="flex items-center">
-      <Indicator kind={attention} />
-    </span>
-  );
-};
-
 const SessionRow = ({ active, attention, session, onOpen }: SessionRowProps) => (
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
-      'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+      'flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
       active && 'bg-control text-hover'
     )}
   >
-    <span class="col-span-2 truncate text-sm leading-5 font-medium">{session.title}</span>
+    <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
     <span class="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-soft">
+      {attention && <Indicator kind={attention} />}
       <span class="flex-none">{formatRelativeTime(session.modified)}</span>
       {session.branch && <span class="truncate font-mono">[{session.branch}]</span>}
     </span>
-    <SessionAttention attention={attention} />
   </AppMenu.Item>
 );
 

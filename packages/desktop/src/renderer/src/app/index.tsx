@@ -101,6 +101,7 @@ export const App = () => {
     openSessionId,
     activeSessionId,
     loadedSessionId,
+    currentSessionId,
     switchWorkspace,
     refreshSettings,
     recallMessages,
@@ -344,7 +345,7 @@ export const App = () => {
       onOpenSettings={toggleSettings}
       gitPanelVisible={gitPanelVisible}
       onOpenSession={openRecentSession}
-      activeSessionId={activeSessionId}
+      activeSessionId={currentSessionId}
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={closeSidePanel}
       sessionViewActive={sessionViewActive}
