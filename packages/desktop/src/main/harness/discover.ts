@@ -48,18 +48,30 @@ const withToolFiles = async (harnessDir: string, harness: Harness): Promise<Harn
   return toolFiles.length ? { ...harness, toolFiles } : harness;
 };
 
+const readHarnessFile = async (harnessDir: string, fileName: string): Promise<Harness | null> => {
+  try {
+    const harness = parseHarnessFile(fileName, await readFile(join(harnessDir, fileName), 'utf8'));
+    return harness ? await withToolFiles(harnessDir, harness) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const discoverHarnesses = async (harnessDir: string): Promise<Map<string, Harness>> => {
-  const harnesses = new Map<string, Harness>([[defaultHarnessName, await withToolFiles(harnessDir, defaultHarness)]]);
-  const entries = await readdir(harnessDir, { withFileTypes: true }).catch(() => []);
+  const [defaultEntry, entries] = await Promise.all([
+    withToolFiles(harnessDir, defaultHarness),
+    readdir(harnessDir, { withFileTypes: true }).catch(() => [])
+  ]);
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+  const parsed = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+      .map((entry) => readHarnessFile(harnessDir, entry.name))
+  );
 
-    try {
-      const text = await readFile(join(harnessDir, entry.name), 'utf8');
-      const harness = parseHarnessFile(entry.name, text);
-      if (harness) harnesses.set(harness.name, await withToolFiles(harnessDir, harness));
-    } catch {}
+  const harnesses = new Map<string, Harness>([[defaultHarnessName, defaultEntry]]);
+  for (const harness of parsed) {
+    if (harness) harnesses.set(harness.name, harness);
   }
 
   return harnesses;

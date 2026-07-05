@@ -16,6 +16,12 @@ interface HarnessControllerOptions {
 const harnessExplainer =
   'A harness is the assistant persona and instructions for the session. It replaces the base behavior with a custom system prompt, plus optional tools stored under <name>/tools.';
 
+const writeHarnessToolFile = async (harnessDir: string, harnessName: string, toolName: string, code: string) => {
+  const dir = harnessToolsDir(harnessDir, harnessName);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, `${toolName}.mjs`), `${code.trim()}\n`, 'utf8');
+};
+
 const switchParameters = {
   type: 'object',
   required: ['name'],
@@ -110,7 +116,7 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
       async execute(_toolCallId, { name }) {
         const requested = name.trim();
         const harnesses = await discoverHarnesses(harnessDir);
-        const harness = harnesses.get(requested) ?? (requested === defaultHarness.name ? defaultHarness : undefined);
+        const harness = harnesses.get(requested);
         if (!harness) {
           return toolResult(`No harness named "${requested}". Available: ${[...harnesses.keys()].join(', ')}.`, null);
         }
@@ -142,12 +148,8 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
         const frontmatter = `---\nname: ${cleanName}\ndescription: ${description.trim()}\n---\n`;
         await writeFile(join(harnessDir, `${cleanName}.md`), `${frontmatter}\n${trimmedBody}\n`, 'utf8');
 
-        if (toolFiles?.length) {
-          const dir = harnessToolsDir(harnessDir, cleanName);
-          await mkdir(dir, { recursive: true });
-          for (const tool of toolFiles) {
-            await writeFile(join(dir, `${tool.name}.mjs`), `${tool.code.trim()}\n`, 'utf8');
-          }
+        for (const tool of toolFiles ?? []) {
+          await writeHarnessToolFile(harnessDir, cleanName, tool.name, tool.code);
         }
 
         const toolNote = toolFiles?.length ? ` with ${toolFiles.length} tool(s)` : '';
@@ -178,9 +180,7 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
           return toolResult(`No harness named "${cleanHarness}". Create it first with create_harness.`, null);
         }
 
-        const dir = harnessToolsDir(harnessDir, cleanHarness);
-        await mkdir(dir, { recursive: true });
-        await writeFile(join(dir, `${toolName}.mjs`), `${trimmedCode}\n`, 'utf8');
+        await writeHarnessToolFile(harnessDir, cleanHarness, toolName, trimmedCode);
 
         const activated = await reactivateIfCurrent(cleanHarness);
         const nextStep = activated ? 'and activated it' : 'switch to it to activate';
