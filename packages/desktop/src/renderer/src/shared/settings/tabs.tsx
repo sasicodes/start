@@ -1,4 +1,5 @@
 import { computeTabReveal, type SettingsTab, type TabReveal } from '@renderer/shared/settings/tab';
+import { tw } from '@renderer/utils/tw';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 export type { SettingsTab };
@@ -18,7 +19,7 @@ const settingsTabs = [
 export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
   const listRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [reveal, setReveal] = useState<TabReveal>({ left: 0, right: 0 });
+  const [reveal, setReveal] = useState<TabReveal | null>(null);
 
   useLayoutEffect(() => {
     const updateReveal = () => {
@@ -58,8 +59,11 @@ export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
       ))}
       <div
         aria-hidden="true"
-        class="pointer-events-none absolute inset-0 flex items-center gap-5 text-ink transition-[clip-path] duration-300 ease-out"
-        style={{ clipPath: `inset(0 ${reveal.right}px 0 ${reveal.left}px)` }}
+        class={tw(
+          'pointer-events-none absolute inset-0 flex items-center gap-5 text-ink transition-[clip-path] duration-300 ease-out',
+          !reveal && 'invisible'
+        )}
+        style={reveal ? { clipPath: `inset(0 ${reveal.right}px 0 ${reveal.left}px)` } : {}}
       >
         {settingsTabs.map((tab) => (
           <span key={tab.value} class="h-6 flex-none text-sm leading-6 font-medium">
