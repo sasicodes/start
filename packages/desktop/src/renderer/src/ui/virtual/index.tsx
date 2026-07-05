@@ -116,7 +116,7 @@ const useVisibleRange = (
     };
   }, [schedule, containerRef]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     compute();
   }, [compute, cumulative]);
 
