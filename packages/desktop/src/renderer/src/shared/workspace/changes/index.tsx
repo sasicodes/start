@@ -79,7 +79,7 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   const label = gitChangesLabel(summary.filesChanged);
 
   const handleToggle = () => {
-    playToggleSound();
+    if (!open) playToggleSound();
     onToggle();
   };
 
