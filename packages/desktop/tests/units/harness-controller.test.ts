@@ -132,12 +132,17 @@ describe('harness controller', () => {
     expect(restored.body()).toBe('You research.');
   });
 
-  it('does not restore a persisted harness when persistence is off (subagents)', async () => {
+  it('restores the active harness for subagents but never overwrites the saved selection', async () => {
     await mountController().exec('create_harness', { name: 'research', description: 'r', body: 'You research.' });
     await mountController().exec('switch_harness', { name: 'research' });
 
     const subagent = mountController(false);
     await subagent.restore();
-    expect(subagent.body()).toContain('expert coding assistant');
+    expect(subagent.body()).toBe('You research.');
+
+    await subagent.exec('switch_harness', { name: 'default' });
+    const next = mountController();
+    await next.restore();
+    expect(next.body()).toBe('You research.');
   });
 });

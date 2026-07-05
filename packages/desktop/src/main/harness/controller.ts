@@ -104,7 +104,7 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
   };
 
   const restore = async () => {
-    const name = persist ? readActiveHarness() || defaultHarness.name : defaultHarness.name;
+    const name = readActiveHarness() || defaultHarness.name;
     const harnesses = await discoverHarnesses(harnessDir);
     await activateHarness(harnesses.get(name) ?? defaultHarness);
   };
