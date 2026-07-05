@@ -112,12 +112,19 @@ const promptWithToolCapabilities = (
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
 
-const runtimeContextMarker = '\n\nUser timezone:';
+const runtimeContextOpen = '<runtime-context>';
+const runtimeContextClose = '</runtime-context>';
 
 export const runtimeContextBlock = (now = new Date()): string => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const localTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'long', timeZone }).format(now);
-  return `User timezone: ${timeZone}\nUser local time: ${localTime}`;
+  return `${runtimeContextOpen}\nUser timezone: ${timeZone}\nUser local time: ${localTime}\n${runtimeContextClose}`;
+};
+
+const stripRuntimeContext = (prompt: string): string => {
+  const openIndex = prompt.lastIndexOf(runtimeContextOpen);
+  if (openIndex < 0) return prompt;
+  return prompt.slice(0, openIndex).trimEnd();
 };
 
 export const replaceHarnessIntro = (prompt: string, intro: string): string => {
@@ -166,10 +173,7 @@ export const createStartPromptExtension =
         { getAllTools: () => pi.getAllTools(), getActiveToolNames: () => pi.getActiveTools() },
         harnessBody
       );
-      const markerIndex = withCapabilities.indexOf(runtimeContextMarker);
-      const withoutStaleContext = (
-        markerIndex < 0 ? withCapabilities : withCapabilities.slice(0, markerIndex)
-      ).trimEnd();
+      const withoutStaleContext = stripRuntimeContext(withCapabilities);
 
       return { systemPrompt: `${withoutStaleContext}\n\n${runtimeContextBlock()}` };
     });

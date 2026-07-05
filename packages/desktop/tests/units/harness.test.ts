@@ -99,5 +99,25 @@ describe('prompt harness composition', () => {
     const second = await registered.handler({ systemPrompt: first.systemPrompt });
 
     expect(second.systemPrompt.match(/User timezone:/gu)?.length).toBe(1);
+    expect(second.systemPrompt.match(/<runtime-context>/gu)?.length).toBe(1);
+  });
+
+  it('does not truncate prompt content that mentions the runtime words', async () => {
+    const registered: { handler?: PromptHandler } = {};
+    const pi = {
+      getActiveTools: () => ['grep'],
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
+      on: (_event: 'before_agent_start', handler: PromptHandler) => {
+        registered.handler = handler;
+      }
+    } as unknown as Parameters<ReturnType<typeof createStartPromptExtension>>[0];
+
+    createStartPromptExtension('/p', '/s')(pi);
+    if (!registered.handler) throw new Error('Expected prompt hook registration.');
+    const prompt = `${buildStartSystemPrompt('/p', '/s')}\n\nUser timezone: ignore this project note.\nKeep this line.`;
+    const result = await registered.handler({ systemPrompt: prompt });
+
+    expect(result.systemPrompt).toContain('Keep this line.');
+    expect(result.systemPrompt).toContain('ignore this project note.');
   });
 });
