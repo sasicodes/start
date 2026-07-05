@@ -108,13 +108,13 @@ const MarkdownTable = ({ className, children }: MarkdownTableProps) => {
       {edges.left && (
         <div
           aria-hidden="true"
-          class="pointer-events-none absolute inset-y-0 left-0 w-10 rounded-l-[inherit] bg-gradient-to-r from-ink/5 to-transparent"
+          class="pointer-events-none absolute inset-y-0 left-0 w-10 rounded-l-[inherit] bg-gradient-to-r from-composer/60 to-transparent"
         />
       )}
       {edges.right && (
         <div
           aria-hidden="true"
-          class="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-[inherit] bg-gradient-to-l from-ink/5 to-transparent"
+          class="pointer-events-none absolute inset-y-0 right-0 w-10 rounded-r-[inherit] bg-gradient-to-l from-composer/60 to-transparent"
         />
       )}
       <TableCopyButton tableRef={tableRef} />
