@@ -1,9 +1,4 @@
-import { useState } from 'preact/hooks';
-
-interface ReorderState {
-  dragId: string;
-  overId: string;
-}
+import { useEffect, useRef, useState } from 'preact/hooks';
 
 export const moveId = (ids: string[], dragId: string, overId: string): string[] => {
   const from = ids.indexOf(dragId);
@@ -16,20 +11,62 @@ export const moveId = (ids: string[], dragId: string, overId: string): string[] 
   return next;
 };
 
+const targetIndex = (list: HTMLElement, pointerY: number): number => {
+  const items = [...list.children] as HTMLElement[];
+  for (let index = 0; index < items.length; index += 1) {
+    const rect = items[index]?.getBoundingClientRect();
+    if (rect && pointerY < rect.top + rect.height / 2) return index;
+  }
+  return items.length - 1;
+};
+
 export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => void) => {
-  const [state, setState] = useState<ReorderState | null>(null);
+  const [dragOrder, setDragOrder] = useState<string[] | null>(null);
+  const [dragId, setDragId] = useState('');
+  const listRef = useRef<HTMLUListElement>(null);
+  const order = dragOrder ?? ids;
 
-  const order = state ? moveId(ids, state.dragId, state.overId) : ids;
+  useEffect(() => {
+    setDragOrder(null);
+  }, [ids]);
 
-  const start = (id: string) => setState({ dragId: id, overId: id });
+  useEffect(() => {
+    if (!dragId) return;
 
-  const enter = (id: string) =>
-    setState((current) => (current && current.overId !== id ? { ...current, overId: id } : current));
+    const move = (event: PointerEvent) => {
+      const list = listRef.current;
+      if (!list) return;
 
-  const drop = () => {
-    if (state && order !== ids) onReorder(order);
-    setState(null);
+      setDragOrder((current) => {
+        const base = current ?? ids;
+        const next = base[targetIndex(list, event.clientY)];
+        return next ? moveId(base, dragId, next) : base;
+      });
+    };
+
+    const finish = () => {
+      setDragId('');
+      setDragOrder((current) => {
+        if (!current?.some((id, index) => id !== ids[index])) return null;
+        onReorder(current);
+        return current;
+      });
+    };
+
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+    };
+  }, [dragId, ids, onReorder]);
+
+  const start = (id: string) => {
+    setDragId(id);
+    setDragOrder(ids);
   };
 
-  return { order, dragId: state?.dragId ?? '', start, enter, drop };
+  return { order, dragId, listRef, start };
 };

@@ -18,12 +18,17 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
   const ids = useMemo(() => messages.map((message) => message.id), [messages]);
   const byId = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
   const reorder = useReorder(ids, onReorder);
+  const dragging = Boolean(reorder.dragId);
 
   if (!visible || messages.length === 0) return null;
 
   return (
     <Attached contentClass="max-h-56 overflow-y-auto [&::-webkit-scrollbar]:hidden">
-      <ul aria-label="Queued messages" class="m-0 flex list-none flex-col gap-1 p-0">
+      <ul
+        ref={reorder.listRef}
+        aria-label="Queued messages"
+        class={tw('m-0 flex list-none flex-col gap-1 p-0', dragging && 'select-none')}
+      >
         {reorder.order.map((id) => {
           const message = byId.get(id);
           if (!message) return null;
@@ -33,20 +38,18 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
           return (
             <li
               key={id}
-              draggable
-              onDragStart={() => reorder.start(id)}
-              onDragEnter={() => reorder.enter(id)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={reorder.drop}
-              onDragEnd={reorder.drop}
               class={tw(
-                'group/queue flex min-w-0 items-center gap-1 rounded-xl bg-transparent py-2 pr-3 pl-1 transition-colors hover:bg-control focus-within:bg-control',
-                reorder.dragId === id && 'opacity-50'
+                'group/queue flex min-w-0 items-center gap-1 rounded-xl py-2 pr-3 pl-1 transition-colors',
+                reorder.dragId === id ? 'bg-control' : !dragging && 'hover:bg-control focus-within:bg-control'
               )}
             >
               <span
                 aria-hidden="true"
-                class="grid size-5 flex-none cursor-grab place-items-center text-soft active:cursor-grabbing [&_svg]:size-4"
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  reorder.start(id);
+                }}
+                class="grid size-5 flex-none cursor-grab touch-none place-items-center text-soft active:cursor-grabbing [&_svg]:size-4"
               >
                 <DragIcon />
               </span>
