@@ -61,7 +61,7 @@ export const ComposerShortcut = () => {
           }}
           class="h-9 min-w-36 truncate rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
         >
-          {recording ? 'Recording shortcut' : shortcutKeys(composerShortcut.value).join(' ')}
+          {recording ? 'Press keys' : shortcutKeys(composerShortcut.value).join(' ')}
         </button>
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
