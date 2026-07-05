@@ -1,11 +1,14 @@
 import type { ModelOption } from '@preload/index';
+import { flyoutRisePx } from '@renderer/shared/animation';
 import { type ModelProviderId, modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
 import { AnthropicIcon, CheckIcon, ChevronRightIcon, GeminiIcon, OpenAIIcon, SettingsIcon } from '@renderer/ui/icons';
-import { AppMenu, MenuPanel } from '@renderer/ui/menu';
+import { AppMenu, MenuPanel, MenuSurface } from '@renderer/ui/menu';
+import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import type { JSX } from 'preact';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface ProviderGroup {
   name: string;
@@ -129,37 +132,51 @@ const ModelMenuContent = ({
   return <ModelOptions models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
 };
 
-const ProviderSubmenu = ({
-  provider,
-  selectedModel,
-  onSelectModel,
-  onOpenSettings
-}: Omit<ModelsProps, 'models'> & { provider: ProviderGroup }) => {
+interface ProviderRowProps extends Pick<ProviderGroup, 'id' | 'name'> {
+  active: boolean;
+  onActivate: () => void;
+}
+
+const ProviderRow = ({ id, name, active, onActivate }: ProviderRowProps) => {
   return (
-    <AppMenu.SubmenuRoot>
-      <AppMenu.SubmenuTrigger className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control data-[popup-open]:bg-control">
-        <ProviderIcon id={provider.id} />
-        <span>{provider.name}</span>
-        <ChevronRightIcon class="size-2.5 text-hover" />
-      </AppMenu.SubmenuTrigger>
-      <AppMenu.Portal>
-        <AppMenu.Positioner side="right" align="end" sideOffset={8} className="z-50" collisionPadding={12}>
-          <MenuPanel className="w-56">
-            <ModelMenuContent
-              name={provider.name}
-              models={provider.models}
-              selectedModel={selectedModel}
-              onSelectModel={onSelectModel}
-              onOpenSettings={onOpenSettings}
-            />
-          </MenuPanel>
-        </AppMenu.Positioner>
-      </AppMenu.Portal>
-    </AppMenu.SubmenuRoot>
+    <AppMenu.Item
+      closeOnClick={false}
+      onFocus={onActivate}
+      onClick={onActivate}
+      onMouseEnter={onActivate}
+      className={tw(
+        'grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control',
+        active && 'bg-control'
+      )}
+    >
+      <ProviderIcon id={id} />
+      <span>{name}</span>
+      <ChevronRightIcon class="size-2.5 text-hover" />
+    </AppMenu.Item>
   );
 };
 
+const providerRowStep = 36;
+
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
+  const [active, setActive] = useState(-1);
+  const rowsRef = useRef<HTMLDivElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+
+  const enterFlyout = (event: KeyboardEvent) => {
+    if (event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    event.stopPropagation();
+    flyoutRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  };
+
+  const exitFlyout = (event: KeyboardEvent) => {
+    if (event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    event.stopPropagation();
+    rowsRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]')[active]?.focus();
+  };
+
   const providers = useMemo<ProviderGroup[]>(() => {
     const grouped: Record<ModelProviderId, ModelOption[]> = { google: [], openai: [], anthropic: [] };
     for (const model of models) grouped[modelProviderId(model)].push(model);
@@ -171,17 +188,41 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
     ];
   }, [models]);
 
+  const flyout = providers[active];
+
   return (
-    <MenuPanel className="w-44">
-      {providers.map((provider) => (
-        <ProviderSubmenu
-          key={provider.id}
-          provider={provider}
-          selectedModel={selectedModel}
-          onSelectModel={onSelectModel}
-          onOpenSettings={onOpenSettings}
-        />
-      ))}
+    <MenuPanel className="relative w-44">
+      <div ref={rowsRef} onKeyDown={enterFlyout}>
+        {providers.map((provider, index) => (
+          <ProviderRow
+            key={provider.id}
+            id={provider.id}
+            name={provider.name}
+            active={index === active}
+            onActivate={() => setActive(index)}
+          />
+        ))}
+      </div>
+      {flyout && (
+        <div
+          ref={flyoutRef}
+          onKeyDown={exitFlyout}
+          style={
+            { '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` } as JSX.CSSProperties
+          }
+          class="absolute bottom-1 left-full ml-2 w-56 -translate-y-(--flyout-rise)"
+        >
+          <MenuSurface>
+            <ModelMenuContent
+              name={flyout.name}
+              models={flyout.models}
+              selectedModel={selectedModel}
+              onSelectModel={onSelectModel}
+              onOpenSettings={onOpenSettings}
+            />
+          </MenuSurface>
+        </div>
+      )}
     </MenuPanel>
   );
 };
