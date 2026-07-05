@@ -1,5 +1,6 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { playToggleSound } from '@renderer/ui/sounds';
 import { isEditableTarget } from '@renderer/utils/dom';
 import { useCallback, useEffect, useState } from 'preact/hooks';
 
@@ -58,6 +59,7 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
 
       if (event.key === 'Escape' && sidePanelOpen) {
         event.preventDefault();
+        playToggleSound();
         closeSidePanel();
         return;
       }
@@ -65,6 +67,7 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
       if (!isBracketToggle(event) || isEditableTarget(event.target)) return;
 
       event.preventDefault();
+      playToggleSound();
       toggleSidePanel();
     };
 
