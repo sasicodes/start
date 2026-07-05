@@ -84,33 +84,29 @@ const useVisibleRange = (
     setRange((previous) => (sameRange(previous, next) ? previous : next));
   }, [overscan, containerRef]);
 
-  const schedule = useCallback(() => {
-    if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = 0;
-      compute();
-    });
-  }, [compute]);
-
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    let ancestor: HTMLElement | null = null;
+    let lastTop = Number.NaN;
+    let lastHeight = Number.NaN;
 
-    const scrollAncestor = findScrollAncestor(container);
-    window.addEventListener('scroll', schedule, { capture: true, passive: true });
-    const resizeObserver = new ResizeObserver(schedule);
-    resizeObserver.observe(scrollAncestor ?? document.documentElement);
-
-    return () => {
-      if (frameRef.current) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = 0;
+    const tick = () => {
+      const container = containerRef.current;
+      if (container) {
+        if (!ancestor?.isConnected) ancestor = findScrollAncestor(container);
+        const top = ancestor ? ancestor.scrollTop : window.scrollY;
+        const height = ancestor ? ancestor.clientHeight : window.innerHeight;
+        if (top !== lastTop || height !== lastHeight) {
+          lastTop = top;
+          lastHeight = height;
+          compute();
+        }
       }
-      window.removeEventListener('scroll', schedule, { capture: true });
-      resizeObserver.disconnect();
+      frameRef.current = window.requestAnimationFrame(tick);
     };
-  }, [schedule, containerRef]);
+
+    frameRef.current = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameRef.current);
+  }, [compute, containerRef]);
 
   useLayoutEffect(() => {
     compute();
