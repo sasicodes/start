@@ -81,6 +81,17 @@ const useVisibleRange = (
     const viewportHeight = scrollAncestor ? scrollAncestor.clientHeight : window.innerHeight;
     const scrollTop = anchorTop - containerRect.top;
     const next = visibleRange(cumulativeRef.current, scrollTop, scrollTop + viewportHeight, overscan);
+    if (localStorage.getItem('start:vdebug')) {
+      const cum = cumulativeRef.current;
+      console.log('[vdebug] compute', {
+        scrollTop: Math.round(scrollTop),
+        viewportHeight: Math.round(viewportHeight),
+        total: Math.round(cum[cum.length - 1] ?? 0),
+        items: cum.length - 1,
+        next,
+        ancestorScrollTop: scrollAncestor ? Math.round(scrollAncestor.scrollTop) : null
+      });
+    }
     setRange((previous) => (sameRange(previous, next) ? previous : next));
   }, [overscan, containerRef]);
 
@@ -356,6 +367,17 @@ export const Virtual = <T,>({
   const topSpacer = cumulative[start] ?? 0;
   const visible = items.slice(start, end);
   const bottomSpacer = Math.max(0, total - (cumulative[end] ?? total));
+
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('start:vdebug')) {
+    console.log('[vdebug] render', {
+      start,
+      end,
+      visible: visible.length,
+      topSpacer: Math.round(topSpacer),
+      bottomSpacer: Math.round(bottomSpacer),
+      total: Math.round(total)
+    });
+  }
 
   return (
     <div ref={containerRef} class={tw('min-w-0', className)}>
