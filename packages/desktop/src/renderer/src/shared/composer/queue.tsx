@@ -39,8 +39,10 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
             <li
               key={id}
               class={tw(
-                'group/queue flex min-w-0 items-center gap-1 rounded-xl py-2 pr-3 pl-1 transition-colors',
-                reorder.dragId === id ? 'bg-control' : !dragging && 'hover:bg-control focus-within:bg-control'
+                'group/queue relative flex min-w-0 items-center gap-1 rounded-xl py-2 pr-3 pl-1 transition-colors',
+                reorder.dragId === id
+                  ? 'z-10 bg-control opacity-70 shadow-shell'
+                  : !dragging && 'hover:bg-control focus-within:bg-control'
               )}
             >
               <span
