@@ -9,7 +9,8 @@ const attachmentHeight = 62;
 const terminalLineHeight = 20;
 const activityHeaderHeight = 30;
 
-const estimatedLines = (text: string) => Math.max(1, Math.ceil(text.length / lineLength));
+const estimatedLines = (text: string) =>
+  text.split('\n').reduce((lines, line) => lines + Math.max(1, Math.ceil(line.length / lineLength)), 0);
 
 export const estimateTurnHeight = (turn: Turn) => {
   if (turn.role === 'event') return eventHeight;

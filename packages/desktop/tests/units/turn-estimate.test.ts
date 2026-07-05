@@ -20,6 +20,10 @@ describe('estimateTurnHeight', () => {
     expect(estimateTurnHeight(turn({ text: 'x'.repeat(87) }))).toBe(64);
   });
 
+  it('counts hard line breaks so tall messages are not underestimated', () => {
+    expect(estimateTurnHeight(turn({ text: 'a\nb\nc' }))).toBe(3 * 24 + 16);
+  });
+
   it('keeps empty terminal turns at the base height', () => {
     expect(estimateTurnHeight(turn({ role: 'terminal' }))).toBe(44);
   });
