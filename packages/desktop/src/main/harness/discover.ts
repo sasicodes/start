@@ -41,8 +41,13 @@ export const parseHarnessFile = (fileName: string, text: string): Harness | null
   return { name, body, description: description || `Custom harness "${name}".` };
 };
 
+const withToolFiles = async (harnessDir: string, harness: Harness): Promise<Harness> => {
+  const toolFiles = await discoverToolFiles(harnessDir, harness.name);
+  return toolFiles.length ? { ...harness, toolFiles } : harness;
+};
+
 export const discoverHarnesses = async (harnessDir: string): Promise<Map<string, Harness>> => {
-  const harnesses = new Map<string, Harness>([[defaultHarnessName, defaultHarness]]);
+  const harnesses = new Map<string, Harness>([[defaultHarnessName, await withToolFiles(harnessDir, defaultHarness)]]);
   const entries = await readdir(harnessDir, { withFileTypes: true }).catch(() => []);
 
   for (const entry of entries) {
@@ -51,10 +56,7 @@ export const discoverHarnesses = async (harnessDir: string): Promise<Map<string,
     try {
       const text = await readFile(join(harnessDir, entry.name), 'utf8');
       const harness = parseHarnessFile(entry.name, text);
-      if (!harness) continue;
-
-      const toolFiles = await discoverToolFiles(harnessDir, harness.name);
-      harnesses.set(harness.name, toolFiles.length ? { ...harness, toolFiles } : harness);
+      if (harness) harnesses.set(harness.name, await withToolFiles(harnessDir, harness));
     } catch {}
   }
 

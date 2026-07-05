@@ -34,6 +34,14 @@ describe('harness tool discovery', () => {
     await writeFile(join(dir, 'plain.md'), '---\nname: plain\ndescription: d\n---\nYou help.', 'utf8');
     expect((await discoverHarnesses(dir)).get('plain')?.toolFiles).toBeUndefined();
   });
+
+  it('attaches tool files to the default harness too', async () => {
+    const toolsDir = harnessToolsDir(dir, 'default');
+    await mkdir(toolsDir, { recursive: true });
+    await writeFile(join(toolsDir, 'ping.mjs'), toolModule('ping'), 'utf8');
+
+    expect((await discoverHarnesses(dir)).get('default')?.toolFiles).toEqual([join(toolsDir, 'ping.mjs')]);
+  });
 });
 
 describe('nextActiveTools', () => {

@@ -31,7 +31,7 @@ const addToolParameters = {
   required: ['harness', 'name', 'code'],
   additionalProperties: false,
   properties: {
-    harness: { type: 'string', description: 'Existing harness name to add the tool to. Cannot be "default".' },
+    harness: { type: 'string', description: 'Existing harness name to add the tool to, or "default" for the base.' },
     name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
     code: { type: 'string', description: toolCodeDescription }
   }
@@ -84,6 +84,13 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
     activeToolNames = nextNames;
   };
 
+  const reactivateIfCurrent = async (name: string): Promise<boolean> => {
+    if (current.name !== name) return false;
+    const refreshed = (await discoverHarnesses(harnessDir)).get(name);
+    if (refreshed) await activateHarness(refreshed);
+    return true;
+  };
+
   const tools: ToolDefinition[] = [
     defineTool({
       label: 'harness',
@@ -134,7 +141,9 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
         }
 
         const toolNote = toolFiles?.length ? ` with ${toolFiles.length} tool(s)` : '';
-        return toolResult(`Created harness "${cleanName}"${toolNote}. Switch to it with switch_harness.`, null);
+        const activated = await reactivateIfCurrent(cleanName);
+        const nextStep = activated ? ' Tools are active now.' : ' Switch to it with switch_harness.';
+        return toolResult(`Created harness "${cleanName}"${toolNote}.${nextStep}`, null);
       }
     }),
     defineTool({
@@ -162,13 +171,9 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
         await mkdir(dir, { recursive: true });
         await writeFile(join(dir, `${toolName}.mjs`), `${trimmedCode}\n`, 'utf8');
 
-        if (current.name !== cleanHarness) {
-          return toolResult(`Added tool "${toolName}" to "${cleanHarness}". Switch to it to activate.`, null);
-        }
-
-        const refreshed = (await discoverHarnesses(harnessDir)).get(cleanHarness);
-        if (refreshed) await activateHarness(refreshed);
-        return toolResult(`Added tool "${toolName}" to "${cleanHarness}" and activated it.`, null);
+        const activated = await reactivateIfCurrent(cleanHarness);
+        const nextStep = activated ? 'and activated it' : 'switch to it to activate';
+        return toolResult(`Added tool "${toolName}" to "${cleanHarness}" ${nextStep}.`, null);
       }
     })
   ];
