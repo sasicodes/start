@@ -213,8 +213,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const editQueuedMessage = useCallback(
     async (id: string, text: string) => {
       try {
-        updateQueuedMessages(await window.pi.chat.editQueuedMessage(id, text));
-      } catch {}
+        const messages = await window.pi.chat.editQueuedMessage(id, text);
+        updateQueuedMessages(messages);
+        return messages.some((message) => message.id === id && message.text === text);
+      } catch {
+        return false;
+      }
     },
     [updateQueuedMessages]
   );

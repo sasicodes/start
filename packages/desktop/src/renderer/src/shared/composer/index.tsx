@@ -159,15 +159,24 @@ export const Composer = memo(
     const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
     const recall = useMessageRecall(recallMessages, recallQueuedIds, draft, onDraftChange);
 
+    const editQueued = async (id: string, text: string) => {
+      const updated = await onEditQueuedMessage(id, text);
+      if (updated) {
+        onDraftChange('');
+        recall.clearEditing();
+        return;
+      }
+
+      onSubmit();
+    };
+
     const submitDraft = () => {
       if (!draft.trim() || noProvidersConfigured) return;
 
       const editingId = recall.editingId();
       const editable = editingId && queuedMessages.some((message) => message.id === editingId);
       if (editable) {
-        onEditQueuedMessage(editingId, draft.trim());
-        onDraftChange('');
-        recall.clearEditing();
+        editQueued(editingId, draft.trim());
         return;
       }
 
