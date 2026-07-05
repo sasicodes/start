@@ -1,22 +1,24 @@
-import { moveId } from '@renderer/shared/composer/use-reorder';
+import { reorder } from '@renderer/shared/composer/use-reorder';
 import { describe, expect, it } from 'vitest';
 
-describe('moveId', () => {
+describe('reorder', () => {
   const ids = ['a', 'b', 'c', 'd'];
 
-  it('moves a dragged id down before the hovered id', () => {
-    expect(moveId(ids, 'a', 'c')).toEqual(['b', 'c', 'a', 'd']);
+  it('inserts the dragged id at the target slot', () => {
+    expect(reorder(ids, 'a', 2)).toEqual(['b', 'c', 'a', 'd']);
+    expect(reorder(ids, 'd', 1)).toEqual(['a', 'd', 'b', 'c']);
   });
 
-  it('moves a dragged id up before the hovered id', () => {
-    expect(moveId(ids, 'd', 'b')).toEqual(['a', 'd', 'b', 'c']);
+  it('clamps the index to the list bounds', () => {
+    expect(reorder(ids, 'b', -5)).toEqual(['b', 'a', 'c', 'd']);
+    expect(reorder(ids, 'b', 99)).toEqual(['a', 'c', 'd', 'b']);
   });
 
-  it('returns the same reference when nothing changes', () => {
-    expect(moveId(ids, 'a', 'a')).toBe(ids);
+  it('keeps a stable slot when the index matches the current position', () => {
+    expect(reorder(ids, 'c', 2)).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('returns the same reference for unknown ids', () => {
-    expect(moveId(ids, 'a', 'z')).toBe(ids);
+  it('returns the same reference for an unknown id', () => {
+    expect(reorder(ids, 'z', 1)).toBe(ids);
   });
 });

@@ -1,29 +1,18 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 
-export const moveId = (ids: string[], dragId: string, overId: string): string[] => {
-  const from = ids.indexOf(dragId);
-  const to = ids.indexOf(overId);
-  if (from === -1 || to === -1 || from === to) return ids;
+export const reorder = (ids: string[], dragId: string, index: number): string[] => {
+  const rest = ids.filter((id) => id !== dragId);
+  if (rest.length === ids.length) return ids;
 
-  const next = [...ids];
-  next.splice(from, 1);
-  next.splice(to, 0, dragId);
-  return next;
-};
-
-const targetIndex = (list: HTMLElement, pointerY: number): number => {
-  const items = [...list.children] as HTMLElement[];
-  for (let index = 0; index < items.length; index += 1) {
-    const rect = items[index]?.getBoundingClientRect();
-    if (rect && pointerY < rect.top + rect.height / 2) return index;
-  }
-  return items.length - 1;
+  rest.splice(Math.max(0, Math.min(index, rest.length)), 0, dragId);
+  return rest;
 };
 
 export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => void) => {
   const [dragOrder, setDragOrder] = useState<string[] | null>(null);
   const [dragId, setDragId] = useState('');
   const listRef = useRef<HTMLUListElement>(null);
+  const metricsRef = useRef({ top: 0, pitch: 1 });
   const order = dragOrder ?? ids;
 
   useEffect(() => {
@@ -34,14 +23,9 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
     if (!dragId) return;
 
     const move = (event: PointerEvent) => {
-      const list = listRef.current;
-      if (!list) return;
-
-      setDragOrder((current) => {
-        const base = current ?? ids;
-        const next = base[targetIndex(list, event.clientY)];
-        return next ? moveId(base, dragId, next) : base;
-      });
+      const { top, pitch } = metricsRef.current;
+      const index = Math.floor((event.clientY - top) / pitch);
+      setDragOrder(reorder(ids, dragId, index));
     };
 
     const finish = () => {
@@ -66,6 +50,10 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
   }, [dragId, ids, onReorder]);
 
   const start = (id: string) => {
+    const rows = listRef.current?.children;
+    const first = rows?.[0]?.getBoundingClientRect();
+    const second = rows?.[1]?.getBoundingClientRect();
+    if (first) metricsRef.current = { top: first.top, pitch: second ? second.top - first.top : first.height };
     setDragId(id);
     setDragOrder(ids);
   };
