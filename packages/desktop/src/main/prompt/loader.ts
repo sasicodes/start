@@ -2,19 +2,23 @@ import { homedir } from 'node:os';
 import { join, sep } from 'node:path';
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
+import { createHarnessController } from '@main/harness/controller';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
 
 const piConfigSegment = `${sep}.pi${sep}`;
 const startAgentDir = join(baseDir, 'agent');
 const startPromptsDir = join(baseDir, 'prompts');
 const startSkillsDir = join(startAgentDir, 'skills');
+const startHarnessDir = join(startAgentDir, 'harness');
 const startPromptsPrefix = `${startPromptsDir}${sep}`;
 const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const systemPrompt = buildStartSystemPrompt(startPromptsDir, startSkillsDir);
 
-export const createStartResourceLoader = async (cwd: string) => {
+export const createStartResourceLoader = async (cwd: string, options?: { persistHarness?: boolean }) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
   const skillDirs = [startSkillsDir, globalSkillsDir, projectSkillsDir];
+  const persistHarness = options?.persistHarness !== false;
+  const harness = createHarnessController({ harnessDir: startHarnessDir, persist: persistHarness });
 
   const loader = new DefaultResourceLoader({
     cwd,
@@ -42,9 +46,10 @@ export const createStartResourceLoader = async (cwd: string) => {
     }),
     additionalSkillPaths: skillDirs,
     additionalPromptTemplatePaths: [startPromptsDir],
-    extensionFactories: [createStartPromptExtension(startPromptsDir, startSkillsDir)]
+    extensionFactories: [createStartPromptExtension(startPromptsDir, startSkillsDir, harness), harness.extension]
   });
 
   await loader.reload();
+  await harness.restore();
   return loader;
 };

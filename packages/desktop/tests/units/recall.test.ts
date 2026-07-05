@@ -7,10 +7,17 @@ const userTurn = (id: string, text: string): Turn => ({ id, text, role: 'user', 
 const assistantTurn = (id: string, text: string): Turn => ({ id, text, role: 'assistant', createdAt: 0 });
 const queued = (id: string, text: string): QueuedMessage => ({ id, text, kind: 'followUp' });
 
+const skillBlock = (body: string) =>
+  `<skill name="simplify" location="/s/SKILL.md">\nRefs.\n\n${body}\n</skill>\n\nclean it up`;
+
 describe('userTurnTexts', () => {
   it('returns user messages newest first, skipping non-user and empty', () => {
     const turns = [userTurn('1', 'first'), assistantTurn('2', 'reply'), userTurn('3', ''), userTurn('4', 'second')];
     expect(userTurnTexts(turns)).toEqual(['second', 'first']);
+  });
+
+  it('reconstructs the typed slash command for a skill turn', () => {
+    expect(userTurnTexts([userTurn('1', skillBlock('body'))])).toEqual(['/skill:simplify clean it up']);
   });
 });
 
@@ -23,6 +30,10 @@ describe('buildRecallList', () => {
 
   it('drops empty queued text', () => {
     expect(buildRecallList([queued('q1', '')], ['msg'])).toEqual(['msg']);
+  });
+
+  it('reconstructs a queued skill message into its slash command', () => {
+    expect(buildRecallList([queued('q1', skillBlock('body'))], [])).toEqual(['/skill:simplify clean it up']);
   });
 });
 

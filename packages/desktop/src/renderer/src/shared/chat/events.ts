@@ -3,6 +3,7 @@ import { createTurn, createUserTurn } from '@renderer/functions/chat';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
+import { endsMidWord } from '@renderer/shared/chat/segment';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
@@ -70,6 +71,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     let assistantBuffer = '';
     let terminalBuffer = '';
     let textAssistantId = '';
+    let lastAssistantChar = '';
     let activityClearedAssistantId: string | null = null;
 
     const flushStream = () => {
@@ -113,7 +115,10 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
 
     const queueAssistantDelta = (delta: string) => {
       const id = optionsRef.current.assistantIdRef.current;
-      if (id && delta) textAssistantId = id;
+      if (id && delta) {
+        textAssistantId = id;
+        lastAssistantChar = delta.slice(-1);
+      }
       assistantBuffer += delta;
       assistantFlush.schedule();
     };
@@ -131,6 +136,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const startActivitySegment = () => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id || textAssistantId !== id) return;
+      if (endsMidWord(lastAssistantChar)) return;
 
       assistantFlush.flushNow();
       setTurnStreaming(id, false);

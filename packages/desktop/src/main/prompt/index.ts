@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { defaultHarness } from '@main/harness/default';
 import * as v from 'valibot';
 
 interface ToolCapability {
@@ -97,26 +98,51 @@ const promptWithToolCapabilities = (
   prompt: string,
   promptsDir: string,
   skillsDir: string,
-  capabilitySource: ToolCapabilitySource
+  capabilitySource: ToolCapabilitySource,
+  harnessBody: string
 ) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
   const nextPrompt = replacePromptSection(prompt, 'Available tools:', 'Guidelines:', runtimeToolsList(capabilities));
 
-  if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource)}\n\n${prompt}`.trim();
+  if (!nextPrompt) {
+    return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource, harnessBody)}\n\n${prompt}`.trim();
+  }
 
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
+};
+
+const nowOpen = '<now>';
+const nowClose = '</now>';
+
+export const runtimeContextBlock = (now = new Date()): string => `${nowOpen}${now.toString()}${nowClose}`;
+
+const trailingNowBlock = /<now>([^<]*)<\/now>\s*$/u;
+const runtimeTimestamp = /^[A-Za-z]{3} [A-Za-z]{3} \d{2} \d{4} \d{2}:\d{2}:\d{2} GMT[+-]\d{4}/u;
+
+const stripRuntimeContext = (prompt: string): string => {
+  const match = trailingNowBlock.exec(prompt);
+  if (!match || !runtimeTimestamp.test(match[1] ?? '')) return prompt;
+  return prompt.slice(0, match.index).trimEnd();
+};
+
+export const replaceHarnessIntro = (prompt: string, intro: string): string => {
+  const marker = 'Available tools:';
+  const markerIndex = prompt.indexOf(marker);
+  if (markerIndex < 0) return prompt;
+  return `${intro}\n\n${prompt.slice(markerIndex)}`;
 };
 
 export const buildStartSystemPrompt = (
   promptsDir: string,
   skillsDir: string,
-  capabilitySource?: ToolCapabilitySource
+  capabilitySource?: ToolCapabilitySource,
+  harnessBody: string = defaultHarness.body
 ): string => {
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
-  return `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
+  return `${harnessBody}
 
 Available tools:
 ${runtimeToolsList(capabilities)}
@@ -133,16 +159,21 @@ Project and user resources:
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
 };
 
-export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {
-  pi.on('before_agent_start', async (event) => ({
-    systemPrompt: promptWithToolCapabilities(
-      event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir),
-      promptsDir,
-      skillsDir,
-      {
-        getAllTools: () => pi.getAllTools(),
-        getActiveToolNames: () => pi.getActiveTools()
-      }
-    )
-  }));
-};
+export const createStartPromptExtension =
+  (promptsDir: string, skillsDir: string, harness?: { getBody: () => string }) => (pi: ExtensionAPI) => {
+    pi.on('before_agent_start', async (event) => {
+      const harnessBody = harness?.getBody() ?? defaultHarness.body;
+      const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
+      const withHarness = harnessBody === defaultHarness.body ? base : replaceHarnessIntro(base, harnessBody);
+      const withCapabilities = promptWithToolCapabilities(
+        withHarness,
+        promptsDir,
+        skillsDir,
+        { getAllTools: () => pi.getAllTools(), getActiveToolNames: () => pi.getActiveTools() },
+        harnessBody
+      );
+      const withoutStaleContext = stripRuntimeContext(withCapabilities);
+
+      return { systemPrompt: `${withoutStaleContext}\n\n${runtimeContextBlock()}` };
+    });
+  };

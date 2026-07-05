@@ -35,6 +35,7 @@ export const useTurnSummary = () => {
   return {
     setTurns,
     turnCount,
+    turnCountRef,
     userTurns
   };
 };

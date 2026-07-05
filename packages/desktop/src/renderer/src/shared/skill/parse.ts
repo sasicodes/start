@@ -20,3 +20,11 @@ export const parseSkillBlock = (text: string): ParsedSkillBlock | null => {
     ...(trimmedUserMessage ? { userMessage: trimmedUserMessage } : {})
   };
 };
+
+export const skillCommandText = (block: ParsedSkillBlock): string =>
+  block.userMessage ? `/skill:${block.name} ${block.userMessage}` : `/skill:${block.name}`;
+
+export const skillDisplayText = (text: string): string => {
+  const block = parseSkillBlock(text);
+  return block ? skillCommandText(block) : text;
+};

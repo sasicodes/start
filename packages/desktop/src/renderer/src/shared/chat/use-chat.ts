@@ -73,7 +73,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const terminalIdRef = useRef<string | null>(null);
   const assistantIdRef = useRef<string | null>(null);
   const newSessionRequestRef = useRef(0);
-  const { setTurns, turnCount, userTurns } = useTurnSummary();
+  const { setTurns, turnCount, turnCountRef, userTurns } = useTurnSummary();
   const recallMessages = useMemo(() => buildRecallList(queuedMessages, userTurns), [queuedMessages, userTurns]);
 
   const updateActiveSessionId = useCallback((sessionId = '') => {
@@ -104,11 +104,11 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
-      updateActiveSessionId(nextStatus.sessionId && turnCount > 0 ? nextStatus.sessionId : '');
+      updateActiveSessionId(nextStatus.sessionId && turnCountRef.current > 0 ? nextStatus.sessionId : '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
       contextPercentState.value = nextStatus.contextPercent ?? 0;
     },
-    [turnCount, updateActiveSessionId]
+    [turnCountRef, updateActiveSessionId]
   );
 
   const syncStatus = useCallback(async () => {
