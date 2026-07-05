@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
@@ -73,6 +74,8 @@ describe('workspace switching', () => {
   });
 
   it('shows remembered workspaces even before they have sessions', async () => {
+    mkdirSync('/tmp/workspace-a', { recursive: true });
+    mkdirSync('/tmp/workspace-c', { recursive: true });
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     await chat.switchWorkspace('/tmp/workspace-c');
 
@@ -80,6 +83,16 @@ describe('workspace switching', () => {
       '/tmp/workspace-c',
       '/tmp/workspace-a'
     ]);
+  });
+
+  it('drops deleted workspaces from the folder list and remembered history', async () => {
+    mkdirSync('/tmp/workspace-a', { recursive: true });
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    await chat.switchWorkspace('/tmp/workspace-gone');
+    await chat.switchWorkspace('/tmp/workspace-a');
+
+    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual(['/tmp/workspace-a']);
+    expect(getStorageSnapshot().workspaceHistory).not.toHaveProperty('/tmp/workspace-gone');
   });
 
   it('falls back to the user home directory when no workspace was previously saved', () => {

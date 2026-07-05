@@ -816,7 +816,7 @@ export class ChatService {
     }));
   }
 
-  async getWorkspaceFolders(prune = false): Promise<WorkspaceFolder[]> {
+  async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
@@ -882,10 +882,19 @@ export class ChatService {
     }
 
     const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
-    if (!prune) return list;
-
     const existing = await Promise.all(list.map((folder) => directoryExists(folder.path)));
-    return list.filter((folder, index) => folder.path === activeRoot || existing[index]);
+    const missingPaths = new Set(
+      list.filter((folder, index) => folder.path !== activeRoot && !existing[index]).map((folder) => folder.path)
+    );
+    if (missingPaths.size === 0) return list;
+
+    const nextHistory = Object.fromEntries(
+      Object.entries(workspaceHistory).filter(([workspacePath]) => !missingPaths.has(workspacePath))
+    );
+    if (Object.keys(nextHistory).length !== Object.keys(workspaceHistory).length) {
+      this.persistState({ workspaceHistory: nextHistory });
+    }
+    return list.filter((folder) => !missingPaths.has(folder.path));
   }
 
   async prepareDroppedFiles(paths: string[]): Promise<PreparedDropFiles> {

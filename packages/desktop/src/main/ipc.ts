@@ -154,7 +154,7 @@ export const registerChatIpc = ({
     return result;
   });
   ipcMain.handle('chat:release-attachments', (_event, ids: string[]) => chat.releaseAttachments(ids));
-  ipcMain.handle('chat:workspace-folders', (_event, prune?: boolean) => chat.getWorkspaceFolders(prune));
+  ipcMain.handle('chat:workspace-folders', () => chat.getWorkspaceFolders());
   ipcMain.handle('chat:switch-workspace', async (_event, path: string) => {
     const result = await chat.switchWorkspace(path);
     if (result.ok && !result.unchanged) {
