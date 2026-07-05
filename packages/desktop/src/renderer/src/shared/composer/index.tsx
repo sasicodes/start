@@ -1,3 +1,4 @@
+import { queuedRecallIds } from '@renderer/shared/chat/recall';
 import { Attachments } from '@renderer/shared/composer/attachments';
 import { Generate } from '@renderer/shared/composer/generate';
 import { composerIsLayered } from '@renderer/shared/composer/layout';
@@ -52,6 +53,8 @@ export const Composer = memo(
     onExitComplete,
     onSteerQueuedMessage,
     onDeleteQueuedMessage,
+    onEditQueuedMessage,
+    onReorderQueuedMessages,
     selectedModelKey,
     onOpenAttachment,
     onRemoveAttachment,
@@ -153,12 +156,32 @@ export const Composer = memo(
       onDraftChange(`${draft.slice(0, finderToken.start)}${nextToken}`);
     };
 
-    const recall = useMessageRecall(recallMessages, draft, onDraftChange);
+    const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
+    const recall = useMessageRecall(recallMessages, recallQueuedIds, draft, onDraftChange);
+
+    const editQueued = async (id: string, text: string) => {
+      const updated = await onEditQueuedMessage(id, text);
+      if (!updated) return;
+
+      onDraftChange('');
+      recall.clearEditing();
+    };
+
+    const submitDraft = () => {
+      if (!draft.trim() || noProvidersConfigured) return;
+
+      const editingId = recall.editingId();
+      if (editingId && queuedMessages.some((message) => message.id === editingId)) {
+        editQueued(editingId, draft.trim());
+        return;
+      }
+
+      onSubmit();
+    };
 
     const handleSubmit = (event: SubmitEvent) => {
       event.preventDefault();
-      if (!draft.trim() || noProvidersConfigured) return;
-      onSubmit();
+      submitDraft();
     };
 
     const handleDraftInput = (event: InputEvent) => {
@@ -209,8 +232,7 @@ export const Composer = memo(
 
       if (event.key !== 'Enter' || (event.shiftKey && !singleLine)) return;
       event.preventDefault();
-      if (!draft.trim() || noProvidersConfigured) return;
-      onSubmit();
+      submitDraft();
     };
 
     return (
@@ -252,6 +274,7 @@ export const Composer = memo(
           visible={queueVisible}
           onSteer={onSteerQueuedMessage}
           onDelete={onDeleteQueuedMessage}
+          onReorder={onReorderQueuedMessages}
         />
         <form
           class={tw(

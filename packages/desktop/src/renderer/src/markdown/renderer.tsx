@@ -11,13 +11,16 @@ import {
 } from '@renderer/markdown/options';
 import { useMarkdownPlugins } from '@renderer/markdown/plugins';
 import { markdownComponents } from '@renderer/markdown/table';
+import { normalizeTexDelimiters } from '@renderer/markdown/tex';
 import type { ComponentType } from 'preact';
+import { useMemo } from 'preact/hooks';
 import { Streamdown, type StreamdownProps } from 'streamdown';
 
 const MarkdownEngine = Streamdown as unknown as ComponentType<StreamdownProps>;
 
 export const MarkdownRenderer = ({ source, streaming = false, density = 'default' }: MarkdownProps) => {
-  const plugins = useMarkdownPlugins(source);
+  const normalized = useMemo(() => normalizeTexDelimiters(source), [source]);
+  const plugins = useMarkdownPlugins(normalized);
 
   return (
     <div dir="auto" class="contents">
@@ -40,7 +43,7 @@ export const MarkdownRenderer = ({ source, streaming = false, density = 'default
         disallowedElements={markdownDisallowedElements}
         className={density === 'compact' ? 'markdown-compact' : 'markdown-default'}
       >
-        {source}
+        {normalized}
       </MarkdownEngine>
     </div>
   );

@@ -14,14 +14,16 @@ export const userTurnTexts = (turns: Turn[]): string[] => {
 export const sameOrder = (a: string[], b: string[]) =>
   a.length === b.length && a.every((value, index) => value === b[index]);
 
-export const buildRecallList = (queued: QueuedMessage[], userTurns: string[]): string[] => {
-  const queuedTexts = [...queued]
-    .reverse()
-    .map((message) => message.text)
-    .filter((text) => text.length > 0)
-    .map(skillDisplayText);
-  return [...queuedTexts, ...userTurns];
-};
+const recallableQueued = (queued: QueuedMessage[]): QueuedMessage[] =>
+  [...queued].reverse().filter((message) => message.text.length > 0);
+
+export const buildRecallList = (queued: QueuedMessage[], userTurns: string[]): string[] => [
+  ...recallableQueued(queued).map((message) => skillDisplayText(message.text)),
+  ...userTurns
+];
+
+export const queuedRecallIds = (queued: QueuedMessage[]): string[] =>
+  recallableQueued(queued).map((message) => message.id);
 
 export interface RecallStep {
   index: number;

@@ -15,7 +15,7 @@ interface PluginLoadState {
 const texMathPattern = /\\\(|\\\[/;
 const inlineMathPattern = /(^|[^\\])\$[^$\n]+\$/;
 const fencePattern = /^(`{3,}|~{3,})\s*([^`~]*)$/;
-const blockMathPattern = /(^|\n)\s*\$\$[\s\S]*?\$\$/;
+const blockMathPattern = /\$\$[\s\S]+?\$\$/;
 const cjkTextPattern = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/u;
 
 const pluginModules = {

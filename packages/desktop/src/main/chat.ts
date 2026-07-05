@@ -1373,6 +1373,37 @@ export class ChatService {
     return this.visibleQueuedMessages(runtimeState);
   }
 
+  async editQueuedMessage(id: string, text: string, webContents: WebContents): Promise<QueuedMessage[]> {
+    const session = this.session;
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    const message = runtimeState?.queuedMessages.find((item) => item.id === id);
+    if (!session || !runtimeState || !message || message.text === text) return this.visibleQueuedMessages();
+
+    runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
+      item.id === id ? { ...item, text } : item
+    );
+    await this.rebuildSessionQueue(session, runtimeState);
+    this.emitQueueUpdate(webContents);
+    return this.visibleQueuedMessages(runtimeState);
+  }
+
+  async reorderQueuedMessages(orderedIds: string[], webContents: WebContents): Promise<QueuedMessage[]> {
+    const session = this.session;
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    if (!session || !runtimeState) return this.visibleQueuedMessages();
+
+    const current = runtimeState.queuedMessages;
+    const byId = new Map(current.map((message) => [message.id, message]));
+    const reordered = orderedIds.map((id) => byId.get(id)).filter((message) => message !== undefined);
+    const isPermutation = new Set(orderedIds).size === current.length && reordered.length === current.length;
+    if (!isPermutation) return this.visibleQueuedMessages(runtimeState);
+
+    runtimeState.queuedMessages = reordered;
+    await this.rebuildSessionQueue(session, runtimeState);
+    this.emitQueueUpdate(webContents);
+    return this.visibleQueuedMessages(runtimeState);
+  }
+
   async deleteQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;

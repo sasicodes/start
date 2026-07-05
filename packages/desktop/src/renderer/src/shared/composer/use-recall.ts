@@ -1,9 +1,15 @@
 import { recallNewer, recallOlder } from '@renderer/shared/chat/recall';
 import { useRef } from 'preact/hooks';
 
-export const useMessageRecall = (entries: string[], draft: string, onDraftChange: (value: string) => void) => {
+export const useMessageRecall = (
+  entries: string[],
+  queuedIds: string[],
+  draft: string,
+  onDraftChange: (value: string) => void
+) => {
   const indexRef = useRef(-1);
   const injectedRef = useRef('');
+  const editingIdRef = useRef('');
 
   const resetOnEdit = () => {
     if (draft !== injectedRef.current) indexRef.current = -1;
@@ -12,6 +18,7 @@ export const useMessageRecall = (entries: string[], draft: string, onDraftChange
   const apply = (text: string, index: number) => {
     indexRef.current = index;
     injectedRef.current = text;
+    editingIdRef.current = queuedIds[index] ?? '';
     onDraftChange(text);
   };
 
@@ -35,5 +42,12 @@ export const useMessageRecall = (entries: string[], draft: string, onDraftChange
     return true;
   };
 
-  return { older, newer };
+  const editingId = () => (draft.trim() ? editingIdRef.current : '');
+
+  const clearEditing = () => {
+    editingIdRef.current = '';
+    indexRef.current = -1;
+  };
+
+  return { older, newer, editingId, clearEditing };
 };

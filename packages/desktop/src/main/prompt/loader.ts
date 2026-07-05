@@ -50,6 +50,5 @@ export const createStartResourceLoader = async (cwd: string, options?: { persist
   });
 
   await loader.reload();
-  await harness.restore();
   return loader;
 };

@@ -1,5 +1,12 @@
 import type { QueuedMessage } from '@preload/index';
-import { buildRecallList, recallNewer, recallOlder, sameOrder, userTurnTexts } from '@renderer/shared/chat/recall';
+import {
+  buildRecallList,
+  queuedRecallIds,
+  recallNewer,
+  recallOlder,
+  sameOrder,
+  userTurnTexts
+} from '@renderer/shared/chat/recall';
 import type { Turn } from '@renderer/utils/types';
 import { describe, expect, it } from 'vitest';
 
@@ -34,6 +41,17 @@ describe('buildRecallList', () => {
 
   it('reconstructs a queued skill message into its slash command', () => {
     expect(buildRecallList([queued('q1', skillBlock('body'))], [])).toEqual(['/skill:simplify clean it up']);
+  });
+});
+
+describe('queuedRecallIds', () => {
+  it('lists queued ids newest first, aligned with the recall list', () => {
+    const queue = [queued('q1', 'older queue'), queued('q2', 'newer queue')];
+    expect(queuedRecallIds(queue)).toEqual(['q2', 'q1']);
+  });
+
+  it('drops ids for empty queued text', () => {
+    expect(queuedRecallIds([queued('q1', ''), queued('q2', 'kept')])).toEqual(['q2']);
   });
 });
 

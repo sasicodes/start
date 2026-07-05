@@ -167,6 +167,12 @@ export const registerChatIpc = ({
   ipcMain.handle('chat:delete-queued-message', (event, id: string) =>
     chat.deleteQueuedMessage(id, event.sender as WebContents)
   );
+  ipcMain.handle('chat:edit-queued-message', (event, id: string, text: string) =>
+    chat.editQueuedMessage(id, text, event.sender as WebContents)
+  );
+  ipcMain.handle('chat:reorder-queued-messages', (event, orderedIds: string[]) =>
+    chat.reorderQueuedMessages(orderedIds, event.sender as WebContents)
+  );
   ipcMain.handle('chat:login-subscription', (event, provider: string) => {
     const providerId = provider.trim().toLowerCase();
     trackSubscriptionLoginStarted(providerId, chat.getWorkspaceCwd());
