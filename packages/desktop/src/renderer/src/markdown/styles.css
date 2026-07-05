@@ -115,7 +115,7 @@
 
 .markdown-default [data-streamdown="table-wrapper"],
 .markdown-compact [data-streamdown="table-wrapper"] {
-  @apply my-2 overflow-x-auto rounded-xl border border-line bg-transparent p-0;
+  @apply my-2 rounded-xl border border-line bg-transparent p-0;
 }
 
 .markdown-default [data-streamdown="code-block-header"],
