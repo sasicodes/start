@@ -114,10 +114,11 @@ describe('prompt harness composition', () => {
 
     createStartPromptExtension('/p', '/s')(pi);
     if (!registered.handler) throw new Error('Expected prompt hook registration.');
-    const prompt = `${buildStartSystemPrompt('/p', '/s')}\n\nRefer to now for scheduling. Keep this line.`;
+    const prompt = `${buildStartSystemPrompt('/p', '/s')}\n\nSee <now>docs</now> for scheduling. Keep this line.`;
     const result = await registered.handler({ systemPrompt: prompt });
 
     expect(result.systemPrompt).toContain('Keep this line.');
-    expect(result.systemPrompt).toContain('Refer to now for scheduling.');
+    expect(result.systemPrompt).toContain('See <now>docs</now> for scheduling.');
+    expect(result.systemPrompt.match(/<now>/gu)?.length).toBe(2);
   });
 });

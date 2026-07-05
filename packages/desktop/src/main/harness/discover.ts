@@ -17,8 +17,10 @@ const discoverToolFiles = async (harnessDir: string, name: string): Promise<stri
 
   return entries
     .filter((entry) => entry.isFile() && harnessToolExtensions.includes(extname(entry.name)))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b))
     .slice(0, maxHarnessTools)
-    .map((entry) => join(dir, entry.name));
+    .map((name) => join(dir, name));
 };
 
 const frontmatterPattern = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/u;
@@ -32,7 +34,7 @@ export const parseHarnessFile = (fileName: string, text: string): Harness | null
   const name = fileName.replace(/\.md$/u, '');
   if (!isValidHarnessName(name)) return null;
 
-  const match = text.match(frontmatterPattern);
+  const match = text.replace(/\r\n/gu, '\n').match(frontmatterPattern);
   const frontmatter = match?.[1] ?? '';
   const body = (match?.[2] ?? text).trim();
   if (!body) return null;

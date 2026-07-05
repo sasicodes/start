@@ -25,9 +25,11 @@ interface Harness {
   registeredNames: () => string[];
 }
 
-const mountController = (): Harness => {
-  const registered = new Map<string, ToolDefinition>();
-  let active: string[] = ['read', 'edit'];
+const mountController = (builtins: string[] = []): Harness => {
+  const registered = new Map<string, ToolDefinition>(
+    builtins.map((name) => [name, { name, execute: async () => ({ content: [] }) } as unknown as ToolDefinition])
+  );
+  let active: string[] = ['read', 'edit', ...builtins];
 
   const pi = {
     registerTool: (tool: ToolDefinition) => registered.set(tool.name, tool),
@@ -94,5 +96,13 @@ describe('harness controller', () => {
   it('always resolves the default harness even with an empty directory', async () => {
     const harness = mountController();
     expect(await harness.exec('switch_harness', { name: 'default' })).toContain('Switched to harness "default"');
+  });
+
+  it('does not register or activate a harness tool that collides with an existing tool name', async () => {
+    const harness = mountController(['search']);
+    await harness.exec('add_harness_tool', { harness: 'default', name: 'search', code: toolCode('search') });
+
+    expect(harness.active().filter((name) => name === 'search')).toEqual(['search']);
+    expect(harness.registeredNames().filter((name) => name === 'search')).toEqual(['search']);
   });
 });

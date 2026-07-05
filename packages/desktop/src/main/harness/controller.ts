@@ -66,22 +66,23 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
   let current: Harness = defaultHarness;
   let api: ExtensionAPI | null = null;
   let activeToolNames: string[] = [];
+  let reservedNames: Set<string> | null = null;
 
   const getBody = () => current.body;
 
-  const activateHarness = async (harness: Harness) => {
+  const activateHarness = async (harness: Harness): Promise<number> => {
     current = harness;
-    if (!api) return;
+    if (!api) return 0;
 
-    const loaded = await loadHarnessTools(harness.toolFiles ?? []);
-    const registered = new Set(api.getAllTools().map((tool) => tool.name));
-    for (const tool of loaded) {
-      if (!registered.has(tool.name)) api.registerTool(tool);
-    }
+    if (!reservedNames) reservedNames = new Set(api.getAllTools().map((tool) => tool.name));
+    const reserved = reservedNames;
+    const loaded = (await loadHarnessTools(harness.toolFiles ?? [])).filter((tool) => !reserved.has(tool.name));
+    for (const tool of loaded) api.registerTool(tool);
 
     const nextNames = loaded.map((tool) => tool.name);
     api.setActiveTools(nextActiveTools(api.getActiveTools(), activeToolNames, nextNames));
     activeToolNames = nextNames;
+    return nextNames.length;
   };
 
   const reactivateIfCurrent = async (name: string): Promise<boolean> => {
@@ -106,8 +107,8 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
           return toolResult(`No harness named "${requested}". Available: ${[...harnesses.keys()].join(', ')}.`, null);
         }
 
-        await activateHarness(harness);
-        const toolNote = harness.toolFiles?.length ? ` Activated ${harness.toolFiles.length} harness tool(s).` : '';
+        const count = await activateHarness(harness);
+        const toolNote = count ? ` Activated ${count} harness tool(s).` : '';
         return toolResult(`Switched to harness "${harness.name}". ${harness.description}${toolNote}`, null);
       }
     }),

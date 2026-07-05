@@ -117,9 +117,11 @@ const nowClose = '</now>';
 
 export const runtimeContextBlock = (now = new Date()): string => `${nowOpen}${now.toString()}${nowClose}`;
 
+const trailingNowBlock = /<now>[^<]*<\/now>\s*$/u;
+
 const stripRuntimeContext = (prompt: string): string => {
   const openIndex = prompt.lastIndexOf(nowOpen);
-  if (openIndex < 0) return prompt;
+  if (openIndex < 0 || !trailingNowBlock.test(prompt.slice(openIndex))) return prompt;
   return prompt.slice(0, openIndex).trimEnd();
 };
 

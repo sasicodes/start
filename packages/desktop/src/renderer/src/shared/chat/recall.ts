@@ -23,7 +23,8 @@ export const buildRecallList = (queued: QueuedMessage[], userTurns: string[]): s
   const queuedTexts = [...queued]
     .reverse()
     .map((message) => message.text)
-    .filter((text) => text.length > 0);
+    .filter((text) => text.length > 0)
+    .map(recallText);
   return [...queuedTexts, ...userTurns];
 };
 

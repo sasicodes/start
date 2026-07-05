@@ -35,6 +35,17 @@ describe('harness tool discovery', () => {
     expect((await discoverHarnesses(dir)).get('plain')?.toolFiles).toBeUndefined();
   });
 
+  it('parses CRLF harness files', async () => {
+    await writeFile(
+      join(dir, 'win.md'),
+      '---\r\nname: win\r\ndescription: Windows.\r\n---\r\nYou help on Windows.',
+      'utf8'
+    );
+    const harness = (await discoverHarnesses(dir)).get('win');
+    expect(harness?.description).toBe('Windows.');
+    expect(harness?.body).toBe('You help on Windows.');
+  });
+
   it('attaches tool files to the default harness too', async () => {
     const toolsDir = harnessToolsDir(dir, 'default');
     await mkdir(toolsDir, { recursive: true });
@@ -59,15 +70,30 @@ describe('nextActiveTools', () => {
 });
 
 describe('loadHarnessTools', () => {
-  it('imports valid tool definitions and skips broken modules', async () => {
+  it('imports valid tool definitions and skips broken or malformed modules', async () => {
     const good = join(dir, 'good.mjs');
     const bad = join(dir, 'bad.mjs');
     const invalid = join(dir, 'invalid.mjs');
+    const noParams = join(dir, 'no-params.mjs');
     await writeFile(good, toolModule('good'), 'utf8');
     await writeFile(bad, 'export default {{ this is not valid js', 'utf8');
     await writeFile(invalid, 'export default { name: 123 };', 'utf8');
+    await writeFile(noParams, "export default { name: 'x', description: 'd', execute: async () => ({}) };", 'utf8');
 
-    const loaded = await loadHarnessTools([good, bad, invalid]);
+    const loaded = await loadHarnessTools([good, bad, invalid, noParams]);
     expect(loaded.map((tool) => tool.name)).toEqual(['good']);
+  });
+
+  it('reloads tool code after the file changes on disk', async () => {
+    const file = join(dir, 'edit.mjs');
+    await writeFile(file, toolModule('edit-tool'), 'utf8');
+    expect((await loadHarnessTools([file]))[0]?.description).toBe('x');
+
+    await writeFile(
+      file,
+      "export default { name: 'edit-tool', label: 'edit-tool', description: 'updated', parameters: { type: 'object', properties: {}, required: [] }, execute: async () => ({ content: [] }) };",
+      'utf8'
+    );
+    expect((await loadHarnessTools([file]))[0]?.description).toBe('updated');
   });
 });
