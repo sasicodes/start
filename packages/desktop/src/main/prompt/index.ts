@@ -98,16 +98,21 @@ const promptWithToolCapabilities = (
   prompt: string,
   promptsDir: string,
   skillsDir: string,
-  capabilitySource: ToolCapabilitySource
+  capabilitySource: ToolCapabilitySource,
+  harnessBody: string
 ) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
   const nextPrompt = replacePromptSection(prompt, 'Available tools:', 'Guidelines:', runtimeToolsList(capabilities));
 
-  if (!nextPrompt) return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource)}\n\n${prompt}`.trim();
+  if (!nextPrompt) {
+    return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource, harnessBody)}\n\n${prompt}`.trim();
+  }
 
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
+
+const runtimeContextMarker = '\n\nUser timezone:';
 
 export const runtimeContextBlock = (now = new Date()): string => {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
@@ -154,11 +159,18 @@ export const createStartPromptExtension =
       const harnessBody = harness?.getBody() ?? defaultHarness.body;
       const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
       const withHarness = harnessBody === defaultHarness.body ? base : replaceHarnessIntro(base, harnessBody);
-      const withCapabilities = promptWithToolCapabilities(withHarness, promptsDir, skillsDir, {
-        getAllTools: () => pi.getAllTools(),
-        getActiveToolNames: () => pi.getActiveTools()
-      });
+      const withCapabilities = promptWithToolCapabilities(
+        withHarness,
+        promptsDir,
+        skillsDir,
+        { getAllTools: () => pi.getAllTools(), getActiveToolNames: () => pi.getActiveTools() },
+        harnessBody
+      );
+      const markerIndex = withCapabilities.indexOf(runtimeContextMarker);
+      const withoutStaleContext = (
+        markerIndex < 0 ? withCapabilities : withCapabilities.slice(0, markerIndex)
+      ).trimEnd();
 
-      return { systemPrompt: `${withCapabilities}\n\n${runtimeContextBlock()}` };
+      return { systemPrompt: `${withoutStaleContext}\n\n${runtimeContextBlock()}` };
     });
   };

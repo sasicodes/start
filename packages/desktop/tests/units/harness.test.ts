@@ -1,8 +1,15 @@
 import { defaultHarness } from '@main/harness/default';
 import { parseHarnessFile } from '@main/harness/discover';
 import { harnessNameError, isReservedHarnessName, isValidHarnessName } from '@main/harness/validate';
-import { buildStartSystemPrompt, replaceHarnessIntro, runtimeContextBlock } from '@main/prompt/index';
+import {
+  buildStartSystemPrompt,
+  createStartPromptExtension,
+  replaceHarnessIntro,
+  runtimeContextBlock
+} from '@main/prompt/index';
 import { describe, expect, it } from 'vitest';
+
+type PromptHandler = (event: { systemPrompt: string }) => Promise<{ systemPrompt: string }>;
 
 describe('harness validate', () => {
   it('accepts kebab-case names and rejects reserved and malformed ones', () => {
@@ -56,5 +63,41 @@ describe('prompt harness composition', () => {
     const block = runtimeContextBlock(new Date('2026-07-05T12:00:00Z'));
     expect(block).toContain('User timezone:');
     expect(block).toContain('User local time:');
+  });
+
+  it('applies the harness persona even when the prompt lacks the tools marker', async () => {
+    const registered: { handler?: PromptHandler } = {};
+    const pi = {
+      getActiveTools: () => ['grep'],
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
+      on: (_event: 'before_agent_start', handler: PromptHandler) => {
+        registered.handler = handler;
+      }
+    } as unknown as Parameters<ReturnType<typeof createStartPromptExtension>>[0];
+
+    createStartPromptExtension('/p', '/s', { getBody: () => 'You are a research assistant.' })(pi);
+    if (!registered.handler) throw new Error('Expected prompt hook registration.');
+    const result = await registered.handler({ systemPrompt: 'A platform prompt without the marker.' });
+
+    expect(result.systemPrompt).toContain('You are a research assistant.');
+    expect(result.systemPrompt).toContain('User timezone:');
+  });
+
+  it('does not stack runtime context blocks across turns', async () => {
+    const registered: { handler?: PromptHandler } = {};
+    const pi = {
+      getActiveTools: () => ['grep'],
+      getAllTools: () => [{ name: 'grep', description: 'Search file contents.' }],
+      on: (_event: 'before_agent_start', handler: PromptHandler) => {
+        registered.handler = handler;
+      }
+    } as unknown as Parameters<ReturnType<typeof createStartPromptExtension>>[0];
+
+    createStartPromptExtension('/p', '/s')(pi);
+    if (!registered.handler) throw new Error('Expected prompt hook registration.');
+    const first = await registered.handler({ systemPrompt: buildStartSystemPrompt('/p', '/s') });
+    const second = await registered.handler({ systemPrompt: first.systemPrompt });
+
+    expect(second.systemPrompt.match(/User timezone:/gu)?.length).toBe(1);
   });
 });
