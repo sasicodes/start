@@ -118,10 +118,11 @@ const nowClose = '</now>';
 export const runtimeContextBlock = (now = new Date()): string => `${nowOpen}${now.toString()}${nowClose}`;
 
 const trailingNowBlock = /<now>([^<]*)<\/now>\s*$/u;
+const runtimeTimestamp = /^[A-Za-z]{3} [A-Za-z]{3} \d{2} \d{4} \d{2}:\d{2}:\d{2} GMT[+-]\d{4}/u;
 
 const stripRuntimeContext = (prompt: string): string => {
   const match = trailingNowBlock.exec(prompt);
-  if (!match || Number.isNaN(Date.parse(match[1] ?? ''))) return prompt;
+  if (!match || !runtimeTimestamp.test(match[1] ?? '')) return prompt;
   return prompt.slice(0, match.index).trimEnd();
 };
 
