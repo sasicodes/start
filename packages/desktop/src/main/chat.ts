@@ -890,10 +890,11 @@ export class ChatService {
     );
     if (missingPaths.size === 0) return list;
 
+    const currentHistory = this.appState.workspaceHistory ?? {};
     const nextHistory = Object.fromEntries(
-      Object.entries(workspaceHistory).filter(([workspacePath]) => !missingPaths.has(workspacePath))
+      Object.entries(currentHistory).filter(([workspacePath]) => !missingPaths.has(workspacePath))
     );
-    if (Object.keys(nextHistory).length !== Object.keys(workspaceHistory).length) {
+    if (Object.keys(nextHistory).length !== Object.keys(currentHistory).length) {
       this.persistState({ workspaceHistory: nextHistory });
     }
     return list.filter((folder) => !missingPaths.has(folder.path));

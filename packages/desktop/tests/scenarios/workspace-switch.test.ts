@@ -75,15 +75,15 @@ describe('workspace switching', () => {
   });
 
   it('shows remembered workspaces even before they have sessions', async () => {
-    mkdirSync('/tmp/workspace-a', { recursive: true });
-    mkdirSync('/tmp/workspace-c', { recursive: true });
-    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
-    await chat.switchWorkspace('/tmp/workspace-c');
+    const root = mkdtempSync(path.join(tmpdir(), 'start-workspaces-'));
+    const workspaceA = path.join(root, 'workspace-a');
+    const workspaceC = path.join(root, 'workspace-c');
+    mkdirSync(workspaceA, { recursive: true });
+    mkdirSync(workspaceC, { recursive: true });
+    const chat = freshChatService({ lastWorkspace: workspaceA });
+    await chat.switchWorkspace(workspaceC);
 
-    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([
-      '/tmp/workspace-c',
-      '/tmp/workspace-a'
-    ]);
+    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([workspaceC, workspaceA]);
   });
 
   it('drops deleted workspaces from the folder list and remembered history', async () => {
