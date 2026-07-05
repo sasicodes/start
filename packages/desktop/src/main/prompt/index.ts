@@ -1,4 +1,6 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { defaultHarness } from '@main/harness/default';
+import type { HarnessController } from '@main/harness/controller';
 import * as v from 'valibot';
 
 interface ToolCapability {
@@ -108,15 +110,29 @@ const promptWithToolCapabilities = (
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
 
+export const runtimeContextBlock = (now = new Date()): string => {
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const localTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'long', timeZone }).format(now);
+  return `User timezone: ${timeZone}\nUser local time: ${localTime}`;
+};
+
+export const replaceHarnessIntro = (prompt: string, intro: string): string => {
+  const marker = 'Available tools:';
+  const markerIndex = prompt.indexOf(marker);
+  if (markerIndex < 0) return prompt;
+  return `${intro}\n\n${prompt.slice(markerIndex)}`;
+};
+
 export const buildStartSystemPrompt = (
   promptsDir: string,
   skillsDir: string,
-  capabilitySource?: ToolCapabilitySource
+  capabilitySource?: ToolCapabilitySource,
+  harnessBody: string = defaultHarness.body
 ): string => {
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
-  return `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
+  return `${harnessBody}
 
 Available tools:
 ${runtimeToolsList(capabilities)}
@@ -133,16 +149,17 @@ Project and user resources:
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.`;
 };
 
-export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {
-  pi.on('before_agent_start', async (event) => ({
-    systemPrompt: promptWithToolCapabilities(
-      event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir),
-      promptsDir,
-      skillsDir,
-      {
+export const createStartPromptExtension =
+  (promptsDir: string, skillsDir: string, harness?: HarnessController) => (pi: ExtensionAPI) => {
+    pi.on('before_agent_start', async (event) => {
+      const harnessBody = harness?.getBody() ?? defaultHarness.body;
+      const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
+      const withHarness = harnessBody === defaultHarness.body ? base : replaceHarnessIntro(base, harnessBody);
+      const withCapabilities = promptWithToolCapabilities(withHarness, promptsDir, skillsDir, {
         getAllTools: () => pi.getAllTools(),
         getActiveToolNames: () => pi.getActiveTools()
-      }
-    )
-  }));
-};
+      });
+
+      return { systemPrompt: `${withCapabilities}\n\n${runtimeContextBlock()}` };
+    });
+  };
