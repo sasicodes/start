@@ -23,6 +23,20 @@ const switchParameters = {
   }
 } as const;
 
+const toolCodeDescription =
+  'Self-contained ES module with no imports. Default-export a plain object with name, description, parameters (JSON schema), and an async execute(id, args) that returns { content: [{ type: "text", text }] }.';
+
+const addToolParameters = {
+  type: 'object',
+  required: ['harness', 'name', 'code'],
+  additionalProperties: false,
+  properties: {
+    harness: { type: 'string', description: 'Existing harness name to add the tool to. Cannot be "default".' },
+    name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
+    code: { type: 'string', description: toolCodeDescription }
+  }
+} as const;
+
 const createParameters = {
   type: 'object',
   required: ['name', 'description', 'body'],
@@ -41,11 +55,7 @@ const createParameters = {
         additionalProperties: false,
         properties: {
           name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
-          code: {
-            type: 'string',
-            description:
-              'Self-contained ES module with no imports. Default-export a plain object with name, description, parameters (JSON schema), and an async execute(id, args) that returns { content: [{ type: "text", text }] }.'
-          }
+          code: { type: 'string', description: toolCodeDescription }
         }
       }
     }
@@ -125,6 +135,40 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
 
         const toolNote = toolFiles?.length ? ` with ${toolFiles.length} tool(s)` : '';
         return toolResult(`Created harness "${cleanName}"${toolNote}. Switch to it with switch_harness.`, null);
+      }
+    }),
+    defineTool({
+      label: 'harness',
+      name: 'add_harness_tool',
+      parameters: addToolParameters,
+      description: `Add a tool to an existing harness. ${harnessExplainer}`,
+      promptSnippet: 'Add a self-contained tool to a harness; it activates when that harness is active.',
+      async execute(_toolCallId, { harness: harnessName, name: toolName, code }) {
+        const cleanHarness = harnessName.trim();
+        if (!isValidHarnessName(cleanHarness)) {
+          return toolResult(harnessNameError(cleanHarness) || `Invalid harness name "${cleanHarness}".`, null);
+        }
+        if (!isValidHarnessName(toolName)) return toolResult(`Tool name "${toolName}" must be kebab-case.`, null);
+
+        const trimmedCode = code.trim();
+        if (!trimmedCode) return toolResult('Tool code is required.', null);
+
+        const harnesses = await discoverHarnesses(harnessDir);
+        if (!harnesses.has(cleanHarness)) {
+          return toolResult(`No harness named "${cleanHarness}". Create it first with create_harness.`, null);
+        }
+
+        const dir = harnessToolsDir(harnessDir, cleanHarness);
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, `${toolName}.mjs`), `${trimmedCode}\n`, 'utf8');
+
+        if (current.name !== cleanHarness) {
+          return toolResult(`Added tool "${toolName}" to "${cleanHarness}". Switch to it to activate.`, null);
+        }
+
+        const refreshed = (await discoverHarnesses(harnessDir)).get(cleanHarness);
+        if (refreshed) await activateHarness(refreshed);
+        return toolResult(`Added tool "${toolName}" to "${cleanHarness}" and activated it.`, null);
       }
     })
   ];
