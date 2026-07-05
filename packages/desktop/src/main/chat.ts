@@ -96,7 +96,7 @@ import {
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
-import { directoryExists, workspaceDisplayName } from '@main/utils/workspace';
+import { directoryStatus, workspaceDisplayName } from '@main/utils/workspace';
 import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
@@ -882,9 +882,9 @@ export class ChatService {
     }
 
     const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
-    const existing = await Promise.all(list.map((folder) => directoryExists(folder.path)));
+    const statuses = await Promise.all(list.map((folder) => directoryStatus(folder.path)));
     const missingPaths = new Set(
-      list.filter((folder, index) => folder.path !== activeRoot && !existing[index]).map((folder) => folder.path)
+      list.filter((folder, index) => folder.path !== activeRoot && statuses[index] === 'missing').map((folder) => folder.path)
     );
     if (missingPaths.size === 0) return list;
 
