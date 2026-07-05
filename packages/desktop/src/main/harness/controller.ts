@@ -14,7 +14,7 @@ interface HarnessControllerOptions {
 }
 
 const harnessExplainer =
-  'A harness is the assistant persona and instructions for the session. It replaces the base behavior with a custom system prompt, plus optional tools stored under <name>/tools.';
+  'A harness is the assistant persona and instructions for the session. It replaces the base behavior with a custom system prompt, plus optional extensions (self-contained tools it can activate).';
 
 const writeHarnessToolFile = async (harnessDir: string, harnessName: string, toolName: string, code: string) => {
   const dir = harnessToolsDir(harnessDir, harnessName);
@@ -31,17 +31,20 @@ const switchParameters = {
   }
 } as const;
 
-const toolCodeDescription =
+const extensionCodeDescription =
   'Self-contained ES module with no imports. Default-export a plain object with name, description, parameters (JSON schema), and an async execute(id, args) that returns { content: [{ type: "text", text }] }.';
 
-const addToolParameters = {
+const addExtensionParameters = {
   type: 'object',
   required: ['harness', 'name', 'code'],
   additionalProperties: false,
   properties: {
-    harness: { type: 'string', description: 'Existing harness name to add the tool to, or "default" for the base.' },
-    name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
-    code: { type: 'string', description: toolCodeDescription }
+    harness: {
+      type: 'string',
+      description: 'Existing harness name to add the extension to, or "default" for the base.'
+    },
+    name: { type: 'string', description: 'Kebab-case extension name (no file suffix).' },
+    code: { type: 'string', description: extensionCodeDescription }
   }
 } as const;
 
@@ -53,17 +56,17 @@ const createParameters = {
     name: { type: 'string', description: 'Kebab-case harness name. Cannot be "default".' },
     description: { type: 'string', description: 'One line describing when to use this harness.' },
     body: { type: 'string', description: 'The persona and instructions that replace the base system prompt.' },
-    tools: {
+    extensions: {
       type: 'array',
       maxItems: maxHarnessTools,
-      description: 'Optional self-contained tool files stored under the harness, activated when it is switched on.',
+      description: 'Optional self-contained extensions stored under the harness, activated when it is switched on.',
       items: {
         type: 'object',
         required: ['name', 'code'],
         additionalProperties: false,
         properties: {
-          name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
-          code: { type: 'string', description: toolCodeDescription }
+          name: { type: 'string', description: 'Kebab-case extension name (no file suffix).' },
+          code: { type: 'string', description: extensionCodeDescription }
         }
       }
     }
@@ -123,8 +126,8 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
 
         const count = await activateHarness(harness);
         if (persist) writeActiveHarness(harness.name);
-        const toolNote = count ? ` Activated ${count} harness tool(s).` : '';
-        return toolResult(`Switched to harness "${harness.name}". ${harness.description}${toolNote}`, null);
+        const extensionNote = count ? ` Activated ${count} extension(s).` : '';
+        return toolResult(`Switched to harness "${harness.name}". ${harness.description}${extensionNote}`, null);
       }
     }),
     defineTool({
@@ -133,7 +136,7 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
       parameters: createParameters,
       description: `Create a new harness file the user can switch to later. ${harnessExplainer}`,
       promptSnippet: 'Author a new harness (persona) as a reusable global file.',
-      async execute(_toolCallId, { name, body, tools: toolFiles, description }) {
+      async execute(_toolCallId, { name, body, extensions, description }) {
         const nameError = harnessNameError(name);
         if (nameError) return toolResult(nameError, null);
 
@@ -141,50 +144,52 @@ export const createHarnessController = ({ harnessDir, persist = true }: HarnessC
         if (!trimmedBody) return toolResult('Harness body is required.', null);
 
         const cleanName = name.trim();
-        const invalidTool = (toolFiles ?? []).find((tool) => !isValidHarnessName(tool.name));
-        if (invalidTool) return toolResult(`Tool name "${invalidTool.name}" must be kebab-case.`, null);
+        const invalid = (extensions ?? []).find((extension) => !isValidHarnessName(extension.name));
+        if (invalid) return toolResult(`Extension name "${invalid.name}" must be kebab-case.`, null);
 
         await mkdir(harnessDir, { recursive: true });
         const frontmatter = `---\nname: ${cleanName}\ndescription: ${description.trim()}\n---\n`;
         await writeFile(join(harnessDir, `${cleanName}.md`), `${frontmatter}\n${trimmedBody}\n`, 'utf8');
 
-        for (const tool of toolFiles ?? []) {
-          await writeHarnessToolFile(harnessDir, cleanName, tool.name, tool.code);
+        for (const extension of extensions ?? []) {
+          await writeHarnessToolFile(harnessDir, cleanName, extension.name, extension.code);
         }
 
-        const toolNote = toolFiles?.length ? ` with ${toolFiles.length} tool(s)` : '';
+        const extensionNote = extensions?.length ? ` with ${extensions.length} extension(s)` : '';
         const activated = await reactivateIfCurrent(cleanName);
-        const nextStep = activated ? ' Tools are active now.' : ' Switch to it with switch_harness.';
-        return toolResult(`Created harness "${cleanName}"${toolNote}.${nextStep}`, null);
+        const nextStep = activated ? ' Extensions are active now.' : ' Switch to it with switch_harness.';
+        return toolResult(`Created harness "${cleanName}"${extensionNote}.${nextStep}`, null);
       }
     }),
     defineTool({
       label: 'harness',
-      name: 'add_harness_tool',
-      parameters: addToolParameters,
-      description: `Add a tool to an existing harness. ${harnessExplainer}`,
-      promptSnippet: 'Add a self-contained tool to a harness; it activates when that harness is active.',
-      async execute(_toolCallId, { harness: harnessName, name: toolName, code }) {
+      name: 'add_extension',
+      parameters: addExtensionParameters,
+      description: `Add an extension (a self-contained tool) to an existing harness. ${harnessExplainer}`,
+      promptSnippet: 'Add a self-contained extension to a harness; it activates when that harness is active.',
+      async execute(_toolCallId, { harness: harnessName, name: extensionName, code }) {
         const cleanHarness = harnessName.trim();
         const isDefaultHarness = cleanHarness === defaultHarness.name;
         if (!isDefaultHarness && !isValidHarnessName(cleanHarness)) {
           return toolResult(harnessNameError(cleanHarness) || `Invalid harness name "${cleanHarness}".`, null);
         }
-        if (!isValidHarnessName(toolName)) return toolResult(`Tool name "${toolName}" must be kebab-case.`, null);
+        if (!isValidHarnessName(extensionName)) {
+          return toolResult(`Extension name "${extensionName}" must be kebab-case.`, null);
+        }
 
         const trimmedCode = code.trim();
-        if (!trimmedCode) return toolResult('Tool code is required.', null);
+        if (!trimmedCode) return toolResult('Extension code is required.', null);
 
         const harnesses = await discoverHarnesses(harnessDir);
         if (!harnesses.has(cleanHarness)) {
           return toolResult(`No harness named "${cleanHarness}". Create it first with create_harness.`, null);
         }
 
-        await writeHarnessToolFile(harnessDir, cleanHarness, toolName, trimmedCode);
+        await writeHarnessToolFile(harnessDir, cleanHarness, extensionName, trimmedCode);
 
         const activated = await reactivateIfCurrent(cleanHarness);
         const nextStep = activated ? 'and activated it' : 'switch to it to activate';
-        return toolResult(`Added tool "${toolName}" to "${cleanHarness}" ${nextStep}.`, null);
+        return toolResult(`Added extension "${extensionName}" to "${cleanHarness}" ${nextStep}.`, null);
       }
     })
   ];

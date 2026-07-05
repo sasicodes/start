@@ -79,21 +79,21 @@ describe('harness controller', () => {
       name: 'ml-instructor',
       description: 'Teaches ML.',
       body: 'You teach ML.',
-      tools: [{ name: 'lookup', code: toolCode('lookup') }]
+      extensions: [{ name: 'lookup', code: toolCode('lookup') }]
     });
     expect(created).toContain('Switch to it');
     expect(harness.active()).toEqual(['read', 'edit']);
     await expect(stat(join(harnessToolsDir(dir, 'ml-instructor'), 'lookup.mjs'))).resolves.toBeTruthy();
 
     const switched = await harness.exec('switch_harness', { name: 'ml-instructor' });
-    expect(switched).toContain('Activated 1 harness tool(s)');
+    expect(switched).toContain('Activated 1 extension(s)');
     expect(harness.active()).toContain('lookup');
   });
 
   it('adds and activates a tool on the default harness in real time', async () => {
     const harness = mountController();
 
-    const added = await harness.exec('add_harness_tool', { harness: 'default', name: 'ping', code: toolCode('ping') });
+    const added = await harness.exec('add_extension', { harness: 'default', name: 'ping', code: toolCode('ping') });
     expect(added).toContain('activated it');
     expect(harness.active()).toContain('ping');
     expect(harness.registeredNames()).toContain('ping');
@@ -102,12 +102,12 @@ describe('harness controller', () => {
   it('rejects a bad tool name and reports missing harnesses', async () => {
     const harness = mountController();
 
-    expect(await harness.exec('add_harness_tool', { harness: 'default', name: 'BadName', code: 'x' })).toContain(
+    expect(await harness.exec('add_extension', { harness: 'default', name: 'BadName', code: 'x' })).toContain(
       'kebab-case'
     );
-    expect(
-      await harness.exec('add_harness_tool', { harness: 'ghost', name: 'ping', code: toolCode('ping') })
-    ).toContain('No harness named');
+    expect(await harness.exec('add_extension', { harness: 'ghost', name: 'ping', code: toolCode('ping') })).toContain(
+      'No harness named'
+    );
   });
 
   it('always resolves the default harness even with an empty directory', async () => {
@@ -117,7 +117,7 @@ describe('harness controller', () => {
 
   it('does not register or activate a harness tool that collides with an existing tool name', async () => {
     const harness = mountController(['search']);
-    await harness.exec('add_harness_tool', { harness: 'default', name: 'search', code: toolCode('search') });
+    await harness.exec('add_extension', { harness: 'default', name: 'search', code: toolCode('search') });
 
     expect(harness.active().filter((name) => name === 'search')).toEqual(['search']);
     expect(harness.registeredNames().filter((name) => name === 'search')).toEqual(['search']);
