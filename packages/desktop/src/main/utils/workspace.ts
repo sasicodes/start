@@ -1,15 +1,16 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import { relativeInside } from '@main/search/path';
+import * as v from 'valibot';
 
 type DirectoryStatus = 'directory' | 'missing' | 'other' | 'unavailable';
 
 const missingDirectoryErrorCodes = new Set(['ENOENT', 'ENOTDIR']);
+const errorCodeSchema = v.object({ code: v.string() });
 
 const errorCode = (error: unknown) => {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return '';
-  const code = error.code;
-  return typeof code === 'string' ? code : '';
+  const result = v.safeParse(errorCodeSchema, error);
+  return result.success ? result.output.code : '';
 };
 
 export const directoryStatus = async (workspacePath: string): Promise<DirectoryStatus> => {
