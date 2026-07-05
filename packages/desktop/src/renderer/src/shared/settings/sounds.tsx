@@ -12,7 +12,7 @@ export const Sounds = () => {
       <div class="flex min-w-0 items-center justify-between gap-4">
         <div class="min-w-0">
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">In-app sounds</h2>
-          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Play short sounds for buttons and pickers.</p>
+          <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Play short sounds as you use the app.</p>
         </div>
         <Toggle onChange={save} label="In-app sounds" checked={soundsEnabled.value} />
       </div>
