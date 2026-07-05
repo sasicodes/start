@@ -161,13 +161,10 @@ export const Composer = memo(
 
     const editQueued = async (id: string, text: string) => {
       const updated = await onEditQueuedMessage(id, text);
-      if (updated) {
-        onDraftChange('');
-        recall.clearEditing();
-        return;
-      }
+      if (!updated) return;
 
-      onSubmit();
+      onDraftChange('');
+      recall.clearEditing();
     };
 
     const submitDraft = () => {
