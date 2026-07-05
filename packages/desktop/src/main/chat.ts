@@ -1194,8 +1194,13 @@ export class ChatService {
         if (flushed.thinking) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, flushed.thinking);
       });
 
+      let generationStartNotified = false;
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
+        if (active && !generationStartNotified) {
+          generationStartNotified = true;
+          sendToRendererWindows('chat:status-changed');
+        }
         if (event.type === 'queue_update') {
           deltas.flush();
           if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);
