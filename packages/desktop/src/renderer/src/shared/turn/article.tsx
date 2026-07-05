@@ -1,5 +1,4 @@
 import { Markdown } from '@renderer/markdown';
-import { SkillMessage } from '@renderer/shared/skill/message';
 import { parseSkillBlock } from '@renderer/shared/skill/parse';
 import { TurnActivity } from '@renderer/shared/turn/activity';
 import { turnSignal } from '@renderer/state/chat';
@@ -88,11 +87,12 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
   const isUser = turn.role === 'user';
   const skillBlock = isUser ? parseSkillBlock(turn.text) : null;
-  if (skillBlock) return <SkillMessage block={skillBlock} />;
+  if (skillBlock && !skillBlock.userMessage) return null;
 
+  const body = skillBlock ? { ...turn, text: skillBlock.userMessage ?? '' } : turn;
   const isEvent = turn.role === 'event';
   const isSystem = turn.role === 'system';
-  const useMarkdown = shouldUseMarkdown(turn);
+  const useMarkdown = shouldUseMarkdown(body);
   const isTerminal = turn.role === 'terminal';
 
   return (
@@ -107,7 +107,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         isTerminal && 'text-xs leading-5 text-ink'
       )}
     >
-      {useMarkdown ? <Markdown source={turn.text} streaming={Boolean(turn.streaming)} /> : fallbackText(turn)}
+      {useMarkdown ? <Markdown source={body.text} streaming={Boolean(body.streaming)} /> : fallbackText(body)}
     </div>
   );
 });
