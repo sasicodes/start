@@ -45,9 +45,9 @@ const mountController = (builtins: string[] | boolean = []): Harness => {
   );
   let active: string[] = ['read', 'edit', ...builtinNames];
 
-  const handlers = new Map<string, (event: unknown) => unknown>();
+  const handlers = new Map<string, (event?: unknown) => unknown>();
   const pi = {
-    on: (event: string, handler: (event: unknown) => unknown) => handlers.set(event, handler),
+    on: (event: string, handler: (event?: unknown) => unknown) => handlers.set(event, handler),
     registerTool: (tool: ToolDefinition) => registered.set(tool.name, tool),
     getAllTools: () => [...registered.values()],
     getActiveTools: () => active,
@@ -63,7 +63,7 @@ const mountController = (builtins: string[] | boolean = []): Harness => {
     active: () => active,
     body: () => controller.getBody(),
     restore: async () => {
-      await handlers.get('session_start')?.(undefined);
+      await handlers.get('session_start')?.();
     },
     registeredNames: () => [...registered.keys()],
     exec: async (name, args) => {
