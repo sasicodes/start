@@ -117,12 +117,12 @@ const nowClose = '</now>';
 
 export const runtimeContextBlock = (now = new Date()): string => `${nowOpen}${now.toString()}${nowClose}`;
 
-const trailingNowBlock = /<now>[^<]*<\/now>\s*$/u;
+const trailingNowBlock = /<now>([^<]*)<\/now>\s*$/u;
 
 const stripRuntimeContext = (prompt: string): string => {
-  const openIndex = prompt.lastIndexOf(nowOpen);
-  if (openIndex < 0 || !trailingNowBlock.test(prompt.slice(openIndex))) return prompt;
-  return prompt.slice(0, openIndex).trimEnd();
+  const match = trailingNowBlock.exec(prompt);
+  if (!match || Number.isNaN(Date.parse(match[1] ?? ''))) return prompt;
+  return prompt.slice(0, match.index).trimEnd();
 };
 
 export const replaceHarnessIntro = (prompt: string, intro: string): string => {
