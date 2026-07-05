@@ -34,7 +34,7 @@ export const Workspace = memo(
     );
 
     const handleOpenChange = (next: boolean) => {
-      playToggleSound();
+      if (next) playToggleSound();
       setOpen(next);
       setWorkspaceFoldersPrune(next);
       if (next) refreshFolders();

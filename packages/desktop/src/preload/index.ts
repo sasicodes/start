@@ -288,6 +288,7 @@ export interface OpenSessionResult {
   id?: string;
   error?: string;
   turns?: HistoryTurn[];
+  queuedMessages?: QueuedMessage[];
 }
 
 export interface RootItem {

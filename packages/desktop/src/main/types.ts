@@ -268,4 +268,5 @@ export type OpenSessionResult = {
   id?: string;
   error?: string;
   turns?: HistoryTurn[];
+  queuedMessages?: QueuedMessage[];
 };

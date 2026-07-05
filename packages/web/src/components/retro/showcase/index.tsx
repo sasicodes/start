@@ -10,8 +10,8 @@ export const Showcase = () => {
         <img
           src="/images/workspace-preview.webp"
           alt="Start workspace screenshot"
-          width={4324}
-          height={2432}
+          width={2736}
+          height={1539}
           loading="lazy"
           decoding="async"
           className="aspect-video w-full rounded-2xl object-cover shadow-[0_24px_80px_rgba(33,28,18,0.12)]"

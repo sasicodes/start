@@ -536,7 +536,8 @@ export class ChatService {
       return {
         ok: true,
         id: sessionManager.getSessionId(),
-        turns: this.sessionTurns(session)
+        turns: this.sessionTurns(session),
+        queuedMessages: this.visibleQueuedMessages()
       };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Session could not be opened.' };
@@ -547,7 +548,7 @@ export class ChatService {
     const id = sessionId.trim();
     if (!id) return { ok: false, error: 'Session id is empty.' };
     if (this.session?.sessionManager.getSessionId() === id) {
-      return { ok: true, id, turns: this.sessionTurns(this.session) };
+      return { ok: true, id, turns: this.sessionTurns(this.session), queuedMessages: this.visibleQueuedMessages() };
     }
     if (this.backgroundSessions.has(id)) return this.activateTab(id);
 
@@ -769,7 +770,8 @@ export class ChatService {
     return {
       ok: true,
       id,
-      turns: this.sessionTurns(session)
+      turns: this.sessionTurns(session),
+      queuedMessages: this.visibleQueuedMessages()
     };
   }
 
@@ -1194,8 +1196,13 @@ export class ChatService {
         if (flushed.thinking) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, flushed.thinking);
       });
 
+      let generationStartNotified = false;
       const unsubscribe = session.subscribe((event) => {
         const active = this.isActiveSession(sessionId, workspacePath);
+        if (active && !generationStartNotified) {
+          generationStartNotified = true;
+          sendToRendererWindows('chat:status-changed');
+        }
         if (event.type === 'queue_update') {
           deltas.flush();
           if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);

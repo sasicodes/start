@@ -59,7 +59,6 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
 
       if (event.key === 'Escape' && sidePanelOpen) {
         event.preventDefault();
-        playToggleSound();
         closeSidePanel();
         return;
       }

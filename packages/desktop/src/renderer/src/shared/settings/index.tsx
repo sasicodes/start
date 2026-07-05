@@ -21,7 +21,7 @@ export const Settings = memo(({ open, onOpen }: SettingsProps) => {
   const appFocused = useAppFocusState();
 
   const handleOpen = () => {
-    playToggleSound();
+    if (!open) playToggleSound();
     onOpen();
   };
 

@@ -252,7 +252,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       setDraft('');
-      clearQueuedMessages();
+      updateQueuedMessages(result.queuedMessages ?? []);
       const baseTurns = result.turns ?? [];
       const restoredStreamingId = streamingAssistantId(baseTurns);
       const generating = Boolean(nextStatus.isGenerating);
@@ -267,7 +267,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       if (result.id) window.pi.chat.markNoticeSeen(result.id).catch(() => {});
       return true;
     },
-    [applyStatus, clearQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
+    [applyStatus, updateQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
   );
 
   const openSession = useCallback(
