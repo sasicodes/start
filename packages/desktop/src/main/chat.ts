@@ -891,13 +891,21 @@ export class ChatService {
     if (missingPaths.size === 0) return list;
 
     const currentHistory = this.appState.workspaceHistory ?? {};
-    const nextHistory = Object.fromEntries(
-      Object.entries(currentHistory).filter(([workspacePath]) => !missingPaths.has(workspacePath))
+    const pruneCandidates = Object.keys(currentHistory).filter((workspacePath) => missingPaths.has(workspacePath));
+    const currentStatuses = await Promise.all(pruneCandidates.map((workspacePath) => directoryStatus(workspacePath)));
+    const currentActiveRoot = await this.workspaceRootForCwd(this.workspaceCwd);
+    const confirmedMissingPaths = new Set(
+      pruneCandidates.filter(
+        (workspacePath, index) => workspacePath !== currentActiveRoot && currentStatuses[index] === 'missing'
+      )
     );
-    if (Object.keys(nextHistory).length !== Object.keys(currentHistory).length) {
-      this.persistState({ workspaceHistory: nextHistory });
-    }
-    return list.filter((folder) => !missingPaths.has(folder.path));
+    if (confirmedMissingPaths.size === 0) return list.filter((folder) => !missingPaths.has(folder.path));
+
+    const nextHistory = Object.fromEntries(
+      Object.entries(currentHistory).filter(([workspacePath]) => !confirmedMissingPaths.has(workspacePath))
+    );
+    this.persistState({ workspaceHistory: nextHistory });
+    return list.filter((folder) => !confirmedMissingPaths.has(folder.path));
   }
 
   async prepareDroppedFiles(paths: string[]): Promise<PreparedDropFiles> {
