@@ -85,7 +85,7 @@ const useVisibleRange = (
   }, [overscan, containerRef]);
 
   const schedule = useCallback(() => {
-    if (frameRef.current) return;
+    if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
 
     frameRef.current = window.requestAnimationFrame(() => {
       frameRef.current = 0;
@@ -98,21 +98,17 @@ const useVisibleRange = (
     if (!container) return;
 
     const scrollAncestor = findScrollAncestor(container);
-    const scrollTarget: EventTarget = scrollAncestor ?? window;
-
-    scrollTarget.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('scroll', schedule, { capture: true, passive: true });
     const resizeObserver = new ResizeObserver(schedule);
-    if (scrollAncestor) resizeObserver.observe(scrollAncestor);
-    else window.addEventListener('resize', schedule, { passive: true });
+    resizeObserver.observe(scrollAncestor ?? document.documentElement);
 
     return () => {
       if (frameRef.current) {
         window.cancelAnimationFrame(frameRef.current);
         frameRef.current = 0;
       }
-      scrollTarget.removeEventListener('scroll', schedule);
+      window.removeEventListener('scroll', schedule, { capture: true });
       resizeObserver.disconnect();
-      if (!scrollAncestor) window.removeEventListener('resize', schedule);
     };
   }, [schedule, containerRef]);
 
