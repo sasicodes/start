@@ -158,8 +158,12 @@ const ProviderRow = ({ id, name, active, onActivate }: ProviderRowProps) => {
 
 const providerRowStep = 36;
 
+const providerOrder: ModelProviderId[] = ['openai', 'anthropic', 'google'];
+
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
-  const [active, setActive] = useState(-1);
+  const [active, setActive] = useState(() =>
+    Math.max(0, selectedModel ? providerOrder.indexOf(modelProviderId(selectedModel)) : 0)
+  );
   const rowsRef = useRef<HTMLDivElement>(null);
   const flyoutRef = useRef<HTMLDivElement>(null);
 
