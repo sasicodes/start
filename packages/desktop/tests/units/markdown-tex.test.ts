@@ -31,4 +31,20 @@ describe('normalizeTexDelimiters', () => {
   it('keeps unclosed streaming delimiters literal until completed', () => {
     expect(normalizeTexDelimiters('partial \\(x + ')).toBe('partial \\(x + ');
   });
+
+  it('wraps bare math environments in display math', () => {
+    expect(normalizeTexDelimiters('\\begin{align}\na &= b\n\\end{align}')).toBe(
+      '$$\\begin{align}\na &= b\n\\end{align}$$'
+    );
+  });
+
+  it('does not rewrap environments already inside display math', () => {
+    const source = '$$\\begin{align}\na &= b\n\\end{align}$$ and \\(c\\)';
+    expect(normalizeTexDelimiters(source)).toBe('$$\\begin{align}\na &= b\n\\end{align}$$ and $c$');
+  });
+
+  it('leaves unknown environments alone', () => {
+    const source = 'about \\begin{verbatim}x\\end{verbatim} blocks \\(y\\)';
+    expect(normalizeTexDelimiters(source)).toBe('about \\begin{verbatim}x\\end{verbatim} blocks $y$');
+  });
 });
