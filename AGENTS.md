@@ -25,6 +25,7 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 
 - Prefer standard-library built-ins over hand-rolled equivalents (e.g. `Buffer.readUInt32BE` instead of manual byte math).
 - Do not use TypeScript `any`; use `unknown` with explicit parsing, narrow unions, or well-defined interfaces.
+- Use Valibot for runtime validation of untrusted inputs and API boundaries instead of ad-hoc inline shape checks.
 - Trust the type system: do not add runtime guards, optional chaining, or shape re-parsing for values the types already guarantee, such as a non-nullable parameter or a typed `promisify(execFile)` result.
 - Delete dead complexity: unreachable branches, guards that always pass, unused return values, object keys a spread already sets, and effect work the state initializer already did. Narrow over-wide union parameters to what callers actually pass.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.

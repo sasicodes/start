@@ -1,5 +1,6 @@
 import { composerShortcut, updateComposerShortcut } from '@renderer/shared/settings/state';
 import { shortcutKeys } from '@renderer/shared/shortcuts/format';
+import { Tooltip } from '@renderer/ui/tooltip';
 import { useState } from 'preact/hooks';
 
 const modifierKeys = new Set(['Control', 'Meta', 'Alt', 'Shift']);
@@ -50,20 +51,26 @@ export const ComposerShortcut = () => {
           <h2 class="m-0 text-sm leading-5 font-medium text-ink">Composer shortcut</h2>
           <p class="m-0 mt-0.5 text-xs leading-4 text-soft">Open the composer from anywhere while Start is running.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setError('');
-            setRecording(true);
-          }}
-          onKeyDown={(event) => {
-            if (recording) record(event);
-          }}
-          onBlur={() => setRecording(false)}
-          class="h-9 min-w-36 truncate rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-        >
-          {recording ? 'Recording' : shortcutKeys(composerShortcut.value).join(' ')}
-        </button>
+        <Tooltip side="left" label={recording ? 'Press the new shortcut' : 'Change shortcut'}>
+          <button
+            type="button"
+            onClick={() => {
+              setError('');
+              setRecording(true);
+            }}
+            onKeyDown={(event) => {
+              if (recording) record(event);
+            }}
+            onBlur={() => setRecording(false)}
+            class="grid h-9 min-w-9 place-items-center rounded-full border border-line bg-transparent px-3 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+          >
+            {recording ? (
+              <span class="inline-block size-2 animate-pulse rounded-full bg-danger" />
+            ) : (
+              shortcutKeys(composerShortcut.value).join(' ')
+            )}
+          </button>
+        </Tooltip>
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
     </div>

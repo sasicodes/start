@@ -96,7 +96,7 @@ import {
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
-import { directoryExists, workspaceDisplayName } from '@main/utils/workspace';
+import { directoryStatus, workspaceDisplayName } from '@main/utils/workspace';
 import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
@@ -816,7 +816,7 @@ export class ChatService {
     }));
   }
 
-  async getWorkspaceFolders(prune = false): Promise<WorkspaceFolder[]> {
+  async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
@@ -882,10 +882,32 @@ export class ChatService {
     }
 
     const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
-    if (!prune) return list;
+    const statuses = await Promise.all(list.map((folder) => directoryStatus(folder.path)));
+    const missingPaths = new Set(
+      list
+        .filter((folder, index) => folder.path !== activeRoot && statuses[index] === 'missing')
+        .map((folder) => folder.path)
+    );
+    if (missingPaths.size === 0) return list;
 
-    const existing = await Promise.all(list.map((folder) => directoryExists(folder.path)));
-    return list.filter((folder, index) => folder.path === activeRoot || existing[index]);
+    const missingCandidates = [...missingPaths];
+    const currentStatuses = await Promise.all(missingCandidates.map((workspacePath) => directoryStatus(workspacePath)));
+    const currentActiveRoot = await this.workspaceRootForCwd(this.workspaceCwd);
+    const confirmedMissingPaths = new Set(
+      missingCandidates.filter(
+        (workspacePath, index) => workspacePath !== currentActiveRoot && currentStatuses[index] === 'missing'
+      )
+    );
+    if (confirmedMissingPaths.size === 0) return list;
+
+    const currentHistory = this.appState.workspaceHistory ?? {};
+    const nextHistory = Object.fromEntries(
+      Object.entries(currentHistory).filter(([workspacePath]) => !confirmedMissingPaths.has(workspacePath))
+    );
+    if (Object.keys(nextHistory).length !== Object.keys(currentHistory).length) {
+      this.persistState({ workspaceHistory: nextHistory });
+    }
+    return list.filter((folder) => !confirmedMissingPaths.has(folder.path));
   }
 
   async prepareDroppedFiles(paths: string[]): Promise<PreparedDropFiles> {

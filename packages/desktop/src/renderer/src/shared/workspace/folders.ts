@@ -12,8 +12,6 @@ interface UseWorkspaceFoldersOptions {
 let stopWorkspaceFolderEvents: (() => void) | undefined;
 let workspaceFoldersCache: WorkspaceFolder[] | undefined;
 let workspaceFoldersRequest: Promise<WorkspaceFolder[]> | undefined;
-let workspaceFoldersRequestPrune = false;
-let pruneWorkspaceFolders = false;
 let workspaceFoldersSeq = 0;
 let appliedWorkspaceFoldersSeq = 0;
 
@@ -38,10 +36,6 @@ const emitWorkspaceFolders = () => {
 export const cachedWorkspaceFolders = (workspacePath?: string) =>
   withCurrentWorkspace(workspaceFoldersCache ?? [], workspacePath);
 
-export const setWorkspaceFoldersPrune = (prune: boolean) => {
-  pruneWorkspaceFolders = prune;
-};
-
 const applyWorkspaceFolders = (folders: WorkspaceFolder[], seq: number) => {
   if (seq < appliedWorkspaceFoldersSeq) return workspaceFoldersCache ?? folders;
   appliedWorkspaceFoldersSeq = seq;
@@ -51,15 +45,12 @@ const applyWorkspaceFolders = (folders: WorkspaceFolder[], seq: number) => {
 };
 
 export const loadWorkspaceFolders = async () => {
-  if (workspaceFoldersRequest && workspaceFoldersRequestPrune === pruneWorkspaceFolders) {
-    return workspaceFoldersRequest;
-  }
+  if (workspaceFoldersRequest) return workspaceFoldersRequest;
 
   workspaceFoldersSeq += 1;
   const seq = workspaceFoldersSeq;
-  workspaceFoldersRequestPrune = pruneWorkspaceFolders;
   const request = window.pi.chat
-    .workspaceFolders(pruneWorkspaceFolders)
+    .workspaceFolders()
     .then((folders) => applyWorkspaceFolders(folders, seq))
     .finally(() => {
       if (workspaceFoldersRequest === request) workspaceFoldersRequest = undefined;

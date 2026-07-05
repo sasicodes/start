@@ -1,6 +1,6 @@
 import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
 import { AttentionBadge } from '@renderer/shared/badge';
-import { setWorkspaceFoldersPrune, useWorkspaceFolders } from '@renderer/shared/workspace/folders';
+import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
 import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
@@ -36,7 +36,6 @@ export const Workspace = memo(
     const handleOpenChange = (next: boolean) => {
       if (next) playToggleSound();
       setOpen(next);
-      setWorkspaceFoldersPrune(next);
       if (next) refreshFolders();
     };
 

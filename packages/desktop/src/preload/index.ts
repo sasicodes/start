@@ -494,8 +494,7 @@ const api = {
     onResourcesRefreshed: (listener: () => void): IpcDisposer => onIpc<[]>('chat:resources-refreshed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),
     onWorkspaceOpened: (listener: () => void): IpcDisposer => onIpc<[]>('chat:workspace-opened', listener),
-    workspaceFolders: (prune?: boolean): Promise<WorkspaceFolder[]> =>
-      ipcRenderer.invoke('chat:workspace-folders', prune),
+    workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
     prepareDroppedFiles: (paths: string[]): Promise<PreparedDropFiles> =>
       ipcRenderer.invoke('chat:prepare-dropped-files', paths),
     prepareClipboardImage: (): Promise<ImageAttachment | null> => ipcRenderer.invoke('chat:prepare-clipboard-image'),
