@@ -101,7 +101,7 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
       async execute(_toolCallId, { name }) {
         const requested = name.trim();
         const harnesses = await discoverHarnesses(harnessDir);
-        const harness = requested === defaultHarness.name ? defaultHarness : harnesses.get(requested);
+        const harness = harnesses.get(requested) ?? (requested === defaultHarness.name ? defaultHarness : undefined);
         if (!harness) {
           return toolResult(`No harness named "${requested}". Available: ${[...harnesses.keys()].join(', ')}.`, null);
         }
@@ -154,7 +154,8 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
       promptSnippet: 'Add a self-contained tool to a harness; it activates when that harness is active.',
       async execute(_toolCallId, { harness: harnessName, name: toolName, code }) {
         const cleanHarness = harnessName.trim();
-        if (!isValidHarnessName(cleanHarness)) {
+        const isDefaultHarness = cleanHarness === defaultHarness.name;
+        if (!isDefaultHarness && !isValidHarnessName(cleanHarness)) {
           return toolResult(harnessNameError(cleanHarness) || `Invalid harness name "${cleanHarness}".`, null);
         }
         if (!isValidHarnessName(toolName)) return toolResult(`Tool name "${toolName}" must be kebab-case.`, null);
