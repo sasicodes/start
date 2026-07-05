@@ -1,5 +1,6 @@
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { SettingsIcon } from '@renderer/ui/icons';
+import { playToggleSound } from '@renderer/ui/sounds';
 import {
   bottomBubbleHiddenMotion,
   bottomBubbleHideTransition,
@@ -19,6 +20,11 @@ interface SettingsProps {
 export const Settings = memo(({ open, onOpen }: SettingsProps) => {
   const appFocused = useAppFocusState();
 
+  const handleOpen = () => {
+    playToggleSound();
+    onOpen();
+  };
+
   return (
     <Tooltip label="Settings" shortcut="Command+," disabled={open || !appFocused}>
       <motion.button
@@ -27,7 +33,7 @@ export const Settings = memo(({ open, onOpen }: SettingsProps) => {
         aria-expanded={open}
         aria-label="Open settings"
         initial={false}
-        onClick={onOpen}
+        onClick={handleOpen}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
           'grid size-11.5 shrink-0 place-items-center rounded-full border-0 bg-composer text-ink shadow-shell outline-0 transition-colors duration-75 ease-out select-none hover:bg-control focus-visible:bg-control',

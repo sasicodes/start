@@ -11,6 +11,7 @@ import { Indicator } from '@renderer/shared/indicator';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { HistoryIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
+import { playToggleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { formatRelativeTime } from '@renderer/utils/time';
 import { tw } from '@renderer/utils/tw';
@@ -155,6 +156,7 @@ export const RecentSessions = memo(
     const updateOpen = useCallback(
       (nextOpen: boolean) => {
         if (nextOpen) void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
+        playToggleSound();
         setOpen(nextOpen);
       },
       [loadSessions]

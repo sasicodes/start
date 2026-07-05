@@ -6,6 +6,7 @@ import { createDeferredFlush } from '@renderer/shared/chat/flush';
 import { endsMidWord } from '@renderer/shared/chat/segment';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
+import { playAttentionSound, playDoneSound, playErrorSound } from '@renderer/ui/sounds';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
@@ -213,6 +214,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       assistantFlush.flushNow();
       if (id) {
         finishAssistantTurn(id);
+        playDoneSound();
       }
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -252,6 +254,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       optionsRef.current.assistantIdRef.current = null;
       optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
+      playErrorSound();
       setTurns((current) => [...current, createTurn('system', turn)]);
     });
 
@@ -309,6 +312,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       assistantFlush.flushNow();
       if (id) {
         finishAssistantTurn(id);
+        playDoneSound();
       }
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -328,7 +332,12 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
+      playErrorSound();
       setTurns((current) => [...current, createTurn('system', payload)]);
+    });
+
+    const offNotice = window.pi.chat.onNotice(({ payload }) => {
+      if (payload) playAttentionSound();
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
@@ -341,6 +350,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const offResourcesRefreshed = window.pi.chat.onResourcesRefreshed(clearSlashCommandsCache);
 
     return () => {
+      offNotice();
       offDone();
       offDelta();
       offError();
