@@ -12,7 +12,7 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
   const [dragOrder, setDragOrder] = useState<string[] | null>(null);
   const [dragId, setDragId] = useState('');
   const listRef = useRef<HTMLUListElement>(null);
-  const metricsRef = useRef({ top: 0, pitch: 1 });
+  const pitchRef = useRef(1);
   const indexRef = useRef(-1);
   const order = dragOrder ?? ids;
 
@@ -24,8 +24,11 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
     if (!dragId) return;
 
     const move = (event: PointerEvent) => {
-      const { top, pitch } = metricsRef.current;
-      const index = Math.max(0, Math.min(Math.floor((event.clientY - top) / pitch), ids.length - 1));
+      const first = listRef.current?.children[0];
+      if (!first) return;
+
+      const top = first.getBoundingClientRect().top;
+      const index = Math.max(0, Math.min(Math.floor((event.clientY - top) / pitchRef.current), ids.length - 1));
       if (index === indexRef.current) return;
 
       indexRef.current = index;
@@ -57,7 +60,7 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
     const rows = listRef.current?.children;
     const first = rows?.[0]?.getBoundingClientRect();
     const second = rows?.[1]?.getBoundingClientRect();
-    if (first) metricsRef.current = { top: first.top, pitch: second ? second.top - first.top : first.height };
+    if (first) pitchRef.current = second ? second.top - first.top : first.height;
     indexRef.current = ids.indexOf(id);
     setDragId(id);
     setDragOrder(ids);

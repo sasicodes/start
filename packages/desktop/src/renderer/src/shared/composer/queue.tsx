@@ -49,6 +49,7 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
                 aria-hidden="true"
                 onPointerDown={(event) => {
                   event.preventDefault();
+                  event.currentTarget.setPointerCapture(event.pointerId);
                   reorder.start(id);
                 }}
                 class={tw(
