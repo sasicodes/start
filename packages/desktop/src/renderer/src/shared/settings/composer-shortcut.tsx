@@ -62,7 +62,7 @@ export const ComposerShortcut = () => {
               if (recording) record(event);
             }}
             onBlur={() => setRecording(false)}
-            class="border-0 bg-transparent p-0 text-sm font-medium text-ink outline-0 transition-colors duration-100 ease-in hover:text-hover focus-visible:text-hover"
+            class="grid h-9 min-w-9 place-items-center rounded-full border border-line bg-transparent px-3 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
           >
             {recording ? (
               <span class="inline-block size-2 animate-pulse rounded-full bg-danger" />
