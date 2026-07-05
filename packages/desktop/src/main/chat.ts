@@ -884,7 +884,9 @@ export class ChatService {
     const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
     const statuses = await Promise.all(list.map((folder) => directoryStatus(folder.path)));
     const missingPaths = new Set(
-      list.filter((folder, index) => folder.path !== activeRoot && statuses[index] === 'missing').map((folder) => folder.path)
+      list
+        .filter((folder, index) => folder.path !== activeRoot && statuses[index] === 'missing')
+        .map((folder) => folder.path)
     );
     if (missingPaths.size === 0) return list;
 

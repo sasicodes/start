@@ -65,11 +65,13 @@ export const ProviderIconTicker = () => {
 const ModelOptionItem = ({
   model,
   selected,
-  onSelectModel
+  onSelectModel,
+  onExitFlyout
 }: {
   model: ModelOption;
   selected: boolean;
   onSelectModel: (modelKey: string) => void;
+  onExitFlyout: (event: KeyboardEvent) => void;
 }) => {
   const selectModel = () => {
     selectedModelKeyState.value = model.key;
@@ -80,6 +82,7 @@ const ModelOptionItem = ({
     <AppMenu.Item
       onClick={selectModel}
       onPointerDown={selectModel}
+      onKeyDown={onExitFlyout}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
       <span class="block truncate">{model.name}</span>
@@ -93,25 +96,38 @@ const ModelOptionItem = ({
 const ModelOptions = ({
   models,
   selectedModel,
-  onSelectModel
-}: Pick<ProviderGroup, 'models'> & Pick<ModelsProps, 'selectedModel' | 'onSelectModel'>) => {
+  onSelectModel,
+  onExitFlyout
+}: Pick<ProviderGroup, 'models'> &
+  Pick<ModelsProps, 'selectedModel' | 'onSelectModel'> & {
+    onExitFlyout: (event: KeyboardEvent) => void;
+  }) => {
   return models.map((model) => (
     <ModelOptionItem
       key={model.key}
       model={model}
       selected={selectedModel?.key === model.key}
       onSelectModel={onSelectModel}
+      onExitFlyout={onExitFlyout}
     />
   ));
 };
 
-const SetupItem = ({ name, onOpenSettings }: Pick<ProviderGroup, 'name'> & Pick<ModelsProps, 'onOpenSettings'>) => {
+const SetupItem = ({
+  name,
+  onOpenSettings,
+  onExitFlyout
+}: Pick<ProviderGroup, 'name'> &
+  Pick<ModelsProps, 'onOpenSettings'> & {
+    onExitFlyout: (event: KeyboardEvent) => void;
+  }) => {
   const openProviderSettings = () => onOpenSettings(providerSettingsTab);
 
   return (
     <AppMenu.Item
       onClick={openProviderSettings}
       onPointerDown={openProviderSettings}
+      onKeyDown={onExitFlyout}
       className="grid w-full grid-cols-[auto_1fr] items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
       <SettingsIcon class="size-4" />
@@ -125,25 +141,40 @@ const ModelMenuContent = ({
   models,
   selectedModel,
   onSelectModel,
-  onOpenSettings
-}: Pick<ProviderGroup, 'models' | 'name'> & Omit<ModelsProps, 'models'>) => {
-  if (models.length === 0) return <SetupItem name={name} onOpenSettings={onOpenSettings} />;
+  onOpenSettings,
+  onExitFlyout
+}: Pick<ProviderGroup, 'models' | 'name'> &
+  Omit<ModelsProps, 'models'> & {
+    onExitFlyout: (event: KeyboardEvent) => void;
+  }) => {
+  if (models.length === 0) {
+    return <SetupItem name={name} onOpenSettings={onOpenSettings} onExitFlyout={onExitFlyout} />;
+  }
 
-  return <ModelOptions models={models} selectedModel={selectedModel} onSelectModel={onSelectModel} />;
+  return (
+    <ModelOptions
+      models={models}
+      selectedModel={selectedModel}
+      onSelectModel={onSelectModel}
+      onExitFlyout={onExitFlyout}
+    />
+  );
 };
 
 interface ProviderRowProps extends Pick<ProviderGroup, 'id' | 'name'> {
   active: boolean;
   onActivate: () => void;
+  onEnterFlyout: (event: KeyboardEvent) => void;
 }
 
-const ProviderRow = ({ id, name, active, onActivate }: ProviderRowProps) => {
+const ProviderRow = ({ id, name, active, onActivate, onEnterFlyout }: ProviderRowProps) => {
   return (
     <AppMenu.Item
       closeOnClick={false}
       onFocus={onActivate}
       onClick={onActivate}
       onMouseEnter={onActivate}
+      onKeyDown={onEnterFlyout}
       className={tw(
         'grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control',
         active && 'bg-control'
@@ -196,7 +227,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
 
   return (
     <MenuPanel className="relative w-44" finalFocus={false}>
-      <div ref={rowsRef} role="presentation" onKeyDown={enterFlyout}>
+      <div ref={rowsRef}>
         {providers.map((provider, index) => (
           <ProviderRow
             key={provider.id}
@@ -204,14 +235,13 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
             name={provider.name}
             active={index === active}
             onActivate={() => setActive(index)}
+            onEnterFlyout={enterFlyout}
           />
         ))}
       </div>
       {flyout && (
         <div
           ref={flyoutRef}
-          role="presentation"
-          onKeyDown={exitFlyout}
           style={
             { '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` } as JSX.CSSProperties
           }
@@ -224,6 +254,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
               selectedModel={selectedModel}
               onSelectModel={onSelectModel}
               onOpenSettings={onOpenSettings}
+              onExitFlyout={exitFlyout}
             />
           </MenuSurface>
         </div>
