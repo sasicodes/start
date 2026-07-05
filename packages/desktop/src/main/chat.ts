@@ -1392,9 +1392,11 @@ export class ChatService {
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     if (!session || !runtimeState) return this.visibleQueuedMessages();
 
-    const byId = new Map(runtimeState.queuedMessages.map((message) => [message.id, message]));
+    const current = runtimeState.queuedMessages;
+    const byId = new Map(current.map((message) => [message.id, message]));
     const reordered = orderedIds.map((id) => byId.get(id)).filter((message) => message !== undefined);
-    if (reordered.length !== runtimeState.queuedMessages.length) return this.visibleQueuedMessages(runtimeState);
+    const isPermutation = new Set(orderedIds).size === current.length && reordered.length === current.length;
+    if (!isPermutation) return this.visibleQueuedMessages(runtimeState);
 
     runtimeState.queuedMessages = reordered;
     await this.rebuildSessionQueue(session, runtimeState);
