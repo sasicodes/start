@@ -65,7 +65,7 @@ export const ComposerShortcut = () => {
             class="border-0 bg-transparent p-0 text-sm font-medium text-ink outline-0 transition-colors duration-100 ease-in hover:text-hover focus-visible:text-hover"
           >
             {recording ? (
-              <span class="size-2 animate-pulse rounded-full bg-danger" />
+              <span class="inline-block size-2 animate-pulse rounded-full bg-danger" />
             ) : (
               shortcutKeys(composerShortcut.value).join(' ')
             )}
