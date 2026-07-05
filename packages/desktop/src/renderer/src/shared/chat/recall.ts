@@ -23,6 +23,12 @@ export const buildRecallList = (queued: QueuedMessage[], userTurns: string[]): s
   return [...queuedTexts, ...userTurns];
 };
 
+export const queuedRecallIds = (queued: QueuedMessage[]): string[] =>
+  [...queued]
+    .reverse()
+    .filter((message) => message.text.length > 0)
+    .map((message) => message.id);
+
 export interface RecallStep {
   index: number;
   text: string;

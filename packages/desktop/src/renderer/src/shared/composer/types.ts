@@ -32,6 +32,8 @@ export interface ComposerProps {
   onSelectWorkspace: (path: string) => void;
   onSteerQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
+  onEditQueuedMessage: (id: string, text: string) => void;
+  onReorderQueuedMessages: (orderedIds: string[]) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
   onSelectThinkingLevel: (level: EffortLevel) => void;
 }

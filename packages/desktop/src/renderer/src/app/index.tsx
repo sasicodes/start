@@ -109,7 +109,9 @@ export const App = () => {
     disconnectProvider,
     steerQueuedMessage,
     deleteQueuedMessage,
+    editQueuedMessage,
     selectThinkingLevel,
+    reorderQueuedMessages,
     chooseWorkspaceDirectory
   } = useChat({ onShowChat: showChatFromEvent, onShowSettings: showSettings, textareaRef });
 
@@ -321,7 +323,9 @@ export const App = () => {
       onSelectModel={selectModelFromComposer}
       onSteerQueuedMessage={steerQueuedMessage}
       revealKey={overlay ? composerRevealKey : 0}
+      onEditQueuedMessage={editQueuedMessage}
       onDeleteQueuedMessage={deleteQueuedMessage}
+      onReorderQueuedMessages={reorderQueuedMessages}
       noProvidersConfigured={noProvidersConfigured}
       onSelectWorkspace={selectWorkspaceFromComposer}
       onSelectThinkingLevel={selectThinkingFromComposer}

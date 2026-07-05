@@ -518,6 +518,10 @@ const api = {
       ipcRenderer.invoke('chat:submit-subscription-auth-input', value),
     steerQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:steer-queued-message', id),
     deleteQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:delete-queued-message', id),
+    editQueuedMessage: (id: string, text: string): Promise<QueuedMessage[]> =>
+      ipcRenderer.invoke('chat:edit-queued-message', id, text),
+    reorderQueuedMessages: (orderedIds: string[]): Promise<QueuedMessage[]> =>
+      ipcRenderer.invoke('chat:reorder-queued-messages', orderedIds),
     selectModel: (modelKey: string): Promise<ChatStatus> => ipcRenderer.invoke('chat:select-model', modelKey),
     selectThinkingLevel: (level: EffortLevel): Promise<ChatStatus> =>
       ipcRenderer.invoke('chat:select-thinking-level', level),

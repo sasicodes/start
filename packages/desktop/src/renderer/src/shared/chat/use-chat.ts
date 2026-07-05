@@ -210,6 +210,24 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [updateQueuedMessages]
   );
 
+  const editQueuedMessage = useCallback(
+    async (id: string, text: string) => {
+      try {
+        updateQueuedMessages(await window.pi.chat.editQueuedMessage(id, text));
+      } catch {}
+    },
+    [updateQueuedMessages]
+  );
+
+  const reorderQueuedMessages = useCallback(
+    async (orderedIds: string[]) => {
+      try {
+        updateQueuedMessages(await window.pi.chat.reorderQueuedMessages(orderedIds));
+      } catch {}
+    },
+    [updateQueuedMessages]
+  );
+
   const applyOpenSession = useCallback(
     async (result: OpenSessionResult, requestId: number) => {
       if (!result.ok) return false;
@@ -430,7 +448,9 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     disconnectProvider,
     steerQueuedMessage,
     deleteQueuedMessage,
+    editQueuedMessage,
     selectThinkingLevel,
+    reorderQueuedMessages,
     chooseWorkspaceDirectory
   };
 };
