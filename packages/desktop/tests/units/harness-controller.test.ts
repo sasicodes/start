@@ -4,11 +4,21 @@ import { join } from 'node:path';
 import type { ExtensionAPI, ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { createHarnessController } from '@main/harness/controller';
 import { harnessToolsDir } from '@main/harness/discover';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const db = vi.hoisted(() => ({ state: {} as Record<string, unknown> }));
+vi.mock('@main/storage', () => ({
+  readStartState: () => db.state,
+  updateStartState: (patch: Record<string, unknown>) => {
+    db.state = { ...db.state, ...patch };
+    return db.state;
+  }
+}));
 
 let dir = '';
 
 beforeEach(async () => {
+  db.state = {};
   dir = await mkdtemp(join(tmpdir(), 'harness-ctrl-'));
 });
 
@@ -23,13 +33,17 @@ interface Harness {
   exec: (name: string, args: Record<string, unknown>) => Promise<string>;
   active: () => string[];
   registeredNames: () => string[];
+  restore: () => Promise<void>;
+  body: () => string;
 }
 
-const mountController = (builtins: string[] = []): Harness => {
+const mountController = (builtins: string[] | boolean = []): Harness => {
+  const builtinNames = Array.isArray(builtins) ? builtins : [];
+  const persist = Array.isArray(builtins) ? true : builtins;
   const registered = new Map<string, ToolDefinition>(
-    builtins.map((name) => [name, { name, execute: async () => ({ content: [] }) } as unknown as ToolDefinition])
+    builtinNames.map((name) => [name, { name, execute: async () => ({ content: [] }) } as unknown as ToolDefinition])
   );
-  let active: string[] = ['read', 'edit', ...builtins];
+  let active: string[] = ['read', 'edit', ...builtinNames];
 
   const pi = {
     registerTool: (tool: ToolDefinition) => registered.set(tool.name, tool),
@@ -40,10 +54,13 @@ const mountController = (builtins: string[] = []): Harness => {
     }
   } as unknown as ExtensionAPI;
 
-  createHarnessController({ harnessDir: dir }).extension(pi);
+  const controller = createHarnessController({ harnessDir: dir, persist });
+  controller.extension(pi);
 
   return {
     active: () => active,
+    body: () => controller.getBody(),
+    restore: () => controller.restore(),
     registeredNames: () => [...registered.keys()],
     exec: async (name, args) => {
       const tool = registered.get(name);
@@ -104,5 +121,23 @@ describe('harness controller', () => {
 
     expect(harness.active().filter((name) => name === 'search')).toEqual(['search']);
     expect(harness.registeredNames().filter((name) => name === 'search')).toEqual(['search']);
+  });
+
+  it('persists the switched harness and restores it on a fresh controller', async () => {
+    await mountController().exec('create_harness', { name: 'research', description: 'r', body: 'You research.' });
+    await mountController().exec('switch_harness', { name: 'research' });
+
+    const restored = mountController();
+    await restored.restore();
+    expect(restored.body()).toBe('You research.');
+  });
+
+  it('does not restore a persisted harness when persistence is off (subagents)', async () => {
+    await mountController().exec('create_harness', { name: 'research', description: 'r', body: 'You research.' });
+    await mountController().exec('switch_harness', { name: 'research' });
+
+    const subagent = mountController(false);
+    await subagent.restore();
+    expect(subagent.body()).toContain('expert coding assistant');
   });
 });

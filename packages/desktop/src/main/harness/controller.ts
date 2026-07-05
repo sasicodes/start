@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ExtensionAPI, type ToolDefinition, defineTool } from '@earendil-works/pi-coding-agent';
+import { readActiveHarness, writeActiveHarness } from '@main/harness/active';
 import { type Harness, defaultHarness, maxHarnessTools } from '@main/harness/default';
 import { discoverHarnesses, harnessToolsDir } from '@main/harness/discover';
 import { loadHarnessTools, nextActiveTools } from '@main/harness/tools';
@@ -9,6 +10,7 @@ import { toolResult } from '@main/providers/tools/result';
 
 interface HarnessControllerOptions {
   harnessDir: string;
+  persist?: boolean;
 }
 
 const harnessExplainer =
@@ -62,7 +64,7 @@ const createParameters = {
   }
 } as const;
 
-export const createHarnessController = ({ harnessDir }: HarnessControllerOptions) => {
+export const createHarnessController = ({ harnessDir, persist = true }: HarnessControllerOptions) => {
   let current: Harness = defaultHarness;
   let api: ExtensionAPI | null = null;
   let activeToolNames: string[] = [];
@@ -92,6 +94,12 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
     return true;
   };
 
+  const restore = async () => {
+    const name = persist ? readActiveHarness() || defaultHarness.name : defaultHarness.name;
+    const harnesses = await discoverHarnesses(harnessDir);
+    await activateHarness(harnesses.get(name) ?? defaultHarness);
+  };
+
   const tools: ToolDefinition[] = [
     defineTool({
       label: 'harness',
@@ -108,6 +116,7 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
         }
 
         const count = await activateHarness(harness);
+        if (persist) writeActiveHarness(harness.name);
         const toolNote = count ? ` Activated ${count} harness tool(s).` : '';
         return toolResult(`Switched to harness "${harness.name}". ${harness.description}${toolNote}`, null);
       }
@@ -185,7 +194,7 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
     for (const tool of tools) pi.registerTool(tool);
   };
 
-  return { getBody, extension };
+  return { getBody, extension, restore };
 };
 
 export type HarnessController = ReturnType<typeof createHarnessController>;

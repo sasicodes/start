@@ -121,7 +121,7 @@ export const runSubagents = async ({
       update();
 
       const sessionManager = SessionManager.inMemory(cwd);
-      const resourceLoader = await createStartResourceLoader(cwd);
+      const resourceLoader = await createStartResourceLoader(cwd, { restoreHarness: false });
       const result = await createAgentSession({
         cwd,
         model,

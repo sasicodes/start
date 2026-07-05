@@ -14,10 +14,11 @@ const startPromptsPrefix = `${startPromptsDir}${sep}`;
 const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const systemPrompt = buildStartSystemPrompt(startPromptsDir, startSkillsDir);
 
-export const createStartResourceLoader = async (cwd: string) => {
+export const createStartResourceLoader = async (cwd: string, options?: { restoreHarness?: boolean }) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
   const skillDirs = [startSkillsDir, globalSkillsDir, projectSkillsDir];
-  const harness = createHarnessController({ harnessDir: startHarnessDir });
+  const restoreHarness = options?.restoreHarness !== false;
+  const harness = createHarnessController({ harnessDir: startHarnessDir, persist: restoreHarness });
 
   const loader = new DefaultResourceLoader({
     cwd,
@@ -49,5 +50,6 @@ export const createStartResourceLoader = async (cwd: string) => {
   });
 
   await loader.reload();
+  await harness.restore();
   return loader;
 };
