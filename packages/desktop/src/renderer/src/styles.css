@@ -326,3 +326,8 @@ body {
 .tooltip-positioner[data-side="left"] .tooltip-popup:is([data-starting-style], [data-ending-style]) {
   transform: translateX(0.25rem);
 }
+
+.is-reordering,
+.is-reordering * {
+  cursor: grabbing;
+}

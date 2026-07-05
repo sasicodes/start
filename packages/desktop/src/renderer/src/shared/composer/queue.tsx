@@ -51,7 +51,10 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
                   event.preventDefault();
                   reorder.start(id);
                 }}
-                class="grid size-5 flex-none cursor-grab touch-none place-items-center text-soft active:cursor-grabbing [&_svg]:size-4"
+                class={tw(
+                  'grid size-5 flex-none cursor-grab touch-none place-items-center text-soft transition-opacity active:cursor-grabbing [&_svg]:size-4',
+                  dragging && reorder.dragId !== id && 'opacity-0'
+                )}
               >
                 <DragIcon />
               </span>

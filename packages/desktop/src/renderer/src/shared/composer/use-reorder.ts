@@ -53,10 +53,12 @@ export const useReorder = (ids: string[], onReorder: (orderedIds: string[]) => v
       });
     };
 
+    document.documentElement.classList.add('is-reordering');
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', finish);
     window.addEventListener('pointercancel', finish);
     return () => {
+      document.documentElement.classList.remove('is-reordering');
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', finish);
       window.removeEventListener('pointercancel', finish);
