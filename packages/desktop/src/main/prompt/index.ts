@@ -1,6 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { defaultHarness } from '@main/harness/default';
-import type { HarnessController } from '@main/harness/controller';
 import * as v from 'valibot';
 
 interface ToolCapability {
@@ -150,7 +149,7 @@ Project and user resources:
 };
 
 export const createStartPromptExtension =
-  (promptsDir: string, skillsDir: string, harness?: HarnessController) => (pi: ExtensionAPI) => {
+  (promptsDir: string, skillsDir: string, harness?: { getBody: () => string }) => (pi: ExtensionAPI) => {
     pi.on('before_agent_start', async (event) => {
       const harnessBody = harness?.getBody() ?? defaultHarness.body;
       const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
