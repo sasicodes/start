@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +6,10 @@ import { getFakeSession } from '../fakes/agent/index.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
 import { activationLog } from '../fakes/workspace-access.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
+
+const workspaceTempRoot = () => mkdtempSync(path.join(tmpdir(), 'start-workspaces-'));
+
+const removeTempRoot = (root: string) => rmSync(root, { recursive: true, force: true });
 
 describe('workspace switching', () => {
   it('moves the current session to background and restores it when the workspace is reopened', async () => {
@@ -75,28 +79,36 @@ describe('workspace switching', () => {
   });
 
   it('shows remembered workspaces even before they have sessions', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'start-workspaces-'));
-    const workspaceA = path.join(root, 'workspace-a');
-    const workspaceC = path.join(root, 'workspace-c');
-    mkdirSync(workspaceA, { recursive: true });
-    mkdirSync(workspaceC, { recursive: true });
-    const chat = freshChatService({ lastWorkspace: workspaceA });
-    await chat.switchWorkspace(workspaceC);
+    const root = workspaceTempRoot();
+    try {
+      const workspaceA = path.join(root, 'workspace-a');
+      const workspaceC = path.join(root, 'workspace-c');
+      mkdirSync(workspaceA, { recursive: true });
+      mkdirSync(workspaceC, { recursive: true });
+      const chat = freshChatService({ lastWorkspace: workspaceA });
+      await chat.switchWorkspace(workspaceC);
 
-    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([workspaceC, workspaceA]);
+      expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([workspaceC, workspaceA]);
+    } finally {
+      removeTempRoot(root);
+    }
   });
 
   it('drops deleted workspaces from the folder list and remembered history', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'start-workspaces-'));
-    const workspacePath = path.join(root, 'workspace-a');
-    const deletedPath = path.join(root, 'workspace-gone');
-    mkdirSync(workspacePath, { recursive: true });
-    const chat = freshChatService({ lastWorkspace: workspacePath });
-    await chat.switchWorkspace(deletedPath);
-    await chat.switchWorkspace(workspacePath);
+    const root = workspaceTempRoot();
+    try {
+      const workspacePath = path.join(root, 'workspace-a');
+      const deletedPath = path.join(root, 'workspace-gone');
+      mkdirSync(workspacePath, { recursive: true });
+      const chat = freshChatService({ lastWorkspace: workspacePath });
+      await chat.switchWorkspace(deletedPath);
+      await chat.switchWorkspace(workspacePath);
 
-    expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([workspacePath]);
-    expect(getStorageSnapshot().workspaceHistory).not.toHaveProperty(deletedPath);
+      expect((await chat.getWorkspaceFolders()).map((folder) => folder.path)).toEqual([workspacePath]);
+      expect(getStorageSnapshot().workspaceHistory).not.toHaveProperty(deletedPath);
+    } finally {
+      removeTempRoot(root);
+    }
   });
 
   it('falls back to the user home directory when no workspace was previously saved', () => {

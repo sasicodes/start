@@ -16,6 +16,8 @@ interface ProviderGroup {
   models: ModelOption[];
 }
 
+type MenuKeyHandler = (event: KeyboardEvent) => void;
+
 interface ModelsProps {
   models: ModelOption[];
   onOpenSettings: (tab?: SettingsTab) => void;
@@ -71,7 +73,7 @@ const ModelOptionItem = ({
   model: ModelOption;
   selected: boolean;
   onSelectModel: (modelKey: string) => void;
-  onExitFlyout: (event: KeyboardEvent) => void;
+  onExitFlyout: MenuKeyHandler;
 }) => {
   const selectModel = () => {
     selectedModelKeyState.value = model.key;
@@ -100,7 +102,7 @@ const ModelOptions = ({
   onExitFlyout
 }: Pick<ProviderGroup, 'models'> &
   Pick<ModelsProps, 'selectedModel' | 'onSelectModel'> & {
-    onExitFlyout: (event: KeyboardEvent) => void;
+    onExitFlyout: MenuKeyHandler;
   }) => {
   return models.map((model) => (
     <ModelOptionItem
@@ -119,7 +121,7 @@ const SetupItem = ({
   onExitFlyout
 }: Pick<ProviderGroup, 'name'> &
   Pick<ModelsProps, 'onOpenSettings'> & {
-    onExitFlyout: (event: KeyboardEvent) => void;
+    onExitFlyout: MenuKeyHandler;
   }) => {
   const openProviderSettings = () => onOpenSettings(providerSettingsTab);
 
@@ -145,7 +147,7 @@ const ModelMenuContent = ({
   onExitFlyout
 }: Pick<ProviderGroup, 'models' | 'name'> &
   Omit<ModelsProps, 'models'> & {
-    onExitFlyout: (event: KeyboardEvent) => void;
+    onExitFlyout: MenuKeyHandler;
   }) => {
   if (models.length === 0) {
     return <SetupItem name={name} onOpenSettings={onOpenSettings} onExitFlyout={onExitFlyout} />;
@@ -164,7 +166,7 @@ const ModelMenuContent = ({
 interface ProviderRowProps extends Pick<ProviderGroup, 'id' | 'name'> {
   active: boolean;
   onActivate: () => void;
-  onEnterFlyout: (event: KeyboardEvent) => void;
+  onEnterFlyout: MenuKeyHandler;
 }
 
 const ProviderRow = ({ id, name, active, onActivate, onEnterFlyout }: ProviderRowProps) => {
