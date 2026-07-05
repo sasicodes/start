@@ -6,6 +6,7 @@ import { WorkspaceMenu } from '@renderer/shared/workspace/menu';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { ChevronDownIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel } from '@renderer/ui/menu';
+import { playToggleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { memo } from 'preact/compat';
@@ -33,6 +34,7 @@ export const Workspace = memo(
     );
 
     const handleOpenChange = (next: boolean) => {
+      playToggleSound();
       setOpen(next);
       setWorkspaceFoldersPrune(next);
       if (next) refreshFolders();

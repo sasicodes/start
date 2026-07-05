@@ -67,6 +67,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const [authProviders, setAuthProviders] = useState<ProviderAuthStatus[]>([]);
   const [activeSessionId, setActiveSessionId] = useState('');
   const [loadedSessionId, setLoadedSessionId] = useState('');
+  const [currentSessionId, setCurrentSessionId] = useState('');
   const [selectedModelKey, setSelectedModelKey] = useState('');
   const statusRequestRef = useRef(0);
   const sessionRequestRef = useRef(0);
@@ -78,6 +79,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const updateActiveSessionId = useCallback((sessionId = '') => {
     setActiveSessionId(sessionId);
+    if (sessionId) setCurrentSessionId(sessionId);
   }, []);
 
   const loadAuthProviders = useCallback(async () => {
@@ -104,6 +106,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
+      setCurrentSessionId(nextStatus.sessionId ?? '');
       updateActiveSessionId(nextStatus.sessionId && turnCountRef.current > 0 ? nextStatus.sessionId : '');
       if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
       contextPercentState.value = nextStatus.contextPercent ?? 0;
@@ -137,6 +140,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       clearQueuedMessages();
       setIsGenerating(false);
       setLoadedSessionId('');
+      setCurrentSessionId('');
       contextPercentState.value = 0;
       updateActiveSessionId('');
     },
@@ -444,6 +448,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     activateTab,
     activeSessionId,
     loadedSessionId,
+    currentSessionId,
     switchWorkspace,
     refreshSettings,
     recallMessages,

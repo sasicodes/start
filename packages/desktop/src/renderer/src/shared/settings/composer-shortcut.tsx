@@ -1,4 +1,5 @@
 import { composerShortcut, updateComposerShortcut } from '@renderer/shared/settings/state';
+import { shortcutKeys } from '@renderer/shared/shortcuts/format';
 import { useState } from 'preact/hooks';
 
 const modifierKeys = new Set(['Control', 'Meta', 'Alt', 'Shift']);
@@ -58,9 +59,10 @@ export const ComposerShortcut = () => {
           onKeyDown={(event) => {
             if (recording) record(event);
           }}
+          onBlur={() => setRecording(false)}
           class="h-9 min-w-36 truncate rounded-full border border-line bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
         >
-          {recording ? 'Recording shortcut' : composerShortcut.value.replaceAll('+', ' + ')}
+          {recording ? 'Recording' : shortcutKeys(composerShortcut.value).join(' ')}
         </button>
       </div>
       {error && <p class="m-0 mt-2 text-xs leading-4 text-danger">{error}</p>}
