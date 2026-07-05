@@ -1,7 +1,25 @@
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { type Harness, defaultHarness, defaultHarnessName } from '@main/harness/default';
+import { extname, join } from 'node:path';
+import {
+  type Harness,
+  defaultHarness,
+  defaultHarnessName,
+  harnessToolExtensions,
+  maxHarnessTools
+} from '@main/harness/default';
 import { isValidHarnessName } from '@main/harness/validate';
+
+export const harnessToolsDir = (harnessDir: string, name: string) => join(harnessDir, name, 'tools');
+
+const discoverToolFiles = async (harnessDir: string, name: string): Promise<string[]> => {
+  const dir = harnessToolsDir(harnessDir, name);
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+
+  return entries
+    .filter((entry) => entry.isFile() && harnessToolExtensions.includes(extname(entry.name)))
+    .slice(0, maxHarnessTools)
+    .map((entry) => join(dir, entry.name));
+};
 
 const frontmatterPattern = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/u;
 
@@ -33,7 +51,10 @@ export const discoverHarnesses = async (harnessDir: string): Promise<Map<string,
     try {
       const text = await readFile(join(harnessDir, entry.name), 'utf8');
       const harness = parseHarnessFile(entry.name, text);
-      if (harness) harnesses.set(harness.name, harness);
+      if (!harness) continue;
+
+      const toolFiles = await discoverToolFiles(harnessDir, harness.name);
+      harnesses.set(harness.name, toolFiles.length ? { ...harness, toolFiles } : harness);
     } catch {}
   }
 

@@ -1,5 +1,5 @@
 import { Markdown } from '@renderer/markdown';
-import { parseSkillBlock } from '@renderer/shared/skill/parse';
+import { parseSkillBlock, skillCommandText } from '@renderer/shared/skill/parse';
 import { TurnActivity } from '@renderer/shared/turn/activity';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
@@ -87,9 +87,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
 
   const isUser = turn.role === 'user';
   const skillBlock = isUser ? parseSkillBlock(turn.text) : null;
-  if (skillBlock && !skillBlock.userMessage) return null;
-
-  const body = skillBlock ? { ...turn, text: skillBlock.userMessage ?? '' } : turn;
+  const body = skillBlock ? { ...turn, text: skillCommandText(skillBlock) } : turn;
   const isEvent = turn.role === 'event';
   const isSystem = turn.role === 'system';
   const useMarkdown = shouldUseMarkdown(body);

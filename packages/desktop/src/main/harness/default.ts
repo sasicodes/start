@@ -2,7 +2,11 @@ export interface Harness {
   name: string;
   description: string;
   body: string;
+  toolFiles?: string[];
 }
+
+export const maxHarnessTools = 16;
+export const harnessToolExtensions = ['.mjs', '.js'];
 
 export const defaultHarnessName = 'default';
 

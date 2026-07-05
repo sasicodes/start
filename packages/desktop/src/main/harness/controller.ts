@@ -1,9 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ExtensionAPI, type ToolDefinition, defineTool } from '@earendil-works/pi-coding-agent';
-import { type Harness, defaultHarness } from '@main/harness/default';
-import { discoverHarnesses } from '@main/harness/discover';
-import { harnessNameError } from '@main/harness/validate';
+import { type Harness, defaultHarness, maxHarnessTools } from '@main/harness/default';
+import { discoverHarnesses, harnessToolsDir } from '@main/harness/discover';
+import { loadHarnessTools, nextActiveTools } from '@main/harness/tools';
+import { harnessNameError, isValidHarnessName } from '@main/harness/validate';
 import { toolResult } from '@main/providers/tools/result';
 
 interface HarnessControllerOptions {
@@ -11,7 +12,7 @@ interface HarnessControllerOptions {
 }
 
 const harnessExplainer =
-  'A harness is the assistant persona and instructions for the session. It replaces the base behavior with a custom system prompt.';
+  'A harness is the assistant persona and instructions for the session. It replaces the base behavior with a custom system prompt, plus optional tools stored under <name>/tools.';
 
 const switchParameters = {
   type: 'object',
@@ -29,14 +30,45 @@ const createParameters = {
   properties: {
     name: { type: 'string', description: 'Kebab-case harness name. Cannot be "default".' },
     description: { type: 'string', description: 'One line describing when to use this harness.' },
-    body: { type: 'string', description: 'The persona and instructions that replace the base system prompt.' }
+    body: { type: 'string', description: 'The persona and instructions that replace the base system prompt.' },
+    tools: {
+      type: 'array',
+      maxItems: maxHarnessTools,
+      description: 'Optional ES module tool files stored under the harness. Each default-exports a pi tool definition.',
+      items: {
+        type: 'object',
+        required: ['name', 'code'],
+        additionalProperties: false,
+        properties: {
+          name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
+          code: { type: 'string', description: 'ES module source that default-exports a pi tool definition.' }
+        }
+      }
+    }
   }
 } as const;
 
 export const createHarnessController = ({ harnessDir }: HarnessControllerOptions) => {
   let current: Harness = defaultHarness;
+  let api: ExtensionAPI | null = null;
+  let activeToolNames: string[] = [];
 
   const getBody = () => current.body;
+
+  const activateHarness = async (harness: Harness) => {
+    current = harness;
+    if (!api) return;
+
+    const loaded = await loadHarnessTools(harness.toolFiles ?? []);
+    const registered = new Set(api.getAllTools().map((tool) => tool.name));
+    for (const tool of loaded) {
+      if (!registered.has(tool.name)) api.registerTool(tool);
+    }
+
+    const nextNames = loaded.map((tool) => tool.name);
+    api.setActiveTools(nextActiveTools(api.getActiveTools(), activeToolNames, nextNames));
+    activeToolNames = nextNames;
+  };
 
   const tools: ToolDefinition[] = [
     defineTool({
@@ -53,8 +85,9 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
           return toolResult(`No harness named "${requested}". Available: ${[...harnesses.keys()].join(', ')}.`, null);
         }
 
-        current = harness;
-        return toolResult(`Switched to harness "${harness.name}". ${harness.description}`, null);
+        await activateHarness(harness);
+        const toolNote = harness.toolFiles?.length ? ` Activated ${harness.toolFiles.length} harness tool(s).` : '';
+        return toolResult(`Switched to harness "${harness.name}". ${harness.description}${toolNote}`, null);
       }
     }),
     defineTool({
@@ -63,7 +96,7 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
       parameters: createParameters,
       description: `Create a new harness file the user can switch to later. ${harnessExplainer}`,
       promptSnippet: 'Author a new harness (persona) as a reusable global file.',
-      async execute(_toolCallId, { name, body, description }) {
+      async execute(_toolCallId, { name, body, tools: toolFiles, description }) {
         const nameError = harnessNameError(name);
         if (nameError) return toolResult(nameError, null);
 
@@ -71,16 +104,29 @@ export const createHarnessController = ({ harnessDir }: HarnessControllerOptions
         if (!trimmedBody) return toolResult('Harness body is required.', null);
 
         const cleanName = name.trim();
+        const invalidTool = (toolFiles ?? []).find((tool) => !isValidHarnessName(tool.name));
+        if (invalidTool) return toolResult(`Tool name "${invalidTool.name}" must be kebab-case.`, null);
+
         await mkdir(harnessDir, { recursive: true });
         const frontmatter = `---\nname: ${cleanName}\ndescription: ${description.trim()}\n---\n`;
         await writeFile(join(harnessDir, `${cleanName}.md`), `${frontmatter}\n${trimmedBody}\n`, 'utf8');
 
-        return toolResult(`Created harness "${cleanName}". Switch to it with switch_harness.`, null);
+        if (toolFiles?.length) {
+          const dir = harnessToolsDir(harnessDir, cleanName);
+          await mkdir(dir, { recursive: true });
+          for (const tool of toolFiles) {
+            await writeFile(join(dir, `${tool.name}.mjs`), `${tool.code.trim()}\n`, 'utf8');
+          }
+        }
+
+        const toolNote = toolFiles?.length ? ` with ${toolFiles.length} tool(s)` : '';
+        return toolResult(`Created harness "${cleanName}"${toolNote}. Switch to it with switch_harness.`, null);
       }
     })
   ];
 
   const extension = (pi: ExtensionAPI) => {
+    api = pi;
     for (const tool of tools) pi.registerTool(tool);
   };
 
