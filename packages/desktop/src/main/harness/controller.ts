@@ -34,14 +34,18 @@ const createParameters = {
     tools: {
       type: 'array',
       maxItems: maxHarnessTools,
-      description: 'Optional ES module tool files stored under the harness. Each default-exports a pi tool definition.',
+      description: 'Optional self-contained tool files stored under the harness, activated when it is switched on.',
       items: {
         type: 'object',
         required: ['name', 'code'],
         additionalProperties: false,
         properties: {
           name: { type: 'string', description: 'Kebab-case tool file name without extension.' },
-          code: { type: 'string', description: 'ES module source that default-exports a pi tool definition.' }
+          code: {
+            type: 'string',
+            description:
+              'Self-contained ES module with no imports. Default-export a plain object with name, description, parameters (JSON schema), and an async execute(id, args) that returns { content: [{ type: "text", text }] }.'
+          }
         }
       }
     }

@@ -112,17 +112,13 @@ const promptWithToolCapabilities = (
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
 };
 
-const runtimeContextOpen = '<runtime-context>';
-const runtimeContextClose = '</runtime-context>';
+const nowOpen = '<now>';
+const nowClose = '</now>';
 
-export const runtimeContextBlock = (now = new Date()): string => {
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  const localTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'long', timeZone }).format(now);
-  return `${runtimeContextOpen}\nUser timezone: ${timeZone}\nUser local time: ${localTime}\n${runtimeContextClose}`;
-};
+export const runtimeContextBlock = (now = new Date()): string => `${nowOpen}${now.toString()}${nowClose}`;
 
 const stripRuntimeContext = (prompt: string): string => {
-  const openIndex = prompt.lastIndexOf(runtimeContextOpen);
+  const openIndex = prompt.lastIndexOf(nowOpen);
   if (openIndex < 0) return prompt;
   return prompt.slice(0, openIndex).trimEnd();
 };

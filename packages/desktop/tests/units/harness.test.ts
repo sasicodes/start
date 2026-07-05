@@ -59,10 +59,11 @@ describe('prompt harness composition', () => {
     expect(buildStartSystemPrompt('/p', '/s', undefined, defaultHarness.body)).toBe(base);
   });
 
-  it('renders timezone and local time for runtime context', () => {
+  it('renders a single now timestamp for runtime context', () => {
     const block = runtimeContextBlock(new Date('2026-07-05T12:00:00Z'));
-    expect(block).toContain('User timezone:');
-    expect(block).toContain('User local time:');
+    expect(block.startsWith('<now>')).toBe(true);
+    expect(block.endsWith('</now>')).toBe(true);
+    expect(block).toContain('2026');
   });
 
   it('applies the harness persona even when the prompt lacks the tools marker', async () => {
@@ -80,7 +81,7 @@ describe('prompt harness composition', () => {
     const result = await registered.handler({ systemPrompt: 'A platform prompt without the marker.' });
 
     expect(result.systemPrompt).toContain('You are a research assistant.');
-    expect(result.systemPrompt).toContain('User timezone:');
+    expect(result.systemPrompt).toContain('<now>');
   });
 
   it('does not stack runtime context blocks across turns', async () => {
@@ -98,8 +99,7 @@ describe('prompt harness composition', () => {
     const first = await registered.handler({ systemPrompt: buildStartSystemPrompt('/p', '/s') });
     const second = await registered.handler({ systemPrompt: first.systemPrompt });
 
-    expect(second.systemPrompt.match(/User timezone:/gu)?.length).toBe(1);
-    expect(second.systemPrompt.match(/<runtime-context>/gu)?.length).toBe(1);
+    expect(second.systemPrompt.match(/<now>/gu)?.length).toBe(1);
   });
 
   it('does not truncate prompt content that mentions the runtime words', async () => {
@@ -114,10 +114,10 @@ describe('prompt harness composition', () => {
 
     createStartPromptExtension('/p', '/s')(pi);
     if (!registered.handler) throw new Error('Expected prompt hook registration.');
-    const prompt = `${buildStartSystemPrompt('/p', '/s')}\n\nUser timezone: ignore this project note.\nKeep this line.`;
+    const prompt = `${buildStartSystemPrompt('/p', '/s')}\n\nRefer to now for scheduling. Keep this line.`;
     const result = await registered.handler({ systemPrompt: prompt });
 
     expect(result.systemPrompt).toContain('Keep this line.');
-    expect(result.systemPrompt).toContain('ignore this project note.');
+    expect(result.systemPrompt).toContain('Refer to now for scheduling.');
   });
 });
