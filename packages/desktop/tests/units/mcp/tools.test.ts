@@ -25,7 +25,8 @@ interface ExecutableTool {
   name: string;
   execute: (
     toolCallId: string,
-    params: unknown
+    params: unknown,
+    signal?: AbortSignal
   ) => Promise<{ details: Record<string, unknown>; content: { text: string }[] }>;
 }
 
@@ -79,7 +80,34 @@ describe('mcp tools', () => {
 
     const result = await tools[0]?.execute('call-1', { title: 'bug' });
     expect(result?.content[0]?.text).toBe('created #7');
-    expect(clientsMock.callServerTool).toHaveBeenCalledWith(globalServer, 'create_issue', { title: 'bug' }, 30_000);
+    expect(clientsMock.callServerTool).toHaveBeenCalledWith(
+      globalServer,
+      'create_issue',
+      { title: 'bug' },
+      {
+        timeoutMs: 30_000
+      }
+    );
+  });
+
+  it('forwards the abort signal to server calls', async () => {
+    configMock.servers = [globalServer];
+    clientsMock.connectServer.mockResolvedValue(connected(['create_issue']));
+    clientsMock.callServerTool.mockResolvedValue({ content: [] });
+    const controller = new AbortController();
+
+    const tools = await sessionTools('/tmp/workspace');
+    await tools[0]?.execute('call-1', {}, controller.signal);
+
+    expect(clientsMock.callServerTool).toHaveBeenCalledWith(
+      globalServer,
+      'create_issue',
+      {},
+      {
+        timeoutMs: 30_000,
+        signal: controller.signal
+      }
+    );
   });
 
   it('falls back to structured content and reports failed calls', async () => {
@@ -124,6 +152,31 @@ describe('mcp tools', () => {
 
     expect(result?.content[0]?.text).toBe('Authentication required for github. Check the MCP server config.');
     expect(result?.details).toEqual({ failed: true, server: 'github' });
+  });
+
+  it('drops tool names that collide with web_search or an earlier mcp tool', async () => {
+    configMock.servers = [
+      { ...globalServer, name: 'web' },
+      { ...globalServer, name: 'my server' },
+      { ...globalServer, name: 'my_server' }
+    ];
+    clientsMock.connectServer.mockImplementation(async (server: McpServer) =>
+      connected(server.name === 'web' ? ['search'] : ['run'])
+    );
+
+    const tools = await sessionTools('/tmp/workspace');
+
+    expect(tools.map((tool) => tool.name)).toEqual(['my_server_run']);
+  });
+
+  it('skips servers named after the built-in web search server', async () => {
+    configMock.servers = [{ ...projectRemote, name: 'web-search' }];
+    clientsMock.connectServer.mockResolvedValue(connected(['search']));
+
+    const tools = await mcpToolsForSession('/tmp/workspace');
+
+    expect(tools).toHaveLength(0);
+    expect(clientsMock.connectServer).not.toHaveBeenCalled();
   });
 
   it('excludes project stdio servers from sessions', async () => {

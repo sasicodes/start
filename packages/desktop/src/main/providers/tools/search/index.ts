@@ -55,12 +55,20 @@ export const createWebSearchTools = () => [
     parameters: webSearchSchema,
     description: 'Search the public web.',
     promptSnippet: 'Use for current facts, package docs, news, pricing, standards, and source-backed research.',
-    async execute(_toolCallId, { query }, _signal, onUpdate) {
+    async execute(_toolCallId, { query }, signal, onUpdate) {
       const searchQuery = queryValue(query);
       onUpdate?.(toolResult(`Searching the web for "${searchQuery}".`, { query: searchQuery }));
 
       try {
-        const result = await callServerTool(searchServer, searchToolName, { query: searchQuery }, callTimeoutMs);
+        const result = await callServerTool(
+          searchServer,
+          searchToolName,
+          { query: searchQuery },
+          {
+            timeoutMs: callTimeoutMs,
+            ...(signal ? { signal } : {})
+          }
+        );
         const failed = result.isError === true;
         return toolResult(mcpOutputText(result), {
           query: searchQuery,

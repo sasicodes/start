@@ -110,7 +110,7 @@ const serverEntry = (server: McpServer): ClientEntry => {
 
   const key = serverKey(server);
   const current = entries.get(server.name);
-  if (current && current.key === key) {
+  if (current && current.key === key && current.connection?.kind !== 'failed') {
     current.lastUsedAt = Date.now();
     return current;
   }
@@ -135,11 +135,16 @@ export const serverConnection = (server: McpServer): McpConnection | null => {
   return entry && entry.key === serverKey(server) ? entry.connection : null;
 };
 
+export interface CallServerToolOptions {
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
 export const callServerTool = async (
   server: McpServer,
   toolName: string,
   args: Record<string, unknown>,
-  timeoutMs: number
+  { signal, timeoutMs }: CallServerToolOptions
 ) => {
   const { client, connection } = await serverEntry(server).result;
   if (!client) {
@@ -147,7 +152,10 @@ export const callServerTool = async (
     throw new Error('Server unavailable.');
   }
 
-  return await client.callTool({ name: toolName, arguments: args }, undefined, { timeout: timeoutMs });
+  return await client.callTool({ name: toolName, arguments: args }, undefined, {
+    timeout: timeoutMs,
+    ...(signal ? { signal } : {})
+  });
 };
 
 export const disposeMcpClients = () => {

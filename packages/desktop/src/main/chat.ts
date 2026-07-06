@@ -1991,7 +1991,10 @@ export class ChatService {
 
     const cwd = this.workspaceCwd;
     const sessionManager = this.shouldCreateSession ? SessionManager.create(cwd) : SessionManager.continueRecent(cwd);
-    const resourceLoader = await createStartResourceLoader(cwd);
+    const [resourceLoader, customTools] = await Promise.all([
+      createStartResourceLoader(cwd),
+      this.sessionCustomTools(sessionManager.getSessionId(), cwd)
+    ]);
     const { session } = await createAgentSession({
       cwd,
       model,
@@ -1999,7 +2002,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), cwd)),
+      customTools,
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });

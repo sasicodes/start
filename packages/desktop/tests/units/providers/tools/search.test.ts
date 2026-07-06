@@ -57,11 +57,23 @@ describe('web_search tool', () => {
       }),
       'web_search_exa',
       { query: 'latest docs' },
-      30_000
+      { timeoutMs: 30_000 }
     );
     expect(updates[0]?.content[0]?.text).toBe('Searching the web for "latest docs".');
     expect(result.content[0]?.text).toBe('Search answer');
     expect(result.details).toEqual({ query: 'latest docs' });
+  });
+
+  it('forwards the abort signal to the search call', async () => {
+    clientsMock.callServerTool.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const controller = new AbortController();
+
+    await tool().execute('call-1', { query: 'cancelable' }, controller.signal);
+
+    expect(clientsMock.callServerTool).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), {
+      timeoutMs: 30_000,
+      signal: controller.signal
+    });
   });
 
   it('accepts array query arguments from providers', async () => {

@@ -41,7 +41,11 @@ vi.mock('@main/workspace/access', () => import('./fakes/workspace-access.js'));
 vi.mock('@main/attachments', () => import('./fakes/attachments.js'));
 vi.mock('@main/environment', () => ({
   environment: { rendererUrl: undefined },
-  readEnvironmentValue: (name: string) => process.env[name]?.trim() || undefined
+  readEnvironmentValue: (name: string) => {
+    const value = process.env[name]?.trim();
+    if (!value) return;
+    return value;
+  }
 }));
 vi.mock('@main/prompt/loader', () => ({ createStartResourceLoader: async () => ({}) }));
 vi.mock('@main/db', () => {
