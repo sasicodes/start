@@ -544,7 +544,7 @@ export class ChatService {
       this.subscribeIndexSync(session, model.provider, model.id);
       this.session = session;
       this.workspaceCwd = workspacePath;
-      this.runtimeStateForSession(session).isGenerating = false;
+      this.syncSessionRuntime(session);
       this.setActiveSession(sessionManager);
       this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
@@ -671,7 +671,7 @@ export class ChatService {
     this.attachments.clear();
     this.session = session;
     this.workspaceCwd = workspacePath;
-    this.runtimeStateForSession(session).isGenerating = false;
+    this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
     this.setActiveSession(session.sessionManager);
     this.persistWorkspace(this.workspaceCwd);
@@ -706,7 +706,7 @@ export class ChatService {
   private async createBackgroundSession(workspacePath: string): Promise<AgentSession> {
     const session = await this.buildSession(workspacePath);
     this.backgroundSessions.set(session.sessionManager.getSessionId(), session);
-    this.runtimeStateForSession(session).isGenerating = false;
+    this.syncSessionRuntime(session);
     return session;
   }
 
@@ -774,7 +774,7 @@ export class ChatService {
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
     this.setActiveSession(session.sessionManager);
-    this.activateSessionRuntime(session);
+    this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
@@ -951,7 +951,7 @@ export class ChatService {
       this.attachments.clear();
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
-      if (this.session) this.activateSessionRuntime(this.session);
+      if (this.session) this.syncSessionRuntime(this.session);
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistWorkspace(this.workspaceCwd);
@@ -995,7 +995,7 @@ export class ChatService {
     };
   }
 
-  private activateSessionRuntime(session: AgentSession): void {
+  private syncSessionRuntime(session: AgentSession): void {
     const runtimeState = this.runtimeStateForSession(session);
     runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
     runtimeState.queueDeliveryCandidates = [];

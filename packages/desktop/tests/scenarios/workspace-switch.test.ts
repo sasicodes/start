@@ -11,6 +11,17 @@ const workspaceTempRoot = () => mkdtempSync(path.join(tmpdir(), 'start-workspace
 
 const removeTempRoot = (root: string) => rmSync(root, { recursive: true, force: true });
 
+const seedStoredSession = (cwd: string) => {
+  const stored = FakeSessionManager.create(cwd);
+  stored.appendEntry({
+    id: 'entry-1',
+    type: 'message',
+    timestamp: new Date().toISOString(),
+    message: { role: 'user', content: 'stored prompt' }
+  });
+  return stored;
+};
+
 describe('workspace switching', () => {
   it('moves the current session to background and restores it when the workspace is reopened', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
@@ -41,14 +52,7 @@ describe('workspace switching', () => {
 
   it('opens the most recent stored session when switching into a workspace with history', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
-
-    const stored = FakeSessionManager.create('/tmp/workspace-b');
-    stored.appendEntry({
-      id: 'entry-1',
-      type: 'message',
-      timestamp: new Date().toISOString(),
-      message: { role: 'user', content: 'stored prompt' }
-    });
+    const stored = seedStoredSession('/tmp/workspace-b');
 
     const result = await chat.switchWorkspace('/tmp/workspace-b');
 
@@ -61,14 +65,7 @@ describe('workspace switching', () => {
 
   it('skips session restore when the caller opts out', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
-
-    const stored = FakeSessionManager.create('/tmp/workspace-b');
-    stored.appendEntry({
-      id: 'entry-1',
-      type: 'message',
-      timestamp: new Date().toISOString(),
-      message: { role: 'user', content: 'stored prompt' }
-    });
+    seedStoredSession('/tmp/workspace-b');
 
     const result = await chat.switchWorkspace('/tmp/workspace-b', { restoreSession: false });
 
