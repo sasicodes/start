@@ -60,6 +60,7 @@ import { resolveInside } from '@main/utils/workspace';
 import {
   allowMainWindowClose,
   createMainWindow,
+  destroyRendererWindows,
   getMainWindow,
   hideComposerWindow,
   onMainWindowChanged,
@@ -612,11 +613,13 @@ const runQuitCleanup = async () => {
   stopAutoUpdateChecks();
   desktopRelay.stop();
   setStayAwake(false);
+  await destroyBrowserSilently();
+  destroyRendererWindows();
   gitChanges.dispose();
   chat.dispose();
   deactivateWorkspaceAccess();
 
-  await Promise.all([shutdownAnalyticsSilently(), destroyBrowserSilently()]);
+  await shutdownAnalyticsSilently();
 };
 
 const startQuitCleanup = async () => {
