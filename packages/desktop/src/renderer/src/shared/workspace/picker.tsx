@@ -94,7 +94,7 @@ export const Workspace = memo(
                 />
                 <span
                   class={tw(
-                    'grid h-full w-8 shrink-0 place-items-center rounded-r-full text-ink @max-workspace-dock/chat:hidden',
+                    'flex h-full shrink-0 items-center rounded-r-full py-0 pr-3 pl-2 text-ink @max-workspace-dock/chat:hidden',
                     collapsed && 'hidden'
                   )}
                 >

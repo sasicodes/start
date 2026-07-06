@@ -65,8 +65,6 @@ export const searchProvider = (model: SearchModel): WebSearchProvider | null => 
     return 'openai';
   }
   if (provider === 'anthropic' && api === 'anthropic-messages') return 'anthropic';
-  if (provider === 'google' && api === 'google-generative-ai') return 'google';
-  if (provider === 'google-generative-ai' && api === 'google-generative-ai') return 'google';
   return null;
 };
 

@@ -4,6 +4,8 @@ import type { ChatEvent, TurnDetailState } from '@main/types';
 
 const recordPath = (args: Record<string, unknown>) => stringValue(args.path) || '.';
 
+const isWorkflowTool = (toolName: string) => toolName === 'run_workflow';
+
 const toolDisplayName = (toolName: string) =>
   toolName
     .split(/[_-]+/u)
@@ -196,7 +198,7 @@ const diffMarkdown = (details: unknown) => {
 };
 
 export const toolBody = (toolName: string, args: Record<string, unknown>, result: unknown) => {
-  if (toolName === 'subagent_spawn') return '';
+  if (isWorkflowTool(toolName)) return '';
   if (!isRecord(result)) return '';
 
   const output = toolOutput(toolName, args, textContent(result.content));
@@ -209,7 +211,7 @@ const toolDetail = (toolName: string, args: Record<string, unknown>) => {
   if (toolName === 'web_search') return stringValue(args.query);
   if (toolName === 'browser_open') return stringValue(args.url);
   if (toolName.startsWith('browser_')) return '';
-  if (toolName === 'subagent_spawn') return '';
+  if (isWorkflowTool(toolName)) return '';
   if (toolName === 'bash') return stringValue(args.command).replace(/\s+/g, ' ').trim();
   if (toolName === 'find') return stringValue(args.pattern);
   if (toolName === 'grep') return stringValue(args.pattern);
@@ -234,7 +236,7 @@ const diffStats = (details: unknown) => {
 };
 
 const toolMetric = (toolName: string, args: Record<string, unknown>, result?: unknown) => {
-  if (toolName === 'subagent_spawn') return '';
+  if (isWorkflowTool(toolName)) return '';
   if (toolName === 'web_search' && isRecord(result) && isRecord(result.details)) {
     const resultCount = result.details.resultCount;
     return typeof resultCount === 'number' ? countLabel(resultCount, 'result') : '';
@@ -250,10 +252,10 @@ const toolMetric = (toolName: string, args: Record<string, unknown>, result?: un
 };
 
 export const keepsErrorState = (toolName: string) =>
-  toolName === 'web_search' || toolName === 'subagent_spawn' || toolName.startsWith('browser_');
+  toolName === 'web_search' || isWorkflowTool(toolName) || toolName.startsWith('browser_');
 
 export const toolResultTitle = (toolName: string, error: boolean) => {
-  if (toolName === 'subagent_spawn') return error ? 'Sub-agents failed' : 'Sub-agents finished';
+  if (isWorkflowTool(toolName)) return error ? 'Sub-agents failed' : 'Sub-agents finished';
 
   const browserTitle = browserToolTitles[toolName];
   if (browserTitle) return error ? browserTitle.error : browserTitle.result;
@@ -273,7 +275,7 @@ export const toolResultTitle = (toolName: string, error: boolean) => {
 };
 
 const toolTitle = (toolName: string, args: Record<string, unknown>, state: TurnDetailState) => {
-  if (toolName === 'subagent_spawn') {
+  if (isWorkflowTool(toolName)) {
     const count = countLabel(subagentTaskCount(args), 'agent');
     if (state === 'error') return 'Sub-agents failed';
     return state === 'active' ? `Spawning ${count}` : `Finished ${count}`;

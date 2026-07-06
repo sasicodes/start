@@ -207,7 +207,7 @@ describe('tool details', () => {
       toolEventDetail({
         key: 'tool:1',
         state: 'error',
-        toolName: 'subagent_spawn',
+        toolName: 'run_workflow',
         args: { tasks: [{ prompt: 'a' }] }
       })
     ).toMatchObject({

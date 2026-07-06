@@ -2,9 +2,9 @@ import { allowedLatestModelIds, allowedLatestModelOrder, models } from '@main/mo
 import { describe, expect, it } from 'vitest';
 
 describe('models allowlist', () => {
-  it('exposes only the three supported providers', () => {
+  it('exposes only the two supported providers', () => {
     const providers = new Set(models.map((model) => model.provider));
-    expect(providers).toEqual(new Set(['anthropic', 'google', 'openai']));
+    expect(providers).toEqual(new Set(['anthropic', 'openai']));
   });
 
   it('returns a set for each provider with the right ids', () => {
@@ -15,9 +15,6 @@ describe('models allowlist', () => {
 
     const openai = allowedLatestModelIds('openai');
     expect(openai.has('gpt-5.5')).toBe(true);
-
-    const google = allowedLatestModelIds('google');
-    expect(google.has('gemini-3.5-flash')).toBe(true);
   });
 
   it('preserves declaration order in allowedLatestModelOrder', () => {
@@ -29,6 +26,5 @@ describe('models allowlist', () => {
   it('never returns an empty set for a supported provider', () => {
     expect(allowedLatestModelIds('anthropic').size).toBeGreaterThan(0);
     expect(allowedLatestModelIds('openai').size).toBeGreaterThan(0);
-    expect(allowedLatestModelIds('google').size).toBeGreaterThan(0);
   });
 });

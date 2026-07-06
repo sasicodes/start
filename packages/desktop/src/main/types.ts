@@ -1,6 +1,6 @@
 export type EffortLevel = 'high' | 'low' | 'xhigh' | 'medium';
 export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
-export type ProviderKey = 'google' | 'openai' | 'anthropic';
+export type ProviderKey = 'openai' | 'anthropic';
 
 export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
 

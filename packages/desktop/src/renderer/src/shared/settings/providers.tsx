@@ -1,11 +1,11 @@
 import type { ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, ChevronDownIcon, GeminiIcon, OpenAIIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, ChevronDownIcon, OpenAIIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-type ProviderKey = 'anthropic' | 'google' | 'openai';
+type ProviderKey = 'anthropic' | 'openai';
 type AccordionKey = '' | ProviderKey;
 
 const providers: {
@@ -22,11 +22,6 @@ const providers: {
     key: 'anthropic',
     name: 'Anthropic',
     supportsSubscription: true
-  },
-  {
-    key: 'google',
-    name: 'Google',
-    supportsSubscription: false
   }
 ];
 
@@ -49,7 +44,6 @@ const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) 
 
 const ProviderIcon = ({ provider }: { provider: ProviderKey }) => {
   if (provider === 'openai') return <OpenAIIcon class="size-5" />;
-  if (provider === 'google') return <GeminiIcon class="size-5" />;
   return <AnthropicIcon class="size-5" />;
 };
 
@@ -84,7 +78,7 @@ export const Providers = ({
   providers: authProviders
 }: ProvidersProps) => {
   const [openProvider, setOpenProvider] = useState<AccordionKey>('');
-  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', google: '', openai: '' });
+  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
 
   const toggleProvider = (provider: AccordionKey) => {
     setOpenProvider((current) => (current !== provider ? provider : ''));
@@ -167,6 +161,20 @@ export const Providers = ({
                   class="overflow-hidden"
                 >
                   <div class="mt-5 grid gap-2">
+                    {provider.supportsSubscription && (
+                      <>
+                        <div class="rounded-full border border-line bg-composer p-1">
+                          <button
+                            type="button"
+                            onClick={() => loginSubscription(provider.key).catch(() => {})}
+                            class="h-8 w-full rounded-full border-0 bg-transparent px-3 text-center text-sm text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                          >
+                            Log in with {provider.name}
+                          </button>
+                        </div>
+                        <div class="text-center text-xs leading-5 text-soft">or</div>
+                      </>
+                    )}
                     <div class="relative rounded-full border border-line bg-composer p-1">
                       <input
                         type="password"
@@ -184,18 +192,6 @@ export const Providers = ({
                         Save
                       </button>
                     </div>
-                    {provider.supportsSubscription && (
-                      <div class="flex items-center gap-2 px-1 text-xs leading-5 text-soft">
-                        <span>or</span>
-                        <button
-                          type="button"
-                          onClick={() => loginSubscription(provider.key).catch(() => {})}
-                          class="border-0 bg-transparent p-0 text-xs leading-5 font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                        >
-                          Connect subscription
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </motion.div>
               )}

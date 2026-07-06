@@ -4,7 +4,7 @@ export type SearchModel = Model<Api>;
 
 export type JsonRecord = Record<string, unknown>;
 
-export type WebSearchProvider = 'anthropic' | 'google' | 'openai';
+export type WebSearchProvider = 'anthropic' | 'openai';
 
 export interface SseEvent {
   data: unknown;

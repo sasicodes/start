@@ -966,13 +966,11 @@ export class ChatService {
     this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
     const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
-    const googleModels = available.filter((model) => isProviderModel(model, 'google'));
     const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
 
     return [
       this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
-      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0),
-      this.providerAuthStatus('google', 'Google', googleModels.length > 0)
+      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0)
     ];
   }
 

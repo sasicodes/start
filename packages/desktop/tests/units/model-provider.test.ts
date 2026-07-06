@@ -36,16 +36,6 @@ describe('modelProviderId', () => {
     );
   });
 
-  it('classifies Google by provider name', () => {
-    expect(modelProviderId(model({ id: 'gemini-3.1-pro-preview', name: 'Gemini Pro', provider: 'google' }))).toBe(
-      'google'
-    );
-  });
-
-  it('classifies Google by gemini in identifiers', () => {
-    expect(modelProviderId(model({ id: 'gemini-3.5-flash', name: 'flash', provider: 'unknown' }))).toBe('google');
-  });
-
   it('classifies OpenAI by provider name', () => {
     expect(modelProviderId(model({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }))).toBe('openai');
   });

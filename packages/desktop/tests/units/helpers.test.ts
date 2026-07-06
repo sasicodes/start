@@ -30,7 +30,6 @@ describe('helpers', () => {
   it('maps providers to their auth.json slots, including the openai-codex subscription slot', () => {
     expect(providerAuthSlots('openai')).toEqual(['openai', 'openai-codex']);
     expect(providerAuthSlots('anthropic')).toEqual(['anthropic']);
-    expect(providerAuthSlots('google')).toEqual(['google']);
   });
 
   it('labels provider auth based on connection signals', () => {
@@ -47,19 +46,12 @@ describe('helpers', () => {
     expect(providerAuthLabel('unknown', false)).toBe('Not connected');
   });
 
-  it('classifies OpenAI, Anthropic, and Google models from identifiers', () => {
+  it('classifies OpenAI and Anthropic models from identifiers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'openai')).toBe(true);
     expect(
       isProviderModel({ id: 'claude-opus-4-8', name: 'Claude Opus 4 7', provider: 'anthropic' }, 'anthropic')
     ).toBe(true);
-    expect(
-      isProviderModel({ id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'google' }, 'google')
-    ).toBe(true);
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
-    expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'google')).toBe(false);
-    expect(
-      isProviderModel({ id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', provider: 'google' }, 'openai')
-    ).toBe(false);
   });
 
   it('sorts the latest provider models into the configured display order', () => {
@@ -69,15 +61,6 @@ describe('helpers', () => {
       { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
     expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5']);
-  });
-
-  it('orders Google models smartest to cheapest', () => {
-    const sorted = getLatestProviderModels('google', [
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' },
-      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: 'google' },
-      { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview', provider: 'google' }
-    ]);
-    expect(sorted.map((model) => model.id)).toEqual(['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-2.5-pro']);
   });
 
   it('exposes labels and keys for models', () => {

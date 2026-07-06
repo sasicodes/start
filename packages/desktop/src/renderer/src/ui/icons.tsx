@@ -8,6 +8,39 @@ export const CheckIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeW
   </svg>
 );
 
+export const NoteTextIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
+  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
+    <path
+      d="M3.75 6.75C3.75 5.09315 5.09315 3.75 6.75 3.75H17.25C18.9069 3.75 20.25 5.09315 20.25 6.75V14.7574C20.25 14.9235 20.2362 15.0882 20.2093 15.25C20.1072 15.8629 19.8164 16.4336 19.3713 16.8787L16.8787 19.3713C16.4336 19.8164 15.8629 20.1072 15.25 20.2093C15.0882 20.2362 14.9235 20.25 14.7574 20.25H6.75C5.09315 20.25 3.75 18.9069 3.75 17.25V6.75Z"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M20.2093 15.25H18.25C16.5931 15.25 15.25 16.5931 15.25 18.25V20.2093"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M8.75 8.75H15.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M8.75 12.75H11.25"
+      stroke="currentColor"
+      stroke-width={strokeWidth}
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </svg>
+);
+
 export const XIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strokeWidth?: number }) => (
   <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
     <path
@@ -308,15 +341,6 @@ export const ChangesIcon = ({ strokeWidth = 1.5, ...props }: IconProps & { strok
       stroke-width={strokeWidth}
       stroke-linecap="round"
       stroke-linejoin="round"
-    />
-  </svg>
-);
-
-export const GeminiIcon = (props: IconProps) => (
-  <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" {...props}>
-    <path
-      d="M20.2246 10.888C18.6066 10.1911 17.1915 9.23659 15.9769 8.02312C14.7634 6.80966 13.8077 5.39335 13.112 3.7754C12.846 3.15614 12.63 2.51778 12.4653 1.86392C12.4116 1.65034 12.2207 1.5 12 1.5C11.7793 1.5 11.5884 1.65034 11.5347 1.86392C11.37 2.51778 11.1552 3.15375 10.888 3.7754C10.1911 5.39335 9.23659 6.80966 8.02312 8.02312C6.80966 9.2354 5.39335 10.1911 3.7754 10.888C3.15614 11.154 2.51778 11.37 1.86392 11.5347C1.65034 11.5884 1.5 11.7793 1.5 12C1.5 12.2207 1.65034 12.4116 1.86392 12.4653C2.51778 12.63 3.15375 12.8448 3.7754 13.112C5.39335 13.8089 6.80847 14.7634 8.02312 15.9769C9.23659 17.1903 10.1923 18.6066 10.888 20.2246C11.1552 20.8451 11.37 21.4822 11.5347 22.1361C11.5607 22.2399 11.6206 22.332 11.7049 22.3979C11.7891 22.4638 11.893 22.4998 12 22.5C12.2207 22.5 12.4116 22.3497 12.4653 22.1361C12.63 21.4822 12.8448 20.8462 13.112 20.2246C13.8089 18.6066 14.7634 17.1915 15.9769 15.9769C17.1903 14.7634 18.6066 13.8077 20.2246 13.112C20.8451 12.8448 21.4822 12.63 22.1361 12.4653C22.2399 12.4393 22.332 12.3794 22.3979 12.2951C22.4638 12.2109 22.4998 12.107 22.5 12C22.5 11.7793 22.3497 11.5884 22.1361 11.5347C21.4822 11.37 20.8462 11.1552 20.2246 10.888Z"
-      fill="currentColor"
     />
   </svg>
 );
