@@ -2143,8 +2143,8 @@ export class ChatService {
   }
 
   private workflowModels(): WorkflowModelOption[] {
-    return this.modelRegistry.getAvailable().flatMap((model) => {
-      const score = modelScore(model.provider, model.id);
+    return this.getPickerModels().flatMap((model) => {
+      const score = modelScore(model.id);
       if (!score) return [];
       return [
         {
