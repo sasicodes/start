@@ -8,8 +8,10 @@ import {
 import { toolResult } from '@main/providers/tools/result';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
+import type { WorkflowModelOption } from '@main/subagents/types';
+import { workflowToolDescription } from '@main/subagents/utils/catalog';
 import { maxSubagentTasks, normalizeSubagentTasks } from '@main/subagents/utils/input';
-import type { EffortLevel } from '@main/types';
+import { effortLevels } from '@main/types';
 
 const spawnToolParameters = {
   properties: {
@@ -20,12 +22,21 @@ const spawnToolParameters = {
       description: 'Focused tasks to run in parallel sub-agents.',
       items: {
         type: 'object',
-        required: ['prompt'],
+        required: ['prompt', 'model', 'effort'],
         additionalProperties: false,
         properties: {
           prompt: {
             type: 'string',
             description: 'Focused task for one sub-agent.'
+          },
+          model: {
+            type: 'string',
+            description: 'Model key for this task, chosen from the models listed in the tool description.'
+          },
+          effort: {
+            type: 'string',
+            enum: effortLevels,
+            description: 'Reasoning effort for this task.'
           }
         }
       }
@@ -36,25 +47,27 @@ const spawnToolParameters = {
   additionalProperties: false
 } as const;
 
+type ResolvedModel = ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
+
 interface CreateSubagentToolsOptions {
   cwd: () => string;
   authStorage: AuthStorage;
   modelRegistry: ModelRegistry;
-  thinkingLevel: () => EffortLevel;
   settingsManager: SettingsManager;
   customTools: () => ToolDefinition[];
   nameAllocator: () => SubagentNameAllocator;
-  model: () => ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem | null : never;
+  availableModels: () => WorkflowModelOption[];
+  resolveModel: (key: string) => ResolvedModel | null;
 }
 
 export const createSubagentTools = ({
   cwd,
-  model,
   authStorage,
   customTools,
+  resolveModel,
   modelRegistry,
   nameAllocator,
-  thinkingLevel,
+  availableModels,
   settingsManager
 }: CreateSubagentToolsOptions) => [
   defineTool({
@@ -62,25 +75,22 @@ export const createSubagentTools = ({
     name: 'run_workflow',
     executionMode: 'sequential',
     parameters: spawnToolParameters,
-    description: 'Run a workflow of focused sub-agents in parallel.',
+    description: workflowToolDescription(availableModels()),
     promptSnippet: 'Use for independent research, review, or mapping work.',
     prepareArguments: (args) => ({ tasks: normalizeSubagentTasks(args) }),
     async execute(_toolCallId, { tasks }, signal, onUpdate) {
-      const selectedModel = model();
-      if (!selectedModel) throw new Error('No configured model is available for sub-agents.');
-      if (tasks.length === 0) throw new Error('Enter at least one sub-agent task.');
+      if (tasks.length === 0) throw new Error('Each workflow task needs a prompt, a model, and an effort level.');
 
       const result = await runSubagents({
         tasks,
         cwd: cwd(),
         authStorage,
         customTools,
+        resolveModel,
         modelRegistry,
         settingsManager,
-        model: selectedModel,
         ...(signal ? { signal } : {}),
         nameAllocator: nameAllocator(),
-        thinkingLevel: thinkingLevel(),
         onUpdate: (snapshot) => onUpdate?.(toolResult('Sub-agents are working.', snapshot))
       });
 
