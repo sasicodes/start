@@ -17,7 +17,7 @@ const boundedOutput = (text: string) =>
 
 export const mcpToolName = (server: string, tool: string) => `${server}_${tool}`.replace(/[^\w-]/gu, '_');
 
-const resultText = (result: unknown) => {
+export const mcpResultText = (result: unknown) => {
   const payload = result as { content?: unknown; structuredContent?: unknown };
   const content = Array.isArray(payload.content) ? payload.content : [];
   const text = content
@@ -48,7 +48,7 @@ const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinit
           callTimeoutMs
         );
         const failed = result.isError === true;
-        return toolResult<Record<string, unknown>>(boundedOutput(resultText(result)), {
+        return toolResult<Record<string, unknown>>(boundedOutput(mcpResultText(result)), {
           server: server.name,
           ...(failed ? { failed } : {})
         });
