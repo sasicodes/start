@@ -2005,7 +2005,7 @@ export class ChatService {
       settingsManager: this.settingsManager,
       model: () => this.pickModel() ?? null,
       availableModels: () => this.workflowModels(),
-      resolveModel: (key: string) => this.findModelByKey(key) ?? null
+      resolveModel: (key: string) => this.findModelByKey(key) ?? this.pickModel() ?? null
     };
     const subagentSessionTools = (): ReturnType<typeof createStartCustomTools> =>
       createStartCustomTools({ ...base, includeSubagents: false, customTools: subagentSessionTools });
