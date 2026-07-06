@@ -155,8 +155,7 @@ ${filePathGuideline}${toolGuidelines}
 
 Project and user resources:
 - Project rules come from AGENTS.md files in or above the current working directory.
-- Existing skills can be loaded from ~/.agents/skills/<skill-name>/SKILL.md or <cwd>/.agents/skills/<skill-name>/SKILL.md.
-- Create Start-managed skills in ${skillsDir}/<skill-name>/SKILL.md with YAML frontmatter and instructions.
+- Skills are <skill-name>/SKILL.md files with YAML frontmatter and instructions, loaded from ~/.agents/skills and <cwd>/.agents/skills; create Start-managed skills in ${skillsDir}.
 - Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.
 - MCP servers are "mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}. Project entries must be remote servers with a "url"; "command" servers only load from the global file. Never write secret values into these files; reference environment variables with \${VAR} placeholders.`;
 };
