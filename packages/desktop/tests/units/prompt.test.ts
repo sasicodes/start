@@ -174,9 +174,10 @@ Current date: 2026-05-30`
 
   it('points the model at standard and start-managed skill paths', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
-    expect(prompt).toContain('~/.agents/skills/<skill-name>/SKILL.md');
-    expect(prompt).toContain(`${skillsDir}/<skill-name>/SKILL.md`);
-    expect(prompt).toContain('<cwd>/.agents/skills/<skill-name>/SKILL.md');
+    expect(prompt).toContain('<skill-name>/SKILL.md');
+    expect(prompt).toContain('~/.agents/skills');
+    expect(prompt).toContain('<cwd>/.agents/skills');
+    expect(prompt).toContain(`create Start-managed skills in ${skillsDir}`);
   });
 
   it('mentions AGENTS.md as the project-context source', () => {

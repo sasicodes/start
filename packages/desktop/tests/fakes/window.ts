@@ -17,6 +17,8 @@ export const sendToMainWindowIfOpen = (channel: string, ...args: unknown[]) => {
   broadcasts.push({ args, channel });
 };
 
+export const destroyRendererWindows = () => {};
+
 export const broadcastedEvents = () => [...broadcasts];
 
 export const broadcastsByChannel = (channel: string) => broadcasts.filter((event) => event.channel === channel);

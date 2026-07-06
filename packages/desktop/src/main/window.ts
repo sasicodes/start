@@ -289,6 +289,16 @@ export const sendToRendererWindows = (channel: string, ...args: unknown[]) => {
   }
 };
 
+export const destroyRendererWindows = () => {
+  allowMainWindowClose();
+
+  for (const window of [composerWindow, mainWindow]) {
+    if (!window || window.isDestroyed()) continue;
+
+    window.destroy();
+  }
+};
+
 export const sendToMainWindowIfOpen = (channel: string, ...args: unknown[]) => {
   const window = getMainWindow();
   if (!window) return;

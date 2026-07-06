@@ -1,12 +1,22 @@
-import { defineTool, type ModelRegistry } from '@earendil-works/pi-coding-agent';
+import { defineTool } from '@earendil-works/pi-coding-agent';
+import { callServerTool, connectServer } from '@main/mcp/clients';
+import type { McpServer } from '@main/mcp/config';
+import { mcpOutputText } from '@main/mcp/tools';
 import { toolResult } from '@main/providers/tools/result';
-import { SearchApiError } from '@main/providers/tools/search/fetcher';
-import { withSources, withUngroundedWarning } from '@main/providers/tools/search/helpers';
-import { runWebSearch, unsupportedWebSearchMessage } from '@main/providers/tools/search/providers';
-import type { SearchModel, SearchResult } from '@main/providers/tools/search/types';
+import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import * as v from 'valibot';
 
-export const noModelWebSearchMessage = 'No configured model is available for web search.';
+const callTimeoutMs = 30_000;
+const searchToolName = 'web_search_exa';
+const searchFailedText = 'Web search failed. Try again shortly.';
+
+const searchServer: McpServer = {
+  kind: 'remote',
+  name: 'web-search',
+  origin: 'global',
+  url: 'https://mcp.exa.ai/mcp',
+  headers: {}
+};
 
 const webSearchSchema = {
   properties: {
@@ -19,11 +29,6 @@ const webSearchSchema = {
   required: ['query'],
   additionalProperties: false
 } as const;
-
-export interface CreateWebSearchToolsOptions {
-  modelRegistry: ModelRegistry;
-  model: () => SearchModel | null;
-}
 
 const searchQuerySchema = v.pipe(
   v.union([
@@ -43,64 +48,43 @@ const queryValue = (query: unknown) => {
   throw new Error('Enter a web search query.');
 };
 
-export const createWebSearchTools = ({ model, modelRegistry }: CreateWebSearchToolsOptions) => [
+export const createWebSearchTools = () => [
   defineTool({
     label: 'web',
     name: 'web_search',
     parameters: webSearchSchema,
-    description: 'Search the public web through the active built-in provider.',
+    description: 'Search the public web.',
     promptSnippet: 'Use for current facts, package docs, news, pricing, standards, and source-backed research.',
     async execute(_toolCallId, { query }, signal, onUpdate) {
       const searchQuery = queryValue(query);
-      const selectedModel = model();
-      if (!selectedModel) {
-        return toolResult(noModelWebSearchMessage, {
-          error: 'no_model',
-          query: searchQuery
-        });
-      }
-
       onUpdate?.(toolResult(`Searching the web for "${searchQuery}".`, { query: searchQuery }));
 
-      let result: SearchResult;
       try {
-        result = await runWebSearch({
-          modelRegistry,
+        const result = await callServerTool(
+          searchServer,
+          searchToolName,
+          { query: searchQuery },
+          {
+            timeoutMs: callTimeoutMs,
+            ...(signal ? { signal } : {})
+          }
+        );
+        const failed = result.isError === true;
+        return toolResult(mcpOutputText(result), {
           query: searchQuery,
-          model: selectedModel,
-          signal: signal ?? null
+          ...(failed ? { error: 'search_failed' } : {})
         });
       } catch (error) {
-        if (error instanceof Error && error.message === unsupportedWebSearchMessage) {
-          return toolResult(unsupportedWebSearchMessage, {
-            query: searchQuery,
-            error: 'unsupported_provider'
-          });
-        }
-        if (error instanceof SearchApiError) {
-          const rateLimited = error.status === 429 || error.status === 529;
-          const text = rateLimited
-            ? 'Web search is rate limited right now. Wait a moment and retry.'
-            : 'Web search failed upstream. Try again shortly.';
-          return toolResult(text, {
-            query: searchQuery,
-            status: error.status,
-            error: rateLimited ? 'rate_limited' : 'search_failed'
-          });
-        }
-        throw error;
+        const authRequired = error instanceof UnauthorizedError;
+        return toolResult(authRequired ? 'Web search authentication failed.' : searchFailedText, {
+          query: searchQuery,
+          error: authRequired ? 'auth_required' : 'search_failed'
+        });
       }
-      const sourcedText = withSources(result.text, result.sources);
-      const text = withUngroundedWarning(sourcedText, result.grounded);
-      return toolResult(text, {
-        query: searchQuery,
-        model: result.model,
-        sources: result.sources,
-        grounded: result.grounded,
-        provider: result.provider,
-        resultCount: result.resultCount,
-        searchQueries: result.searchQueries
-      });
     }
   })
 ];
+
+export const warmWebSearchTools = () => {
+  connectServer(searchServer).catch(() => {});
+};
