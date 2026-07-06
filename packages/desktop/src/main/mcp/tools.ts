@@ -20,8 +20,8 @@ export const mcpToolName = (server: string, tool: string) => `${server}_${tool}`
 const textContentSchema = v.object({ text: v.string(), type: v.literal('text') });
 
 const callResultSchema = v.looseObject({
-  content: v.optional(v.array(v.unknown()), []),
-  structuredContent: v.optional(v.unknown())
+  structuredContent: v.optional(v.unknown()),
+  content: v.optional(v.array(v.unknown()), [])
 });
 
 const mcpResultText = (result: unknown) => {

@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const fakeClients = vi.hoisted(() => ({
   closed: 0,
   connects: 0,
-  calls: [] as { params: unknown; options: unknown }[],
-  connectErrors: [] as Error[]
+  connectErrors: [] as Error[],
+  calls: [] as { params: unknown; options: unknown }[]
 }));
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
@@ -41,7 +41,7 @@ vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => ({
   StreamableHTTPClientTransport: class {}
 }));
 
-const { callServerTool, connectServer, disposeMcpClients } = await import('@main/mcp/clients');
+const { connectServer, callServerTool, disposeMcpClients } = await import('@main/mcp/clients');
 
 const remoteServer = (url = 'https://mcp.example.com/mcp'): McpServer => ({
   url,
