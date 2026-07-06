@@ -1,19 +1,13 @@
 import { isRecord } from '@main/details';
 import type { SubagentTaskInput } from '@main/subagents/types';
+import { effortLevels } from '@main/types';
 import * as v from 'valibot';
 
-const taskSchema = v.pipe(
-  v.union([
-    v.string(),
-    v.pipe(
-      v.object({ prompt: v.string() }),
-      v.transform((task) => task.prompt)
-    )
-  ]),
-  v.trim(),
-  v.minLength(1),
-  v.transform((prompt) => ({ prompt }) satisfies SubagentTaskInput)
-);
+const taskSchema = v.object({
+  effort: v.picklist(effortLevels),
+  model: v.pipe(v.string(), v.trim(), v.minLength(1)),
+  prompt: v.pipe(v.string(), v.trim(), v.minLength(1))
+}) satisfies v.GenericSchema<unknown, SubagentTaskInput>;
 
 export const maxSubagentTasks = 8;
 

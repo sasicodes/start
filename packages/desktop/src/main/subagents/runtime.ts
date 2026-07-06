@@ -9,25 +9,31 @@ import {
   type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
 import { countLabel } from '@main/details';
-import { agentEndError } from '@main/helpers';
+import { agentEndError, clampThinkingLevel } from '@main/helpers';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
 import type { SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
-import type { EffortLevel, SubagentActivity } from '@main/types';
+import type { SubagentActivity } from '@main/types';
+
+type ResolvedModel = ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 
 interface RunSubagentsOptions {
   cwd: string;
   signal?: AbortSignal;
   authStorage: AuthStorage;
   tasks: SubagentTaskInput[];
-  thinkingLevel: EffortLevel;
   modelRegistry: ModelRegistry;
   settingsManager: SettingsManager;
   customTools: () => ToolDefinition[];
   nameAllocator: SubagentNameAllocator;
   onUpdate: (snapshot: SubagentRunSnapshot) => void;
-  model: ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
+  resolveModel: (key: string) => ResolvedModel | null;
+}
+
+interface AgentJob {
+  task: SubagentTaskInput;
+  agent: SubagentActivity;
 }
 
 const maxConcurrentAgents = 4;
@@ -88,35 +94,41 @@ const runWithAbort = async (session: AgentSession, signal: AbortSignal | null, t
 
 export const runSubagents = async ({
   cwd,
-  model,
   tasks,
   signal,
   onUpdate,
   authStorage,
   customTools,
+  resolveModel,
   modelRegistry,
   nameAllocator,
-  thinkingLevel,
   settingsManager
 }: RunSubagentsOptions): Promise<SubagentRunResult> => {
-  const agents: SubagentActivity[] = tasks.map((task, index) => {
+  const jobs: AgentJob[] = tasks.map((task, index) => {
     const name = nameAllocator.next(`${task.prompt}:${index}:${randomUUID()}`);
     return {
-      name,
-      id: randomUUID(),
-      status: 'queued',
-      task: task.prompt,
-      avatar: subagentAvatar(name),
-      accentColor: subagentAccentColor(name)
+      task,
+      agent: {
+        name,
+        id: randomUUID(),
+        status: 'queued',
+        task: task.prompt,
+        avatar: subagentAvatar(name),
+        accentColor: subagentAccentColor(name)
+      }
     };
   });
+  const agents = jobs.map((job) => job.agent);
 
   const update = () => onUpdate({ agents: agents.map((agent) => ({ ...agent })) });
   update();
 
-  const runAgent = async (agent: SubagentActivity): Promise<void> => {
+  const runAgent = async ({ task, agent }: AgentJob): Promise<void> => {
     let session: AgentSession | null = null;
     try {
+      const model = resolveModel(task.model);
+      if (!model) throw new Error(`Model ${task.model} is not available.`);
+
       agent.status = 'running';
       update();
 
@@ -127,11 +139,11 @@ export const runSubagents = async ({
         model,
         authStorage,
         modelRegistry,
-        thinkingLevel,
         sessionManager,
         resourceLoader,
         customTools: customTools(),
-        settingsManager
+        settingsManager,
+        thinkingLevel: clampThinkingLevel(model, task.effort)
       });
       session = result.session;
       session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
@@ -162,11 +174,11 @@ export const runSubagents = async ({
     }
   };
 
-  const pending = [...agents];
+  const pending = [...jobs];
   const worker = async () => {
-    for (let agent = pending.shift(); agent; agent = pending.shift()) await runAgent(agent);
+    for (let job = pending.shift(); job; job = pending.shift()) await runAgent(job);
   };
-  await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, agents.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, jobs.length) }, worker));
 
   return {
     text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`,
