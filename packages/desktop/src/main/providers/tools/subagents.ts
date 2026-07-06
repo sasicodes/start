@@ -8,7 +8,7 @@ import {
 import { toolResult } from '@main/providers/tools/result';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
-import type { WorkflowModelOption } from '@main/subagents/types';
+import type { ResolvedModel, WorkflowModelOption } from '@main/subagents/types';
 import { workflowToolDescription } from '@main/subagents/utils/catalog';
 import { maxSubagentTasks, normalizeSubagentTasks } from '@main/subagents/utils/input';
 import { effortLevels } from '@main/types';
@@ -46,8 +46,6 @@ const spawnToolParameters = {
   required: ['tasks'],
   additionalProperties: false
 } as const;
-
-type ResolvedModel = ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 
 interface CreateSubagentToolsOptions {
   cwd: () => string;
