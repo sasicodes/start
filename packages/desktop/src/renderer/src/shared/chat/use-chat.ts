@@ -326,7 +326,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       } else {
         forgetWorkspace(result.status.workspacePath);
       }
-      clearSlashCommandsCache();
       clearFinderItemsCache();
       clearSession(options);
 
@@ -335,6 +334,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
         return true;
       }
 
+      clearSlashCommandsCache();
       setWorkspacePath(result.status.workspacePath);
       selectedModelKeyState.value = result.status.selectedModelKey ?? '';
       setSelectedModelKey(result.status.selectedModelKey ?? '');
