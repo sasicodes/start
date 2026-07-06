@@ -125,7 +125,7 @@ export const runSubagents = async ({
     let session: AgentSession | null = null;
     try {
       const model = resolveModel(task.model);
-      if (!model) throw new Error(`Model ${task.model} is not available.`);
+      if (!model) throw new Error('No configured model is available. Set up a provider in settings.');
 
       agent.status = 'running';
       update();
