@@ -162,17 +162,19 @@ export const Providers = ({
                 >
                   <div class="mt-5 grid gap-2">
                     {provider.supportsSubscription && (
-                      <div class="rounded-full border border-line bg-composer p-1">
-                        <button
-                          type="button"
-                          onClick={() => loginSubscription(provider.key).catch(() => {})}
-                          class="h-8 w-full rounded-full border-0 bg-transparent px-3 text-center text-sm text-ink transition-opacity duration-100 ease-in hover:opacity-80"
-                        >
-                          Log in with {provider.name}
-                        </button>
-                      </div>
+                      <>
+                        <div class="rounded-full border border-line bg-composer p-1">
+                          <button
+                            type="button"
+                            onClick={() => loginSubscription(provider.key).catch(() => {})}
+                            class="h-8 w-full rounded-full border-0 bg-transparent px-3 text-center text-sm text-ink transition-opacity duration-100 ease-in hover:opacity-80"
+                          >
+                            Log in with {provider.name}
+                          </button>
+                        </div>
+                        <div class="text-center text-xs leading-5 text-soft">or</div>
+                      </>
                     )}
-                    {provider.supportsSubscription && <div class="text-center text-xs leading-5 text-soft">or</div>}
                     <div class="relative rounded-full border border-line bg-composer p-1">
                       <input
                         type="password"
