@@ -20,10 +20,9 @@ export const models: readonly AllowedModel[] = [
   { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 7, intelligence: 5, affordability: 5 } }
 ] as const;
 
-const scoresByKey = new Map(models.map((model) => [`${model.provider}:${model.id}`, model.score]));
+const scoresById = new Map(models.map((model) => [model.id, model.score]));
 
-export const modelScore = (provider: string, id: string): ModelScore | undefined =>
-  scoresByKey.get(`${provider}:${id}`);
+export const modelScore = (id: string): ModelScore | undefined => scoresById.get(id);
 
 const idsByProvider = (provider: ProviderKey) =>
   models.filter((model) => model.provider === provider).map((model) => model.id);
