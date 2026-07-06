@@ -261,6 +261,7 @@ export type SwitchWorkspaceResult = {
   status?: ChatStatus;
   cancelled?: boolean;
   unchanged?: boolean;
+  session?: OpenSessionResult;
 };
 
 export type OpenSessionResult = {

@@ -236,22 +236,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [updateQueuedMessages]
   );
 
-  const applyOpenSession = useCallback(
-    async (result: OpenSessionResult, requestId: number) => {
-      if (!result.ok) return false;
-
-      let nextStatus: ChatStatus;
-      try {
-        nextStatus = await window.pi.chat.status();
-      } catch {
-        return false;
-      }
-      if (sessionRequestRef.current !== requestId) return false;
+  const applySessionSnapshot = useCallback(
+    (result: OpenSessionResult, nextStatus: ChatStatus) => {
       applyStatus(nextStatus);
       clearSlashCommandsCache();
       assistantIdRef.current = null;
       terminalIdRef.current = null;
-      setDraft('');
       updateQueuedMessages(result.queuedMessages ?? []);
       const baseTurns = result.turns ?? [];
       const restoredStreamingId = streamingAssistantId(baseTurns);
@@ -265,9 +255,26 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       updateActiveSessionId(result.id);
       textareaRef.current?.focus();
       if (result.id) window.pi.chat.markNoticeSeen(result.id).catch(() => {});
-      return true;
     },
     [applyStatus, updateQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
+  );
+
+  const applyOpenSession = useCallback(
+    async (result: OpenSessionResult, requestId: number) => {
+      if (!result.ok) return false;
+
+      let nextStatus: ChatStatus;
+      try {
+        nextStatus = await window.pi.chat.status();
+      } catch {
+        return false;
+      }
+      if (sessionRequestRef.current !== requestId) return false;
+      setDraft('');
+      applySessionSnapshot(result, nextStatus);
+      return true;
+    },
+    [applySessionSnapshot]
   );
 
   const openSession = useCallback(
@@ -319,9 +326,15 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       } else {
         forgetWorkspace(result.status.workspacePath);
       }
-      clearSlashCommandsCache();
       clearFinderItemsCache();
       clearSession(options);
+
+      if (result.session?.ok) {
+        applySessionSnapshot(result.session, result.status);
+        return true;
+      }
+
+      clearSlashCommandsCache();
       setWorkspacePath(result.status.workspacePath);
       selectedModelKeyState.value = result.status.selectedModelKey ?? '';
       setSelectedModelKey(result.status.selectedModelKey ?? '');
@@ -330,7 +343,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       textareaRef.current?.focus();
       return true;
     },
-    [clearSession, textareaRef]
+    [applySessionSnapshot, clearSession, textareaRef]
   );
 
   const switchWorkspace = useCallback(

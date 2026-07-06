@@ -363,7 +363,7 @@ const openCliWorkspace = async (request: CliLaunchRequest) => {
     return;
   }
 
-  const result = await chat.switchWorkspace(resolved.workspacePath);
+  const result = await chat.switchWorkspace(resolved.workspacePath, { restoreSession: false });
   if (!result.ok) {
     showCliError(result.error ?? 'Workspace could not be opened.');
     showMainWindow();

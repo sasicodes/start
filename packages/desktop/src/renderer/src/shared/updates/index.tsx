@@ -82,7 +82,7 @@ export const Update = memo(() => {
               aria-label="Release notes"
               class="flex h-full shrink-0 items-center rounded-r-full py-0 pr-4 pl-3 text-ink transition-colors duration-75 ease-out hover:bg-control focus-visible:bg-control"
             >
-              <NoteTextIcon class="size-3.5" />
+              <NoteTextIcon class="size-5" />
             </a>
           </Tooltip>
         </>
