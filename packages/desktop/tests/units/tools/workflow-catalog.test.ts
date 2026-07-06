@@ -26,11 +26,13 @@ describe('workflow catalog', () => {
     );
   });
 
-  it('explains scoring and lists models when some are available', () => {
+  it('explains scoring, tells the agent to conserve tokens, and lists models when some are available', () => {
     const description = workflowToolDescription([option({})]);
 
     expect(description).toContain('higher is better');
     expect(description).toContain('affordability higher means cheaper');
+    expect(description).toContain('Do not default to the highest scores');
+    expect(description).toContain('minimum capability it needs');
     expect(description).toContain('anthropic:claude-opus-4-8');
   });
 
