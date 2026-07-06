@@ -9,6 +9,7 @@ import {
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
 import { Tooltip } from '@renderer/ui/tooltip';
+import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 
@@ -31,6 +32,7 @@ export const Update = memo(() => {
   const downloaded = status === 'downloaded';
   const active = animationActive(appFocused) && !downloading;
   const label = updateLabel(state);
+  const showReleaseNotes = !downloaded;
 
   return (
     <motion.div
@@ -45,7 +47,10 @@ export const Update = memo(() => {
           aria-label={label}
           disabled={downloading}
           onClick={downloaded ? installUpdate : downloadUpdate}
-          class="flex h-full shrink-0 items-center justify-center overflow-hidden rounded-l-full border-0 bg-transparent px-5 text-sm leading-5 font-medium whitespace-nowrap text-ink outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control disabled:bg-muted disabled:text-soft"
+          class={tw(
+            'flex h-full shrink-0 items-center justify-center overflow-hidden border-0 bg-transparent text-sm leading-5 font-medium whitespace-nowrap text-ink outline-0 transition-[background-color,width,padding] duration-75 ease-out select-none hover:bg-control focus-visible:bg-control disabled:bg-muted disabled:text-soft',
+            showReleaseNotes ? 'rounded-l-full py-0 pr-3 pl-5' : 'rounded-full px-5'
+          )}
         >
           <span class="relative inline-block max-w-full truncate leading-5 tabular-nums">
             {active && (
@@ -56,22 +61,32 @@ export const Update = memo(() => {
                 {label}
               </span>
             )}
-            {label}
+            {state.status === 'downloading' ? (
+              <>
+                Downloading (<span class="inline-block w-9 text-center">{state.percent}%</span>)
+              </>
+            ) : (
+              label
+            )}
           </span>
         </button>
       </Tooltip>
-      <span aria-hidden="true" class="h-full w-0.5 shrink-0 bg-line" />
-      <Tooltip label="Release notes">
-        <a
-          href={releaseNotesUrl}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Release notes"
-          class="grid h-full w-8 shrink-0 place-items-center rounded-r-full text-ink transition-colors duration-75 ease-out hover:bg-control focus-visible:bg-control"
-        >
-          <NoteTextIcon class="size-3.5" />
-        </a>
-      </Tooltip>
+      {showReleaseNotes && (
+        <>
+          <span aria-hidden="true" class="h-full w-0.5 shrink-0 bg-line" />
+          <Tooltip label="Release notes">
+            <a
+              href={releaseNotesUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Release notes"
+              class="flex h-full shrink-0 items-center rounded-r-full py-0 pr-4 pl-3 text-ink transition-colors duration-75 ease-out hover:bg-control focus-visible:bg-control"
+            >
+              <NoteTextIcon class="size-3.5" />
+            </a>
+          </Tooltip>
+        </>
+      )}
     </motion.div>
   );
 });
