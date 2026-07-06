@@ -10,5 +10,5 @@ export const workflowToolDescription = (options: WorkflowModelOption[]) => {
     return 'Run a workflow of focused sub-agents in parallel. No models are configured; set up a provider before spawning sub-agents.';
   }
 
-  return `Run a workflow of focused sub-agents in parallel. Pick a model and effort for each task from the scores below (all scores are 0-10, higher is better; affordability higher means cheaper). Match cheap simple work to a cheaper, lower-intelligence model with low effort; give design, UX, and architecture work a higher-taste model; give hard reasoning a higher-intelligence model with high or xhigh effort.\n\nModels:\n${workflowModelMenu(options)}`;
+  return `Run a workflow of focused sub-agents in parallel. Choose a model and effort per task from the scores below (0-10, higher is better; affordability higher means cheaper). Do not default to the highest scores, that wastes tokens. Pick the cheapest model and lowest effort that can still do the task well, and only move up when the task truly needs it: reading, lookups, and mechanical edits belong on a cheap model at low effort; design, UX, and architecture want higher taste; genuinely hard reasoning wants higher intelligence at high or xhigh effort. Match each task to the minimum capability it needs.\n\nModels:\n${workflowModelMenu(options)}`;
 };
