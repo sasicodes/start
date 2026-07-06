@@ -13,10 +13,8 @@ import { agentEndError, clampThinkingLevel } from '@main/helpers';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
-import type { SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
+import type { ResolvedModel, SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
 import type { SubagentActivity } from '@main/types';
-
-type ResolvedModel = ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
 
 interface RunSubagentsOptions {
   cwd: string;
