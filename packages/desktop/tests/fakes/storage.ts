@@ -1,5 +1,5 @@
-import type { EffortLevel, SessionNotice } from '@main/types';
 import type { TrustedMobileDevice } from '@main/storage';
+import type { EffortLevel, SessionNotice } from '@main/types';
 
 export interface MobileRelaySettings {
   desktopId: string;

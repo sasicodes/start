@@ -39,7 +39,10 @@ vi.mock('@main/storage', () => import('./fakes/storage.js'));
 vi.mock('@main/window', () => import('./fakes/window.js'));
 vi.mock('@main/workspace/access', () => import('./fakes/workspace-access.js'));
 vi.mock('@main/attachments', () => import('./fakes/attachments.js'));
-vi.mock('@main/environment', () => ({ environment: { rendererUrl: undefined } }));
+vi.mock('@main/environment', () => ({
+  environment: { rendererUrl: undefined },
+  readEnvironmentValue: (name: string) => process.env[name]?.trim() || undefined
+}));
 vi.mock('@main/prompt/loader', () => ({ createStartResourceLoader: async () => ({}) }));
 vi.mock('@main/db', () => {
   const stub = {

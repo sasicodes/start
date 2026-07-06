@@ -2,6 +2,7 @@ import { batch, type Signal, signal, untracked } from '@preact/signals';
 import type { Turn } from '@renderer/utils/types';
 
 export const selectedModelKeyState = signal('');
+export const composerPrefillState = signal('');
 export const contextPercentState = signal(0);
 export const turnIdsState = signal<string[]>([]);
 

@@ -44,6 +44,8 @@ import {
   thinkingDelta
 } from '@main/helpers';
 import { historyTurns } from '@main/history';
+import { disposeMcpClients } from '@main/mcp/clients';
+import { mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
@@ -258,6 +260,14 @@ export class ChatService {
   constructor() {
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
+    warmMcpServers(this.workspaceCwd);
+  }
+
+  private async sessionCustomTools(sessionId: string, workspacePath: string) {
+    return [
+      ...createStartCustomTools(this.subagentToolsOptions(sessionId, workspacePath)),
+      ...(await mcpToolsForSession(workspacePath))
+    ];
   }
 
   setMobileSessionChangeHandler(handler: MobileSessionChangeHandler): void {
@@ -507,7 +517,10 @@ export class ChatService {
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
-      const resourceLoader = await createStartResourceLoader(workspacePath);
+      const [resourceLoader, customTools] = await Promise.all([
+        createStartResourceLoader(workspacePath),
+        this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
+      ]);
       const { session } = await createAgentSession({
         cwd: workspacePath,
         model,
@@ -515,7 +528,7 @@ export class ChatService {
         resourceLoader,
         authStorage: this.authStorage,
         modelRegistry: this.modelRegistry,
-        customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
+        customTools,
         settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
       });
@@ -637,7 +650,10 @@ export class ChatService {
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
 
     const sessionManager = SessionManager.create(workspacePath);
-    const resourceLoader = await createStartResourceLoader(workspacePath);
+    const [resourceLoader, customTools] = await Promise.all([
+      createStartResourceLoader(workspacePath),
+      this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
+    ]);
     const { session } = await createAgentSession({
       cwd: workspacePath,
       model,
@@ -645,7 +661,7 @@ export class ChatService {
       resourceLoader,
       authStorage: this.authStorage,
       modelRegistry: this.modelRegistry,
-      customTools: createStartCustomTools(this.subagentToolsOptions(sessionManager.getSessionId(), workspacePath)),
+      customTools,
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
     });
@@ -953,6 +969,7 @@ export class ChatService {
       this.persistWorkspace(this.workspaceCwd);
       activateWorkspaceAccess(this.workspaceCwd);
       this.refreshWorkspaceSearch();
+      warmMcpServers(this.workspaceCwd);
 
       return { ok: true, status: await this.getStatus() };
     } catch (error) {
@@ -1486,6 +1503,7 @@ export class ChatService {
     this.sessionRuntimeStates.clear();
     this.attachments.clear();
     disposeWorkspaceFinders();
+    disposeMcpClients();
     closeStartDb();
   }
 

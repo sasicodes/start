@@ -572,7 +572,6 @@ if (!singleInstanceLock) {
       withComposerBlurSuppressed,
       notifyRecentSessionsChanged
     });
-
     app.on('browser-window-blur', scheduleAppFocusStateChanged);
     app.on('browser-window-focus', scheduleAppFocusStateChanged);
 

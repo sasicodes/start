@@ -1,6 +1,6 @@
 import { resolveInspectRelay, routeInspectRelay } from '@main/browser/inspect/relay';
 import { inspectScript } from '@main/browser/inspect/script';
-import { withTimeout } from '@main/browser/timeout';
+import { withTimeout } from '@main/utils/timeout';
 import { sendToRendererWindows } from '@main/window';
 import type { WebContents } from 'electron';
 

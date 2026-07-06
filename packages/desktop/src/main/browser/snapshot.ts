@@ -1,5 +1,5 @@
 import { browserElementsScript } from '@main/browser/elements';
-import { withTimeout } from '@main/browser/timeout';
+import { withTimeout } from '@main/utils/timeout';
 import type { WebContents } from 'electron';
 
 export interface BrowserSnapshotHeading {

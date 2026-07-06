@@ -275,6 +275,7 @@ const rowsToRaw = (rows: StateRow[]): Record<string, unknown> => {
 };
 
 const rawToStartStateShape = (raw: Record<string, unknown>) => ({
+  activeHarness: raw[stateKey.activeHarness],
   lastWorkspace: raw[stateKey.lastWorkspace],
   mobileRelay: raw[stateKey.mobileRelay],
   composerShortcut: raw[stateKey.composerShortcut],
@@ -287,16 +288,23 @@ const rawToStartStateShape = (raw: Record<string, unknown>) => ({
   solidWindowBackground: raw[stateKey.solidWindowBackground]
 });
 
+let cachedState: StartState | null = null;
+
 export const readStartState = (): StartState => {
+  if (cachedState) return cachedState;
+
   try {
-    return parseStartState(rawToStartStateShape(rowsToRaw(readAllRows())));
+    cachedState = parseStartState(rawToStartStateShape(rowsToRaw(readAllRows())));
   } catch {
     return defaultStartState;
   }
+
+  return cachedState;
 };
 
 export const writeStartState = (state: StartState): StartState => {
   const nextState = parseStartState(state);
+  cachedState = nextState;
   runStartTransaction(() => {
     writeRow(stateKey.mobileRelay, nextState.mobileRelay);
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);

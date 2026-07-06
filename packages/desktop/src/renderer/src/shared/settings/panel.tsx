@@ -38,31 +38,38 @@ export const Settings = memo(
   }: SettingsProps) => {
     const updateTranslucency = (enabled: boolean) => onSolidWindowBackgroundChange(!enabled);
 
+    const tabBody = () => {
+      if (tab === 'personalization') {
+        return (
+          <Personalization
+            translucentBackground={!solidWindowBackground}
+            onTranslucentBackgroundChange={updateTranslucency}
+          />
+        );
+      }
+
+      if (tab === 'providers') {
+        return (
+          <Providers
+            providers={providers}
+            onSaveApiKey={onSaveApiKey}
+            onLoginSubscription={onLoginSubscription}
+            onDisconnectProvider={onDisconnectProvider}
+          />
+        );
+      }
+
+      if (tab === 'mobile') return <Mobile settings={mobileRelay} onChange={onMobileRelayChange} />;
+      return <Shortcuts />;
+    };
+
     return (
       <section class="min-h-full px-4 pt-4 pb-3 outline-0">
         <header class="mb-6 flex items-center justify-between gap-3 text-sm leading-6 font-medium">
           <SettingsTabs value={tab} onChange={onTabChange} />
           <PanelCloseButton onClick={onClose} />
         </header>
-        <div>
-          {tab === 'personalization' ? (
-            <Personalization
-              translucentBackground={!solidWindowBackground}
-              onTranslucentBackgroundChange={updateTranslucency}
-            />
-          ) : tab === 'providers' ? (
-            <Providers
-              providers={providers}
-              onSaveApiKey={onSaveApiKey}
-              onLoginSubscription={onLoginSubscription}
-              onDisconnectProvider={onDisconnectProvider}
-            />
-          ) : tab === 'mobile' ? (
-            <Mobile settings={mobileRelay} onChange={onMobileRelayChange} />
-          ) : (
-            <Shortcuts />
-          )}
-        </div>
+        <div>{tabBody()}</div>
       </section>
     );
   }

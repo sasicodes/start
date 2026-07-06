@@ -1,5 +1,5 @@
-import type { AppSettingsResult } from '@preload/index';
 import { signal } from '@preact/signals';
+import type { AppSettingsResult } from '@preload/index';
 
 export const keepAwake = signal(true);
 export const composerShortcut = signal('Control+Space');
