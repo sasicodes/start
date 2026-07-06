@@ -22,7 +22,12 @@ describe('sub-agent tool details', () => {
           agents: [{ id: 'agent-1', name: 'Arul', status: 'unknown' }]
         }
       },
-      args: { tasks: [{ prompt: 'Review UI.' }, { prompt: 'Review tests.' }] },
+      args: {
+        tasks: [
+          { prompt: 'Review UI.', model: 'anthropic:claude-opus-4-7', effort: 'low' },
+          { prompt: 'Review tests.', model: 'anthropic:claude-opus-4-7', effort: 'low' }
+        ]
+      },
       key: 'tool:subagents',
       toolName: 'run_workflow'
     });
@@ -37,7 +42,7 @@ describe('sub-agent tool details', () => {
       state: 'active',
       toolName: 'run_workflow',
       key: 'tool:subagents',
-      args: { tasks: [{ prompt: 'Review renderer activity UI.' }] },
+      args: { tasks: [{ prompt: 'Review renderer activity UI.', model: 'anthropic:claude-opus-4-7', effort: 'high' }] },
       result: {
         content: [{ text: 'Sub-agents are working.', type: 'text' }],
         details: {
@@ -62,41 +67,47 @@ describe('sub-agent tool details', () => {
     expect(detail.subagents?.[0]?.task).toBe('Review renderer activity UI.');
   });
 
-  it('normalizes Claude single-task sub-agent arguments', () => {
-    expect(normalizeSubagentTasks({ prompt: 'Review renderer activity UI.' })).toEqual([
-      { prompt: 'Review renderer activity UI.' }
+  it('normalizes single-task workflow arguments and requires model and effort', () => {
+    const single = { prompt: 'Review renderer activity UI.', model: 'anthropic:claude-opus-4-7', effort: 'low' };
+    expect(normalizeSubagentTasks(single)).toEqual([single]);
+    expect(normalizeSubagentTasks({ tasks: single })).toEqual([single]);
+    expect(
+      normalizeSubagentTasks({
+        tasks: [
+          { prompt: 'Review UI.', model: 'openai:gpt-5.5', effort: 'high' },
+          { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5', effort: 'low' }
+        ]
+      })
+    ).toEqual([
+      { prompt: 'Review UI.', model: 'openai:gpt-5.5', effort: 'high' },
+      { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5', effort: 'low' }
     ]);
-    expect(normalizeSubagentTasks({ tasks: { prompt: 'Review main process.' } })).toEqual([
-      { prompt: 'Review main process.' }
-    ]);
-    expect(normalizeSubagentTasks({ tasks: [{ prompt: 'Review UI.' }, { prompt: 'Review tests.' }] })).toEqual([
-      { prompt: 'Review UI.' },
-      { prompt: 'Review tests.' }
-    ]);
-    expect(normalizeSubagentTasks(['Review UI.', 'Review tests.'])).toEqual([
-      { prompt: 'Review UI.' },
-      { prompt: 'Review tests.' }
-    ]);
-    expect(normalizeSubagentTasks({ tasks: [{ prompt: '  ' }, { name: 'no prompt' }] })).toEqual([]);
+    expect(normalizeSubagentTasks(['Review UI.', 'Review tests.'])).toEqual([]);
+    expect(normalizeSubagentTasks({ tasks: [{ prompt: 'No model or effort.' }] })).toEqual([]);
+    expect(normalizeSubagentTasks({ tasks: [{ prompt: '  ', model: 'openai:gpt-5.5', effort: 'low' }] })).toEqual([]);
     expect(normalizeSubagentTasks({})).toEqual([]);
 
     const detail = toolEventDetail({
       state: 'active',
       toolName: 'run_workflow',
       key: 'tool:subagents',
-      args: { prompt: 'Review renderer activity UI.' }
+      args: single
     });
 
     expect(detail.title).toBe('Spawning 1 agent');
   });
 
   it('caps normalized tasks at the spawn limit', () => {
-    const tasks = Array.from({ length: 12 }, (_, index) => ({ prompt: `Task ${index}` }));
+    const tasks = Array.from({ length: 12 }, (_, index) => ({
+      prompt: `Task ${index}`,
+      model: 'anthropic:claude-opus-4-7',
+      effort: 'low'
+    }));
     const normalized = normalizeSubagentTasks({ tasks });
 
     expect(maxSubagentTasks).toBe(8);
     expect(normalized).toHaveLength(maxSubagentTasks);
-    expect(normalized.at(-1)).toEqual({ prompt: 'Task 7' });
+    expect(normalized.at(-1)).toEqual({ prompt: 'Task 7', model: 'anthropic:claude-opus-4-7', effort: 'low' });
   });
 
   it('expands completed summaries', () => {

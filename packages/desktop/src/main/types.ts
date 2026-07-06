@@ -2,7 +2,7 @@ export type EffortLevel = 'high' | 'low' | 'xhigh' | 'medium';
 export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
 export type ProviderKey = 'openai' | 'anthropic';
 
-export const effortLevels: EffortLevel[] = ['low', 'medium', 'high', 'xhigh'];
+export const effortLevels = ['low', 'medium', 'high', 'xhigh'] as const satisfies readonly EffortLevel[];
 
 export type ChatStatus = {
   ready: boolean;

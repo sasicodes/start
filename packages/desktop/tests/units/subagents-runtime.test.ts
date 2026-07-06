@@ -30,14 +30,13 @@ describe('sub-agent runtime', () => {
   it('keeps full sub-agent tools enabled', async () => {
     const snapshots: SubagentRunSnapshot[] = [];
     const run = runSubagents({
-      model,
       authStorage,
       modelRegistry,
       settingsManager,
+      resolveModel: () => model,
       cwd: '/workspace/project',
-      tasks: [{ prompt: 'Inspect the project.' }],
+      tasks: [{ prompt: 'Inspect the project.', model: 'anthropic:claude-opus-4-7', effort: 'medium' }],
       nameAllocator: new SubagentNameAllocator(),
-      thinkingLevel: 'medium',
       customTools: () => [tool('browser_open'), tool('browser_snapshot')],
       onUpdate: (snapshot) => snapshots.push(snapshot)
     });
@@ -59,16 +58,19 @@ describe('sub-agent runtime', () => {
 
   it('runs at most four sub-agents at once', async () => {
     const run = runSubagents({
-      model,
       authStorage,
       modelRegistry,
       settingsManager,
       onUpdate: () => {},
       customTools: () => [],
-      thinkingLevel: 'medium',
+      resolveModel: () => model,
       cwd: '/workspace/project',
       nameAllocator: new SubagentNameAllocator(),
-      tasks: Array.from({ length: 6 }, (_, index) => ({ prompt: `Task ${index}.` }))
+      tasks: Array.from({ length: 6 }, (_, index) => ({
+        prompt: `Task ${index}.`,
+        model: 'anthropic:claude-opus-4-7',
+        effort: 'medium' as const
+      }))
     });
 
     await vi.waitFor(() => expect(listFakeSessions()).toHaveLength(4));

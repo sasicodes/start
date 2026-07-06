@@ -64,8 +64,10 @@ import {
   updateSessionTitle,
   upsertSessionOnStart
 } from '@main/sessions';
+import { modelScore } from '@main/models';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
+import type { WorkflowModelOption } from '@main/subagents/types';
 import {
   type AgentTab,
   type AgentTabStatus,
@@ -2000,9 +2002,10 @@ export class ChatService {
       authStorage: this.authStorage,
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
-      model: () => this.pickModel() ?? null,
       settingsManager: this.settingsManager,
-      thinkingLevel: () => this.selectedThinkingLevel
+      model: () => this.pickModel() ?? null,
+      availableModels: () => this.workflowModels(),
+      resolveModel: (key: string) => this.findModelByKey(key) ?? this.pickModel() ?? null
     };
     const subagentSessionTools = (): ReturnType<typeof createStartCustomTools> =>
       createStartCustomTools({ ...base, includeSubagents: false, customTools: subagentSessionTools });
@@ -2137,6 +2140,22 @@ export class ChatService {
 
   private getPickerModels() {
     return getVisibleModels(this.modelRegistry.getAvailable());
+  }
+
+  private workflowModels(): WorkflowModelOption[] {
+    return this.getPickerModels().flatMap((model) => {
+      const score = modelScore(model.id);
+      if (!score) return [];
+      return [
+        {
+          score,
+          name: model.name,
+          key: modelKey(model),
+          provider: model.provider,
+          effortLevels: getSupportedEffortLevels(model)
+        }
+      ];
+    });
   }
 
   private isThinkingLevel(level: string): level is EffortLevel {
