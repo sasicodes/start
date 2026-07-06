@@ -10,8 +10,8 @@ export interface SubagentTaskInput {
 export interface WorkflowModelOption {
   key: string;
   name: string;
-  score: ModelScore;
   provider: string;
+  score: ModelScore;
   effortLevels: EffortLevel[];
 }
 
