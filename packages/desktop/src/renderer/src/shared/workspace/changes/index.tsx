@@ -4,16 +4,16 @@ import { hasGitDiff } from '@renderer/shared/workspace/changes/controls';
 import { diffFold, nextDiffFold, setDiffFold } from '@renderer/shared/workspace/changes/diff/fold';
 import type { DiffViewMode } from '@renderer/shared/workspace/changes/diff/types';
 import {
-  availableViewModes,
-  emptyGitSummary,
-  type GitPatchViewMode,
-  gitChangesLabel,
+  useGitPatch,
   gitViewLabel,
   nextViewMode,
-  sectionsForViewMode,
-  summaryForViewMode,
   useGitChanges,
-  useGitPatch
+  emptyGitSummary,
+  gitChangesLabel,
+  availableViewModes,
+  sectionsForViewMode,
+  type GitPatchViewMode,
+  summaryForViewMode
 } from '@renderer/shared/workspace/changes/state';
 import { ChangesIcon, CollapseAllIcon, CycleVerticalIcon, DiffSplitIcon, ExpandAllIcon } from '@renderer/ui/icons';
 import {

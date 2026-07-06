@@ -1,5 +1,5 @@
-import { composerShortcut } from '@renderer/shared/settings/state';
 import { shortcutKeys } from '@renderer/shared/shortcuts/format';
+import { composerShortcut } from '@renderer/shared/settings/state';
 import { memo } from 'preact/compat';
 
 interface ShortcutEntry {

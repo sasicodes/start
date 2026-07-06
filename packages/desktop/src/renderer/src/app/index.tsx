@@ -1,4 +1,3 @@
-import { useSignalEffect } from '@preact/signals';
 import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
@@ -18,7 +17,6 @@ import { useFileAttachments } from '@renderer/shared/composer/use-file-attachmen
 import { newSessionMention } from '@renderer/shared/input';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { canSelectWorkspace } from '@renderer/shared/workspace/select';
-import { composerPrefillState } from '@renderer/state/chat';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
@@ -156,16 +154,6 @@ export const App = () => {
     },
     [setDraft]
   );
-
-  useSignalEffect(() => {
-    const prefill = composerPrefillState.value;
-    if (!prefill) return;
-
-    composerPrefillState.value = '';
-    closeSidePanel();
-    setDraft(prefill);
-    textareaRef.current?.focus();
-  });
 
   const selectModelFromComposer = useCallback(
     (modelKey: string) => {

@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { readStartState, type TrustedMobileDevice, updateStartState } from '@main/storage';
+import { readStartState, updateStartState, type TrustedMobileDevice } from '@main/storage';
 
 interface TrustDeviceInput {
   name?: string;

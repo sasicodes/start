@@ -1,6 +1,6 @@
-import { mobileTrustProof, trustMobileDevice, verifyMobileResume } from '@main/relay/trust';
 import { describe, expect, it } from 'vitest';
 import { getStorageSnapshot, resetStorage } from '../fakes/storage.js';
+import { mobileTrustProof, trustMobileDevice, verifyMobileResume } from '@main/relay/trust';
 
 describe('mobile relay trust', () => {
   it('stores a trusted mobile device and verifies its resume proof', () => {

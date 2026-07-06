@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { type FSWatcher, watch } from 'node:fs';
+import { watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch, gitEnv } from '@main/git';
