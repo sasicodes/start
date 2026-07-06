@@ -15,6 +15,15 @@ export const Footer = () => {
         </span>
         <span>·</span>
         <a
+          href="https://github.com/sasicodes/start"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-neutral-900 transition-colors"
+        >
+          GitHub
+        </a>
+        <span>·</span>
+        <a
           href="https://github.com/sasicodes/start/releases"
           target="_blank"
           rel="noopener noreferrer"

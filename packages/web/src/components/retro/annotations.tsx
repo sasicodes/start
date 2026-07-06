@@ -6,13 +6,13 @@ interface Annotation {
 
 export const ANNOTATIONS: Annotation[] = [
   { label: 'WORKSPACES', side: 'left', labelY: 205 },
-  { label: 'PARALLEL AGENTS', side: 'left', labelY: 285 },
-  { label: 'MULTI-MODEL', side: 'left', labelY: 365 },
-  { label: 'EFFORT LEVELS', side: 'left', labelY: 445 },
-  { label: 'PROMPT QUEUE', side: 'right', labelY: 205 },
-  { label: 'FOLLOW-UPS', side: 'right', labelY: 285 },
-  { label: 'CHANGE REVIEW', side: 'right', labelY: 365 },
-  { label: 'BYOK', side: 'right', labelY: 445 }
+  { label: 'SUBAGENTS', side: 'left', labelY: 285 },
+  { label: 'DYNAMIC THREADS', side: 'left', labelY: 365 },
+  { label: 'CHANGE REVIEW', side: 'left', labelY: 445 },
+  { label: 'WORKTREES', side: 'right', labelY: 205 },
+  { label: 'MCP TOOLS', side: 'right', labelY: 285 },
+  { label: 'BUILT-IN BROWSER', side: 'right', labelY: 365 },
+  { label: 'MULTI-MODEL', side: 'right', labelY: 445 }
 ];
 
 export const DEFAULT_TARGETS = [
