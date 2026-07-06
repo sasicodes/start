@@ -73,7 +73,9 @@ export const createSubagentTools = ({
     name: 'run_workflow',
     executionMode: 'sequential',
     parameters: spawnToolParameters,
-    description: workflowToolDescription(availableModels()),
+    get description() {
+      return workflowToolDescription(availableModels());
+    },
     promptSnippet: 'Use for independent research, review, or mapping work.',
     prepareArguments: (args) => ({ tasks: normalizeSubagentTasks(args) }),
     async execute(_toolCallId, { tasks }, signal, onUpdate) {
