@@ -132,6 +132,40 @@ describe('queue and abort', () => {
     await firstSend;
   });
 
+  it('keeps a background session queue in sync while another workspace is active', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    await chat.send('queued follow-up', webContents);
+
+    const switchToB = await chat.switchWorkspace('/tmp/workspace-b');
+    expect(switchToB.ok).toBe(true);
+
+    session.followUpQueue = [];
+    session.pushEvent({ type: 'queue_update', steering: [], followUp: [] });
+    session.pushEvent({ type: 'message_start', message: { role: 'user', content: 'queued follow-up' } });
+
+    const lastUpdateWhileAway = eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0] as {
+      text: string;
+    }[];
+    expect(lastUpdateWhileAway.map((message) => message.text)).toEqual(['queued follow-up']);
+
+    const backToA = await chat.switchWorkspace('/tmp/workspace-a');
+    expect(backToA.ok).toBe(true);
+    expect(backToA.session?.id).toBe(tab.id);
+    expect(backToA.session?.queuedMessages).toEqual([]);
+
+    await chat.abort(webContents);
+    session.finishPrompt();
+    await firstSend;
+  });
+
   it('rejects a queued send when no stream is in flight', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

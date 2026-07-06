@@ -281,6 +281,7 @@ export interface SwitchWorkspaceResult {
   cancelled?: boolean;
   unchanged?: boolean;
   workspace?: WorkspaceInfo;
+  session?: OpenSessionResult;
 }
 
 export interface OpenSessionResult {

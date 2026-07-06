@@ -781,7 +781,9 @@ export class ChatService {
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
     this.setActiveSession(session.sessionManager);
-    this.runtimeStateForSession(session).isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    const runtimeState = this.runtimeStateForSession(session);
+    runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    runtimeState.queueDeliveryCandidates = [];
     this.shouldCreateSession = false;
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
@@ -962,10 +964,11 @@ export class ChatService {
       this.attachments.clear();
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
-      if (this.session)
-        this.runtimeStateForSession(this.session).isGenerating = Boolean(
-          this.session.isStreaming || this.session.isBashRunning
-        );
+      if (this.session) {
+        const runtimeState = this.runtimeStateForSession(this.session);
+        runtimeState.isGenerating = Boolean(this.session.isStreaming || this.session.isBashRunning);
+        runtimeState.queueDeliveryCandidates = [];
+      }
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistWorkspace(this.workspaceCwd);
@@ -973,9 +976,36 @@ export class ChatService {
       this.refreshWorkspaceSearch();
       warmMcpServers(this.workspaceCwd);
 
-      return { ok: true, status: await this.getStatus() };
+      const session = this.session
+        ? {
+            ok: true,
+            id: this.activeSessionId,
+            turns: this.sessionTurns(this.session),
+            queuedMessages: this.visibleQueuedMessages()
+          }
+        : await this.resumeRecentSession(nextCwd);
+
+      return { ok: true, status: await this.getStatus(), ...(session ? { session } : {}) };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Workspace could not be switched.' };
+    }
+  }
+
+  private async resumeRecentSession(workspacePath: string): Promise<OpenSessionResult | null> {
+    try {
+      const sessions = await SessionManager.listAll();
+      const candidates = sessions
+        .filter(
+          (session) => session.cwd === workspacePath && session.messageCount > 0 && !getSession(session.id)?.archived
+        )
+        .sort((first, second) => second.modified.getTime() - first.modified.getTime());
+      const recent = candidates[0];
+      if (!recent) return null;
+
+      const opened = await this.openSession(recent.path);
+      return opened.ok ? opened : null;
+    } catch {
+      return null;
     }
   }
 
@@ -1230,11 +1260,13 @@ export class ChatService {
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
 
-      const deltas = createDeltaCoalescer(streamDeltaFlushMs, (flushed) => {
-        if (flushed.senderText) this.emit('delta', flushed.senderText, webContents);
-        if (flushed.text) this.emitScoped('chat:scoped-delta', sessionId, workspacePath, flushed.text);
-        if (flushed.senderThinking) this.emit('thinking-delta', flushed.senderThinking, webContents);
-        if (flushed.thinking) this.emitScoped('chat:scoped-thinking-delta', sessionId, workspacePath, flushed.thinking);
+      const deltas = createDeltaCoalescer(streamDeltaFlushMs, (chunks) => {
+        for (const chunk of chunks) {
+          const scopedChannel = chunk.kind === 'text' ? 'chat:scoped-delta' : 'chat:scoped-thinking-delta';
+          if (chunk.senderDelta)
+            this.emit(chunk.kind === 'text' ? 'delta' : 'thinking-delta', chunk.senderDelta, webContents);
+          this.emitScoped(scopedChannel, sessionId, workspacePath, chunk.delta);
+        }
       });
 
       let generationStartNotified = false;
@@ -1246,7 +1278,8 @@ export class ChatService {
         }
         if (event.type === 'queue_update') {
           deltas.flush();
-          if (active) this.syncQueuedMessages(event.steering, event.followUp, webContents);
+          if (active) this.syncQueuedMessages(state, event.steering, event.followUp, webContents);
+          else this.syncQueuedMessages(state, event.steering, event.followUp);
           return;
         }
 
@@ -1612,12 +1645,12 @@ export class ChatService {
   }
 
   private syncQueuedMessages(
+    runtimeState: SessionRuntimeState,
     steering: readonly string[],
     followUp: readonly string[],
     webContents?: WebContents
   ): void {
-    const runtimeState = this.activeRuntimeState();
-    if (!runtimeState || runtimeState.queueRebuildDepth > 0) return;
+    if (runtimeState.queueRebuildDepth > 0) return;
 
     const steeringMessages = [...steering];
     const followUpMessages = [...followUp];

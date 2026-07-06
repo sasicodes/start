@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getFakeSession } from '../fakes/agent/index.js';
+import { FakeSessionManager, getFakeSession } from '../fakes/agent/index.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
 import { activationLog } from '../fakes/workspace-access.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
@@ -34,7 +34,38 @@ describe('workspace switching', () => {
 
     const backToA = await chat.switchWorkspace('/tmp/workspace-a');
     expect(backToA.ok).toBe(true);
+    expect(backToA.session?.id).toBe(tabA.id);
+    expect(backToA.session?.turns?.map((turn) => turn.text)).toEqual(['one']);
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
+  });
+
+  it('opens the most recent stored session when switching into a workspace with history', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+
+    const stored = FakeSessionManager.create('/tmp/workspace-b');
+    stored.appendEntry({
+      id: 'entry-1',
+      type: 'message',
+      timestamp: new Date().toISOString(),
+      message: { role: 'user', content: 'stored prompt' }
+    });
+
+    const result = await chat.switchWorkspace('/tmp/workspace-b');
+
+    expect(result.ok).toBe(true);
+    expect(result.session?.id).toBe(stored.getSessionId());
+    expect(result.session?.turns?.map((turn) => turn.text)).toEqual(['stored prompt']);
+    expect((await chat.getStatus()).sessionId).toBe(stored.getSessionId());
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-b');
+  });
+
+  it('starts fresh when switching into a workspace without stored sessions', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const result = await chat.switchWorkspace('/tmp/workspace-empty');
+
+    expect(result.ok).toBe(true);
+    expect(result.session).toBeUndefined();
+    expect((await chat.getStatus()).sessionId).toBeUndefined();
   });
 
   it('does not reset the active session when selecting the current workspace', async () => {

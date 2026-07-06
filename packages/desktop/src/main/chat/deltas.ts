@@ -1,8 +1,7 @@
-export interface DeltaFlush {
-  text: string;
-  thinking: string;
-  senderText: string;
-  senderThinking: string;
+export interface DeltaChunk {
+  kind: 'text' | 'thinking';
+  delta: string;
+  senderDelta: string;
 }
 
 export interface DeltaCoalescer {
@@ -10,11 +9,9 @@ export interface DeltaCoalescer {
   push: (kind: 'text' | 'thinking', delta: string, sender: boolean) => void;
 }
 
-const emptyFlush = (): DeltaFlush => ({ text: '', thinking: '', senderText: '', senderThinking: '' });
-
-export const createDeltaCoalescer = (flushMs: number, onFlush: (deltas: DeltaFlush) => void): DeltaCoalescer => {
+export const createDeltaCoalescer = (flushMs: number, onFlush: (chunks: DeltaChunk[]) => void): DeltaCoalescer => {
   let timer: NodeJS.Timeout | null = null;
-  let pending = emptyFlush();
+  let pending: DeltaChunk[] = [];
 
   const flush = () => {
     if (timer) {
@@ -22,21 +19,21 @@ export const createDeltaCoalescer = (flushMs: number, onFlush: (deltas: DeltaFlu
       timer = null;
     }
 
-    const { text, thinking, senderText, senderThinking } = pending;
-    if (!text && !thinking && !senderText && !senderThinking) return;
-    pending = emptyFlush();
-    onFlush({ text, thinking, senderText, senderThinking });
+    if (pending.length === 0) return;
+    const chunks = pending;
+    pending = [];
+    onFlush(chunks);
   };
 
   const push = (kind: 'text' | 'thinking', delta: string, sender: boolean) => {
     if (!delta) return;
 
-    if (kind === 'text') {
-      pending.text += delta;
-      if (sender) pending.senderText += delta;
+    const last = pending.at(-1);
+    if (last && last.kind === kind) {
+      last.delta += delta;
+      if (sender) last.senderDelta += delta;
     } else {
-      pending.thinking += delta;
-      if (sender) pending.senderThinking += delta;
+      pending.push({ kind, delta, senderDelta: sender ? delta : '' });
     }
 
     if (!timer) timer = setTimeout(flush, flushMs);
