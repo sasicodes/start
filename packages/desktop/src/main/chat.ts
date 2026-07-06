@@ -498,7 +498,7 @@ export class ChatService {
     if (input.sessionId) return this.sendToTab(input.sessionId, text);
 
     if (input.workspacePath && input.workspacePath !== this.workspaceCwd) {
-      const result = await this.switchWorkspace(input.workspacePath);
+      const result = await this.switchWorkspace(input.workspacePath, { restoreSession: false });
       if (!result.ok) return { ok: false, error: result.error ?? 'Workspace could not be switched.' };
     }
 
@@ -550,12 +550,7 @@ export class ChatService {
       activateWorkspaceAccess(this.workspaceCwd);
       this.refreshWorkspaceSearch();
       this.shouldCreateSession = false;
-      return {
-        ok: true,
-        id: sessionManager.getSessionId(),
-        turns: this.sessionTurns(session),
-        queuedMessages: this.visibleQueuedMessages()
-      };
+      return this.sessionResult(session);
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Session could not be opened.' };
     }
@@ -564,9 +559,7 @@ export class ChatService {
   async openSessionId(sessionId: string): Promise<OpenSessionResult> {
     const id = sessionId.trim();
     if (!id) return { ok: false, error: 'Session id is empty.' };
-    if (this.session?.sessionManager.getSessionId() === id) {
-      return { ok: true, id, turns: this.sessionTurns(this.session), queuedMessages: this.visibleQueuedMessages() };
-    }
+    if (this.session?.sessionManager.getSessionId() === id) return this.sessionResult(this.session);
     if (this.backgroundSessions.has(id)) return this.activateTab(id);
 
     const sessions = await SessionManager.listAll();
@@ -781,20 +774,13 @@ export class ChatService {
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
     this.setActiveSession(session.sessionManager);
-    const runtimeState = this.runtimeStateForSession(session);
-    runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
-    runtimeState.queueDeliveryCandidates = [];
+    this.activateSessionRuntime(session);
     this.shouldCreateSession = false;
     this.persistWorkspace(this.workspaceCwd);
     activateWorkspaceAccess(this.workspaceCwd);
     this.warmWorkspaceSearch();
 
-    return {
-      ok: true,
-      id,
-      turns: this.sessionTurns(session),
-      queuedMessages: this.visibleQueuedMessages()
-    };
+    return this.sessionResult(session);
   }
 
   private async workspaceRootForCwd(cwd: string): Promise<string> {
@@ -951,7 +937,8 @@ export class ChatService {
     }
   }
 
-  async switchWorkspace(cwd: string): Promise<SwitchWorkspaceResult> {
+  async switchWorkspace(cwd: string, options: { restoreSession?: boolean } = {}): Promise<SwitchWorkspaceResult> {
+    const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
     if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: await this.getStatus() };
@@ -964,11 +951,7 @@ export class ChatService {
       this.attachments.clear();
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
-      if (this.session) {
-        const runtimeState = this.runtimeStateForSession(this.session);
-        runtimeState.isGenerating = Boolean(this.session.isStreaming || this.session.isBashRunning);
-        runtimeState.queueDeliveryCandidates = [];
-      }
+      if (this.session) this.activateSessionRuntime(this.session);
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
       this.persistWorkspace(this.workspaceCwd);
@@ -976,14 +959,10 @@ export class ChatService {
       this.refreshWorkspaceSearch();
       warmMcpServers(this.workspaceCwd);
 
-      const session = this.session
-        ? {
-            ok: true,
-            id: this.activeSessionId,
-            turns: this.sessionTurns(this.session),
-            queuedMessages: this.visibleQueuedMessages()
-          }
-        : await this.resumeRecentSession(nextCwd);
+      let session: OpenSessionResult | null = null;
+      if (restoreSession) {
+        session = this.session ? this.sessionResult(this.session) : await this.resumeRecentSession(nextCwd);
+      }
 
       return { ok: true, status: await this.getStatus(), ...(session ? { session } : {}) };
     } catch (error) {
@@ -995,11 +974,9 @@ export class ChatService {
     try {
       const sessions = await SessionManager.listAll();
       const candidates = sessions
-        .filter(
-          (session) => session.cwd === workspacePath && session.messageCount > 0 && !getSession(session.id)?.archived
-        )
+        .filter((session) => session.cwd === workspacePath && session.messageCount > 0)
         .sort((first, second) => second.modified.getTime() - first.modified.getTime());
-      const recent = candidates[0];
+      const recent = candidates.find((session) => !getSession(session.id)?.archived);
       if (!recent) return null;
 
       const opened = await this.openSession(recent.path);
@@ -1007,6 +984,21 @@ export class ChatService {
     } catch {
       return null;
     }
+  }
+
+  private sessionResult(session: AgentSession): OpenSessionResult {
+    return {
+      ok: true,
+      id: session.sessionManager.getSessionId(),
+      turns: this.sessionTurns(session),
+      queuedMessages: this.visibleQueuedMessages(this.runtimeStateForSession(session))
+    };
+  }
+
+  private activateSessionRuntime(session: AgentSession): void {
+    const runtimeState = this.runtimeStateForSession(session);
+    runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    runtimeState.queueDeliveryCandidates = [];
   }
 
   getWorkspaceCwd(): string {

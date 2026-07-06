@@ -59,6 +59,24 @@ describe('workspace switching', () => {
     expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-b');
   });
 
+  it('skips session restore when the caller opts out', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+
+    const stored = FakeSessionManager.create('/tmp/workspace-b');
+    stored.appendEntry({
+      id: 'entry-1',
+      type: 'message',
+      timestamp: new Date().toISOString(),
+      message: { role: 'user', content: 'stored prompt' }
+    });
+
+    const result = await chat.switchWorkspace('/tmp/workspace-b', { restoreSession: false });
+
+    expect(result.ok).toBe(true);
+    expect(result.session).toBeUndefined();
+    expect((await chat.getStatus()).sessionId).toBeUndefined();
+  });
+
   it('starts fresh when switching into a workspace without stored sessions', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const result = await chat.switchWorkspace('/tmp/workspace-empty');
