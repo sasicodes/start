@@ -3,7 +3,7 @@ import { flyoutRisePx } from '@renderer/shared/animation';
 import { type ModelProviderId, modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
 import { selectedModelKeyState } from '@renderer/state/chat';
-import { AnthropicIcon, CheckIcon, ChevronRightIcon, GeminiIcon, OpenAIIcon, SettingsIcon } from '@renderer/ui/icons';
+import { AnthropicIcon, CheckIcon, ChevronRightIcon, OpenAIIcon, SettingsIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSurface } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
@@ -27,11 +27,10 @@ interface ModelsProps {
 
 export const ProviderIcon = ({ id }: { id: ModelProviderId }) => {
   if (id === 'openai') return <OpenAIIcon class="size-4" />;
-  if (id === 'google') return <GeminiIcon class="size-4" />;
   return <AnthropicIcon class="size-4" />;
 };
 
-const tickerProviders: ModelProviderId[] = ['anthropic', 'openai', 'google'];
+const tickerProviders: ModelProviderId[] = ['anthropic', 'openai'];
 const tickerIntervalMs = 1500;
 
 export const ProviderIconTicker = () => {
@@ -191,7 +190,7 @@ const ProviderRow = ({ id, name, active, onActivate, onEnterFlyout }: ProviderRo
 
 const providerRowStep = 36;
 
-const providerOrder: ModelProviderId[] = ['openai', 'anthropic', 'google'];
+const providerOrder: ModelProviderId[] = ['openai', 'anthropic'];
 
 export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }: ModelsProps) => {
   const [active, setActive] = useState(() =>
@@ -215,13 +214,12 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
   };
 
   const providers = useMemo<ProviderGroup[]>(() => {
-    const grouped: Record<ModelProviderId, ModelOption[]> = { google: [], openai: [], anthropic: [] };
+    const grouped: Record<ModelProviderId, ModelOption[]> = { openai: [], anthropic: [] };
     for (const model of models) grouped[modelProviderId(model)].push(model);
 
     return [
       { id: 'openai', name: 'OpenAI', models: grouped.openai },
-      { id: 'anthropic', name: 'Anthropic', models: grouped.anthropic },
-      { id: 'google', name: 'Google', models: grouped.google }
+      { id: 'anthropic', name: 'Anthropic', models: grouped.anthropic }
     ];
   }, [models]);
 

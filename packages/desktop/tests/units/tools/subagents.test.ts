@@ -24,7 +24,7 @@ describe('sub-agent tool details', () => {
       },
       args: { tasks: [{ prompt: 'Review UI.' }, { prompt: 'Review tests.' }] },
       key: 'tool:subagents',
-      toolName: 'subagent_spawn'
+      toolName: 'run_workflow'
     });
 
     expect(detail.title).toBe('Spawning 2 agents');
@@ -35,7 +35,7 @@ describe('sub-agent tool details', () => {
   it('renders sub-agent activity as structured detail rows', () => {
     const detail = toolEventDetail({
       state: 'active',
-      toolName: 'subagent_spawn',
+      toolName: 'run_workflow',
       key: 'tool:subagents',
       args: { tasks: [{ prompt: 'Review renderer activity UI.' }] },
       result: {
@@ -82,7 +82,7 @@ describe('sub-agent tool details', () => {
 
     const detail = toolEventDetail({
       state: 'active',
-      toolName: 'subagent_spawn',
+      toolName: 'run_workflow',
       key: 'tool:subagents',
       args: { prompt: 'Review renderer activity UI.' }
     });

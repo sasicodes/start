@@ -59,10 +59,10 @@ export const createSubagentTools = ({
 }: CreateSubagentToolsOptions) => [
   defineTool({
     label: 'sub-agents',
-    name: 'subagent_spawn',
+    name: 'run_workflow',
     executionMode: 'sequential',
     parameters: spawnToolParameters,
-    description: 'Run focused sub-agents in parallel.',
+    description: 'Run a workflow of focused sub-agents in parallel.',
     promptSnippet: 'Use for independent research, review, or mapping work.',
     prepareArguments: (args) => ({ tasks: normalizeSubagentTasks(args) }),
     async execute(_toolCallId, { tasks }, signal, onUpdate) {

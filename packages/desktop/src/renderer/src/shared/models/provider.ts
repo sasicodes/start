@@ -1,6 +1,6 @@
 import type { ModelOption } from '@preload/index';
 
-export type ModelProviderId = 'anthropic' | 'google' | 'openai';
+export type ModelProviderId = 'anthropic' | 'openai';
 
 const matches = (model: ModelOption, terms: string[]) => {
   const haystack = `${model.provider} ${model.id} ${model.name}`.toLowerCase();
@@ -9,9 +9,7 @@ const matches = (model: ModelOption, terms: string[]) => {
 
 export const modelProviderId = (model: ModelOption): ModelProviderId => {
   if (model.provider === 'anthropic') return 'anthropic';
-  if (model.provider === 'google') return 'google';
   if (model.provider === 'openai') return 'openai';
-  if (matches(model, ['gemini', 'google'])) return 'google';
   if (matches(model, ['gpt', 'openai', 'o3', 'o4'])) return 'openai';
   return 'anthropic';
 };

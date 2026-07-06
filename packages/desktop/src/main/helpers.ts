@@ -68,10 +68,6 @@ export const isProviderModel = (model: { provider: string; id: string; name?: st
       haystack.includes('openai') || haystack.includes('gpt') || haystack.includes('o3') || haystack.includes('o4')
     );
   }
-  if (provider === 'google') {
-    return haystack.includes('google') || haystack.includes('gemini');
-  }
-
   return haystack.includes('anthropic') || haystack.includes('claude');
 };
 
@@ -94,9 +90,8 @@ export const getLatestProviderModels = <T extends { provider: string; id: string
 
 export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(models: T[]) => {
   const openAiModels = getLatestProviderModels('openai', models);
-  const googleModels = getLatestProviderModels('google', models);
   const anthropicModels = getLatestProviderModels('anthropic', models);
-  const latestModels = [...openAiModels, ...anthropicModels, ...googleModels];
+  const latestModels = [...openAiModels, ...anthropicModels];
 
   if (latestModels.length === 0) return models;
   return latestModels;

@@ -89,12 +89,8 @@ describe('web search helpers', () => {
     expect(searchProvider(model({ provider: 'openai-codex', api: 'openai-responses' }))).toBe('openai');
     expect(searchProvider(model({ provider: 'openai-codex', api: 'openai-codex-responses' }))).toBe('openai');
     expect(searchProvider(model({ provider: 'anthropic', api: 'anthropic-messages' }))).toBe('anthropic');
-    expect(searchProvider(model({ provider: 'google', api: 'google-generative-ai' }))).toBe('google');
-    expect(searchProvider(model({ provider: 'google-generative-ai', api: 'google-generative-ai' }))).toBe('google');
     expect(searchProvider(model({ provider: 'openai', api: 'openai-completions' }))).toBeNull();
     expect(searchProvider(model({ provider: 'anthropic', api: 'openai-completions' }))).toBeNull();
-    expect(searchProvider(model({ provider: 'google', api: 'google-vertex' }))).toBeNull();
-    expect(searchProvider(model({ provider: 'google-generative-ai', api: 'openai-completions' }))).toBeNull();
     expect(searchProvider(model({ provider: 'ollama', api: 'openai-completions' }))).toBeNull();
   });
 
@@ -280,87 +276,6 @@ describe('web search provider calls', () => {
 
     expect(requestHeaders()).toMatchObject({ 'X-Api-Key': 'provided-key' });
     expect(requestHeaders()['x-api-key']).toBeFalsy();
-  });
-
-  it('calls Gemini with Google Search grounding and parses grounding metadata', async () => {
-    fetchMock.mockResolvedValue(
-      responseFromSse([
-        {
-          candidates: [
-            {
-              content: { parts: [{ text: 'Gemini answer' }] },
-              groundingMetadata: {
-                webSearchQueries: ['gemini query'],
-                groundingChunks: [{ web: { title: 'Gemini Docs', uri: 'https://example.com/gemini' } }]
-              }
-            }
-          ]
-        }
-      ])
-    );
-
-    const result = await runWebSearch({
-      query: 'gemini query',
-      signal: null,
-      modelRegistry: registry(),
-      model: model({
-        provider: 'google',
-        api: 'google-generative-ai',
-        id: 'gemini-3.5-flash',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta'
-      })
-    });
-
-    expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse'
-    );
-    expect(requestHeaders()).toMatchObject({ 'x-goog-api-key': 'key-1' });
-    const body = requestBody();
-    expect(body.tools).toEqual([{ google_search: {} }]);
-    expect(result).toMatchObject({
-      text: 'Gemini answer',
-      grounded: true,
-      provider: 'google',
-      searchQueries: ['gemini query'],
-      sources: [{ title: 'Gemini Docs', url: 'https://example.com/gemini' }]
-    });
-  });
-
-  it('keeps provided Gemini API key headers without adding duplicates', async () => {
-    fetchMock.mockResolvedValue(responseFromSse([]));
-
-    await runWebSearch({
-      query: 'gemini query',
-      signal: null,
-      modelRegistry: registry({ ok: true, apiKey: 'fallback-key', headers: { 'X-Goog-Api-Key': 'provided-key' } }),
-      model: model({
-        provider: 'google-generative-ai',
-        api: 'google-generative-ai',
-        id: 'gemini-3.5-flash',
-        baseUrl: 'https://generativelanguage.googleapis.com/v1beta'
-      })
-    });
-
-    expect(requestHeaders()).toMatchObject({ 'X-Goog-Api-Key': 'provided-key' });
-    expect(requestHeaders()['x-goog-api-key']).toBeFalsy();
-  });
-
-  it('throws Google stream errors instead of returning an empty ungrounded result', async () => {
-    fetchMock.mockResolvedValue(responseFromSse([{ error: { message: 'quota exceeded' } }]));
-
-    await expect(
-      runWebSearch({
-        query: 'gemini query',
-        signal: null,
-        modelRegistry: registry(),
-        model: model({
-          provider: 'google',
-          api: 'google-generative-ai',
-          id: 'gemini-3.5-flash',
-          baseUrl: 'https://generativelanguage.googleapis.com/v1beta'
-        })
-      })
-    ).rejects.toThrow('quota exceeded');
   });
 
   it('marks answers ungrounded when no search metadata is returned', async () => {

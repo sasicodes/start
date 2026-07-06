@@ -6,7 +6,7 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 
 - This is an open source project.
 - Prefer long-term, scalable fixes over short-term patches.
-- Treat PR comments and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory; verify each claim against current code before acting. Reviewers can be wrong, outdated, or hallucinated.
+- Treat PR comments and automated reviewer findings (Greptile, CodeRabbit, etc.) as advisory: verify each claim against current code before acting, since reviewers can be wrong, outdated, or hallucinated; then resolve or address every one before merging, never merging while any remain outstanding.
 - Follow commit and PR title style: lowercase, precise, prefixed with `fix:`, `feat:`, or `chore:`.
 - Keep code warning-free and error-free. Run `pnpm check` before reporting completion.
 - App description: `your coding assistant`.
@@ -15,8 +15,7 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 ## Architecture & state
 
 - Prefer shared state over prop drilling: when a value or handler is needed by distant components, keep it in a signal store (`@preact/signals` in a `*/state.ts`, e.g. `shared/settings/state.ts`) and read it where needed instead of threading the same prop/handler through many layers.
-- Keep component props minimal, precise, and subtle; never over-define. Do not repeat the component's own name or domain in a prop — a `ComposerShortcut` takes `value`/`onChange`, not `composerShortcut`. Prefer composite/compound components over deep prop chains.
-- Keep local prop names minimal and contextual; avoid repeating parent or domain words like `panelOpen` or `onOpenPanel` inside a component that only controls one panel. Prefer `open`, `onOpen`, `value`.
+- Keep component and local prop names minimal, precise, and contextual; never over-define, and never repeat the component's own name, its domain, or its parent in a prop — a `ComposerShortcut` takes `value`/`onChange` not `composerShortcut`, and a panel-only component takes `open`/`onOpen` not `panelOpen`/`onOpenPanel`. Prefer composite/compound components over deep prop chains.
 - Extract any helper or parser used in more than one file into a domain `utils` folder; do not duplicate.
 - Read environment variables only through `packages/desktop/src/main/environment.ts`.
 - Keep agent tools and page-content extraction bounded with explicit time, size, and count limits; prefer targeted structured output over broad dumps.
@@ -30,7 +29,6 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 - Delete dead complexity: unreachable branches, guards that always pass, unused return values, object keys a spread already sets, and effect work the state initializer already did. Narrow over-wide union parameters to what callers actually pass.
 - Do not add lint, format, or type suppressions such as `@ts-ignore`, `biome-ignore`, or `eslint-disable`.
 - Use `interface` for component props and shared object shapes; use `type` for unions, function aliases, mapped types, and utility-composed shapes.
-- Omit optional object properties when absent instead of serializing placeholder nullish values.
 - Model renderer loading state with explicit discriminated unions instead of stacking nullish sentinels.
 - Use a bare `return;` for no-value exits.
 - For optional JSX or object props, use a conditional spread with a truthy guard (`...(value ? { value } : {})`) instead of passing absent props with a ternary. Keep the falsy branch only when `0`, `false`, or `''` is a valid value to preserve.
@@ -40,8 +38,7 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 - Keep code comment-free unless a comment prevents a real maintenance hazard.
 - Prefer arrow functions for components, helpers, callbacks, and async functions; avoid function declarations unless a framework, class prototype, or external API requires them.
 - Avoid single-use indirection; inline single-use constants, helpers, wrapper components, and forwarding callbacks unless a name removes meaningful duplication or prevents a maintenance hazard. Never wrap a referentially stable function such as a `useState` setter in `useCallback`.
-- Prefer empty strings for absent renderer-only string state (selected ids, model keys, paths); omit optional object properties at API boundaries.
-- Never write `undefined` literally. For swallowed promise rejections use `.catch(() => {})`. For absent state, omit the property or use an empty string per the rules above.
+- Never write `undefined` literally: omit optional object properties when absent instead of serializing placeholder nullish values, use empty strings for absent renderer-only string state (selected ids, model keys, paths), and use `.catch(() => {})` for swallowed promise rejections.
 
 ## React & Preact
 
@@ -88,11 +85,8 @@ This file is grouped into sections so you can scan the relevant ones fast. Follo
 - Use camelCase for variables, functions, hooks, and local constants; PascalCase for types and components; kebab-case for file names, folder names, CSS custom properties, and persisted storage keys.
 - Prefix persisted browser storage keys with `start:`, keep the namespaced value kebab-case, and name the constant with a clear `StorageKey` suffix.
 - Split component files before they approach 300 lines.
-- Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files.
-- Prefer single-word filenames. When two or more files share a multi-word prefix (e.g. `provider-form`, `provider-list`), promote that prefix to a folder and shorten each child to its distinguishing word (`provider/form.tsx`, `provider/list.tsx`). A lone, unambiguous multi-word name is fine; do not fold framework conventions such as `use-*` hooks.
-- Inside domain folders, keep child filenames short and precise; avoid repeating the folder/domain name unless it improves clarity.
-- Prefer descriptive file names over generic ones (`items`, `panels`, etc.) so module purpose is obvious from filename.
-- Name component files with clear component words only; avoid unnecessary domain prefixes or role suffixes like `composer-model-picker`, `thinking-button`, `list`, or `card` when the parent folder or component purpose is already clear.
+- Group files that share a domain or filename prefix into a domain folder instead of leaving flat clusters like `workspace-*` files; promote a shared multi-word prefix (`provider-form`, `provider-list`) to a folder and shorten each child to its distinguishing word (`provider/form.tsx`, `provider/list.tsx`), preferring single-word filenames. A lone, unambiguous multi-word name is fine; do not fold framework conventions such as `use-*` hooks.
+- Keep filenames short, precise, and descriptive so a module's purpose is obvious: inside domain folders, avoid repeating the folder/domain name or generic role suffixes (`composer-model-picker`, `thinking-button`, `list`, `card`) unless it improves clarity, and avoid generic names (`items`, `panels`) elsewhere.
 - Prefer `index.ts` or `index.tsx` when a module file would repeat its parent folder name.
 
 ## Testing
