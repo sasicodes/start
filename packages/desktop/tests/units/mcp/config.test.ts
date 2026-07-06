@@ -1,4 +1,4 @@
-import { expandServerValue, expandServerVars, mergeMcpServers, parseMcpConfig, serverVarNames } from '@main/mcp/config';
+import { expandServerValue, expandServerVars, mergeMcpServers, parseMcpConfig } from '@main/mcp/config';
 import { describe, expect, it } from 'vitest';
 
 describe('mcp config', () => {
@@ -58,7 +58,7 @@ describe('mcp config', () => {
     ]);
   });
 
-  it('extracts and expands placeholder variables', () => {
+  it('expands placeholder variables', () => {
     const [server] = parseMcpConfig(
       JSON.stringify({
         mcpServers: { db: { command: 'db', env: { URL: `\${DB_URL}`, MODE: 'ro', KEY: `\${DB_KEY}` } } }
@@ -67,7 +67,6 @@ describe('mcp config', () => {
     );
     if (server?.kind !== 'stdio') throw new Error('Expected a stdio server.');
 
-    expect(serverVarNames(server).sort()).toEqual(['DB_KEY', 'DB_URL']);
     expect(expandServerVars(server.env, (name) => (name === 'DB_URL' ? 'postgres://x' : ''))).toEqual({
       URL: 'postgres://x',
       MODE: 'ro',
@@ -75,13 +74,12 @@ describe('mcp config', () => {
     });
   });
 
-  it('extracts and expands remote URL placeholders', () => {
+  it('expands remote URL placeholders', () => {
     const [server] = parseMcpConfig(
       JSON.stringify({ mcpServers: { exa: { url: `https://mcp.exa.ai/mcp?exaApiKey=\${EXA_API_KEY}` } } }),
       'global'
     );
 
-    expect(server ? serverVarNames(server) : []).toEqual(['EXA_API_KEY']);
     expect(
       expandServerValue(server?.kind === 'remote' ? server.url : '', (name) => `${name.toLowerCase()}-value`)
     ).toBe('https://mcp.exa.ai/mcp?exaApiKey=exa_api_key-value');

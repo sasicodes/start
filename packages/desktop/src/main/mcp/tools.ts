@@ -12,12 +12,9 @@ const sessionToolBudgetMs = 1500;
 
 const authRequiredText = (server: string) => `Authentication required for ${server}. Check the MCP server config.`;
 
-const boundedOutput = (text: string) =>
-  text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
-
 export const mcpToolName = (server: string, tool: string) => `${server}_${tool}`.replace(/[^\w-]/gu, '_');
 
-export const mcpResultText = (result: unknown) => {
+const mcpResultText = (result: unknown) => {
   const payload = result as { content?: unknown; structuredContent?: unknown };
   const content = Array.isArray(payload.content) ? payload.content : [];
   const text = content
@@ -31,6 +28,11 @@ export const mcpResultText = (result: unknown) => {
   if (text) return text;
   if (payload.structuredContent) return JSON.stringify(payload.structuredContent);
   return 'Done.';
+};
+
+export const mcpOutputText = (result: unknown) => {
+  const text = mcpResultText(result);
+  return text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
 };
 
 const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinition =>
@@ -48,7 +50,7 @@ const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinit
           callTimeoutMs
         );
         const failed = result.isError === true;
-        return toolResult<Record<string, unknown>>(boundedOutput(mcpResultText(result)), {
+        return toolResult<Record<string, unknown>>(mcpOutputText(result), {
           server: server.name,
           ...(failed ? { failed } : {})
         });

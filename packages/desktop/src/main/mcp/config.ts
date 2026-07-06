@@ -116,22 +116,6 @@ export const loadMcpServers = async (workspacePath: string): Promise<McpServer[]
   return mergeMcpServers(parseMcpConfig(globalSource, 'global'), parseMcpConfig(projectSource, 'project'));
 };
 
-const varNamesIn = (values: string[]) => {
-  const names = new Set<string>();
-  for (const value of values) {
-    for (const match of value.matchAll(varPattern)) {
-      const name = match[1];
-      if (name) names.add(name);
-    }
-  }
-  return names;
-};
-
-export const serverVarNames = (server: McpServer): string[] => {
-  const values = server.kind === 'stdio' ? Object.values(server.env) : [server.url, ...Object.values(server.headers)];
-  return [...varNamesIn(values)];
-};
-
 export const expandServerValue = (value: string, resolve: (name: string) => string) =>
   value.replace(varPattern, (_, name: string) => resolve(name));
 

@@ -1,13 +1,12 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import { callServerTool } from '@main/mcp/clients';
 import type { McpServer } from '@main/mcp/config';
-import { mcpResultText } from '@main/mcp/tools';
+import { mcpOutputText } from '@main/mcp/tools';
 import { toolResult } from '@main/providers/tools/result';
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import * as v from 'valibot';
 
 const callTimeoutMs = 30_000;
-const maxOutputLength = 80_000;
 const searchToolName = 'web_search_exa';
 const searchFailedText = 'Web search failed. Try again shortly.';
 
@@ -49,9 +48,6 @@ const queryValue = (query: unknown) => {
   throw new Error('Enter a web search query.');
 };
 
-const boundedOutput = (text: string) =>
-  text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
-
 export const createWebSearchTools = () => [
   defineTool({
     label: 'web',
@@ -66,7 +62,7 @@ export const createWebSearchTools = () => [
       try {
         const result = await callServerTool(searchServer, searchToolName, { query: searchQuery }, callTimeoutMs);
         const failed = result.isError === true;
-        return toolResult(boundedOutput(mcpResultText(result)), {
+        return toolResult(mcpOutputText(result), {
           query: searchQuery,
           ...(failed ? { error: 'search_failed' } : {})
         });

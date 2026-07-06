@@ -150,13 +150,6 @@ export const callServerTool = async (
   return await client.callTool({ name: toolName, arguments: args }, undefined, { timeout: timeoutMs });
 };
 
-export const dropServerClient = (name: string) => {
-  const entry = entries.get(name);
-  if (!entry) return;
-  closeEntry(entry);
-  entries.delete(name);
-};
-
 export const disposeMcpClients = () => {
   for (const entry of entries.values()) closeEntry(entry);
   entries.clear();
