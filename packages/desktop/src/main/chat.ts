@@ -49,6 +49,7 @@ import { mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
+import { warmWebSearchTools } from '@main/providers/tools/search/index';
 import { createStartCustomTools } from '@main/providers/tools/index';
 import type { SessionController, SessionEnvironment, SessionSummary } from '@main/providers/tools/sessions';
 import type { WorktreeOwner } from '@main/providers/tools/worktree';
@@ -261,6 +262,7 @@ export class ChatService {
     this.modelRegistry.refresh();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
     warmMcpServers(this.workspaceCwd);
+    warmWebSearchTools();
   }
 
   private async sessionCustomTools(sessionId: string, workspacePath: string) {

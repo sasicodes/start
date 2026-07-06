@@ -7,6 +7,11 @@ vi.mock('@main/mcp/tools', () => ({
   mcpToolsForSession: async () => [{ name: 'github_create_issue' }]
 }));
 
+vi.mock('@main/providers/tools/search/index', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/providers/tools/search/index')>()),
+  warmWebSearchTools: () => {}
+}));
+
 const toolNames = (sessionId: string) => (getFakeSession(sessionId)?.getAllTools() ?? []).map((tool) => tool.name);
 
 describe('mcp session tools', () => {

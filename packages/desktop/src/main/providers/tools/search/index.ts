@@ -1,5 +1,5 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
-import { callServerTool } from '@main/mcp/clients';
+import { callServerTool, connectServer } from '@main/mcp/clients';
 import type { McpServer } from '@main/mcp/config';
 import { mcpOutputText } from '@main/mcp/tools';
 import { toolResult } from '@main/providers/tools/result';
@@ -84,3 +84,7 @@ export const createWebSearchTools = () => [
     }
   })
 ];
+
+export const warmWebSearchTools = () => {
+  connectServer(searchServer).catch(() => {});
+};

@@ -118,9 +118,11 @@ const serverEntry = (server: McpServer): ClientEntry => {
   if (current) closeEntry(current);
 
   const entry: ClientEntry = { key, connection: null, lastUsedAt: Date.now(), result: connectClient(server) };
-  entry.result.then(({ connection }) => {
-    entry.connection = connection;
-  });
+  entry.result
+    .then(({ connection }) => {
+      entry.connection = connection;
+    })
+    .catch(() => {});
   entries.set(server.name, entry);
   return entry;
 };

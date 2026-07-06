@@ -1,4 +1,4 @@
-import { createWebSearchTools } from '@main/providers/tools/search/index';
+import { createWebSearchTools, warmWebSearchTools } from '@main/providers/tools/search/index';
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +31,8 @@ const tool = () => createWebSearchTools()[0] as unknown as TestTool;
 describe('web_search tool', () => {
   beforeEach(() => {
     clientsMock.callServerTool.mockReset();
+    clientsMock.connectServer.mockReset();
+    clientsMock.connectServer.mockResolvedValue({ kind: 'connected', tools: [] });
   });
 
   it('keeps the existing public tool name', () => {
@@ -62,6 +64,20 @@ describe('web_search tool', () => {
     expect(updates[0]?.content[0]?.text).toBe('Searching the web for "latest docs".');
     expect(result.content[0]?.text).toBe('Search answer');
     expect(result.details).toEqual({ query: 'latest docs' });
+  });
+
+  it('warms the hosted MCP search server', async () => {
+    warmWebSearchTools();
+
+    await vi.waitFor(() =>
+      expect(clientsMock.connectServer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'remote',
+          name: 'web-search',
+          url: 'https://mcp.exa.ai/mcp'
+        })
+      )
+    );
   });
 
   it('forwards the abort signal to the search call', async () => {
