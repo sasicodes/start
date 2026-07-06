@@ -2000,12 +2000,12 @@ export class ChatService {
     const base = {
       cwd: () => cwd,
       authStorage: this.authStorage,
-      resolveModel: (key: string) => this.findModelByKey(key) ?? null,
       nameAllocator: () => allocator,
       modelRegistry: this.modelRegistry,
+      settingsManager: this.settingsManager,
       model: () => this.pickModel() ?? null,
       availableModels: () => this.workflowModels(),
-      settingsManager: this.settingsManager
+      resolveModel: (key: string) => this.findModelByKey(key) ?? null
     };
     const subagentSessionTools = (): ReturnType<typeof createStartCustomTools> =>
       createStartCustomTools({ ...base, includeSubagents: false, customTools: subagentSessionTools });
@@ -2149,8 +2149,8 @@ export class ChatService {
       return [
         {
           score,
-          key: modelKey(model),
           name: model.name,
+          key: modelKey(model),
           provider: model.provider,
           effortLevels: getSupportedEffortLevels(model)
         }

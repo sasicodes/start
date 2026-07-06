@@ -13,11 +13,11 @@ export interface AllowedModel {
 }
 
 export const models: readonly AllowedModel[] = [
-  { provider: 'openai', id: 'gpt-5.5', score: { affordability: 9, intelligence: 8, taste: 5 } },
-  { provider: 'openai', id: 'gpt-5.4', score: { affordability: 8, intelligence: 6, taste: 4 } },
-  { provider: 'anthropic', id: 'claude-fable-5', score: { affordability: 2, intelligence: 9, taste: 9 } },
-  { provider: 'anthropic', id: 'claude-opus-4-8', score: { affordability: 4, intelligence: 7, taste: 8 } },
-  { provider: 'anthropic', id: 'claude-sonnet-5', score: { affordability: 5, intelligence: 5, taste: 7 } }
+  { provider: 'openai', id: 'gpt-5.5', score: { taste: 5, intelligence: 8, affordability: 9 } },
+  { provider: 'openai', id: 'gpt-5.4', score: { taste: 4, intelligence: 6, affordability: 8 } },
+  { provider: 'anthropic', id: 'claude-fable-5', score: { taste: 9, intelligence: 9, affordability: 2 } },
+  { provider: 'anthropic', id: 'claude-opus-4-8', score: { taste: 8, intelligence: 7, affordability: 4 } },
+  { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 7, intelligence: 5, affordability: 5 } }
 ] as const;
 
 const scoresByKey = new Map(models.map((model) => [`${model.provider}:${model.id}`, model.score]));
