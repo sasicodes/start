@@ -92,9 +92,7 @@ const MainSessionSurface = memo(
       sidePanelLabel={sidePanelLabel}
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={onSidePanelCollapse}
-      sidePanelResizable={sidePanelLayout.resizable}
-      {...(sidePanelLayout.maxRatio ? { maxSidePanelWidthRatio: sidePanelLayout.maxRatio } : {})}
-      {...(sidePanelLayout.minRatio ? { minSidePanelWidthRatio: sidePanelLayout.minRatio } : {})}
+      {...sidePanelLayout}
     >
       {!sessionRoutePending && <TurnFeed />}
       <WorkspaceDock
