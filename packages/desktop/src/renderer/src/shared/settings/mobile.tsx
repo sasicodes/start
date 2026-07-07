@@ -1,5 +1,5 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
-import { relaySetupUrl } from '@renderer/constants';
+import { RELAY_SETUP_URL } from '@renderer/constants';
 import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
 import { keepAwake, updateKeepAwake } from '@renderer/shared/settings/state';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
@@ -212,7 +212,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           <p class="m-0 text-xs leading-5 text-soft">
             Self-host our relay with the{' '}
             <a
-              href={relaySetupUrl}
+              href={RELAY_SETUP_URL}
               target="_blank"
               rel="noreferrer"
               class="font-medium text-soft underline decoration-soft decoration-dotted underline-offset-3 transition-colors duration-100 hover:text-ink focus-visible:text-ink"

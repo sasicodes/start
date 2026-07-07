@@ -1,4 +1,4 @@
-import { releaseNotesUrl } from '@renderer/constants';
+import { RELEASE_NOTES_URL } from '@renderer/constants';
 import { animationActive } from '@renderer/shared/animation';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { downloadUpdate, installUpdate, updateLabel, useUpdateState } from '@renderer/shared/updates/state';
@@ -75,7 +75,7 @@ export const Update = memo(() => {
           <span aria-hidden="true" class="h-full w-0.5 shrink-0 bg-line" />
           <Tooltip label="Release notes">
             <a
-              href={releaseNotesUrl}
+              href={RELEASE_NOTES_URL}
               target="_blank"
               rel="noreferrer"
               aria-label="Release notes"
