@@ -26,9 +26,8 @@ interface MainSessionSurfaceProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  sidePanelLayout: SidePanelModeLayout;
-  workspaceCollapsed: boolean;
   onOpenSettings: () => void;
+  workspaceCollapsed: boolean;
   sidePanel: ComponentChildren;
   sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
@@ -36,6 +35,7 @@ interface MainSessionSurfaceProps {
   onChooseDirectory: () => void;
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
+  sidePanelLayout: SidePanelModeLayout;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -48,10 +48,9 @@ interface AppShellProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  sidePanelLayout: SidePanelModeLayout;
-  workspaceCollapsed: boolean;
   sessionViewActive: boolean;
   onOpenSettings: () => void;
+  workspaceCollapsed: boolean;
   sidePanel: ComponentChildren;
   sessionRoutePending: boolean;
   onToggleGitPanel: () => void;
@@ -62,6 +61,7 @@ interface AppShellProps {
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   overlayComposer: ComponentChildren;
+  sidePanelLayout: SidePanelModeLayout;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -69,30 +69,30 @@ interface AppShellProps {
 const MainSessionSurface = memo(
   ({
     sidePanel,
-    workspacePath,
-    sidePanelLabel,
     mainComposer,
-    gitPanelVisible,
     isGenerating,
-    activeSessionId,
-    sidePanelVisible,
-    sidePanelLayout,
+    onOpenSession,
+    workspacePath,
     onOpenSettings,
-    workspaceCollapsed,
-    sessionRoutePending,
-    settingsPanelVisible,
+    sidePanelLabel,
+    gitPanelVisible,
+    activeSessionId,
+    sidePanelLayout,
+    sidePanelVisible,
     onToggleGitPanel,
     onChooseDirectory,
-    onSidePanelCollapse,
     onSelectWorkspace,
-    onOpenSession
+    workspaceCollapsed,
+    sessionRoutePending,
+    onSidePanelCollapse,
+    settingsPanelVisible
   }: MainSessionSurfaceProps) => (
     <PanelLayout
       sidePanel={sidePanel}
       sidePanelLabel={sidePanelLabel}
       sidePanelVisible={sidePanelVisible}
-      sidePanelResizable={sidePanelLayout.resizable}
       onSidePanelCollapse={onSidePanelCollapse}
+      sidePanelResizable={sidePanelLayout.resizable}
       {...(sidePanelLayout.maxRatio ? { maxSidePanelWidthRatio: sidePanelLayout.maxRatio } : {})}
       {...(sidePanelLayout.minRatio ? { minSidePanelWidthRatio: sidePanelLayout.minRatio } : {})}
     >
@@ -103,8 +103,8 @@ const MainSessionSurface = memo(
         onOpenSession={onOpenSession}
         activeSessionId={activeSessionId}
         onChooseDirectory={onChooseDirectory}
-        workspaceCollapsed={workspaceCollapsed}
         onSelectWorkspace={onSelectWorkspace}
+        workspaceCollapsed={workspaceCollapsed}
       />
       <div class="absolute right-4.5 bottom-4.5 z-40 flex h-11.5 items-center gap-2 transition-opacity duration-75 ease-out [-webkit-app-region:no-drag] @max-bottom-controls/chat:pointer-events-none @max-bottom-controls/chat:opacity-0">
         <Update />
@@ -122,25 +122,25 @@ export const AppShell = memo(
     sidePanel,
     mainComposer,
     fileHandlers,
+    isGenerating,
     workspacePath,
+    onOpenSession,
     sidePanelLabel,
+    onOpenSettings,
     overlayComposer,
     gitPanelVisible,
-    isGenerating,
     activeSessionId,
-    sidePanelVisible,
     sidePanelLayout,
-    onOpenSession,
-    workspaceCollapsed,
-    sessionRoutePending,
-    settingsPanelVisible,
-    onOpenSettings,
+    sidePanelVisible,
     onToggleGitPanel,
     onChooseDirectory,
     onDiscardComposer,
     sessionViewActive,
     onSelectWorkspace,
-    onSidePanelCollapse
+    workspaceCollapsed,
+    sessionRoutePending,
+    onSidePanelCollapse,
+    settingsPanelVisible
   }: AppShellProps) => (
     <main
       aria-label="start"
@@ -158,23 +158,23 @@ export const AppShell = memo(
       {surface === 'main' ? (
         <MainSessionSurface
           sidePanel={sidePanel}
-          workspacePath={workspacePath}
-          sidePanelLabel={sidePanelLabel}
           mainComposer={mainComposer}
-          onOpenSession={onOpenSession}
-          gitPanelVisible={gitPanelVisible}
           isGenerating={isGenerating}
-          activeSessionId={activeSessionId}
+          workspacePath={workspacePath}
+          onOpenSession={onOpenSession}
           onOpenSettings={onOpenSettings}
-          sessionRoutePending={sessionRoutePending}
-          settingsPanelVisible={settingsPanelVisible}
-          onToggleGitPanel={onToggleGitPanel}
-          sidePanelVisible={sidePanelVisible}
+          sidePanelLabel={sidePanelLabel}
+          gitPanelVisible={gitPanelVisible}
+          activeSessionId={activeSessionId}
           sidePanelLayout={sidePanelLayout}
+          sidePanelVisible={sidePanelVisible}
+          onToggleGitPanel={onToggleGitPanel}
           onChooseDirectory={onChooseDirectory}
-          workspaceCollapsed={workspaceCollapsed}
           onSelectWorkspace={onSelectWorkspace}
+          workspaceCollapsed={workspaceCollapsed}
+          sessionRoutePending={sessionRoutePending}
           onSidePanelCollapse={onSidePanelCollapse}
+          settingsPanelVisible={settingsPanelVisible}
         />
       ) : (
         overlayComposer

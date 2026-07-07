@@ -342,13 +342,13 @@ export const App = () => {
       workspaceCollapsed={hasTurns}
       sidePanelLabel={sidePanelLabel}
       onOpenSettings={toggleSettings}
+      sidePanelLayout={sidePanelLayout}
       gitPanelVisible={gitPanelVisible}
       onOpenSession={openRecentSession}
       activeSessionId={currentSessionId}
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={closeSidePanel}
       sessionViewActive={sessionViewActive}
-      sidePanelLayout={sidePanelLayout}
       onToggleGitPanel={toggleGitChangesPanel}
       sessionRoutePending={sessionRoutePending}
       onDiscardComposer={discardComposerOverlay}
