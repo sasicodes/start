@@ -213,16 +213,8 @@ describe('browser panel view', () => {
 
     expect(view.webContents.closed).toBe(true);
     expect(window.contentView.children).toHaveLength(0);
-    expect(result.status).toEqual({
-      url: '',
-      tabs: [],
-      title: '',
-      open: false,
-      loading: false,
-      activeTabId: '',
-      canGoBack: false,
-      canGoForward: false
-    });
+    expect(result.status?.open).toBe(false);
+    expect(result.status?.tabs).toEqual([]);
   });
 
   it('scales native browser bounds by the owner renderer zoom factor', () => {

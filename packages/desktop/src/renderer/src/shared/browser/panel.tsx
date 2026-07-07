@@ -155,12 +155,8 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
         .browserCloseTab(tabId)
         .then((result) => {
           if (!result.status) return;
-          if (!result.status.open) {
-            onClose();
-            return;
-          }
-
-          applyStatus(result.status);
+          if (result.status.open) applyStatus(result.status);
+          else onClose();
         })
         .catch(() => setError('Browser tab could not be closed.'));
     },
