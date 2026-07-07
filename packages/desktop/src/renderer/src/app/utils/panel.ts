@@ -1,5 +1,11 @@
 import type { SidePanelMode } from '@renderer/app/types';
 
+export interface SidePanelModeLayout {
+  maxRatio?: number;
+  minRatio?: number;
+  resizable: boolean;
+}
+
 export const sidePanelModeLabel = (mode: SidePanelMode) => {
   if (mode === 'git') return 'Git changes';
   if (mode === 'settings') return 'Settings';
@@ -7,14 +13,8 @@ export const sidePanelModeLabel = (mode: SidePanelMode) => {
   return 'Side panel';
 };
 
-export const sidePanelModeMaxRatio = (mode: SidePanelMode) => {
-  if (mode === 'settings') return 0.3;
-  return;
+export const sidePanelModeLayout = (mode: SidePanelMode): SidePanelModeLayout => {
+  if (mode === 'settings') return { maxRatio: 0.3, resizable: false };
+  if (mode === 'browser') return { minRatio: 0.5, resizable: true };
+  return { resizable: true };
 };
-
-export const sidePanelModeMinRatio = (mode: SidePanelMode) => {
-  if (mode === 'browser') return 0.5;
-  return;
-};
-
-export const sidePanelModeResizable = (mode: SidePanelMode) => mode !== 'settings';

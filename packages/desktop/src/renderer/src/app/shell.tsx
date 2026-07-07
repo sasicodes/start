@@ -1,5 +1,6 @@
 import type { RecentSession } from '@preload/index';
 import type { AppSurface } from '@renderer/app/types';
+import type { SidePanelModeLayout } from '@renderer/app/utils/panel';
 import { DropOverlay } from '@renderer/shared/drop-overlay';
 import { PanelLayout } from '@renderer/shared/panel/layout';
 import { Settings } from '@renderer/shared/settings';
@@ -25,7 +26,7 @@ interface MainSessionSurfaceProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  sidePanelResizable: boolean;
+  sidePanelLayout: SidePanelModeLayout;
   workspaceCollapsed: boolean;
   onOpenSettings: () => void;
   sidePanel: ComponentChildren;
@@ -35,8 +36,6 @@ interface MainSessionSurfaceProps {
   onChooseDirectory: () => void;
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
-  sidePanelMaxRatio?: number;
-  sidePanelMinRatio?: number;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -49,7 +48,7 @@ interface AppShellProps {
   activeSessionId: string;
   gitPanelVisible: boolean;
   sidePanelVisible: boolean;
-  sidePanelResizable: boolean;
+  sidePanelLayout: SidePanelModeLayout;
   workspaceCollapsed: boolean;
   sessionViewActive: boolean;
   onOpenSettings: () => void;
@@ -62,8 +61,6 @@ interface AppShellProps {
   fileHandlers: FileDropHandlers;
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
-  sidePanelMaxRatio?: number;
-  sidePanelMinRatio?: number;
   overlayComposer: ComponentChildren;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
@@ -79,9 +76,7 @@ const MainSessionSurface = memo(
     isGenerating,
     activeSessionId,
     sidePanelVisible,
-    sidePanelResizable,
-    sidePanelMaxRatio,
-    sidePanelMinRatio,
+    sidePanelLayout,
     onOpenSettings,
     workspaceCollapsed,
     sessionRoutePending,
@@ -96,10 +91,10 @@ const MainSessionSurface = memo(
       sidePanel={sidePanel}
       sidePanelLabel={sidePanelLabel}
       sidePanelVisible={sidePanelVisible}
-      sidePanelResizable={sidePanelResizable}
+      sidePanelResizable={sidePanelLayout.resizable}
       onSidePanelCollapse={onSidePanelCollapse}
-      {...(sidePanelMaxRatio !== undefined ? { maxSidePanelWidthRatio: sidePanelMaxRatio } : {})}
-      {...(sidePanelMinRatio !== undefined ? { minSidePanelWidthRatio: sidePanelMinRatio } : {})}
+      {...(sidePanelLayout.maxRatio ? { maxSidePanelWidthRatio: sidePanelLayout.maxRatio } : {})}
+      {...(sidePanelLayout.minRatio ? { minSidePanelWidthRatio: sidePanelLayout.minRatio } : {})}
     >
       {!sessionRoutePending && <TurnFeed />}
       <WorkspaceDock
@@ -134,9 +129,7 @@ export const AppShell = memo(
     isGenerating,
     activeSessionId,
     sidePanelVisible,
-    sidePanelResizable,
-    sidePanelMaxRatio,
-    sidePanelMinRatio,
+    sidePanelLayout,
     onOpenSession,
     workspaceCollapsed,
     sessionRoutePending,
@@ -177,11 +170,9 @@ export const AppShell = memo(
           settingsPanelVisible={settingsPanelVisible}
           onToggleGitPanel={onToggleGitPanel}
           sidePanelVisible={sidePanelVisible}
-          sidePanelResizable={sidePanelResizable}
+          sidePanelLayout={sidePanelLayout}
           onChooseDirectory={onChooseDirectory}
           workspaceCollapsed={workspaceCollapsed}
-          {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
-          {...(sidePanelMinRatio !== undefined ? { sidePanelMinRatio } : {})}
           onSelectWorkspace={onSelectWorkspace}
           onSidePanelCollapse={onSidePanelCollapse}
         />
