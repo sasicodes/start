@@ -6,6 +6,7 @@ export type SidePanelModeLayout = Pick<
   'sidePanelResizable' | 'maxSidePanelWidthRatio' | 'minSidePanelWidthRatio'
 >;
 
+const defaultSidePanelLayout: SidePanelModeLayout = { sidePanelResizable: true };
 const browserSidePanelLayout: SidePanelModeLayout = {
   sidePanelResizable: true,
   minSidePanelWidthRatio: 0.5
@@ -14,7 +15,6 @@ const settingsSidePanelLayout: SidePanelModeLayout = {
   sidePanelResizable: false,
   maxSidePanelWidthRatio: 0.3
 };
-const defaultSidePanelLayout: SidePanelModeLayout = { sidePanelResizable: true };
 
 export const sidePanelModeLabel = (mode: SidePanelMode) => {
   if (mode === 'git') return 'Git changes';
