@@ -6,6 +6,7 @@ import { formatBrowserAddress } from '@renderer/shared/browser/url';
 import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
 import { useBrowserInspect } from '@renderer/shared/browser/use-inspect';
 import { useBrowserScreenshot } from '@renderer/shared/browser/use-screenshot';
+import { shouldCloseBrowserPanelForStatus } from '@renderer/shared/browser/status';
 import { PanelCloseButton } from '@renderer/shared/panel/close';
 import { usePanelMotion } from '@renderer/shared/panel/context';
 import {
@@ -53,6 +54,7 @@ const tabLabel = (tab: BrowserTabStatus) => {
 
 export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }: BrowserPanelProps) => {
   const mountedRef = useRef(true);
+  const openRef = useRef(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
   const [address, setAddress] = useState('');
@@ -73,6 +75,23 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
       if (!editing) setAddress(formatBrowserAddress(nextTab?.url ?? ''));
     },
     [editing]
+  );
+
+  const handleStatus = useCallback(
+    (nextStatus: BrowserStatus) => {
+      if (!mountedRef.current) return;
+
+      const closePanel = shouldCloseBrowserPanelForStatus(openRef.current, nextStatus);
+      openRef.current = nextStatus.open;
+
+      if (closePanel) {
+        onClose();
+        return;
+      }
+
+      applyStatus(nextStatus);
+    },
+    [applyStatus, onClose]
   );
 
   const openAddress = useCallback(
@@ -102,9 +121,9 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
       }
 
       setError('');
-      if (result.status) applyStatus(result.status);
+      if (result.status) handleStatus(result.status);
     },
-    [applyStatus, syncBounds]
+    [handleStatus, syncBounds]
   );
 
   const submitAddress = useCallback(
@@ -116,37 +135,37 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
   );
 
   const goBack = useCallback(() => {
-    window.pi.app.browserBack().then((result) => result.status && applyStatus(result.status));
-  }, [applyStatus]);
+    window.pi.app.browserBack().then((result) => result.status && handleStatus(result.status));
+  }, [handleStatus]);
 
   const goForward = useCallback(() => {
-    window.pi.app.browserForward().then((result) => result.status && applyStatus(result.status));
-  }, [applyStatus]);
+    window.pi.app.browserForward().then((result) => result.status && handleStatus(result.status));
+  }, [handleStatus]);
 
   const reloadOrStop = useCallback(() => {
     const action = status.loading ? window.pi.app.browserStop : window.pi.app.browserReload;
-    action().then((result) => result.status && applyStatus(result.status));
-  }, [applyStatus, status.loading]);
+    action().then((result) => result.status && handleStatus(result.status));
+  }, [handleStatus, status.loading]);
 
   const openNewTab = useCallback(() => {
     window.pi.app
       .browserNewTab()
       .then((result) => {
-        if (result.status) applyStatus(result.status);
+        if (result.status) handleStatus(result.status);
       })
       .catch(() => setError('Browser tab could not be opened.'));
-  }, [applyStatus]);
+  }, [handleStatus]);
 
   const selectTab = useCallback(
     (tabId: string) => {
       window.pi.app
         .browserSelectTab(tabId)
         .then((result) => {
-          if (result.status) applyStatus(result.status);
+          if (result.status) handleStatus(result.status);
         })
         .catch(() => setError('Browser tab could not be selected.'));
     },
-    [applyStatus]
+    [handleStatus]
   );
 
   const closeTab = useCallback(
@@ -154,22 +173,20 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
       window.pi.app
         .browserCloseTab(tabId)
         .then((result) => {
-          if (!result.status) return;
-          if (result.status.open) applyStatus(result.status);
-          else onClose();
+          if (result.status) handleStatus(result.status);
         })
         .catch(() => setError('Browser tab could not be closed.'));
     },
-    [applyStatus, onClose]
+    [handleStatus]
   );
 
   useEffect(() => {
     window.pi.app
       .browserStatus()
-      .then(applyStatus)
+      .then(handleStatus)
       .catch(() => {});
-    return window.pi.app.onBrowserStatus(applyStatus);
-  }, [applyStatus]);
+    return window.pi.app.onBrowserStatus(handleStatus);
+  }, [handleStatus]);
 
   useEffect(() => {
     if (navigation.tabId && !navigation.url) {
