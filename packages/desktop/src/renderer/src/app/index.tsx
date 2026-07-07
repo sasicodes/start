@@ -8,7 +8,7 @@ import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
-import { sidePanelModeLabel, sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/panel';
+import { sidePanelModeLabel, sidePanelModeLayout } from '@renderer/app/utils/panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
@@ -278,8 +278,7 @@ export const App = () => {
   const noProvidersConfigured = modelsLoaded && models.length === 0;
 
   const sidePanelLabel = sidePanelModeLabel(sidePanelMode);
-  const sidePanelMaxRatio = sidePanelModeMaxRatio(sidePanelMode);
-  const sidePanelResizable = sidePanelModeResizable(sidePanelMode);
+  const sidePanelLayout = sidePanelModeLayout(sidePanelMode);
 
   const fileHandlers = useFileAttachments({
     enabled: sessionViewActive,
@@ -343,13 +342,13 @@ export const App = () => {
       workspaceCollapsed={hasTurns}
       sidePanelLabel={sidePanelLabel}
       onOpenSettings={toggleSettings}
+      sidePanelLayout={sidePanelLayout}
       gitPanelVisible={gitPanelVisible}
       onOpenSession={openRecentSession}
       activeSessionId={currentSessionId}
       sidePanelVisible={sidePanelVisible}
       onSidePanelCollapse={closeSidePanel}
       sessionViewActive={sessionViewActive}
-      sidePanelResizable={sidePanelResizable}
       onToggleGitPanel={toggleGitChangesPanel}
       sessionRoutePending={sessionRoutePending}
       onDiscardComposer={discardComposerOverlay}
@@ -358,7 +357,6 @@ export const App = () => {
       settingsPanelVisible={settingsPanelVisible}
       overlayComposer={renderComposer(true, false)}
       mainComposer={renderComposer(false, hasTurns)}
-      {...(sidePanelMaxRatio ? { sidePanelMaxRatio } : {})}
       sidePanel={
         <AppSidePanel
           mode={sidePanelMode}

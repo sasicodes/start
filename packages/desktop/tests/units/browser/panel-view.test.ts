@@ -1,4 +1,5 @@
 import type { WebContents } from 'electron';
+import type { BrowserStatus } from '@preload/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
 import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
@@ -16,9 +17,21 @@ const {
   selectBrowserTab,
   typeInBrowser
 } = await import('@main/browser/index');
+const { shouldCloseBrowserPanelForStatus } = await import('@renderer/shared/browser/status');
 
 const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) =>
   window.webContents as unknown as WebContents;
+
+const statusWithOpen = (open: boolean): BrowserStatus => ({
+  open,
+  url: '',
+  tabs: [],
+  title: '',
+  loading: false,
+  activeTabId: '',
+  canGoBack: false,
+  canGoForward: false
+});
 
 describe('browser panel view', () => {
   beforeEach(() => {
@@ -29,6 +42,12 @@ describe('browser panel view', () => {
 
   afterEach(() => {
     destroyBrowser();
+  });
+
+  it('closes the renderer panel only after an open browser status becomes closed', () => {
+    expect(shouldCloseBrowserPanelForStatus(false, statusWithOpen(false))).toBe(false);
+    expect(shouldCloseBrowserPanelForStatus(false, statusWithOpen(true))).toBe(false);
+    expect(shouldCloseBrowserPanelForStatus(true, statusWithOpen(false))).toBe(true);
   });
 
   it('detaches the native browser view when panel bounds are cleared', () => {
@@ -199,6 +218,22 @@ describe('browser panel view', () => {
     expect(view.webContents.closed).toBe(true);
     expect(result.status?.activeTabId).toBe('tab-2');
     expect(result.status?.tabs).toEqual([{ id: 'tab-2', url: '', title: '', loading: false }]);
+  });
+
+  it('closes the browser panel when the final blank tab is closed', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    const result = closeBrowserTab(webContents, 'tab-1');
+
+    expect(view.webContents.closed).toBe(true);
+    expect(window.contentView.children).toHaveLength(0);
+    expect(result.status?.open).toBe(false);
+    expect(result.status?.tabs).toEqual([]);
   });
 
   it('scales native browser bounds by the owner renderer zoom factor', () => {

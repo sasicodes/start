@@ -21,8 +21,8 @@ export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => 
     >
       <div
         class={tw(
-          'absolute inset-y-0 left-1/2 w-0 opacity-0 transition-opacity',
-          active && 'border-l-2 border-ink/20 opacity-100 dark:border-l-[3px] dark:border-ink/35'
+          'absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-gradient-to-b from-transparent via-ink/20 to-transparent opacity-0 transition-opacity dark:via-ink/35',
+          active && 'opacity-100'
         )}
       />
     </div>

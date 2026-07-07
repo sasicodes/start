@@ -436,12 +436,19 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   const tab = browserTabs.get(tabId);
   if (!tab) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
 
+  const wasBlank = !tab.loaded;
   const wasAttached = attachedTabId === tabId;
 
   closeBrowserTabById(tabId);
 
   const window = windowFromSender(sender);
-  if (!activeTabId && window) createBrowserTab();
+  if (!activeTabId) {
+    if (wasBlank) {
+      closeBrowserTabs();
+      return { ok: true, status: statusFromView() };
+    }
+    if (window) createBrowserTab();
+  }
 
   if (activeTabId && window && (wasAttached || ownerWindow === window)) {
     attachActiveBrowserView(window);

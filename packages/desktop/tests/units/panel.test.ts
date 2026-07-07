@@ -1,16 +1,22 @@
-import { sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/panel';
+import { sidePanelModeLayout } from '@renderer/app/utils/panel';
 import { describe, expect, it } from 'vitest';
 
 describe('side panel mode settings', () => {
   it('keeps settings fixed at the minimum panel width', () => {
-    expect(sidePanelModeMaxRatio('settings')).toBe(0.3);
-    expect(sidePanelModeResizable('settings')).toBe(false);
+    expect(sidePanelModeLayout('settings')).toEqual({
+      sidePanelResizable: false,
+      maxSidePanelWidthRatio: 0.3
+    });
   });
 
-  it('leaves other side panels resizable at the default maximum', () => {
-    expect(sidePanelModeMaxRatio('browser')).toBeUndefined();
-    expect(sidePanelModeMaxRatio('git')).toBeUndefined();
-    expect(sidePanelModeResizable('browser')).toBe(true);
-    expect(sidePanelModeResizable('git')).toBe(true);
+  it('keeps the browser panel wide enough for page content', () => {
+    expect(sidePanelModeLayout('browser')).toEqual({
+      sidePanelResizable: true,
+      minSidePanelWidthRatio: 0.5
+    });
+  });
+
+  it('leaves git resizable at the default size limits', () => {
+    expect(sidePanelModeLayout('git')).toEqual({ sidePanelResizable: true });
   });
 });
