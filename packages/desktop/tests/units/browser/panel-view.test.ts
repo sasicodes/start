@@ -215,13 +215,13 @@ describe('browser panel view', () => {
     expect(window.contentView.children).toHaveLength(0);
     expect(result.status).toEqual({
       url: '',
-      open: false,
+      tabs: [],
       title: '',
+      open: false,
       loading: false,
-      canGoBack: false,
       activeTabId: '',
-      canGoForward: false,
-      tabs: []
+      canGoBack: false,
+      canGoForward: false
     });
   });
 

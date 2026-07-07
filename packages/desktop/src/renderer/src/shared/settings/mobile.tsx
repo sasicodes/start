@@ -212,9 +212,9 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
           <p class="m-0 text-xs leading-5 text-soft">
             Self-host our relay with the{' '}
             <a
-              href={RELAY_SETUP_URL}
               target="_blank"
               rel="noreferrer"
+              href={RELAY_SETUP_URL}
               class="font-medium text-soft underline decoration-soft decoration-dotted underline-offset-3 transition-colors duration-100 hover:text-ink focus-visible:text-ink"
             >
               setup guide
