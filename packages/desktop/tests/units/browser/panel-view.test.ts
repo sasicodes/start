@@ -201,6 +201,30 @@ describe('browser panel view', () => {
     expect(result.status?.tabs).toEqual([{ id: 'tab-2', url: '', title: '', loading: false }]);
   });
 
+  it('closes the browser panel when the final blank tab is closed', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    const result = closeBrowserTab(webContents, 'tab-1');
+
+    expect(view.webContents.closed).toBe(true);
+    expect(window.contentView.children).toHaveLength(0);
+    expect(result.status).toEqual({
+      url: '',
+      open: false,
+      title: '',
+      loading: false,
+      canGoBack: false,
+      activeTabId: '',
+      canGoForward: false,
+      tabs: []
+    });
+  });
+
   it('scales native browser bounds by the owner renderer zoom factor', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

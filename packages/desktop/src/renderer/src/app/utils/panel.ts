@@ -12,4 +12,9 @@ export const sidePanelModeMaxRatio = (mode: SidePanelMode) => {
   return;
 };
 
+export const sidePanelModeMinRatio = (mode: SidePanelMode) => {
+  if (mode === 'browser') return 0.5;
+  return;
+};
+
 export const sidePanelModeResizable = (mode: SidePanelMode) => mode !== 'settings';

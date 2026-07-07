@@ -8,7 +8,12 @@ import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
-import { sidePanelModeLabel, sidePanelModeMaxRatio, sidePanelModeResizable } from '@renderer/app/utils/panel';
+import {
+  sidePanelModeLabel,
+  sidePanelModeMaxRatio,
+  sidePanelModeMinRatio,
+  sidePanelModeResizable
+} from '@renderer/app/utils/panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
@@ -279,6 +284,7 @@ export const App = () => {
 
   const sidePanelLabel = sidePanelModeLabel(sidePanelMode);
   const sidePanelMaxRatio = sidePanelModeMaxRatio(sidePanelMode);
+  const sidePanelMinRatio = sidePanelModeMinRatio(sidePanelMode);
   const sidePanelResizable = sidePanelModeResizable(sidePanelMode);
 
   const fileHandlers = useFileAttachments({
@@ -359,6 +365,7 @@ export const App = () => {
       overlayComposer={renderComposer(true, false)}
       mainComposer={renderComposer(false, hasTurns)}
       {...(sidePanelMaxRatio ? { sidePanelMaxRatio } : {})}
+      {...(sidePanelMinRatio ? { sidePanelMinRatio } : {})}
       sidePanel={
         <AppSidePanel
           mode={sidePanelMode}

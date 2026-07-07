@@ -36,6 +36,7 @@ interface MainSessionSurfaceProps {
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   sidePanelMaxRatio?: number;
+  sidePanelMinRatio?: number;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
 }
@@ -62,6 +63,7 @@ interface AppShellProps {
   mainComposer: ComponentChildren;
   onSidePanelCollapse: () => void;
   sidePanelMaxRatio?: number;
+  sidePanelMinRatio?: number;
   overlayComposer: ComponentChildren;
   onSelectWorkspace: (path: string) => void;
   onOpenSession: (session: RecentSession) => Promise<boolean>;
@@ -79,6 +81,7 @@ const MainSessionSurface = memo(
     sidePanelVisible,
     sidePanelResizable,
     sidePanelMaxRatio,
+    sidePanelMinRatio,
     onOpenSettings,
     workspaceCollapsed,
     sessionRoutePending,
@@ -96,6 +99,7 @@ const MainSessionSurface = memo(
       sidePanelResizable={sidePanelResizable}
       onSidePanelCollapse={onSidePanelCollapse}
       {...(sidePanelMaxRatio !== undefined ? { maxSidePanelWidthRatio: sidePanelMaxRatio } : {})}
+      {...(sidePanelMinRatio !== undefined ? { minSidePanelWidthRatio: sidePanelMinRatio } : {})}
     >
       {!sessionRoutePending && <TurnFeed />}
       <WorkspaceDock
@@ -132,6 +136,7 @@ export const AppShell = memo(
     sidePanelVisible,
     sidePanelResizable,
     sidePanelMaxRatio,
+    sidePanelMinRatio,
     onOpenSession,
     workspaceCollapsed,
     sessionRoutePending,
@@ -176,6 +181,7 @@ export const AppShell = memo(
           onChooseDirectory={onChooseDirectory}
           workspaceCollapsed={workspaceCollapsed}
           {...(sidePanelMaxRatio !== undefined ? { sidePanelMaxRatio } : {})}
+          {...(sidePanelMinRatio !== undefined ? { sidePanelMinRatio } : {})}
           onSelectWorkspace={onSelectWorkspace}
           onSidePanelCollapse={onSidePanelCollapse}
         />

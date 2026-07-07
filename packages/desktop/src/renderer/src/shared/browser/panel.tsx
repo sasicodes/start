@@ -154,11 +154,17 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
       window.pi.app
         .browserCloseTab(tabId)
         .then((result) => {
-          if (result.status) applyStatus(result.status);
+          if (!result.status) return;
+          if (!result.status.open) {
+            onClose();
+            return;
+          }
+
+          applyStatus(result.status);
         })
         .catch(() => setError('Browser tab could not be closed.'));
     },
-    [applyStatus]
+    [applyStatus, onClose]
   );
 
   useEffect(() => {

@@ -436,7 +436,13 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   const tab = browserTabs.get(tabId);
   if (!tab) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
 
+  const finalBlankTab = browserTabs.size === 1 && !tab.loaded;
   const wasAttached = attachedTabId === tabId;
+
+  if (finalBlankTab) {
+    closeBrowserTabs();
+    return { ok: true, status: statusFromView() };
+  }
 
   closeBrowserTabById(tabId);
 
