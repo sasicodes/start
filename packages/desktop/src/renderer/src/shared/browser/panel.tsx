@@ -252,7 +252,7 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
                     }}
                     class="group/close absolute top-1/2 left-2.5 grid size-5 -translate-y-1/2 place-items-center border-0 bg-transparent p-0 text-soft opacity-0 outline-0 transition-[color,opacity] group-hover:opacity-100 group-focus-within:opacity-100 hover:text-ink focus-visible:text-ink [&_svg]:size-3"
                   >
-                    <span class="grid size-4 place-items-center rounded-full bg-ink/10 transition-colors group-hover/close:bg-ink/20 group-focus-visible/close:bg-ink/20">
+                    <span class="grid size-4 place-items-center rounded-full transition-colors group-hover/close:bg-ink/20 group-focus-visible/close:bg-ink/20">
                       <XIcon strokeWidth={1.5} />
                     </span>
                   </button>
