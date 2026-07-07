@@ -217,7 +217,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
               rel="noreferrer"
               class="font-medium text-soft underline decoration-soft decoration-dotted underline-offset-3 transition-colors duration-100 hover:text-ink focus-visible:text-ink"
             >
-              relay setup guide
+              setup guide
             </a>{' '}
             and paste its WebSocket URL and token here.
           </p>
