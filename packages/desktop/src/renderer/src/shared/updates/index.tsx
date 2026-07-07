@@ -1,3 +1,4 @@
+import { releaseNotesUrl } from '@renderer/constants';
 import { animationActive } from '@renderer/shared/animation';
 import { useAppFocusState } from '@renderer/shared/app-focus';
 import { downloadUpdate, installUpdate, updateLabel, useUpdateState } from '@renderer/shared/updates/state';
@@ -12,8 +13,6 @@ import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
-
-const releaseNotesUrl = 'https://github.com/sasicodes/start/releases';
 
 const updateTooltip = (downloading: boolean, downloaded: boolean) => {
   if (downloading) return 'Downloading';

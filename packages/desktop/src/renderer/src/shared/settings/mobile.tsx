@@ -1,4 +1,5 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
+import { relaySetupUrl } from '@renderer/constants';
 import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
 import { keepAwake, updateKeepAwake } from '@renderer/shared/settings/state';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
@@ -208,7 +209,18 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
       <div class="flex items-center justify-between gap-4">
         <div class="grid gap-1">
           <h3 class="m-0 text-sm leading-5 font-medium text-ink">Remote access</h3>
-          <p class="m-0 text-xs leading-5 text-soft">Connect trusted phones to this desktop.</p>
+          <p class="m-0 text-xs leading-5 text-soft">
+            Self-host our relay with the{' '}
+            <a
+              href={relaySetupUrl}
+              target="_blank"
+              rel="noreferrer"
+              class="font-medium text-soft underline decoration-soft decoration-dotted underline-offset-3 transition-colors duration-100 hover:text-ink focus-visible:text-ink"
+            >
+              relay setup guide
+            </a>{' '}
+            and paste its WebSocket URL and token here.
+          </p>
         </div>
         {qrAvailable && (
           <div class="flex flex-none items-center gap-4">
@@ -235,7 +247,7 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
             <MobileInput
               type="password"
               value={draft.relayToken}
-              placeholder="Relay token (optional)"
+              placeholder="START_RELAY_TOKEN"
               onInput={(relayToken) => updateDraft({ relayToken })}
             />
           </div>
