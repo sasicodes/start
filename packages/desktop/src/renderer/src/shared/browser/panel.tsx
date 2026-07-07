@@ -327,7 +327,7 @@ export const BrowserPanel = ({ onClose, navigation, onUrlOpened, onInspectText }
           {copied ? <CheckIcon class="size-4" /> : <ScreenshotIcon class="size-4" strokeWidth={1.5} />}
         </BrowserButton>
       </div>
-      <div ref={viewportRef} class="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div ref={viewportRef} class="relative ml-0.5 min-h-0 min-w-0 flex-1 overflow-hidden">
         {(error || !active) && (
           <div class="absolute inset-0 grid place-items-center px-8 text-center">
             <div class="grid justify-items-center gap-3 text-soft">

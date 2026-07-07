@@ -33,7 +33,7 @@ export const PanelFrame = ({
       aria-label={label}
       style={{ width: `var(--panel-width, ${initialWidth}px)` }}
       class={tw(
-        'relative h-full min-h-0 shrink-0 transform-gpu overflow-visible outline-0 [-webkit-app-region:no-drag]',
+        'relative z-60 h-full min-h-0 shrink-0 transform-gpu overflow-visible outline-0 [-webkit-app-region:no-drag]',
         settling && 'transition-[width] ease-out'
       )}
     >
