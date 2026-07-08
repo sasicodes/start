@@ -205,6 +205,15 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [updateQueuedMessages]
   );
 
+  const sendQueuedMessage = useCallback(
+    async (id: string) => {
+      try {
+        updateQueuedMessages(await window.pi.chat.sendQueuedMessage(id));
+      } catch {}
+    },
+    [updateQueuedMessages]
+  );
+
   const deleteQueuedMessage = useCallback(
     async (id: string) => {
       try {
@@ -469,6 +478,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     loginSubscription,
     disconnectProvider,
     steerQueuedMessage,
+    sendQueuedMessage,
     deleteQueuedMessage,
     editQueuedMessage,
     selectThinkingLevel,

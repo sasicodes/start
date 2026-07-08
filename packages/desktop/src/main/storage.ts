@@ -24,7 +24,6 @@ export interface TrustedMobileDevice {
 
 export type StartState = {
   keepAwake: boolean;
-  activeHarness?: string;
   lastWorkspace?: string;
   mobileRelay: MobileRelaySettings;
   composerShortcut: string;
@@ -182,7 +181,6 @@ const parseThinkingLevel = (value: unknown): EffortLevel => {
 export const parseStartState = (value: unknown): StartState => {
   if (!value || typeof value !== 'object') return defaultStartState;
   const state = value as Partial<StartState>;
-  const activeHarness = parseTrimmedString(state.activeHarness);
   const lastWorkspace = parseTrimmedString(state.lastWorkspace);
   const selectedModelKey = parseTrimmedString(state.selectedModelKey);
   const sessionNotices = parseSessionNotices(state.sessionNotices);
@@ -195,7 +193,6 @@ export const parseStartState = (value: unknown): StartState => {
     composerShortcut: parseTrimmedString(state.composerShortcut) ?? defaultStartState.composerShortcut,
     solidWindowBackground: state.solidWindowBackground === true,
     selectedThinkingLevel: parseThinkingLevel(state.selectedThinkingLevel),
-    ...(activeHarness ? { activeHarness } : {}),
     ...(lastWorkspace ? { lastWorkspace } : {}),
     ...(selectedModelKey ? { selectedModelKey } : {}),
     ...(sessionNotices ? { sessionNotices } : {}),
@@ -207,7 +204,6 @@ export const parseStartState = (value: unknown): StartState => {
 
 const stateKey = {
   keepAwake: 'keep_awake',
-  activeHarness: 'active_harness',
   lastWorkspace: 'last_workspace',
   mobileRelay: 'mobile_relay',
   composerShortcut: 'composer_shortcut',
@@ -302,7 +298,6 @@ export const writeStartState = (state: StartState): StartState => {
     writeRow(stateKey.composerShortcut, nextState.composerShortcut);
     writeRow(stateKey.selectedThinkingLevel, nextState.selectedThinkingLevel);
     writeRow(stateKey.solidWindowBackground, nextState.solidWindowBackground);
-    writeOrDeleteRow(stateKey.activeHarness, nextState.activeHarness);
     writeOrDeleteRow(stateKey.lastWorkspace, nextState.lastWorkspace);
     writeOrDeleteRow(stateKey.selectedModelKey, nextState.selectedModelKey);
     writeOrDeleteRow(stateKey.workspaceHistory, nextState.workspaceHistory);

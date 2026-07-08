@@ -52,6 +52,7 @@ export const Composer = memo(
     onOpenSettings,
     onExitComplete,
     onSteerQueuedMessage,
+    onSendQueuedMessage,
     onDeleteQueuedMessage,
     onEditQueuedMessage,
     onReorderQueuedMessages,
@@ -272,7 +273,9 @@ export const Composer = memo(
         <Queue
           messages={queuedMessages}
           visible={queueVisible}
+          generating={isGenerating}
           onSteer={onSteerQueuedMessage}
+          onSend={onSendQueuedMessage}
           onDelete={onDeleteQueuedMessage}
           onReorder={onReorderQueuedMessages}
         />

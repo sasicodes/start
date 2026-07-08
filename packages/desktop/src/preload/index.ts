@@ -520,6 +520,7 @@ const api = {
     submitSubscriptionAuthInput: (value: string): Promise<void> =>
       ipcRenderer.invoke('chat:submit-subscription-auth-input', value),
     steerQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:steer-queued-message', id),
+    sendQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:send-queued-message', id),
     deleteQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:delete-queued-message', id),
     editQueuedMessage: (id: string, text: string): Promise<QueuedMessage[]> =>
       ipcRenderer.invoke('chat:edit-queued-message', id, text),

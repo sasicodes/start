@@ -46,7 +46,7 @@ export const registerChatIpc = ({
   };
 
   ipcMain.handle('chat:tabs', () => chat.getTabs());
-  ipcMain.handle('chat:abort', (event) => chat.abort(event.sender as WebContents));
+  ipcMain.handle('chat:abort', () => chat.abort());
   ipcMain.handle('chat:sessions:archive', async (_event, sessionId: string) => {
     notifyRecentSessionsChanged(await chat.archiveSession(sessionId));
   });
@@ -199,6 +199,9 @@ export const registerChatIpc = ({
   });
   ipcMain.handle('chat:steer-queued-message', (event, id: string) =>
     chat.steerQueuedMessage(id, event.sender as WebContents)
+  );
+  ipcMain.handle('chat:send-queued-message', (event, id: string) =>
+    chat.sendQueuedMessage(id, event.sender as WebContents)
   );
   ipcMain.handle('chat:cancel-subscription-login', () => chat.cancelSubscriptionLogin());
   ipcMain.handle('chat:prepare-clipboard-image', () => chat.prepareClipboardImage());
