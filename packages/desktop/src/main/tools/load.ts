@@ -4,8 +4,8 @@ import { pathToFileURL } from 'node:url';
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent';
 import * as v from 'valibot';
 
-export const maxAgentTools = 16;
-export const agentToolExtensions = ['.mjs', '.js'];
+const maxAgentTools = 16;
+const agentToolExtensions = ['.mjs', '.js'];
 
 const toolSchema = v.looseObject({
   name: v.pipe(v.string(), v.minLength(1)),
@@ -15,10 +15,6 @@ const toolSchema = v.looseObject({
 });
 
 const isToolDefinition = (value: unknown): value is ToolDefinition => v.is(toolSchema, value);
-
-const toolNamePattern = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/u;
-
-export const isValidToolName = (name: string) => toolNamePattern.test(name);
 
 export const discoverToolFiles = async (toolsDir: string): Promise<string[]> => {
   const entries = await readdir(toolsDir, { withFileTypes: true }).catch(() => []);

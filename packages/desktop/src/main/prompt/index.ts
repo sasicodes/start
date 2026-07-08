@@ -125,9 +125,6 @@ const stripRuntimeContext = (prompt: string): string => {
   return prompt.slice(0, match.index).trimEnd();
 };
 
-const systemIntro =
-  'You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.';
-
 export const buildStartSystemPrompt = (
   promptsDir: string,
   skillsDir: string,
@@ -136,7 +133,7 @@ export const buildStartSystemPrompt = (
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
-  return `${systemIntro}
+  return `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
 
 Available tools:
 ${runtimeToolsList(capabilities)}

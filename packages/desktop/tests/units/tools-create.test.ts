@@ -2,8 +2,8 @@ import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ExtensionAPI, ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { createToolController } from '@main/tools/create';
-import { discoverToolFiles, isValidToolName, loadToolFiles } from '@main/tools/load';
+import { createToolController, isValidToolName } from '@main/tools/create';
+import { discoverToolFiles, loadToolFiles } from '@main/tools/load';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 let dir = '';

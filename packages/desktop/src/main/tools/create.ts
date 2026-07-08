@@ -1,8 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ExtensionAPI, type ToolDefinition, defineTool } from '@earendil-works/pi-coding-agent';
-import { discoverToolFiles, isValidToolName, loadToolFiles } from '@main/tools/load';
+import { discoverToolFiles, loadToolFiles } from '@main/tools/load';
 import { toolResult } from '@main/providers/tools/result';
+
+const toolNamePattern = /^[a-z0-9]+(?:[-_][a-z0-9]+)*$/u;
+
+export const isValidToolName = (name: string) => toolNamePattern.test(name);
 
 const codeDescription =
   'Self-contained ES module with no imports. Default-export a plain object with name, description, parameters (JSON schema), and an async execute(id, args) that returns { content: [{ type: "text", text }] }.';
@@ -21,12 +25,12 @@ export const createToolController = (toolsDir: string) => {
   let api: ExtensionAPI | null = null;
   let reservedNames: Set<string> | null = null;
 
-  const registerToolFiles = async (): Promise<string[]> => {
+  const registerToolFiles = async (files: readonly string[]): Promise<string[]> => {
     if (!api) return [];
 
     if (!reservedNames) reservedNames = new Set(api.getAllTools().map((tool) => tool.name));
     const reserved = reservedNames;
-    const loaded = (await loadToolFiles(await discoverToolFiles(toolsDir))).filter((tool) => !reserved.has(tool.name));
+    const loaded = (await loadToolFiles(files)).filter((tool) => !reserved.has(tool.name));
     for (const tool of loaded) api.registerTool(tool);
 
     const names = loaded.map((tool) => tool.name);
@@ -36,7 +40,7 @@ export const createToolController = (toolsDir: string) => {
 
   const registerOnSessionStart = async () => {
     try {
-      await registerToolFiles();
+      await registerToolFiles(await discoverToolFiles(toolsDir));
     } catch {}
   };
 
@@ -55,10 +59,11 @@ export const createToolController = (toolsDir: string) => {
       const trimmedCode = code.trim();
       if (!trimmedCode) return toolResult('Tool code is required.', null);
 
+      const filePath = join(toolsDir, `${cleanName}.mjs`);
       await mkdir(toolsDir, { recursive: true });
-      await writeFile(join(toolsDir, `${cleanName}.mjs`), `${trimmedCode}\n`, 'utf8');
+      await writeFile(filePath, `${trimmedCode}\n`, 'utf8');
 
-      const registered = await registerToolFiles();
+      const registered = await registerToolFiles([filePath]);
       const activated = registered.includes(cleanName);
       const note = activated
         ? 'It is active now.'
