@@ -32,6 +32,7 @@ interface RunSubagentsOptions {
 interface AgentJob {
   task: SubagentTaskInput;
   agent: SubagentActivity;
+  model: ResolvedModel | null;
 }
 
 const maxConcurrentAgents = 4;
@@ -104,14 +105,18 @@ export const runSubagents = async ({
 }: RunSubagentsOptions): Promise<SubagentRunResult> => {
   const jobs: AgentJob[] = tasks.map((task, index) => {
     const name = nameAllocator.next(`${task.prompt}:${index}:${randomUUID()}`);
+    const model = resolveModel(task.model);
     return {
       task,
+      model,
       agent: {
         name,
         id: randomUUID(),
         status: 'queued',
         task: task.prompt,
+        effort: task.effort,
         avatar: subagentAvatar(name),
+        model: model?.id ?? task.model,
         accentColor: subagentAccentColor(name)
       }
     };
@@ -121,10 +126,9 @@ export const runSubagents = async ({
   const update = () => onUpdate({ agents: agents.map((agent) => ({ ...agent })) });
   update();
 
-  const runAgent = async ({ task, agent }: AgentJob): Promise<void> => {
+  const runAgent = async ({ task, agent, model }: AgentJob): Promise<void> => {
     let session: AgentSession | null = null;
     try {
-      const model = resolveModel(task.model);
       if (!model) throw new Error('No configured model is available. Set up a provider in settings.');
 
       agent.status = 'running';

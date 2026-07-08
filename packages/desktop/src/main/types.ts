@@ -115,6 +115,8 @@ export interface SubagentActivity {
   name: string;
   task: string;
   avatar: string;
+  model?: string;
+  effort?: EffortLevel;
   summary?: string;
   accentColor: string;
   status: SubagentStatus;

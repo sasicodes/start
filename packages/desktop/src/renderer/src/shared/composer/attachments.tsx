@@ -41,7 +41,7 @@ export const Attachments = ({
               onDragStart={(event) => event.preventDefault()}
               class="grid size-8.5 place-items-center overflow-hidden rounded-full border-0 bg-composer p-0 select-none hover:opacity-90 focus-visible:opacity-90 focus-visible:outline-0"
             >
-              <img alt="" draggable={false} src={attachment.previewUrl} class="size-full object-cover" />
+              <img alt="" draggable={false} src={attachment.previewUrl} class="size-full object-contain" />
             </button>
             <button
               type="button"

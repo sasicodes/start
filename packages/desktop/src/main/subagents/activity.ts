@@ -1,6 +1,6 @@
 import { isRecord } from '@main/details';
 import { normalizeSubagentTasks } from '@main/subagents/utils/input';
-import type { SubagentActivity } from '@main/types';
+import { effortLevels, type SubagentActivity } from '@main/types';
 import * as v from 'valibot';
 
 const subagentStatusSchema = v.picklist(['cancelled', 'completed', 'failed', 'queued', 'running']);
@@ -10,6 +10,8 @@ const subagentActivitySchema = v.object({
   name: v.string(),
   task: v.string(),
   avatar: v.string(),
+  model: v.optional(v.string()),
+  effort: v.optional(v.picklist(effortLevels)),
   summary: v.optional(v.string()),
   accentColor: v.string(),
   status: subagentStatusSchema
@@ -31,6 +33,8 @@ const parseSubagentActivity = (value: unknown): SubagentActivity | null => {
     avatar: activity.avatar,
     status: activity.status,
     accentColor: activity.accentColor,
+    ...(activity.model ? { model: activity.model } : {}),
+    ...(activity.effort ? { effort: activity.effort } : {}),
     ...(activity.summary ? { summary: activity.summary } : {})
   };
 };
