@@ -26,12 +26,16 @@ export const createToolController = (toolsDir: string) => {
   let reservedNames: Set<string> | null = null;
   let loadedNames: string[] = [];
 
+  const reserved = (): Set<string> => {
+    if (!reservedNames && api) reservedNames = new Set(api.getAllTools().map((tool) => tool.name));
+    return reservedNames ?? new Set();
+  };
+
   const activateTools = (loaded: readonly ToolDefinition[], previous: readonly string[]): string[] => {
     if (!api) return [];
 
-    if (!reservedNames) reservedNames = new Set(api.getAllTools().map((tool) => tool.name));
-    const reserved = reservedNames;
-    const usable = loaded.filter((tool) => !reserved.has(tool.name));
+    const reservedSet = reserved();
+    const usable = loaded.filter((tool) => !reservedSet.has(tool.name));
     for (const tool of usable) api.registerTool(tool);
 
     const names = usable.map((tool) => tool.name);
@@ -62,8 +66,9 @@ export const createToolController = (toolsDir: string) => {
       const trimmedCode = code.trim();
       if (!trimmedCode) return toolResult('Tool code is required.', null);
 
-      const collides = api?.getAllTools().some((tool) => tool.name === cleanName) && !loadedNames.includes(cleanName);
-      if (collides) return toolResult(`A tool named "${cleanName}" already exists. Pick another name.`, null);
+      if (reserved().has(cleanName)) {
+        return toolResult(`A tool named "${cleanName}" already exists. Pick another name.`, null);
+      }
 
       const filePath = join(toolsDir, `${cleanName}.mjs`);
       await mkdir(toolsDir, { recursive: true });

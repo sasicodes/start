@@ -130,6 +130,19 @@ describe('create_tool', () => {
     expect(mounted.active()).not.toContain('ping');
   });
 
+  it('allows recreating a tool after its file was deleted mid-session', async () => {
+    const mounted = mountController();
+
+    await mounted.exec('create_tool', { name: 'lookup', code: toolCode('lookup') });
+    await rm(join(dir, 'lookup.mjs'));
+    await mounted.sessionStart();
+    expect(mounted.active()).not.toContain('lookup');
+
+    const recreated = await mounted.exec('create_tool', { name: 'lookup', code: toolCode('lookup') });
+    expect(recreated).toContain('It is active now.');
+    expect(mounted.active()).toContain('lookup');
+  });
+
   it('loads existing tool files on session start', async () => {
     await writeFile(join(dir, 'ping.mjs'), toolCode('ping'), 'utf8');
     const mounted = mountController();
