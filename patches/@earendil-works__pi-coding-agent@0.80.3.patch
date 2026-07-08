@@ -15,7 +15,7 @@ index 4b794828f33d7fad94fc0df69bc31959c94bf1c1..dc81812d7c7ccd89ab239b70ce7c3ac1
 +            return fs.realpathSync(entry);
 +        }
 +    }
-+    return require.resolve(packageName);
++    throw new Error(`Unable to resolve ${packageName}/${packageRelativePath}.`);
 +};
  /**
   * Get aliases for jiti (used in Node.js/development mode).
