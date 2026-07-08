@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ExtensionAPI, type ToolDefinition, defineTool } from '@earendil-works/pi-coding-agent';
 import { discoverToolFiles, loadToolFiles } from '@main/tools/load';
@@ -24,23 +24,26 @@ const createParameters = {
 export const createToolController = (toolsDir: string) => {
   let api: ExtensionAPI | null = null;
   let reservedNames: Set<string> | null = null;
+  let loadedNames: string[] = [];
 
-  const registerToolFiles = async (files: readonly string[]): Promise<string[]> => {
+  const activateTools = (loaded: readonly ToolDefinition[], previous: readonly string[]): string[] => {
     if (!api) return [];
 
     if (!reservedNames) reservedNames = new Set(api.getAllTools().map((tool) => tool.name));
     const reserved = reservedNames;
-    const loaded = (await loadToolFiles(files)).filter((tool) => !reserved.has(tool.name));
-    for (const tool of loaded) api.registerTool(tool);
+    const usable = loaded.filter((tool) => !reserved.has(tool.name));
+    for (const tool of usable) api.registerTool(tool);
 
-    const names = loaded.map((tool) => tool.name);
-    api.setActiveTools([...new Set([...api.getActiveTools(), ...names])]);
+    const names = usable.map((tool) => tool.name);
+    const base = api.getActiveTools().filter((name) => !previous.includes(name));
+    api.setActiveTools([...new Set([...base, ...names])]);
+    loadedNames = [...new Set([...loadedNames.filter((name) => !previous.includes(name)), ...names])];
     return names;
   };
 
   const registerOnSessionStart = async () => {
     try {
-      await registerToolFiles(await discoverToolFiles(toolsDir));
+      activateTools(await loadToolFiles(await discoverToolFiles(toolsDir)), loadedNames);
     } catch {}
   };
 
@@ -59,16 +62,24 @@ export const createToolController = (toolsDir: string) => {
       const trimmedCode = code.trim();
       if (!trimmedCode) return toolResult('Tool code is required.', null);
 
+      const collides = api?.getAllTools().some((tool) => tool.name === cleanName) && !loadedNames.includes(cleanName);
+      if (collides) return toolResult(`A tool named "${cleanName}" already exists. Pick another name.`, null);
+
       const filePath = join(toolsDir, `${cleanName}.mjs`);
       await mkdir(toolsDir, { recursive: true });
       await writeFile(filePath, `${trimmedCode}\n`, 'utf8');
 
-      const registered = await registerToolFiles([filePath]);
-      const activated = registered.includes(cleanName);
-      const note = activated
-        ? 'It is active now.'
-        : 'It could not be activated; check that the module default-exports a valid tool with that name.';
-      return toolResult(`Created tool "${cleanName}". ${note}`, null);
+      const tool = (await loadToolFiles([filePath])).find((loaded) => loaded.name === cleanName);
+      if (!tool) {
+        await rm(filePath, { force: true });
+        return toolResult(
+          `Tool module must default-export a valid tool named "${cleanName}". Nothing was saved.`,
+          null
+        );
+      }
+
+      activateTools([tool], []);
+      return toolResult(`Created tool "${cleanName}". It is active now.`, null);
     }
   });
 

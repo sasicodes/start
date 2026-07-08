@@ -78,20 +78,45 @@ describe('create_tool', () => {
     expect(await mounted.exec('create_tool', { name: 'ping', code: '   ' })).toContain('required');
   });
 
-  it('reports when the written module does not activate', async () => {
+  it('rejects and removes a module that does not export a tool with the requested name', async () => {
     const mounted = mountController();
 
-    const created = await mounted.exec('create_tool', { name: 'broken', code: 'export default { nope: true };' });
-    expect(created).toContain('could not be activated');
-    expect(mounted.active()).not.toContain('broken');
+    const broken = await mounted.exec('create_tool', { name: 'broken', code: 'export default { nope: true };' });
+    expect(broken).toContain('Nothing was saved');
+    await expect(stat(join(dir, 'broken.mjs'))).rejects.toThrow();
+
+    const mismatched = await mounted.exec('create_tool', { name: 'foo', code: toolCode('bar') });
+    expect(mismatched).toContain('Nothing was saved');
+    expect(mounted.registeredNames()).not.toContain('bar');
+    await expect(stat(join(dir, 'foo.mjs'))).rejects.toThrow();
   });
 
-  it('does not register a tool that collides with an existing tool name', async () => {
+  it('rejects a tool name that collides with an existing tool', async () => {
     const mounted = mountController(['search']);
-    await mounted.exec('create_tool', { name: 'search', code: toolCode('search') });
 
-    expect(mounted.active().filter((name) => name === 'search')).toEqual(['search']);
-    expect(mounted.registeredNames().filter((name) => name === 'search')).toEqual(['search']);
+    const created = await mounted.exec('create_tool', { name: 'search', code: toolCode('search') });
+    expect(created).toContain('already exists');
+    await expect(stat(join(dir, 'search.mjs'))).rejects.toThrow();
+  });
+
+  it('allows overwriting a tool it created earlier in the session', async () => {
+    const mounted = mountController();
+
+    await mounted.exec('create_tool', { name: 'lookup', code: toolCode('lookup') });
+    const updated = await mounted.exec('create_tool', { name: 'lookup', code: toolCode('lookup', 'v2') });
+    expect(updated).toContain('It is active now.');
+  });
+
+  it('drops tools whose files were deleted when the session restarts', async () => {
+    await writeFile(join(dir, 'ping.mjs'), toolCode('ping'), 'utf8');
+    const mounted = mountController();
+
+    await mounted.sessionStart();
+    expect(mounted.active()).toContain('ping');
+
+    await rm(join(dir, 'ping.mjs'));
+    await mounted.sessionStart();
+    expect(mounted.active()).not.toContain('ping');
   });
 
   it('loads existing tool files on session start', async () => {
