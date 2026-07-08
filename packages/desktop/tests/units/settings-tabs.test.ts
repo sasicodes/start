@@ -1,4 +1,4 @@
-import { computeTabReveal } from '@renderer/shared/settings/tab';
+import { computeTabReveal, settingsTabs } from '@renderer/shared/settings/tab';
 import { describe, expect, it } from 'vitest';
 
 describe('computeTabReveal', () => {
@@ -12,5 +12,11 @@ describe('computeTabReveal', () => {
 
   it('clips only the left when the last tab is active', () => {
     expect(computeTabReveal(300, 220, 80)).toEqual({ left: 220, right: 0 });
+  });
+});
+
+describe('settingsTabs', () => {
+  it('shows the remote tab for relay hosting feedback', () => {
+    expect(settingsTabs.map((tab) => tab.value)).toEqual(['personalization', 'providers', 'remote', 'shortcuts']);
   });
 });

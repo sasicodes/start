@@ -1,4 +1,4 @@
-import type { AppSettingsResult, MobileRelaySettings, ProviderAuthStatus } from '@preload/index';
+import type { AppSettingsResult, ProviderAuthStatus } from '@preload/index';
 import type { SidePanelMode } from '@renderer/app/types';
 import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
@@ -12,7 +12,6 @@ interface AppSidePanelProps {
   onClose: () => void;
   settingsTab: SettingsTab;
   workspacePath: string;
-  mobileRelay: MobileRelaySettings;
   providers: ProviderAuthStatus[];
   browserNavigation: BrowserNavigation;
   solidWindowBackground: boolean;
@@ -22,7 +21,6 @@ interface AppSidePanelProps {
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
   onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
-  onMobileRelayChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 
@@ -32,7 +30,6 @@ export const AppSidePanel = memo(
     onClose,
     providers,
     settingsTab,
-    mobileRelay,
     onSaveApiKey,
     workspacePath,
     browserNavigation,
@@ -40,7 +37,6 @@ export const AppSidePanel = memo(
     solidWindowBackground,
     onLoginSubscription,
     onBrowserInspectText,
-    onMobileRelayChange,
     onSettingsTabChange,
     onDisconnectProvider,
     onSolidWindowBackgroundChange
@@ -62,12 +58,10 @@ export const AppSidePanel = memo(
           tab={settingsTab}
           onClose={onClose}
           providers={providers}
-          mobileRelay={mobileRelay}
           onSaveApiKey={onSaveApiKey}
           onTabChange={onSettingsTabChange}
           solidWindowBackground={solidWindowBackground}
           onLoginSubscription={onLoginSubscription}
-          onMobileRelayChange={onMobileRelayChange}
           onDisconnectProvider={onDisconnectProvider}
           onSolidWindowBackgroundChange={onSolidWindowBackgroundChange}
         />

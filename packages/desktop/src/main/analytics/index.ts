@@ -1,19 +1,15 @@
-import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
 import { appVersion, isProd } from '@main/application';
 import {
-  ANALYTICS_COMMAND_TIMEOUT_MS,
   ANALYTICS_FLUSH_AT,
   ANALYTICS_FLUSH_INTERVAL_MS,
   ANALYTICS_HASH_LENGTH,
   ANALYTICS_SHUTDOWN_TIMEOUT_MS,
-  ANALYTICS_USERNAME_STORAGE_NAME,
   POSTHOG_HOST,
   POSTHOG_PROJECT_KEY
 } from '@main/constants';
 import { loadDesktopId } from '@main/device';
-import { readLocalStateValue, writeLocalStateValue } from '@main/local-state';
 import electron from 'electron';
 import { PostHog } from 'posthog-node';
 
@@ -45,17 +41,22 @@ const { app } = electron;
 let distinctId = '';
 let launchStartMs = 0;
 let client: PostHog | null = null;
-let identifiedUsername = '';
 
-const baseProperties = (): AnalyticsProperties => ({
+const osName = () => {
+  if (process.platform === 'darwin') return 'macOS';
+  if (process.platform === 'win32') return 'Windows';
+  if (process.platform === 'linux') return 'Linux';
+  return process.platform;
+};
+
+const baseProperties: AnalyticsProperties = {
+  $os: osName(),
+  platform: process.platform,
   app_version: appVersion,
-  platform: process.platform
-});
-
-const identifyProperties = (username: string): AnalyticsProperties => ({
-  username,
-  ...baseProperties()
-});
+  $os_version: release(),
+  $app_version: appVersion,
+  $device_type: 'Desktop'
+};
 
 const analyticsId = (value?: string) => {
   const id = value?.trim();
@@ -100,66 +101,18 @@ export const workspaceAnalyticsProperties = (workspacePath?: string): AnalyticsP
   };
 };
 
-const runCommand = (command: string, args: string[]) =>
-  new Promise<string>((resolve) => {
-    execFile(command, args, { timeout: ANALYTICS_COMMAND_TIMEOUT_MS }, (error, stdout) => {
-      if (error) {
-        resolve('');
-        return;
-      }
-
-      resolve(stdout.trim());
-    });
-  });
-
-const readGithubUsername = async () => {
-  const login = await runCommand('gh', ['api', 'user', '--jq', '.login']);
-  return login ? `gh:${login}` : '';
-};
-
-const readGitlabUsername = async () => {
-  const username = await runCommand('glab', ['api', 'user', '--jq', '.username']);
-  return username ? `gl:${username}` : '';
-};
-
-const readGitUsername = async () => {
-  const username = await runCommand('git', ['config', '--global', 'user.name']);
-  return username ? `git:${username}` : '';
-};
-
-const readDeviceUsername = async () =>
-  (await readGithubUsername()) || (await readGitlabUsername()) || (await readGitUsername());
-
 export const initAnalytics = () => {
   if (!isProd) return;
   if (client) return;
 
   distinctId = loadDesktopId();
   launchStartMs = Date.now();
-  identifiedUsername = readLocalStateValue(ANALYTICS_USERNAME_STORAGE_NAME) || '';
   client = new PostHog(POSTHOG_PROJECT_KEY, {
     host: POSTHOG_HOST,
     flushAt: ANALYTICS_FLUSH_AT,
-    flushInterval: ANALYTICS_FLUSH_INTERVAL_MS
-  });
-  void identifyDeviceUser();
-};
-
-export const identifyDeviceUser = async () => {
-  const analytics = client;
-  if (!analytics) return;
-  if (!distinctId) return;
-
-  const username = await readDeviceUsername();
-  if (!username) return;
-  if (identifiedUsername === username) return;
-
-  identifiedUsername = username;
-  writeLocalStateValue(ANALYTICS_USERNAME_STORAGE_NAME, username);
-  analytics.identify({
-    distinctId,
+    isServer: false,
     disableGeoip: true,
-    properties: identifyProperties(username)
+    flushInterval: ANALYTICS_FLUSH_INTERVAL_MS
   });
 };
 
@@ -184,7 +137,7 @@ export const trackAnalyticsEvent = (event: AnalyticsEvent, properties: Analytics
     distinctId,
     disableGeoip: true,
     properties: {
-      ...baseProperties(),
+      ...baseProperties,
       ...properties,
       ...(event === 'app_opened' ? launchPersonProperties() : {})
     }
