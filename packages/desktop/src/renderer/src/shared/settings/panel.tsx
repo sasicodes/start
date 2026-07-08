@@ -53,10 +53,10 @@ export const Settings = memo(
               onLoginSubscription={onLoginSubscription}
               onDisconnectProvider={onDisconnectProvider}
             />
-          ) : tab === 'shortcuts' ? (
-            <Shortcuts />
-          ) : (
+          ) : tab === 'remote' ? (
             <Remote />
+          ) : (
+            <Shortcuts />
           )}
         </div>
       </section>
