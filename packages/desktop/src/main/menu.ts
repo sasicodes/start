@@ -90,7 +90,7 @@ export const installStatusItem = ({
       {
         label: 'Settings',
         accelerator: 'CommandOrControl+,',
-        click: onShowSettings
+        click: () => onShowSettings()
       },
       { label: `Quit ${appMenuName}`, click: () => app.quit() }
     ])
@@ -123,7 +123,7 @@ export const installApplicationMenu = ({
           { type: 'separator' },
           {
             label: 'Settings',
-            click: onShowSettings,
+            click: () => onShowSettings(),
             accelerator: 'CommandOrControl+,'
           },
           { type: 'separator' },

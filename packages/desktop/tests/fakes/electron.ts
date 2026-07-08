@@ -37,6 +37,35 @@ export const clipboard = {
   readImage: () => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })
 };
 
+interface FakeNativeImage {
+  getSize: () => { height: number; width: number };
+  isEmpty: () => boolean;
+  resize: (_options: unknown) => FakeNativeImage;
+  setTemplateImage: (_template: boolean) => void;
+  toJPEG: (_quality: number) => Buffer;
+  toPNG: () => Buffer;
+}
+
+export interface FakeMenuItem {
+  accelerator?: string;
+  click?: (...args: unknown[]) => unknown;
+  enabled?: boolean;
+  label?: string;
+  role?: string;
+  sublabel?: string;
+  submenu?: FakeMenuItem[];
+  type?: string;
+}
+
+const fakeNativeImage = (empty = false): FakeNativeImage => ({
+  getSize: () => ({ height: 1, width: 1 }),
+  isEmpty: () => empty,
+  resize: () => fakeNativeImage(empty),
+  setTemplateImage: (_template: boolean) => {},
+  toJPEG: (_quality: number) => Buffer.alloc(0),
+  toPNG: () => Buffer.alloc(0)
+});
+
 let dialogResponse = 0;
 const messageBoxCalls: unknown[][] = [];
 
@@ -58,13 +87,54 @@ export const dialog = {
 };
 
 export const nativeImage = {
-  createFromBuffer: (_buffer: Buffer) => null
+  createFromBuffer: (_buffer: Buffer) => fakeNativeImage(),
+  createFromPath: (_path: string) => fakeNativeImage()
 };
 
 export const app = {
   isPackaged: false,
   getVersion: () => '0.0.0-test',
+  quit: () => {},
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
+};
+
+let applicationMenu: FakeMenuItem[] | null = null;
+
+export const Menu = {
+  buildFromTemplate: (template: FakeMenuItem[]) => template,
+  setApplicationMenu: (menu: FakeMenuItem[] | null) => {
+    applicationMenu = menu;
+  }
+};
+
+export const applicationMenuTemplate = () => applicationMenu;
+
+export class Tray {
+  contextMenu: FakeMenuItem[] | null = null;
+  tooltip = '';
+
+  setContextMenu = (menu: FakeMenuItem[]) => {
+    this.contextMenu = menu;
+  };
+
+  setToolTip = (tooltip: string) => {
+    this.tooltip = tooltip;
+  };
+}
+
+const trays: Tray[] = [];
+const TrackedTray = class extends Tray {
+  constructor(_image: FakeNativeImage) {
+    super();
+    trays.push(this);
+  }
+};
+
+export const lastTray = () => trays[trays.length - 1] ?? null;
+
+export const resetFakeMenus = () => {
+  trays.length = 0;
+  applicationMenu = null;
 };
 
 const activeBlockers = new Set<number>();
@@ -266,6 +336,8 @@ const fakeElectronModule = {
   dialog,
   clipboard,
   nativeImage,
+  Menu,
+  Tray: TrackedTray,
   powerSaveBlocker,
   utilityProcess,
   BrowserWindow: {
