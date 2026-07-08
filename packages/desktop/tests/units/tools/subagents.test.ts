@@ -53,6 +53,8 @@ describe('sub-agent tool details', () => {
               task: 'Review renderer activity UI.',
               avatar: 'data:image/svg+xml;utf8,test',
               status: 'running',
+              model: 'Claude Opus 4.7',
+              effort: 'high',
               accentColor: '#0f766e'
             }
           ]
@@ -65,6 +67,8 @@ describe('sub-agent tool details', () => {
     expect(detail.metric).toBeUndefined();
     expect(detail.subagents?.[0]?.name).toBe('Arul');
     expect(detail.subagents?.[0]?.task).toBe('Review renderer activity UI.');
+    expect(detail.subagents?.[0]?.model).toBe('Claude Opus 4.7');
+    expect(detail.subagents?.[0]?.effort).toBe('high');
   });
 
   it('normalizes single-task workflow arguments and requires model and effort', () => {

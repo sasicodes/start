@@ -26,12 +26,19 @@ const SubagentRow = ({ agent }: { agent: SubagentActivity }) => {
   const [open, setOpen] = useState(false);
   const summary = subagentSummary(agent);
   const expandable = subagentExpandable(agent);
+  const modelLabel = agent.model ? `${agent.model}${agent.effort ? ` (${agent.effort})` : ''}` : '';
   const content = (
     <>
       <img alt="" draggable={false} src={agent.avatar} class="size-4 flex-none rounded-full" />
       <span class="flex min-w-0 flex-1 items-center gap-1.5 leading-4 text-soft">
         <AgentName agent={agent} />
         <span class="shrink-0 text-soft">-</span>
+        {modelLabel && (
+          <>
+            <span class="shrink-0 text-soft">{modelLabel}</span>
+            <span class="shrink-0 text-soft">-</span>
+          </>
+        )}
         <span class="min-w-0 truncate text-soft">{agent.task}</span>
       </span>
     </>
