@@ -109,6 +109,7 @@ export const App = () => {
     loginSubscription,
     disconnectProvider,
     steerQueuedMessage,
+    sendQueuedMessage,
     deleteQueuedMessage,
     editQueuedMessage,
     selectThinkingLevel,
@@ -322,6 +323,7 @@ export const App = () => {
       onExitComplete={completeComposerExit}
       onSelectModel={selectModelFromComposer}
       onSteerQueuedMessage={steerQueuedMessage}
+      onSendQueuedMessage={sendQueuedMessage}
       revealKey={overlay ? composerRevealKey : 0}
       onEditQueuedMessage={editQueuedMessage}
       onDeleteQueuedMessage={deleteQueuedMessage}

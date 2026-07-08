@@ -101,7 +101,7 @@ describe('workspace switching', () => {
     expect(status.sessionId).toBe(tab.id);
     expect(status.isGenerating).toBe(true);
 
-    await chat.abort(webContents);
+    await chat.abort();
     session.finishPrompt();
     await send;
   });

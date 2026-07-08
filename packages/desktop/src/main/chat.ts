@@ -742,17 +742,15 @@ export class ChatService {
     return this.send(prompt, webContents, attachments);
   }
 
-  async abortTab(id: string, webContents?: WebContents): Promise<void> {
-    if (this.activeSessionId === id) return this.abort(webContents);
+  async abortTab(id: string): Promise<void> {
+    if (this.activeSessionId === id) return this.abort();
     const session = this.backgroundSessions.get(id);
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     if (runtimeState) {
       runtimeState.abortSequence += 1;
-      runtimeState.queuedMessages = [];
-      runtimeState.queueDeliveryCandidates = [];
       delete runtimeState.liveAssistantTurn;
     }
-    session?.clearQueue();
+    this.pauseQueuedMessages(session ?? null, runtimeState);
     session?.abortBash();
     await session?.abort();
   }
@@ -1309,6 +1307,8 @@ export class ChatService {
         if (error) endError = error;
       });
 
+      if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
+
       try {
         if (images.length > 0) {
           await session.prompt(text, { images });
@@ -1429,6 +1429,36 @@ export class ChatService {
     }
   }
 
+  async sendQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
+    const session = this.session;
+    const runtimeState = session ? this.runtimeStateForSession(session) : null;
+    const message = runtimeState?.queuedMessages.find((item) => item.id === id);
+    if (!session || !runtimeState || !message) return this.visibleQueuedMessages();
+    if (runtimeState.isGenerating || session.isStreaming) return this.steerQueuedMessage(id, webContents);
+
+    runtimeState.queuedMessages = runtimeState.queuedMessages.filter((item) => item.id !== id);
+    runtimeState.queueDeliveryCandidates.push(visibleQueuedMessage(message));
+    this.emitQueueUpdate(webContents);
+    this.generate(session, this.workspaceCwd, message.text, this.storeQueuedImages(message.images), webContents).catch(
+      () => {}
+    );
+    return this.visibleQueuedMessages(runtimeState);
+  }
+
+  private storeQueuedImages(images: SessionImageAttachment[] = []): ImageAttachment[] {
+    return images.map((image) =>
+      this.storeAttachment({
+        path: '',
+        previewUrl: '',
+        type: 'image',
+        id: randomUUID(),
+        data: image.data,
+        name: 'attachment',
+        mimeType: image.mimeType
+      })
+    );
+  }
+
   async steerQueuedMessage(id: string, webContents: WebContents): Promise<QueuedMessage[]> {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
@@ -1490,10 +1520,10 @@ export class ChatService {
     return this.visibleQueuedMessages(runtimeState);
   }
 
-  async abort(webContents?: WebContents): Promise<void> {
+  async abort(): Promise<void> {
     const runtimeState = this.activeRuntimeState();
     if (runtimeState) runtimeState.abortSequence += 1;
-    this.clearQueuedMessages(webContents, runtimeState);
+    this.pauseQueuedMessages(this.session, runtimeState);
     this.session?.abortBash();
     await this.session?.abort();
   }
@@ -1718,6 +1748,20 @@ export class ChatService {
           await session.followUp(message.text, message.images);
         }
       }
+    } finally {
+      runtimeState.queueRebuildDepth = Math.max(0, runtimeState.queueRebuildDepth - 1);
+    }
+  }
+
+  private pauseQueuedMessages(session: AgentSession | null, runtimeState: SessionRuntimeState | null): void {
+    if (!runtimeState) return;
+
+    runtimeState.queueDeliveryCandidates = [];
+    if (!session) return;
+
+    runtimeState.queueRebuildDepth += 1;
+    try {
+      session.clearQueue();
     } finally {
       runtimeState.queueRebuildDepth = Math.max(0, runtimeState.queueRebuildDepth - 1);
     }

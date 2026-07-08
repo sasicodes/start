@@ -6,15 +6,27 @@ import { DragIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useMemo } from 'preact/hooks';
 
+const queueActionText = (generating: boolean, steering: boolean) => {
+  if (!generating) return 'Send';
+  return steering ? 'Steering' : 'Steer';
+};
+
+const queueActionLabel = (generating: boolean, steering: boolean) => {
+  if (!generating) return 'Send this queued message now';
+  return steering ? 'Already steering next' : 'Steer this queued message';
+};
+
 interface QueueProps {
   messages: QueuedMessage[];
   visible: boolean;
+  generating: boolean;
   onSteer: (id: string) => void;
+  onSend: (id: string) => void;
   onDelete: (id: string) => void;
   onReorder: (orderedIds: string[]) => void;
 }
 
-export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: QueueProps) => {
+export const Queue = ({ messages, visible, generating, onDelete, onReorder, onSend, onSteer }: QueueProps) => {
   const ids = useMemo(() => messages.map((message) => message.id), [messages]);
   const byId = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
   const reorder = useReorder(ids, onReorder);
@@ -67,12 +79,12 @@ export const Queue = ({ messages, visible, onDelete, onReorder, onSteer }: Queue
               <div class="flex flex-none items-center gap-1">
                 <button
                   type="button"
-                  disabled={steering}
-                  aria-label={steering ? 'Already steering next' : 'Steer this queued message'}
-                  onClick={() => onSteer(id)}
+                  disabled={generating && steering}
+                  aria-label={queueActionLabel(generating, steering)}
+                  onClick={() => (generating ? onSteer(id) : onSend(id))}
                   class="rounded-full border-0 bg-transparent px-2 py-1 text-xs leading-none font-medium text-soft transition-colors hover:text-hover disabled:pointer-events-none disabled:text-hover"
                 >
-                  {steering ? 'Steering' : 'Steer'}
+                  {queueActionText(generating, steering)}
                 </button>
                 <button
                   type="button"

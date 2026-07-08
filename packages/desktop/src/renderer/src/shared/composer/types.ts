@@ -31,6 +31,7 @@ export interface ComposerProps {
   onSelectModel: (modelKey: string) => void;
   onSelectWorkspace: (path: string) => void;
   onSteerQueuedMessage: (id: string) => void;
+  onSendQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
   onEditQueuedMessage: (id: string, text: string) => Promise<boolean>;
   onReorderQueuedMessages: (orderedIds: string[]) => void;
