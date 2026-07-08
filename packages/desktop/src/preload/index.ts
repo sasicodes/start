@@ -54,7 +54,7 @@ export interface ChatStatus {
 
 export type EffortLevel = 'low' | 'medium' | 'high' | 'xhigh';
 
-export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+export type SettingsTab = 'personalization' | 'providers' | 'shortcuts' | 'remote';
 
 export interface ModelOption {
   id: string;

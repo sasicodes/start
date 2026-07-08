@@ -275,7 +275,7 @@ const notifyWorkspaceChanged = (workspacePath?: string) => {
   notifyRecentSessionsChanged(workspacePath);
 };
 
-type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+type SettingsTab = 'personalization' | 'providers' | 'shortcuts' | 'remote';
 
 const withCachedWorkspace = async <T extends { status?: { workspacePath: string } }>(result: T) => {
   const workspacePath = result.status?.workspacePath;

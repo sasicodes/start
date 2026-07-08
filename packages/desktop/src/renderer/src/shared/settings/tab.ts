@@ -1,4 +1,11 @@
-export type SettingsTab = 'personalization' | 'providers' | 'mobile' | 'shortcuts';
+export const settingsTabs = [
+  { value: 'personalization', label: 'Personalization' },
+  { value: 'providers', label: 'Providers' },
+  { value: 'remote', label: 'Remote' },
+  { value: 'shortcuts', label: 'Shortcuts' }
+] as const;
+
+export type SettingsTab = (typeof settingsTabs)[number]['value'];
 
 export const providerSettingsTab = 'providers' satisfies SettingsTab;
 

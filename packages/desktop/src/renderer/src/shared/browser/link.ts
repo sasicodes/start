@@ -1,4 +1,5 @@
-export const browserLinkHrefFromAnchor = (anchor: Pick<HTMLAnchorElement, 'href' | 'protocol'>) => {
+export const browserLinkHrefFromAnchor = (anchor: Pick<HTMLAnchorElement, 'href' | 'protocol' | 'rel'>) => {
+  if (anchor.rel.split(/\s+/u).includes('external')) return '';
   if (anchor.protocol === 'http:' || anchor.protocol === 'https:') return anchor.href;
   return '';
 };

@@ -1,4 +1,4 @@
-import { computeTabReveal, type SettingsTab, type TabReveal } from '@renderer/shared/settings/tab';
+import { computeTabReveal, settingsTabs, type SettingsTab, type TabReveal } from '@renderer/shared/settings/tab';
 import { tw } from '@renderer/utils/tw';
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
@@ -8,13 +8,6 @@ interface SettingsTabsProps {
   value: SettingsTab;
   onChange: (value: SettingsTab) => void;
 }
-
-const settingsTabs = [
-  { value: 'personalization', label: 'Personalization' },
-  { value: 'providers', label: 'Providers' },
-  { value: 'mobile', label: 'Mobile' },
-  { value: 'shortcuts', label: 'Shortcuts' }
-] as const;
 
 export const SettingsTabs = ({ value, onChange }: SettingsTabsProps) => {
   const listRef = useRef<HTMLDivElement | null>(null);

@@ -9,7 +9,7 @@ export const Privacy = () => {
       <div style={{ maxWidth: `${INNER_RAIL}px` }} className="mx-auto px-6 pt-12 pb-0 sm:px-10 sm:pt-20">
         <Header
           title="Privacy"
-          updated="May 24, 2026"
+          updated="July 8, 2026"
           subtitle="Start is your coding assistant. Your project data stays under your control."
         />
         <div className="mt-12 flex flex-col gap-10 pb-20 sm:mt-16">
@@ -23,8 +23,8 @@ export const Privacy = () => {
               app is used.
             </p>
             <p>
-              These signals are associated with this installation. If a local username is available from your developer
-              configuration, Start may include it as an optional profile property.
+              These signals are associated with a random installation id. They never include your name, account
+              identity, or any personal detail, and session or workspace identifiers are one-way salted hashes.
             </p>
           </Section>
 
