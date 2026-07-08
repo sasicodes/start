@@ -13,7 +13,7 @@ overrides:
 
 patchedDependencies:
   '@earendil-works/pi-ai@0.80.3': 01ef722c5311939edf59463c56732c6a846b6c9c8d7759f8ca3e0126d564b17f
-  '@earendil-works/pi-coding-agent@0.80.3': 921b057e9be0a82f9a822ed657bff76625079bd1a96f3f6222a30714fcfd984f
+  '@earendil-works/pi-coding-agent@0.80.3': e05100bdc49490faf783163044b86379a971e625bea6a27bb0578f8a1f4853ff
   '@ff-labs/fff-node@0.9.6': adfc76e2de4f25b1b8b32ade39074aaf8b36de037066931974a219068ea78cc3
 
 importers:
@@ -44,7 +44,7 @@ importers:
         version: 0.80.3(patch_hash=01ef722c5311939edf59463c56732c6a846b6c9c8d7759f8ca3e0126d564b17f)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
       '@earendil-works/pi-coding-agent':
         specifier: 0.80.3
-        version: 0.80.3(patch_hash=921b057e9be0a82f9a822ed657bff76625079bd1a96f3f6222a30714fcfd984f)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
+        version: 0.80.3(patch_hash=e05100bdc49490faf783163044b86379a971e625bea6a27bb0578f8a1f4853ff)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
       '@electron/notarize':
         specifier: 3.1.1
         version: 3.1.1
@@ -4747,7 +4747,7 @@ snapshots:
       - ws
       - zod
 
-  '@earendil-works/pi-coding-agent@0.80.3(patch_hash=921b057e9be0a82f9a822ed657bff76625079bd1a96f3f6222a30714fcfd984f)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)':
+  '@earendil-works/pi-coding-agent@0.80.3(patch_hash=e05100bdc49490faf783163044b86379a971e625bea6a27bb0578f8a1f4853ff)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)':
     dependencies:
       '@earendil-works/pi-agent-core': 0.80.3(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
       '@earendil-works/pi-ai': 0.80.3(patch_hash=01ef722c5311939edf59463c56732c6a846b6c9c8d7759f8ca3e0126d564b17f)(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)

@@ -4,8 +4,7 @@ savePrefix: ''
 saveExact: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
-  - '@mariozechner/*'
-  - '@earendil-works/*'
+  - '@earendil-works/pi-coding-agent'
 allowBuilds:
   esbuild: true
   electron: true
