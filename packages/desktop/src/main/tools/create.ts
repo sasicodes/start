@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type ExtensionAPI, type ToolDefinition, defineTool } from '@earendil-works/pi-coding-agent';
 import { discoverToolFiles, loadToolFiles } from '@main/tools/load';
@@ -67,11 +67,13 @@ export const createToolController = (toolsDir: string) => {
 
       const filePath = join(toolsDir, `${cleanName}.mjs`);
       await mkdir(toolsDir, { recursive: true });
+      const previousCode = await readFile(filePath, 'utf8').catch(() => '');
       await writeFile(filePath, `${trimmedCode}\n`, 'utf8');
 
       const tool = (await loadToolFiles([filePath])).find((loaded) => loaded.name === cleanName);
       if (!tool) {
-        await rm(filePath, { force: true });
+        if (previousCode) await writeFile(filePath, previousCode, 'utf8');
+        else await rm(filePath, { force: true });
         return toolResult(
           `Tool module must default-export a valid tool named "${cleanName}". Nothing was saved.`,
           null

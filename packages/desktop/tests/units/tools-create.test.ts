@@ -107,6 +107,17 @@ describe('create_tool', () => {
     expect(updated).toContain('It is active now.');
   });
 
+  it('restores the previous file when an update fails validation', async () => {
+    const mounted = mountController();
+
+    await mounted.exec('create_tool', { name: 'lookup', code: toolCode('lookup') });
+    const failed = await mounted.exec('create_tool', { name: 'lookup', code: 'export default { nope: true };' });
+    expect(failed).toContain('Nothing was saved');
+
+    const restored = await loadToolFiles([join(dir, 'lookup.mjs')]);
+    expect(restored[0]?.name).toBe('lookup');
+  });
+
   it('drops tools whose files were deleted when the session restarts', async () => {
     await writeFile(join(dir, 'ping.mjs'), toolCode('ping'), 'utf8');
     const mounted = mountController();
