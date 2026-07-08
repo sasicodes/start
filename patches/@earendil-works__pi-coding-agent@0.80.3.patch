@@ -1,79 +1,50 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index 4b794828f33d7fad94fc0df69bc31959c94bf1c1..d3c1c802a25e3c6ae2992abf8886d929cc7f7bfd 100644
+index 4b794828f33d7fad94fc0df69bc31959c94bf1c1..dc81812d7c7ccd89ab239b70ce7c3ac105388573 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -50,7 +50,64 @@ const VIRTUAL_MODULES = {
+@@ -50,7 +50,16 @@ const VIRTUAL_MODULES = {
      "@mariozechner/pi-ai/oauth": _bundledPiAiOauth,
      "@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
  };
 -const require = createRequire(import.meta.url);
 +const require = createRequire(fs.realpathSync(fileURLToPath(import.meta.url)));
-+const exportConditions = new Set(["import", "node", "default"]);
-+const packageNameFromSpecifier = (specifier) => {
-+    if (specifier.startsWith("@")) {
-+        const [scope, name] = specifier.split("/");
-+        return `${scope}/${name}`;
-+    }
-+    return specifier.split("/")[0];
-+};
-+const packageSubpathFromSpecifier = (specifier, packageName) => specifier === packageName ? "." : `.${specifier.slice(packageName.length)}`;
-+const resolveExportTarget = (target) => {
-+    if (typeof target === "string")
-+        return target;
-+    if (Array.isArray(target)) {
-+        for (const value of target) {
-+            const resolved = resolveExportTarget(value);
-+            if (resolved)
-+                return resolved;
-+        }
-+        return;
-+    }
-+    if (target && typeof target === "object") {
-+        for (const [condition, value] of Object.entries(target)) {
-+            if (!exportConditions.has(condition))
-+                continue;
-+            const resolved = resolveExportTarget(value);
-+            if (resolved)
-+                return resolved;
-+        }
-+    }
-+    return;
-+};
-+const findPackageRoot = (packageName) => {
++const resolvePackageEntry = (packageName, packageRelativePath) => {
 +    for (const nodeModulesPath of require.resolve.paths(packageName) ?? []) {
-+        const manifestPath = path.join(nodeModulesPath, packageName, "package.json");
-+        if (fs.existsSync(manifestPath)) {
-+            return path.dirname(fs.realpathSync(manifestPath));
++        const entry = path.join(nodeModulesPath, packageName, packageRelativePath);
++        if (fs.existsSync(entry)) {
++            return fs.realpathSync(entry);
 +        }
 +    }
-+    return;
-+};
-+const resolveImportEntry = (specifier) => {
-+    const packageName = packageNameFromSpecifier(specifier);
-+    const packageRoot = findPackageRoot(packageName);
-+    if (packageRoot) {
-+        const manifestPath = path.join(packageRoot, "package.json");
-+        const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-+        const subpath = packageSubpathFromSpecifier(specifier, packageName);
-+        const exports = manifest.exports;
-+        const target = subpath === "." && (typeof exports === "string" || Array.isArray(exports)) ? exports : exports?.[subpath];
-+        const resolved = resolveExportTarget(target);
-+        if (resolved?.startsWith("./"))
-+            return path.join(packageRoot, resolved);
-+        if (subpath === "." && typeof manifest.main === "string")
-+            return path.join(packageRoot, manifest.main);
-+    }
-+    return require.resolve(specifier);
++    return require.resolve(packageName);
 +};
  /**
   * Get aliases for jiti (used in Node.js/development mode).
   * In Bun binary mode, virtualModules is used instead.
-@@ -70,7 +127,7 @@ function getAliases() {
+@@ -65,21 +74,21 @@ function getAliases() {
+     const typeboxCompileEntry = require.resolve("typebox/compile");
+     const typeboxValueEntry = require.resolve("typebox/value");
+     const packagesRoot = path.resolve(__dirname, "../../../../");
+-    const resolveWorkspaceOrImport = (workspaceRelativePath, specifier) => {
++    const resolveWorkspaceOrPackage = (workspaceRelativePath, packageName, packageRelativePath) => {
+         const workspacePath = path.join(packagesRoot, workspaceRelativePath);
          if (fs.existsSync(workspacePath)) {
              return workspacePath;
          }
 -        return fileURLToPath(import.meta.resolve(specifier));
-+        return resolveImportEntry(specifier);
++        return resolvePackageEntry(packageName, packageRelativePath);
      };
      const piCodingAgentEntry = packageIndex;
-     const piAgentCoreEntry = resolveWorkspaceOrImport("agent/dist/index.js", "@earendil-works/pi-agent-core");
+-    const piAgentCoreEntry = resolveWorkspaceOrImport("agent/dist/index.js", "@earendil-works/pi-agent-core");
+-    const piTuiEntry = resolveWorkspaceOrImport("tui/dist/index.js", "@earendil-works/pi-tui");
++    const piAgentCoreEntry = resolveWorkspaceOrPackage("agent/dist/index.js", "@earendil-works/pi-agent-core", "dist/index.js");
++    const piTuiEntry = resolveWorkspaceOrPackage("tui/dist/index.js", "@earendil-works/pi-tui", "dist/index.js");
+     // Extensions resolve the pi-ai root to the compat entrypoint (a strict
+     // superset of the core entrypoint): existing extensions using the old
+     // global API keep working at runtime until compat is removed.
+-    const piAiCompatEntry = resolveWorkspaceOrImport("ai/dist/compat.js", "@earendil-works/pi-ai/compat");
+-    const piAiOauthEntry = resolveWorkspaceOrImport("ai/dist/oauth.js", "@earendil-works/pi-ai/oauth");
++    const piAiCompatEntry = resolveWorkspaceOrPackage("ai/dist/compat.js", "@earendil-works/pi-ai", "dist/compat.js");
++    const piAiOauthEntry = resolveWorkspaceOrPackage("ai/dist/oauth.js", "@earendil-works/pi-ai", "dist/oauth.js");
+     _aliases = {
+         "@earendil-works/pi-coding-agent": piCodingAgentEntry,
+         "@earendil-works/pi-agent-core": piAgentCoreEntry,
