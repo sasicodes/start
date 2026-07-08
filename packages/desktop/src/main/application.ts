@@ -7,6 +7,7 @@ const { app } = electron;
 export const appId = app.isPackaged ? 'one.intelligence.start' : 'one.intelligence.start.dev';
 export const appName = 'start';
 export const isMac = process.platform === 'darwin';
+export const isLinux = process.platform === 'linux';
 export const isProd = app.isPackaged;
 export const isDev = !app.isPackaged;
 export const appVersion = app.getVersion();

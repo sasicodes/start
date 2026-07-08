@@ -1,0 +1,13 @@
+diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
+index 4b794828f33d7fad94fc0df69bc31959c94bf1c1..0e6806214e7298fb129a7e484c674a122f163a6a 100644
+--- a/dist/core/extensions/loader.js
++++ b/dist/core/extensions/loader.js
+@@ -70,7 +70,7 @@ function getAliases() {
+         if (fs.existsSync(workspacePath)) {
+             return workspacePath;
+         }
+-        return fileURLToPath(import.meta.resolve(specifier));
++        return require.resolve(specifier);
+     };
+     const piCodingAgentEntry = packageIndex;
+     const piAgentCoreEntry = resolveWorkspaceOrImport("agent/dist/index.js", "@earendil-works/pi-agent-core");

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { appIconPath, appName, isDev, isMac } from '@main/application';
+import { appIconPath, appName, isDev, isLinux, isMac } from '@main/application';
 import { confirmClose } from '@main/confirm';
 import { environment } from '@main/environment';
 import { isCloseWindowInput } from '@main/utils/keyboard';
@@ -177,6 +177,7 @@ export const createComposerWindow = (): ElectronBrowserWindow => {
     minimizable: false,
     fullscreenable: false,
     frame: false,
+    ...(isLinux ? { roundedCorners: false } : {}),
     icon: appIconPath,
     transparent: true,
     alwaysOnTop: true,

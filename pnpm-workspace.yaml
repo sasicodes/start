@@ -1,5 +1,32 @@
 packages:
   - packages/*
+saveExact: true
+savePrefix: ''
+minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@earendil-works/*'
   - '@mariozechner/*'
+allowBuilds:
+  '@google/genai': false
+  electron: true
+  electron-winstaller: false
+  esbuild: true
+  protobufjs: false
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+  cpu:
+    - x64
+    - arm64
+    - current
+overrides:
+  yauzl: 3.3.2
+  undici: 8.5.0
+  esbuild: 0.28.1
+  dompurify: 3.4.11
+  xcode>uuid: 11.1.1
+patchedDependencies:
+  '@earendil-works/pi-ai@0.80.3': patches/@earendil-works__pi-ai@0.80.3.patch
+  '@earendil-works/pi-coding-agent@0.80.3': patches/@earendil-works__pi-coding-agent@0.80.3.patch
+  '@ff-labs/fff-node@0.9.6': patches/@ff-labs__fff-node@0.9.6.patch
