@@ -1,5 +1,4 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { defaultHarness } from '@main/harness/default';
 import { globalMcpConfigPath } from '@main/mcp/config';
 import * as v from 'valibot';
 
@@ -99,15 +98,14 @@ const promptWithToolCapabilities = (
   prompt: string,
   promptsDir: string,
   skillsDir: string,
-  capabilitySource: ToolCapabilitySource,
-  harnessBody: string
+  capabilitySource: ToolCapabilitySource
 ) => {
   const capabilities = toolCapabilitiesFromSource(capabilitySource);
   const toolGuidelines = toolGuidelinesList(capabilities);
   const nextPrompt = replacePromptSection(prompt, 'Available tools:', 'Guidelines:', runtimeToolsList(capabilities));
 
   if (!nextPrompt) {
-    return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource, harnessBody)}\n\n${prompt}`.trim();
+    return `${buildStartSystemPrompt(promptsDir, skillsDir, capabilitySource)}\n\n${prompt}`.trim();
   }
 
   return nextPrompt.replace(filePathGuideline, `${filePathGuideline}${toolGuidelines}`);
@@ -127,23 +125,18 @@ const stripRuntimeContext = (prompt: string): string => {
   return prompt.slice(0, match.index).trimEnd();
 };
 
-export const replaceHarnessIntro = (prompt: string, intro: string): string => {
-  const marker = 'Available tools:';
-  const markerIndex = prompt.indexOf(marker);
-  if (markerIndex < 0) return prompt;
-  return `${intro}\n\n${prompt.slice(markerIndex)}`;
-};
+const systemIntro =
+  'You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.';
 
 export const buildStartSystemPrompt = (
   promptsDir: string,
   skillsDir: string,
-  capabilitySource?: ToolCapabilitySource,
-  harnessBody: string = defaultHarness.body
+  capabilitySource?: ToolCapabilitySource
 ): string => {
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
-  return `${harnessBody}
+  return `${systemIntro}
 
 Available tools:
 ${runtimeToolsList(capabilities)}
@@ -160,21 +153,15 @@ Project and user resources:
 - MCP servers are "mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}. Project entries must be remote servers with a "url"; "command" servers only load from the global file. Never write secret values into these files; reference environment variables with \${VAR} placeholders.`;
 };
 
-export const createStartPromptExtension =
-  (promptsDir: string, skillsDir: string, harness?: { getBody: () => string }) => (pi: ExtensionAPI) => {
-    pi.on('before_agent_start', async (event) => {
-      const harnessBody = harness?.getBody() ?? defaultHarness.body;
-      const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
-      const withHarness = harnessBody === defaultHarness.body ? base : replaceHarnessIntro(base, harnessBody);
-      const withCapabilities = promptWithToolCapabilities(
-        withHarness,
-        promptsDir,
-        skillsDir,
-        { getAllTools: () => pi.getAllTools(), getActiveToolNames: () => pi.getActiveTools() },
-        harnessBody
-      );
-      const withoutStaleContext = stripRuntimeContext(withCapabilities);
-
-      return { systemPrompt: `${withoutStaleContext}\n\n${runtimeContextBlock()}` };
+export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {
+  pi.on('before_agent_start', async (event) => {
+    const base = event.systemPrompt || buildStartSystemPrompt(promptsDir, skillsDir);
+    const withCapabilities = promptWithToolCapabilities(base, promptsDir, skillsDir, {
+      getAllTools: () => pi.getAllTools(),
+      getActiveToolNames: () => pi.getActiveTools()
     });
-  };
+    const withoutStaleContext = stripRuntimeContext(withCapabilities);
+
+    return { systemPrompt: `${withoutStaleContext}\n\n${runtimeContextBlock()}` };
+  });
+};
