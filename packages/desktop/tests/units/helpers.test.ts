@@ -60,7 +60,7 @@ describe('helpers', () => {
       { id: 'claude-fable-5', name: 'Fable 5', provider: 'anthropic' },
       { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5', 'claude-opus-4-8', 'claude-sonnet-5']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-fable-5', 'claude-sonnet-5']);
   });
 
   it('exposes labels and keys for models', () => {
@@ -93,13 +93,13 @@ describe('helpers', () => {
   it('keeps only the native allowlist models', () => {
     const models = [
       { id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' },
-      { id: 'gpt-5.4', name: 'GPT 5.4', provider: 'openai' },
+      { id: 'gpt-5.6-sol', name: 'GPT 5.6 Sol', provider: 'openai' },
       { id: 'claude-opus-4-8', name: 'Claude Opus', provider: 'anthropic' },
       { id: 'llama3.1:8b', name: 'Llama 3.1 8B', provider: 'ollama-home' },
       { id: 'gpt-4', name: 'GPT 4', provider: 'pydantic-proxy' }
     ];
     const visible = getVisibleModels(models);
-    expect(visible.map((model) => model.id)).toEqual(['gpt-5.5', 'gpt-5.4', 'claude-opus-4-8']);
+    expect(visible.map((model) => model.id)).toEqual(['gpt-5.6-sol', 'gpt-5.5', 'claude-opus-4-8']);
   });
 
   it('drops non-registered provider models even when their ids look familiar', () => {

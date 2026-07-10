@@ -5,6 +5,9 @@ saveExact: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - '@earendil-works/pi-coding-agent'
+  - '@earendil-works/pi-ai'
+  - '@earendil-works/pi-agent-core'
+  - '@earendil-works/pi-tui'
 allowBuilds:
   esbuild: true
   electron: true
@@ -27,5 +30,5 @@ overrides:
   xcode>uuid: 11.1.1
 patchedDependencies:
   '@ff-labs/fff-node@0.9.6': patches/@ff-labs__fff-node@0.9.6.patch
-  '@earendil-works/pi-ai@0.80.3': patches/@earendil-works__pi-ai@0.80.3.patch
-  '@earendil-works/pi-coding-agent@0.80.3': patches/@earendil-works__pi-coding-agent@0.80.3.patch
+  '@earendil-works/pi-ai@0.80.6': patches/@earendil-works__pi-ai@0.80.6.patch
+  '@earendil-works/pi-coding-agent@0.80.6': patches/@earendil-works__pi-coding-agent@0.80.6.patch

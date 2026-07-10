@@ -123,7 +123,9 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
     case 'thinking_level_changed':
       return;
     case 'agent_end':
+    case 'agent_settled':
     case 'agent_start':
+    case 'entry_appended':
     case 'message_start':
     case 'turn_end':
     case 'turn_start':
