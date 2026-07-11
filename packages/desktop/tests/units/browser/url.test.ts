@@ -21,17 +21,10 @@ describe('normalizeBrowserUrl', () => {
     expect(normalizeBrowserUrl('mailto:test@example.com')).toBeNull();
   });
 
-  it('rejects local files by default (fails closed)', () => {
-    expect(normalizeBrowserUrl('file:///tmp/index.html')).toBeNull();
-    expect(normalizeBrowserUrl('/tmp/lesson-01.html')).toBeNull();
-    expect(normalizeBrowserUrl('file:///tmp/index.html', { allowFile: false })).toBeNull();
-    expect(normalizeBrowserUrl('/tmp/lesson-01.html', { allowFile: false })).toBeNull();
-  });
-
-  it('allows local files by URL or absolute path when allowFile is true', () => {
-    expect(normalizeBrowserUrl('file:///tmp/index.html', { allowFile: true })).toBe('file:///tmp/index.html');
-    expect(normalizeBrowserUrl('/tmp/lesson-01.html', { allowFile: true })).toBe('file:///tmp/lesson-01.html');
-    expect(normalizeBrowserUrl('/tmp/a b.html', { allowFile: true })).toBe('file:///tmp/a%20b.html');
+  it('allows local files by URL or absolute path', () => {
+    expect(normalizeBrowserUrl('file:///tmp/index.html')).toBe('file:///tmp/index.html');
+    expect(normalizeBrowserUrl('/tmp/lesson-01.html')).toBe('file:///tmp/lesson-01.html');
+    expect(normalizeBrowserUrl('/tmp/a b.html')).toBe('file:///tmp/a%20b.html');
   });
 });
 

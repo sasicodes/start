@@ -5,23 +5,22 @@ const localHostPattern = /^(localhost|127(?:\.\d{1,3}){3}|\[[^\]]+\])(?::\d+)?(?
 const explicitSchemePattern = /^[a-z][a-z\d+.-]*:\/\//i;
 const hostWithPortPattern = /^[^:/]+\.[^:/]+:\d+(?:[/?#]|$)/i;
 const schemeLikePattern = /^[a-z][a-z\d+.-]*:/i;
+const allowedProtocols = new Set(['http:', 'https:', 'file:']);
 
 const browserUrlScheme = (local: boolean) => (local ? 'http' : 'https');
 
-const parseNavigableUrl = (value: string, allowFile: boolean) => {
+const parseNavigableUrl = (value: string) => {
   try {
     const url = new URL(value);
-    const isAllowedProtocol =
-      url.protocol === 'http:' || url.protocol === 'https:' || (allowFile && url.protocol === 'file:');
-    if (!isAllowedProtocol) return null;
+    if (!allowedProtocols.has(url.protocol)) return null;
     return url;
   } catch {
     return null;
   }
 };
 
-const browserUrlCandidate = (value: string, allowFile: boolean) => {
-  if (isAbsolute(value)) return allowFile ? pathToFileURL(value).toString() : null;
+const browserUrlCandidate = (value: string) => {
+  if (isAbsolute(value)) return pathToFileURL(value).toString();
   if (explicitSchemePattern.test(value)) return value;
 
   const local = localHostPattern.test(value);
@@ -32,13 +31,12 @@ const browserUrlCandidate = (value: string, allowFile: boolean) => {
   return `${browserUrlScheme(local)}://${value}`;
 };
 
-export const normalizeBrowserUrl = (value: string, options: { allowFile?: boolean } = {}): string | null => {
-  const allowFile = options.allowFile ?? false;
+export const normalizeBrowserUrl = (value: string): string | null => {
   const trimmed = value.trim();
   if (!trimmed) return null;
 
-  const candidate = browserUrlCandidate(trimmed, allowFile);
+  const candidate = browserUrlCandidate(trimmed);
   if (!candidate) return null;
 
-  return parseNavigableUrl(candidate, allowFile)?.toString() ?? null;
+  return parseNavigableUrl(candidate)?.toString() ?? null;
 };

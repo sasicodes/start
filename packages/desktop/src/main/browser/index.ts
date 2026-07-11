@@ -206,7 +206,7 @@ const createBrowserView = () => {
   });
   view.setBackgroundColor('#00000000');
   view.webContents.setWindowOpenHandler(({ url }) => {
-    const normalized = normalizeBrowserUrl(url, { allowFile: false });
+    const normalized = normalizeBrowserUrl(url);
     if (normalized && ownerWindow && !ownerWindow.isDestroyed())
       openBrowserUrl(ownerWindow.webContents, normalized, { newTab: true }).catch(() => {});
     else externalUrl(url);
@@ -377,7 +377,7 @@ export const openBrowserUrl = async (
   value: string,
   options: BrowserOpenOptions = {}
 ): Promise<BrowserActionResult> => {
-  const url = normalizeBrowserUrl(value, { allowFile: true });
+  const url = normalizeBrowserUrl(value);
   if (!url) return { ok: false, error: 'Enter a valid http, https, or local file URL.' };
 
   const window = windowFromSender(sender);
