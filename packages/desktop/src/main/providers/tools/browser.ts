@@ -121,6 +121,10 @@ const requiredString = (value: unknown, label: string) => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const rejectLocalFileTab = () => {
+  if (getBrowserStatus().url.startsWith('file://')) throw new Error('Cannot read a local file tab.');
+};
+
 export const browserOpenSettled = (
   status: BrowserStatus,
   expectedUrl: string,
@@ -298,6 +302,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute() {
+      rejectLocalFileTab();
       const result = await captureBrowserScreenshot();
       if (!result.ok) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
       return textResult('Captured the in-app browser screenshot to the clipboard.');
@@ -310,6 +315,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute() {
+      rejectLocalFileTab();
       const result = await captureBrowserSnapshot();
       if (!result.ok || !result.snapshot) throw new Error(result.error ?? 'Could not read the browser page.');
       return textResult(JSON.stringify(result.snapshot));
