@@ -146,6 +146,16 @@ describe('browser tools', () => {
     expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
   });
 
+  it('rejects local file URLs and paths even though manual navigation allows them', async () => {
+    await expect(toolByName('browser_open').execute('call-1', { url: 'file:///etc/passwd' })).rejects.toThrow(
+      'Enter a valid http or https URL.'
+    );
+    await expect(toolByName('browser_open').execute('call-1', { url: '/etc/passwd' })).rejects.toThrow(
+      'Enter a valid http or https URL.'
+    );
+    expect(broadcastsByChannel('app:browser-open-request')).toHaveLength(0);
+  });
+
   it('accepts a redirected page once it settles instead of polling out', async () => {
     getBrowserStatusMock
       .mockReturnValueOnce({

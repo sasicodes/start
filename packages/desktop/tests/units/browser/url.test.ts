@@ -19,7 +19,17 @@ describe('normalizeBrowserUrl', () => {
   it('rejects unsupported protocols and empty values', () => {
     expect(normalizeBrowserUrl('')).toBeNull();
     expect(normalizeBrowserUrl('mailto:test@example.com')).toBeNull();
-    expect(normalizeBrowserUrl('file:///tmp/index.html')).toBeNull();
+  });
+
+  it('allows local files by URL or absolute path', () => {
+    expect(normalizeBrowserUrl('file:///tmp/index.html')).toBe('file:///tmp/index.html');
+    expect(normalizeBrowserUrl('/tmp/lesson-01.html')).toBe('file:///tmp/lesson-01.html');
+    expect(normalizeBrowserUrl('/tmp/a b.html')).toBe('file:///tmp/a%20b.html');
+  });
+
+  it('rejects local files when allowFile is false', () => {
+    expect(normalizeBrowserUrl('file:///tmp/index.html', { allowFile: false })).toBeNull();
+    expect(normalizeBrowserUrl('/tmp/lesson-01.html', { allowFile: false })).toBeNull();
   });
 });
 

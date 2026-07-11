@@ -164,7 +164,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute(_toolCallId, { url, newTab, tabId }) {
-      const normalizedUrl = normalizeBrowserUrl(requiredString(url, 'URL'));
+      const normalizedUrl = normalizeBrowserUrl(requiredString(url, 'URL'), { allowFile: false });
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
       const tabIdValue = tabId ? requiredString(tabId, 'tab id') : '';
