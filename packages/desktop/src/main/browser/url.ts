@@ -33,7 +33,7 @@ const browserUrlCandidate = (value: string, allowFile: boolean) => {
 };
 
 export const normalizeBrowserUrl = (value: string, options: { allowFile?: boolean } = {}): string | null => {
-  const allowFile = options.allowFile ?? true;
+  const allowFile = options.allowFile ?? false;
   const trimmed = value.trim();
   if (!trimmed) return null;
 

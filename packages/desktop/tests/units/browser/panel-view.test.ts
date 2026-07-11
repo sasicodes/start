@@ -88,7 +88,7 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).toBe(view);
   });
 
-  it('denies popups from page content that target local files', async () => {
+  it('denies popups from page content that target local files', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 

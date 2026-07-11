@@ -377,7 +377,7 @@ export const openBrowserUrl = async (
   value: string,
   options: BrowserOpenOptions = {}
 ): Promise<BrowserActionResult> => {
-  const url = normalizeBrowserUrl(value);
+  const url = normalizeBrowserUrl(value, { allowFile: true });
   if (!url) return { ok: false, error: 'Enter a valid http, https, or local file URL.' };
 
   const window = windowFromSender(sender);

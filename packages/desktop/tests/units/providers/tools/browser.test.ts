@@ -289,7 +289,7 @@ describe('browser tools', () => {
     });
   });
 
-  it('rejects reading a local file tab even after the user opens it manually', async () => {
+  it('rejects reading or interacting with a local file tab even after the user opens it manually', async () => {
     getBrowserStatusMock.mockReturnValue({
       url: 'file:///tmp/secret.html',
       open: true,
@@ -305,19 +305,20 @@ describe('browser tools', () => {
     await expect(toolByName('browser_screenshot').execute('call-2', {})).rejects.toThrow(
       'Cannot read a local file tab.'
     );
+    await expect(toolByName('browser_click').execute('call-3', { ref: 'e1' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    await expect(toolByName('browser_type').execute('call-4', { ref: 'e1', text: 'x' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    await expect(toolByName('browser_press').execute('call-5', { key: 'Enter' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
     expect(captureBrowserSnapshotMock).not.toHaveBeenCalled();
     expect(captureBrowserScreenshotMock).not.toHaveBeenCalled();
-
-    getBrowserStatusMock.mockReturnValue({
-      url: 'https://example.com/',
-      open: true,
-      title: 'Example',
-      activeTabId: 'tab-1',
-      loading: false,
-      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
-      canGoBack: true,
-      canGoForward: false
-    });
+    expect(clickInBrowserMock).not.toHaveBeenCalled();
+    expect(typeInBrowserMock).not.toHaveBeenCalled();
+    expect(pressInBrowserMock).not.toHaveBeenCalled();
   });
 });
 
