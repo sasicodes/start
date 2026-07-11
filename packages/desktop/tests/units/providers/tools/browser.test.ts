@@ -146,14 +146,35 @@ describe('browser tools', () => {
     expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
   });
 
-  it('rejects local file URLs and paths even though manual navigation allows them', async () => {
-    await expect(toolByName('browser_open').execute('call-1', { url: 'file:///etc/passwd' })).rejects.toThrow(
-      'Enter a valid http or https URL.'
-    );
-    await expect(toolByName('browser_open').execute('call-1', { url: '/etc/passwd' })).rejects.toThrow(
-      'Enter a valid http or https URL.'
-    );
-    expect(broadcastsByChannel('app:browser-open-request')).toHaveLength(0);
+  it('opens local file URLs and paths the same as manual navigation', async () => {
+    getBrowserStatusMock
+      .mockReturnValueOnce({
+        url: '',
+        open: false,
+        title: '',
+        activeTabId: '',
+        loading: false,
+        tabs: [],
+        canGoBack: false,
+        canGoForward: false
+      })
+      .mockReturnValueOnce({
+        url: 'file:///tmp/lesson-01.html',
+        open: true,
+        title: '',
+        activeTabId: 'tab-2',
+        loading: false,
+        tabs: [{ id: 'tab-2', url: 'file:///tmp/lesson-01.html', title: '', loading: false }],
+        canGoBack: false,
+        canGoForward: false
+      });
+
+    const result = await toolByName('browser_open').execute('call-1', { url: '/tmp/lesson-01.html' });
+
+    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
+      { url: 'file:///tmp/lesson-01.html', newTab: true }
+    ]);
+    expect(result.content[0]?.text).toBe('Opened file:///tmp/lesson-01.html in the in-app browser.');
   });
 
   it('accepts a redirected page once it settles instead of polling out', async () => {
@@ -289,36 +310,29 @@ describe('browser tools', () => {
     });
   });
 
-  it('rejects reading or interacting with a local file tab even after the user opens it manually', async () => {
+  it('reads and interacts with a local file tab the same as any other tab', async () => {
     getBrowserStatusMock.mockReturnValue({
-      url: 'file:///tmp/secret.html',
+      url: 'file:///tmp/lesson-01.html',
       open: true,
-      title: 'secret',
+      title: 'lesson',
       activeTabId: 'tab-2',
       loading: false,
-      tabs: [{ id: 'tab-2', url: 'file:///tmp/secret.html', title: 'secret', loading: false }],
+      tabs: [{ id: 'tab-2', url: 'file:///tmp/lesson-01.html', title: 'lesson', loading: false }],
       canGoBack: false,
       canGoForward: false
     });
 
-    await expect(toolByName('browser_snapshot').execute('call-1', {})).rejects.toThrow('Cannot read a local file tab.');
-    await expect(toolByName('browser_screenshot').execute('call-2', {})).rejects.toThrow(
-      'Cannot read a local file tab.'
-    );
-    await expect(toolByName('browser_click').execute('call-3', { ref: 'e1' })).rejects.toThrow(
-      'Cannot read a local file tab.'
-    );
-    await expect(toolByName('browser_type').execute('call-4', { ref: 'e1', text: 'x' })).rejects.toThrow(
-      'Cannot read a local file tab.'
-    );
-    await expect(toolByName('browser_press').execute('call-5', { key: 'Enter' })).rejects.toThrow(
-      'Cannot read a local file tab.'
-    );
-    expect(captureBrowserSnapshotMock).not.toHaveBeenCalled();
-    expect(captureBrowserScreenshotMock).not.toHaveBeenCalled();
-    expect(clickInBrowserMock).not.toHaveBeenCalled();
-    expect(typeInBrowserMock).not.toHaveBeenCalled();
-    expect(pressInBrowserMock).not.toHaveBeenCalled();
+    await toolByName('browser_snapshot').execute('call-1', {});
+    await toolByName('browser_screenshot').execute('call-2', {});
+    await toolByName('browser_click').execute('call-3', { ref: 'e1' });
+    await toolByName('browser_type').execute('call-4', { ref: 'e1', text: 'x' });
+    await toolByName('browser_press').execute('call-5', { key: 'Enter' });
+
+    expect(captureBrowserSnapshotMock).toHaveBeenCalledOnce();
+    expect(captureBrowserScreenshotMock).toHaveBeenCalledOnce();
+    expect(clickInBrowserMock).toHaveBeenCalledWith('e1');
+    expect(typeInBrowserMock).toHaveBeenCalledWith({ ref: 'e1', text: 'x', clear: false });
+    expect(pressInBrowserMock).toHaveBeenCalledWith('Enter');
   });
 });
 

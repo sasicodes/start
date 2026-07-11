@@ -88,7 +88,7 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).toBe(view);
   });
 
-  it('denies popups from page content that target local files', () => {
+  it('opens popups from page content as a new browser tab, including local files', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -99,11 +99,12 @@ describe('browser panel view', () => {
     const handler = view.webContents.windowOpenHandler;
     if (!handler) throw new Error('Expected a window open handler.');
 
-    const result = handler({ url: 'file:///etc/passwd' });
+    const result = handler({ url: 'file:///tmp/index.html' });
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(result).toEqual({ action: 'deny' });
-    expect(window.contentView.children).toHaveLength(1);
-    expect(window.contentView.children[0]?.webContents.getURL()).not.toContain('file://');
+    expect(window.contentView.children[0]?.webContents.getURL()).toBe('file:///tmp/index.html');
   });
 
   it('opens and switches between separate browser tabs', async () => {
