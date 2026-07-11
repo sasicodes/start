@@ -1,4 +1,4 @@
-import type { WebContents } from 'electron';
+import type { BrowserWindow, WebContents } from 'electron';
 import type { BrowserStatus } from '@preload/index';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
@@ -6,6 +6,7 @@ import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
 
 const {
   captureBrowserScreenshot,
+  closeActiveBrowserTab,
   closeBrowserTab,
   clickInBrowser,
   destroyBrowser,
@@ -21,6 +22,8 @@ const { shouldCloseBrowserPanelForStatus } = await import('@renderer/shared/brow
 
 const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) =>
   window.webContents as unknown as WebContents;
+
+const windowForTest = (window: ReturnType<typeof createFakeBrowserWindow>) => window as unknown as BrowserWindow;
 
 const statusWithOpen = (open: boolean): BrowserStatus => ({
   open,
@@ -252,6 +255,41 @@ describe('browser panel view', () => {
     expect(window.contentView.children).toHaveLength(0);
     expect(result.status?.open).toBe(false);
     expect(result.status?.tabs).toEqual([]);
+  });
+
+  it('closes the active browser tab one at a time via closeActiveBrowserTab, like a normal browser tab close', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    await openBrowserUrl(webContents, 'https://example.com');
+    await openBrowserUrl(webContents, 'https://start.intelligence.one', { newTab: true });
+
+    expect(closeActiveBrowserTab(windowForTest(window))).toBe(true);
+    expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://example.com/');
+
+    expect(closeActiveBrowserTab(windowForTest(window))).toBe(true);
+    expect(window.contentView.children[0]?.webContents.getURL()).toBe('');
+
+    expect(closeActiveBrowserTab(windowForTest(window))).toBe(true);
+    expect(window.contentView.children).toHaveLength(0);
+  });
+
+  it('leaves closeActiveBrowserTab a no-op when the browser panel has nothing open', () => {
+    const window = createFakeBrowserWindow();
+
+    expect(closeActiveBrowserTab(windowForTest(window))).toBe(false);
+  });
+
+  it('does not close a tab owned by a different window', () => {
+    const window = createFakeBrowserWindow();
+    const otherWindow = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+
+    expect(closeActiveBrowserTab(windowForTest(otherWindow))).toBe(false);
+    expect(window.contentView.children).toHaveLength(1);
   });
 
   it('scales native browser bounds by the owner renderer zoom factor', () => {

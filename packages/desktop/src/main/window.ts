@@ -18,6 +18,11 @@ let composerVisible = false;
 let composerOpenedFromStart = false;
 let mainWindowCloseConfirmed = false;
 let composerBlurSuppressionDepth = 0;
+let closeWindowInputHandler: ((window: ElectronBrowserWindow) => boolean) | null = null;
+
+export const onCloseWindowInput = (handler: (window: ElectronBrowserWindow) => boolean) => {
+  closeWindowInputHandler = handler;
+};
 
 const openExternalUrl = (url: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
@@ -123,6 +128,7 @@ export const createMainWindow = ({ showOnReady = true }: MainWindowOptions = {})
     if (!isCloseWindowInput(input, isMac)) return;
 
     event.preventDefault();
+    if (closeWindowInputHandler?.(window)) return;
     window.close();
   });
 
