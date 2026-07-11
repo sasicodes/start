@@ -88,6 +88,24 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]).toBe(view);
   });
 
+  it('denies popups from page content that target local files', async () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+
+    setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+
+    const handler = view.webContents.windowOpenHandler;
+    if (!handler) throw new Error('Expected a window open handler.');
+
+    const result = handler({ url: 'file:///etc/passwd' });
+
+    expect(result).toEqual({ action: 'deny' });
+    expect(window.contentView.children).toHaveLength(1);
+    expect(window.contentView.children[0]?.webContents.getURL()).not.toContain('file://');
+  });
+
   it('opens and switches between separate browser tabs', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

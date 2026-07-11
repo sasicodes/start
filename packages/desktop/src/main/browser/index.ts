@@ -206,7 +206,7 @@ const createBrowserView = () => {
   });
   view.setBackgroundColor('#00000000');
   view.webContents.setWindowOpenHandler(({ url }) => {
-    const normalized = normalizeBrowserUrl(url);
+    const normalized = normalizeBrowserUrl(url, { allowFile: false });
     if (normalized && ownerWindow && !ownerWindow.isDestroyed())
       openBrowserUrl(ownerWindow.webContents, normalized, { newTab: true }).catch(() => {});
     else externalUrl(url);
