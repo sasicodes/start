@@ -174,9 +174,9 @@ export const App = () => {
     async (switcher: () => Promise<boolean>) => {
       closeSidePanel();
       setSwitchingWorkspace(true);
+      navigate({ name: 'chat' }, true);
       try {
-        const switched = await switcher();
-        if (switched) navigate({ name: 'chat' }, true);
+        await switcher();
       } finally {
         setSwitchingWorkspace(false);
       }

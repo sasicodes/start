@@ -146,6 +146,16 @@ describe('browser tools', () => {
     expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
   });
 
+  it('rejects local file URLs and paths even though manual navigation allows them', async () => {
+    await expect(toolByName('browser_open').execute('call-1', { url: 'file:///etc/passwd' })).rejects.toThrow(
+      'Enter a valid http or https URL.'
+    );
+    await expect(toolByName('browser_open').execute('call-1', { url: '/etc/passwd' })).rejects.toThrow(
+      'Enter a valid http or https URL.'
+    );
+    expect(broadcastsByChannel('app:browser-open-request')).toHaveLength(0);
+  });
+
   it('accepts a redirected page once it settles instead of polling out', async () => {
     getBrowserStatusMock
       .mockReturnValueOnce({
@@ -277,6 +287,38 @@ describe('browser tools', () => {
       elements: [{ ref: 'e1', tag: 'button', text: 'Continue', role: 'button', label: '', disabled: false }],
       headings: [{ text: 'Example heading', level: 1 }]
     });
+  });
+
+  it('rejects reading or interacting with a local file tab even after the user opens it manually', async () => {
+    getBrowserStatusMock.mockReturnValue({
+      url: 'file:///tmp/secret.html',
+      open: true,
+      title: 'secret',
+      activeTabId: 'tab-2',
+      loading: false,
+      tabs: [{ id: 'tab-2', url: 'file:///tmp/secret.html', title: 'secret', loading: false }],
+      canGoBack: false,
+      canGoForward: false
+    });
+
+    await expect(toolByName('browser_snapshot').execute('call-1', {})).rejects.toThrow('Cannot read a local file tab.');
+    await expect(toolByName('browser_screenshot').execute('call-2', {})).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    await expect(toolByName('browser_click').execute('call-3', { ref: 'e1' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    await expect(toolByName('browser_type').execute('call-4', { ref: 'e1', text: 'x' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    await expect(toolByName('browser_press').execute('call-5', { key: 'Enter' })).rejects.toThrow(
+      'Cannot read a local file tab.'
+    );
+    expect(captureBrowserSnapshotMock).not.toHaveBeenCalled();
+    expect(captureBrowserScreenshotMock).not.toHaveBeenCalled();
+    expect(clickInBrowserMock).not.toHaveBeenCalled();
+    expect(typeInBrowserMock).not.toHaveBeenCalled();
+    expect(pressInBrowserMock).not.toHaveBeenCalled();
   });
 });
 

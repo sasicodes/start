@@ -121,6 +121,10 @@ const requiredString = (value: unknown, label: string) => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const rejectLocalFileTab = () => {
+  if (getBrowserStatus().url.startsWith('file://')) throw new Error('Cannot read a local file tab.');
+};
+
 export const browserOpenSettled = (
   status: BrowserStatus,
   expectedUrl: string,
@@ -164,7 +168,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute(_toolCallId, { url, newTab, tabId }) {
-      const normalizedUrl = normalizeBrowserUrl(requiredString(url, 'URL'));
+      const normalizedUrl = normalizeBrowserUrl(requiredString(url, 'URL'), { allowFile: false });
       if (!normalizedUrl) throw new Error('Enter a valid http or https URL.');
 
       const tabIdValue = tabId ? requiredString(tabId, 'tab id') : '';
@@ -258,6 +262,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute(_toolCallId, { ref }) {
+      rejectLocalFileTab();
       const refValue = requiredString(ref, 'element ref');
       const result = await clickInBrowser(refValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not click the browser element.');
@@ -271,6 +276,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute(_toolCallId, { ref, text, clear }) {
+      rejectLocalFileTab();
       const refValue = requiredString(ref, 'element ref');
       const textValue = requiredString(text, 'text value');
       const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear === true });
@@ -285,6 +291,7 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute(_toolCallId, { key }) {
+      rejectLocalFileTab();
       const keyValue = requiredString(key, 'key');
       const result = pressInBrowser(keyValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not press the browser key.');
@@ -298,7 +305,9 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute() {
+      rejectLocalFileTab();
       const result = await captureBrowserScreenshot();
+      rejectLocalFileTab();
       if (!result.ok) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
       return textResult('Captured the in-app browser screenshot to the clipboard.');
     },
@@ -310,7 +319,9 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute() {
+      rejectLocalFileTab();
       const result = await captureBrowserSnapshot();
+      rejectLocalFileTab();
       if (!result.ok || !result.snapshot) throw new Error(result.error ?? 'Could not read the browser page.');
       return textResult(JSON.stringify(result.snapshot));
     },

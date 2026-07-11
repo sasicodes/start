@@ -199,6 +199,7 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   setAudioMuted: (muted: boolean) => void;
   setWindowOpenHandler: (handler: WindowOpenHandler) => void;
   stop: () => void;
+  windowOpenHandler: WindowOpenHandler | null;
 }
 
 export interface FakeContentView {
@@ -269,8 +270,11 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     setAudioMuted: (muted: boolean) => {
       webContents.audioMuted = muted;
     },
-    setWindowOpenHandler: (_handler: WindowOpenHandler) => {},
-    stop: () => {}
+    setWindowOpenHandler: (handler: WindowOpenHandler) => {
+      webContents.windowOpenHandler = handler;
+    },
+    stop: () => {},
+    windowOpenHandler: null
   };
   return webContents;
 };
