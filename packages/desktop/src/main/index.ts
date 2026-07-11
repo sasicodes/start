@@ -12,6 +12,7 @@ import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main
 import {
   type BrowserOpenOptions,
   captureBrowserScreenshot,
+  closeActiveBrowserTab,
   closeBrowserTab,
   destroyBrowser,
   getBrowserStatus,
@@ -63,6 +64,7 @@ import {
   destroyRendererWindows,
   getMainWindow,
   hideComposerWindow,
+  onCloseWindowInput,
   onMainWindowChanged,
   sendToMainWindow,
   sendToMainWindowIfOpen,
@@ -421,6 +423,7 @@ if (!singleInstanceLock) {
 
     appSettings = await readAppSettings();
     stopMainWindowChanged = onMainWindowChanged(applyBackgroundWork);
+    onCloseWindowInput(closeActiveBrowserTab);
     powerMonitor.on('on-ac', refreshStayAwake);
     powerMonitor.on('on-battery', refreshStayAwake);
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());

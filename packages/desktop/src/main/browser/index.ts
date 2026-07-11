@@ -459,6 +459,13 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   return { ok: true, status: statusFromView() };
 };
 
+export const closeActiveBrowserTab = (window: ElectronBrowserWindow): boolean => {
+  if (ownerWindow !== window || !activeTabId) return false;
+
+  closeBrowserTab(window.webContents, activeTabId);
+  return true;
+};
+
 export const goBackInBrowser = (): BrowserActionResult => {
   const tab = activeTab();
   if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
