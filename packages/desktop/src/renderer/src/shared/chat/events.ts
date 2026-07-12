@@ -3,6 +3,7 @@ import { createTurn, createUserTurn } from '@renderer/functions/chat';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
+import { syncOpenedWorkspace } from '@renderer/shared/chat/open-workspace';
 import { endsMidWord } from '@renderer/shared/chat/segment';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
@@ -29,6 +30,7 @@ interface MutableRef<T> {
 
 interface UseChatEventsOptions {
   onShowChat: () => void;
+  onOpenSession: (sessionId: string) => Promise<boolean>;
   clearSession: () => void;
   onShowSettings: (tab: SettingsTab) => void;
   loadModels: () => Promise<void>;
@@ -341,10 +343,9 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
-    const offWorkspaceOpened = window.pi.chat.onWorkspaceOpened(() => {
+    const offWorkspaceOpened = window.pi.chat.onWorkspaceOpened((sessionId) => {
       clearSlashCommandsCache();
-      optionsRef.current.clearSession();
-      optionsRef.current.syncStatus().catch(() => {});
+      syncOpenedWorkspace(sessionId, optionsRef.current);
       optionsRef.current.onShowChat();
     });
     const offResourcesRefreshed = window.pi.chat.onResourcesRefreshed(clearSlashCommandsCache);

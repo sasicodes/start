@@ -496,7 +496,8 @@ const api = {
       onIpc<[RecentSessionsChanged]>('chat:recent-sessions-changed', listener),
     onResourcesRefreshed: (listener: () => void): IpcDisposer => onIpc<[]>('chat:resources-refreshed', listener),
     onStatusChanged: (listener: () => void): IpcDisposer => onIpc<[]>('chat:status-changed', listener),
-    onWorkspaceOpened: (listener: () => void): IpcDisposer => onIpc<[]>('chat:workspace-opened', listener),
+    onWorkspaceOpened: (listener: (sessionId: string) => void): IpcDisposer =>
+      onIpc<[string]>('chat:workspace-opened', listener),
     workspaceFolders: (): Promise<WorkspaceFolder[]> => ipcRenderer.invoke('chat:workspace-folders'),
     prepareDroppedFiles: (paths: string[]): Promise<PreparedDropFiles> =>
       ipcRenderer.invoke('chat:prepare-dropped-files', paths),
