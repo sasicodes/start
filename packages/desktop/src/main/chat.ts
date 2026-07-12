@@ -1533,13 +1533,7 @@ export class ChatService {
     const previousSession = this.session;
     if (previousSession) {
       const runtimeState = this.runtimeStateForSession(previousSession);
-      runtimeState.queueRebuildDepth += 1;
-      try {
-        previousSession.clearQueue();
-      } finally {
-        runtimeState.queueRebuildDepth = Math.max(0, runtimeState.queueRebuildDepth - 1);
-      }
-      this.clearQueuedMessageState(runtimeState);
+      this.pauseQueuedMessages(previousSession, runtimeState);
       this.storeBackgroundSession(this.workspaceCwd, previousSession);
     }
     this.session = null;

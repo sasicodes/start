@@ -247,6 +247,71 @@ describe('queue and abort', () => {
     await firstSend;
   });
 
+  it('keeps a paused queue when starting a new session and returning', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    await chat.send('queued follow-up', webContents);
+    await chat.newSession();
+    const reopened = await chat.activateTab(tab.id);
+
+    expect((await chat.getStatus()).isGenerating).toBe(true);
+    expect(reopened.queuedMessages?.map((message) => message.text)).toEqual(['queued follow-up']);
+
+    await chat.abort();
+    session.finishPrompt();
+    await firstSend;
+  });
+
+  it('keeps a paused queue when switching tabs and returning', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    await chat.send('queued follow-up', webContents);
+    await chat.abort();
+    session.finishPrompt();
+    await firstSend;
+
+    await chat.createTab('/tmp/workspace-a');
+    const reopened = await chat.activateTab(tab.id);
+
+    expect(reopened.queuedMessages?.map((message) => message.text)).toEqual(['queued follow-up']);
+  });
+
+  it('keeps a paused queue when switching workspaces and returning', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const firstSend = chat.send('first message', webContents);
+    const session = getFakeSession(tab.id);
+    if (!session) throw new Error('Expected fake session.');
+    await session.awaitPromptCall();
+
+    await chat.send('queued follow-up', webContents);
+    await chat.abort();
+    session.finishPrompt();
+    await firstSend;
+
+    await chat.switchWorkspace('/tmp/workspace-b');
+    const reopened = await chat.switchWorkspace('/tmp/workspace-a');
+
+    expect(reopened.session?.id).toBe(tab.id);
+    expect(reopened.session?.queuedMessages?.map((message) => message.text)).toEqual(['queued follow-up']);
+  });
+
   it('rejects a queued send when no stream is in flight', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();
