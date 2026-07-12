@@ -9,10 +9,7 @@ export const syncOpenedWorkspace = async (
   { clearSession, onOpenSession, syncStatus }: SyncOpenedWorkspaceOptions
 ) => {
   try {
-    if (sessionId) {
-      await onOpenSession(sessionId);
-      return;
-    }
+    if (sessionId && (await onOpenSession(sessionId))) return;
 
     clearSession();
     await syncStatus();

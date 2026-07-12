@@ -25,4 +25,16 @@ describe('opened workspace chat state', () => {
     expect(syncStatus).toHaveBeenCalledOnce();
     expect(onOpenSession).not.toHaveBeenCalled();
   });
+
+  it('clears stale state when an external session cannot be restored', async () => {
+    const clearSession = vi.fn();
+    const onOpenSession = vi.fn(async () => false);
+    const syncStatus = vi.fn(async () => {});
+
+    await syncOpenedWorkspace('missing-session', { clearSession, onOpenSession, syncStatus });
+
+    expect(onOpenSession).toHaveBeenCalledWith('missing-session');
+    expect(clearSession).toHaveBeenCalledOnce();
+    expect(syncStatus).toHaveBeenCalledOnce();
+  });
 });
