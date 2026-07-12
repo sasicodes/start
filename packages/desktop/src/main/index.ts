@@ -317,7 +317,7 @@ const openRecentSession = async (sessionId: string) => {
   if (!result.ok) return;
 
   notifyWorkspaceChanged();
-  sendToMainWindow('chat:workspace-opened');
+  sendToMainWindow('chat:workspace-opened', sessionId);
 };
 
 const registerComposerShortcut = (accelerator: string) => {
@@ -375,7 +375,7 @@ const openCliWorkspace = async (request: CliLaunchRequest) => {
   await getWorkspace(resolved.workspacePath).catch(() => null);
   if (!result.unchanged) {
     notifyWorkspaceChanged(result.status?.workspacePath ?? resolved.workspacePath);
-    sendToMainWindow('chat:workspace-opened');
+    sendToMainWindow('chat:workspace-opened', '');
   }
   showMainWindow();
 };

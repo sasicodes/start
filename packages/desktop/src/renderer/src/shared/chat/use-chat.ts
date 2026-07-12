@@ -166,23 +166,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     } catch {}
   }, []);
 
-  useChatEvents({
-    setTurns,
-    onShowChat,
-    loadModels,
-    syncStatus,
-    loadAuthProviders,
-    workspacePath,
-    textareaRef,
-    clearSession,
-    terminalIdRef,
-    assistantIdRef,
-    onShowSettings,
-    activeSessionId,
-    setIsGenerating,
-    setQueuedMessages: updateQueuedMessages
-  });
-
   const { send, sendText } = useChatSend({
     draft,
     setDraft,
@@ -407,6 +390,24 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     },
     [loadModels]
   );
+
+  useChatEvents({
+    setTurns,
+    onShowChat,
+    loadModels,
+    syncStatus,
+    loadAuthProviders,
+    workspacePath,
+    textareaRef,
+    clearSession,
+    terminalIdRef,
+    assistantIdRef,
+    onShowSettings,
+    activeSessionId,
+    setIsGenerating,
+    onOpenSession: openSessionId,
+    setQueuedMessages: updateQueuedMessages
+  });
 
   const selectModel = useCallback(
     (modelKey: string) => {
