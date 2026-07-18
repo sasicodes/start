@@ -5,7 +5,7 @@ import {
   attentionStatusCount,
   sessionAttentionStatus,
   topAttentionStatus
-} from '@renderer/shared/attention-status';
+} from '@renderer/shared/attention';
 import { AttentionBadge } from '@renderer/shared/badge';
 import { Indicator } from '@renderer/shared/indicator';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';

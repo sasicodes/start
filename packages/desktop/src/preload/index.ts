@@ -78,6 +78,12 @@ export interface ProviderAuthStatus {
   hasCredentials: boolean;
 }
 
+export interface ProviderUsage {
+  resetAt?: number;
+  remainingPercent: number;
+  id: 'anthropic' | 'openai';
+}
+
 export interface ProviderLoginResult {
   ok: boolean;
   error?: string;
@@ -247,6 +253,7 @@ export interface GitFileBlob {
 export interface WorkspaceFolder {
   name: string;
   path: string;
+  active: boolean;
   modified: number;
   sessionCount: number;
   status?: AgentTabStatus;
@@ -399,6 +406,7 @@ const api = {
     onWorkspaceChanged: (listener: (workspace: WorkspaceInfo) => void): IpcDisposer =>
       onIpc<[WorkspaceInfo]>('app:workspace-changed', listener),
     settings: (): Promise<AppSettings> => ipcRenderer.invoke('app:settings'),
+    providerUsage: (): Promise<ProviderUsage[]> => ipcRenderer.invoke('app:provider-usage'),
     mobileRelayCode: (): Promise<string> => ipcRenderer.invoke('app:mobile-relay-code'),
     onMobileRelayCode: (listener: (code: string) => void): IpcDisposer =>
       onIpc<[string]>('app:mobile-relay-code', listener),

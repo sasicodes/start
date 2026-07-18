@@ -1,4 +1,4 @@
-import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
+import { workspaceFoldersAttention } from '@renderer/shared/attention';
 import { AttentionBadge } from '@renderer/shared/badge';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
@@ -27,11 +27,8 @@ export const Workspace = memo(
     const [open, setOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
     const workspace = useWorkspace(workspacePath);
-    const { folders, refreshFolders } = useWorkspaceFolders({ workspacePath });
-    const { kind: attention, countLabel: visibleAttentionCountLabel } = workspaceFoldersAttention(
-      folders,
-      workspacePath
-    );
+    const { folders, refreshFolders } = useWorkspaceFolders();
+    const { kind: attention, countLabel: visibleAttentionCountLabel } = workspaceFoldersAttention(folders);
 
     const handleOpenChange = (next: boolean) => {
       if (next) playToggleSound();
@@ -112,12 +109,7 @@ export const Workspace = memo(
           <AppMenu.Portal>
             <AppMenu.Positioner side="top" sideOffset={12} anchor={rootRef} className="z-50" collisionPadding={12}>
               <MenuPanel className="w-64" finalFocus={false}>
-                <WorkspaceMenu
-                  folders={folders}
-                  onSelect={onSelectWorkspace}
-                  workspacePath={workspacePath}
-                  onChooseDirectory={onChooseDirectory}
-                />
+                <WorkspaceMenu folders={folders} onSelect={onSelectWorkspace} onChooseDirectory={onChooseDirectory} />
               </MenuPanel>
             </AppMenu.Positioner>
           </AppMenu.Portal>

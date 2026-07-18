@@ -5,10 +5,11 @@ import {
   attentionStatusCount,
   sessionAttentionStatus,
   workspaceFoldersAttention
-} from '@renderer/shared/attention-status';
+} from '@renderer/shared/attention';
 
-const folder = (path: string, status?: WorkspaceFolder['status']): WorkspaceFolder => ({
+const folder = (path: string, status?: WorkspaceFolder['status'], active = false): WorkspaceFolder => ({
   path,
+  active,
   name: path,
   modified: 0,
   sessionCount: 0,
@@ -43,19 +44,28 @@ describe('attention status', () => {
 
   it('summarizes folder attention while excluding the active workspace', () => {
     const folders = [
-      folder('/active', 'generating'),
+      folder('/active', 'generating', true),
       folder('/other', 'completed'),
       folder('/failing', 'failed'),
       folder('/idle')
     ];
 
-    expect(workspaceFoldersAttention(folders, '/active')).toEqual({ kind: 'failed', countLabel: '2' });
+    expect(workspaceFoldersAttention(folders)).toEqual({ kind: 'failed', countLabel: '2' });
   });
 
   it('reports no attention when only the active workspace is busy', () => {
-    expect(workspaceFoldersAttention([folder('/active', 'generating')], '/active')).toEqual({
+    expect(workspaceFoldersAttention([folder('/active', 'generating', true)])).toEqual({
       kind: '',
       countLabel: '0'
+    });
+  });
+
+  it('excludes the canonical active repository for a worktree session', () => {
+    const folders = [folder('/repo', 'generating', true), folder('/other', 'completed')];
+
+    expect(workspaceFoldersAttention(folders)).toEqual({
+      kind: 'completed',
+      countLabel: '1'
     });
   });
 });

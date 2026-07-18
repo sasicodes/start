@@ -338,8 +338,8 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       setTurns((current) => [...current, createTurn('system', payload)]);
     });
 
-    const offNotice = window.pi.chat.onNotice(({ payload }) => {
-      if (payload) playAttentionSound();
+    const offNotice = window.pi.chat.onNotice(({ tabId, payload }) => {
+      if (payload && !activeScopedSession(tabId)) playAttentionSound();
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);

@@ -1,15 +1,16 @@
+import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import {
-  totalHeight,
-  visibleRange,
-  resolveItemHeight,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
+  initialVisibleStart,
   measuredPrependShift,
+  resolveItemHeight,
+  shouldCompensateMeasuredDelta,
   shouldPreserveScrollEnd,
-  shouldCompensateMeasuredDelta
+  totalHeight,
+  visibleRange
 } from '@renderer/ui/virtual/geometry';
-import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
 import { Fragment } from 'preact';
@@ -24,6 +25,7 @@ interface VirtualProps<T> {
   gap?: number;
   overscan?: number;
   className?: string;
+  initialEnd?: boolean;
   itemClassName?: string;
   items: ReadonlyArray<T>;
   preserveScrollEnd?: boolean;
@@ -60,14 +62,17 @@ const sameRange = (a: VisibleRange, b: VisibleRange) => a.start === b.start && a
 const useVisibleRange = (
   cumulative: Float64Array,
   overscan: number,
+  initialEnd: boolean,
   containerRef: RefObject<HTMLElement>
 ): VisibleRange => {
   const frameRef = useRef(0);
+  const initialEndRef = useRef(initialEnd);
   const cumulativeRef = useRef(cumulative);
-  const [range, setRange] = useState<VisibleRange>(() => ({
-    start: 0,
-    end: initialVisibleEnd(cumulative, initialViewportGuess)
-  }));
+  const [range, setRange] = useState<VisibleRange>(() =>
+    initialEnd
+      ? { end: cumulative.length - 1, start: initialVisibleStart(cumulative, initialViewportGuess) }
+      : { start: 0, end: initialVisibleEnd(cumulative, initialViewportGuess) }
+  );
 
   cumulativeRef.current = cumulative;
 
@@ -109,6 +114,10 @@ const useVisibleRange = (
   }, [compute, containerRef]);
 
   useLayoutEffect(() => {
+    if (initialEndRef.current) {
+      initialEndRef.current = false;
+      return;
+    }
     compute();
   }, [compute, cumulative]);
 
@@ -145,6 +154,7 @@ export const Virtual = <T,>({
   onRangeChange,
   className = '',
   estimateHeight,
+  initialEnd = false,
   itemClassName = '',
   preserveScrollEnd = false,
   overscan = defaultOverscan
@@ -158,14 +168,14 @@ export const Virtual = <T,>({
   const containerRef = useRef<HTMLDivElement>(null);
   const committedKeysRef = useRef(new Set<string>());
   const itemIndexRef = useRef(new Map<string, number>());
-  const heightCacheRef = useRef(new Map<string, number>());
-  const [heightRevision, setHeightRevision] = useState(0);
   const preserveScrollEndRef = useRef(preserveScrollEnd);
+  const [heightRevision, setHeightRevision] = useState(0);
+  const heightCacheRef = useRef(new Map<string, number>());
   const cumulativeRef = useRef<Float64Array>(cumulativeHeights([]));
 
+  itemsRef.current = items;
   estimateHeightRef.current = estimateHeight;
   preserveScrollEndRef.current = preserveScrollEnd;
-  itemsRef.current = items;
 
   const heights = useMemo(() => {
     const last = items.length - 1;
@@ -181,7 +191,7 @@ export const Virtual = <T,>({
   }, [gap, items, getKey, estimateHeight, heightRevision]);
   const cumulative = useMemo(() => cumulativeHeights(heights), [heights]);
   const total = totalHeight(cumulative);
-  const range = useVisibleRange(cumulative, overscan, containerRef);
+  const range = useVisibleRange(cumulative, overscan, initialEnd, containerRef);
 
   cumulativeRef.current = cumulative;
 

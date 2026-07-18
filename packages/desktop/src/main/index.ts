@@ -55,6 +55,7 @@ import {
 } from '@main/settings';
 import type { ChatStatus } from '@main/types';
 import { checkForUpdatesNow, registerUpdateIpc, startAutoUpdateChecks, stopAutoUpdateChecks } from '@main/updates';
+import { ProviderUsageService } from '@main/usage/index';
 import { logger } from '@main/utils/logger';
 import { setStayAwake, shouldStayAwake } from '@main/utils/power';
 import { resolveInside } from '@main/utils/workspace';
@@ -102,6 +103,7 @@ let quitCleanupStarted = false;
 let appQuitConfirmationOpen = false;
 let appSettings: AppSettings | null = null;
 let stopResourceRefresh: (() => void) | null = null;
+let providerUsage: ProviderUsageService | null = null;
 let stopMainWindowChanged: (() => void) | null = null;
 
 const mobileResult = (
@@ -328,9 +330,11 @@ const registerComposerShortcut = (accelerator: string) => {
 const menuActions = () => ({
   onShowSettings: showSettings,
   onShowShortcuts: showShortcuts,
-  onQuickAccess: () => toggleQuickAccess('menu'),
   onNewSession: () => startNewSession('menu'),
   onCheckForUpdates: () => checkForUpdatesNow(),
+  onQuickAccess: () => toggleQuickAccess('menu'),
+  onShowProviders: () => showSettings('providers'),
+  providerUsage: providerUsage?.getUsage() ?? null,
   recentSessions: chat.getStatusItemRecentSessions(),
   onOpenRecentSession: (sessionId: string) => openRecentSession(sessionId),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
@@ -430,6 +434,15 @@ if (!singleInstanceLock) {
     registerComposerShortcut(appSettings.composerShortcut);
     activateWorkspaceAccess(chat.getWorkspaceCwd());
 
+    if (isMac) {
+      providerUsage = new ProviderUsageService({
+        onChange: () => installStatusItem(menuActions()),
+        prepareCredentials: () => chat.prepareProviderUsageCredentials(),
+        getCredential: (provider) => chat.getProviderUsageCredential(provider)
+      });
+      providerUsage.start();
+    }
+
     installApplicationMenu(menuActions());
     installStatusItem(menuActions());
     stopWorkspaceChanged = onWorkspaceChanged((workspace) => {
@@ -439,6 +452,7 @@ if (!singleInstanceLock) {
       if (!focused) return;
 
       gitChanges.flushPendingRefreshes();
+      providerUsage?.refreshIfStale().catch(() => {});
       chat
         .refreshActiveSessionResources()
         .then((refreshed) => {
@@ -460,6 +474,7 @@ if (!singleInstanceLock) {
       getWorkspace(workspacePath ?? chat.getWorkspaceCwd())
     );
     ipcMain.handle('app:settings', () => appSettings);
+    ipcMain.handle('app:provider-usage', () => providerUsage?.getUsage() ?? []);
     ipcMain.handle('app:mobile-relay-code', () => desktopRelay.currentCode);
     ipcMain.handle('app:probe-mobile-relay', (_event, settings: { relayUrl: string; relayToken: string }) =>
       probeRelay(settings.relayUrl, settings.relayToken)
@@ -614,6 +629,8 @@ const runQuitCleanup = async () => {
   stopMainWindowChanged?.();
   stopMainWindowChanged = null;
   stopAutoUpdateChecks();
+  providerUsage?.stop();
+  providerUsage = null;
   desktopRelay.stop();
   setStayAwake(false);
   await destroyBrowserSilently();

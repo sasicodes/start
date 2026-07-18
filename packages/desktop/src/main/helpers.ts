@@ -61,6 +61,8 @@ export const providerAuthSlots = (provider: string): string[] => {
   return [provider];
 };
 
+export const subscriptionProviderId = (provider: string) => (provider === 'openai' ? 'openai-codex' : provider);
+
 export const isProviderModel = (model: { provider: string; id: string; name?: string }, provider: ProviderKey) => {
   const haystack = `${model.provider} ${model.id} ${model.name ?? ''}`.toLowerCase();
   if (provider === 'openai') {

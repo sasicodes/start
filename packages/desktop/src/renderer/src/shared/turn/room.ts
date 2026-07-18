@@ -174,6 +174,7 @@ export const useTurnRoom = ({ streaming, turnCount, turnIndex, virtualRef }: Use
     positioned,
     contentRef,
     onVirtualRangeChange,
-    roomVisible: Boolean(roomTurnId)
+    roomVisible: Boolean(roomTurnId),
+    initialEnd: scrollIntent.kind === 'bottom'
   };
 };

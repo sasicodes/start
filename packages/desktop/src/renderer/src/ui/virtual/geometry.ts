@@ -75,6 +75,9 @@ export const initialVisibleEnd = (cumulative: Float64Array, viewportGuess: numbe
   return last;
 };
 
+export const initialVisibleStart = (cumulative: Float64Array, viewportGuess: number) =>
+  firstVisibleIndex(cumulative, Math.max(0, totalHeight(cumulative) - viewportGuess));
+
 export const visibleRange = (
   cumulative: Float64Array,
   scrollTop: number,

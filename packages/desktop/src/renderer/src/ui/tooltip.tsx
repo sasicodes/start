@@ -30,7 +30,7 @@ export const Tooltip = ({
           align={align}
           sideOffset={12}
           collisionPadding={12}
-          className="tooltip-positioner z-50"
+          className="tooltip-positioner z-70"
         >
           <BaseTooltip.Popup className="tooltip-popup pointer-events-none flex items-center gap-2 rounded-full border-0 bg-tooltip px-3 py-1.75 text-xs leading-none font-medium whitespace-nowrap text-zinc-950 opacity-100 shadow-sm transition-[opacity,transform] duration-100 ease-out select-none data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             {label}

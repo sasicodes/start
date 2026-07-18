@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { resolveInside } from '@main/utils/workspace';
@@ -47,6 +47,7 @@ type UntrackedFileData = {
 const maxPatchFiles = 2000;
 const maxUntrackedFiles = 64;
 const gitShowTimeoutMs = 4000;
+const gitWorktreeAddTimeoutMs = 60_000;
 const gitWorktreeTimeoutMs = 10_000;
 const maxPatchLines = 200_000;
 const gitMaxBuffer = 32 * 1024 * 1024;
@@ -483,22 +484,35 @@ export const listWorktrees = async (cwd: string): Promise<GitWorktree[]> => {
   }
 };
 
+export const gitMainWorktree = async (cwd: string): Promise<string> => {
+  const main = (await listWorktrees(cwd)).find((tree) => tree.isMain);
+  return main?.path ?? gitTopLevel(cwd);
+};
+
 export const addWorktree = async (
   cwd: string,
   worktreePath: string,
   options: { branch?: string; base?: string } = {}
-): Promise<GitWorktree | undefined> => {
+): Promise<GitWorktree> => {
+  const branchExisted = options.branch
+    ? Boolean(
+        (await git(cwd, ['for-each-ref', '--count=1', '--format=%(refname)', `refs/heads/${options.branch}`])).trim()
+      )
+    : false;
   try {
     const args = ['worktree', 'add', '--quiet'];
     if (options.branch) args.push('-b', options.branch);
     args.push(worktreePath);
     if (options.base) args.push(options.base);
 
-    await git(cwd, args, gitWorktreeTimeoutMs);
+    await git(cwd, args, gitWorktreeAddTimeoutMs);
     const target = path.resolve(worktreePath);
-    return (await listWorktrees(cwd)).find((tree) => path.resolve(tree.path) === target);
-  } catch {
-    return;
+    const worktree = (await listWorktrees(cwd)).find((tree) => path.resolve(tree.path) === target);
+    if (!worktree) throw new Error(`Git created ${worktreePath}, but it could not be verified.`);
+    return worktree;
+  } catch (error) {
+    await discardWorktree(cwd, worktreePath, branchExisted ? '' : (options.branch ?? ''));
+    throw error;
   }
 };
 
@@ -518,4 +532,13 @@ export const removeWorktree = async (
   } catch {
     return false;
   }
+};
+
+export const discardWorktree = async (cwd: string, worktreePath: string, branch: string): Promise<void> => {
+  const removed = await removeWorktree(cwd, worktreePath, { force: true });
+  if (!removed) {
+    await rm(worktreePath, { recursive: true, force: true }).catch(() => {});
+    await git(cwd, ['worktree', 'prune'], gitWorktreeTimeoutMs).catch(() => {});
+  }
+  if (branch) await git(cwd, ['branch', '-D', branch], gitWorktreeTimeoutMs).catch(() => {});
 };

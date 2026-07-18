@@ -1,5 +1,6 @@
 import { appIconPath, appMenuName, isMac, isProd, trayIconPath } from '@main/application';
 import type { StatusItemRecentSession } from '@main/types';
+import type { ProviderUsage } from '@main/usage/types';
 import type { Tray as ElectronTray, MenuItemConstructorOptions } from 'electron';
 import electron from 'electron';
 
@@ -11,8 +12,10 @@ type MenuActions = {
   onNewSession: () => void;
   onQuickAccess: () => void;
   onShowSettings: () => void;
+  onShowProviders: () => void;
   onShowShortcuts: () => void;
   onCheckForUpdates: () => void;
+  providerUsage: ProviderUsage[] | null;
   recentSessions: StatusItemRecentSession[];
   onOpenRecentSession: (id: string) => void;
 };
@@ -60,11 +63,36 @@ const recentSessionItems = (
   ];
 };
 
+const usageProviders = [
+  { id: 'openai', name: 'OpenAI' },
+  { id: 'anthropic', name: 'Anthropic' }
+] as const;
+
+const usageSublabel = (usage: ProviderUsage | undefined) => {
+  if (!usage) return 'Unavailable';
+  return `${usage.remainingPercent}% remaining`;
+};
+
+const providerUsageItems = (usage: ProviderUsage[] | null, onShowProviders: () => void): MenuItemOptions[] => {
+  if (!usage) return [];
+  return [
+    { type: 'separator' },
+    { label: 'Usage', enabled: false },
+    ...usageProviders.map((provider) => ({
+      label: provider.name,
+      click: onShowProviders,
+      sublabel: usageSublabel(usage.find((item) => item.id === provider.id))
+    }))
+  ];
+};
+
 export const installStatusItem = ({
   onNewSession,
   onQuickAccess,
+  providerUsage,
   onShowSettings,
   recentSessions,
+  onShowProviders,
   composerShortcut,
   onOpenRecentSession
 }: MenuActions) => {
@@ -86,6 +114,7 @@ export const installStatusItem = ({
         click: onQuickAccess
       },
       ...recentSessionItems(recentSessions, onOpenRecentSession),
+      ...providerUsageItems(providerUsage, onShowProviders),
       { type: 'separator' },
       {
         label: 'Settings',

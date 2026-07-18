@@ -7,6 +7,7 @@ import type { RefObject } from 'preact';
 import { memo } from 'preact/compat';
 
 interface TurnArticlesProps {
+  initialEnd: boolean;
   onRangeChange: () => void;
   preserveScrollEnd: boolean;
   virtualRef: RefObject<VirtualHandle | null>;
@@ -19,7 +20,7 @@ const estimateTurnIdHeight = (turnId: string) => {
   return turn ? estimateTurnHeight(turn) : 44;
 };
 
-export const TurnArticles = memo(({ virtualRef, onRangeChange, preserveScrollEnd }: TurnArticlesProps) => {
+export const TurnArticles = memo(({ initialEnd, onRangeChange, preserveScrollEnd, virtualRef }: TurnArticlesProps) => {
   const turnIds = turnIdsState.value;
 
   if (!turnIds.length) return null;
@@ -31,15 +32,16 @@ export const TurnArticles = memo(({ virtualRef, onRangeChange, preserveScrollEnd
       getKey={turnKey}
       className="w-full"
       apiRef={virtualRef}
+      initialEnd={initialEnd}
       onRangeChange={onRangeChange}
       itemClassName="flex flex-col"
-      estimateHeight={estimateTurnIdHeight}
-      preserveScrollEnd={preserveScrollEnd}
       renderItem={(turnId, index) => {
         const assistant = readTurn(turnId)?.role === 'assistant';
         const actionText = assistant ? turnActionTextAt((i) => readTurn(turnIds[i] ?? ''), index) : '';
         return <TurnArticleById turnId={turnId} {...(actionText ? { actionText } : {})} />;
       }}
+      estimateHeight={estimateTurnIdHeight}
+      preserveScrollEnd={preserveScrollEnd}
     />
   );
 });

@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 
 describe('workspace menu', () => {
   it('does not select the current workspace', () => {
-    expect(canSelectWorkspace('/Users/studio/project', '/Users/studio/project')).toBe(false);
+    expect(canSelectWorkspace('/Users/example/project', '/Users/example/project')).toBe(false);
   });
 
   it('selects a different workspace', () => {
-    expect(canSelectWorkspace('/Users/studio/other', '/Users/studio/project')).toBe(true);
+    expect(canSelectWorkspace('/Users/example/other', '/Users/example/project')).toBe(true);
   });
 });

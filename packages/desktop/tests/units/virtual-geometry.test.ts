@@ -1,14 +1,15 @@
 import {
-  totalHeight,
-  visibleRange,
-  resolveItemHeight,
-  lastVisibleIndex,
   cumulativeHeights,
   firstVisibleIndex,
   initialVisibleEnd,
+  initialVisibleStart,
+  lastVisibleIndex,
   measuredPrependShift,
+  resolveItemHeight,
+  shouldCompensateMeasuredDelta,
   shouldPreserveScrollEnd,
-  shouldCompensateMeasuredDelta
+  totalHeight,
+  visibleRange
 } from '@renderer/ui/virtual/geometry';
 import { describe, expect, it } from 'vitest';
 
@@ -96,6 +97,16 @@ describe('initialVisibleEnd', () => {
 
   it('returns the list end when estimates are shorter than the viewport guess', () => {
     expect(initialVisibleEnd(cumulativeHeights([40, 50, 60]), 500)).toBe(3);
+  });
+});
+
+describe('initialVisibleStart', () => {
+  it('starts near the end when estimates exceed the viewport guess', () => {
+    expect(initialVisibleStart(cumulativeHeights([100, 100, 100, 100]), 150)).toBe(2);
+  });
+
+  it('starts at zero when estimates fit within the viewport guess', () => {
+    expect(initialVisibleStart(cumulativeHeights([40, 50, 60]), 500)).toBe(0);
   });
 });
 

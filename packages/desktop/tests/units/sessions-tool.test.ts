@@ -1,10 +1,10 @@
 import {
-  type SessionController,
-  type SessionSummary,
   runCreateSession,
   runListSessions,
   runReadSession,
-  runSendMessage
+  runSendMessage,
+  type SessionController,
+  type SessionSummary
 } from '@main/providers/tools/sessions';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -52,10 +52,14 @@ describe('create_session', () => {
     expect(result.content[0]?.text).toContain('non-empty prompt');
   });
 
-  it('reports the fallback when isolation is not honored', async () => {
-    const ctrl = controller({ create: async () => summary({ isolated: false, workspacePath: '/repo' }) });
+  it('reports creation failure without starting a fallback session', async () => {
+    const ctrl = controller({
+      create: async () => {
+        throw new Error('fatal: invalid reference');
+      }
+    });
     const result = await runCreateSession(ctrl, { prompt: 'do x', environment: { type: 'worktree' } });
-    expect(result.content[0]?.text).toContain('Could not isolate a worktree');
+    expect(result.content[0]?.text).toBe('Could not create worktree session: fatal: invalid reference');
   });
 });
 
