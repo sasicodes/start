@@ -5,6 +5,21 @@ import { broadcastsByChannel } from '../fakes/window.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 describe('background notices', () => {
+  it('does not create a notice for the session the user is viewing', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('visible work', webContents);
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+    session?.finishPrompt();
+    await send;
+
+    expect(await chat.getNotices()).toEqual([]);
+    expect(broadcastsByChannel('chat:notice')).toEqual([]);
+  });
+
   it('persists a completed notice when a session finishes while the user is on another workspace', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

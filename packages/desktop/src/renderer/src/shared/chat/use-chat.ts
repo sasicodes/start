@@ -14,6 +14,7 @@ import { buildRecallList } from '@renderer/shared/chat/recall';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
+import { refreshProviderUsage } from '@renderer/shared/settings/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
@@ -102,7 +103,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applyStatus = useCallback(
     (nextStatus: ChatStatus) => {
-      primeWorkspaceFolders(nextStatus.workspacePath);
+      primeWorkspaceFolders();
       setWorkspacePath(nextStatus.workspacePath);
       selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
       setSelectedModelKey(nextStatus.selectedModelKey ?? '');
@@ -331,7 +332,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       selectedModelKeyState.value = result.status.selectedModelKey ?? '';
       setSelectedModelKey(result.status.selectedModelKey ?? '');
       if (result.status.thinkingLevel) setThinkingLevel(result.status.thinkingLevel);
-      primeWorkspaceFolders(result.status.workspacePath);
+      primeWorkspaceFolders();
       textareaRef.current?.focus();
       return true;
     },
@@ -447,6 +448,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const refreshSettings = useCallback(() => {
     loadModels().catch(() => {});
     loadAuthProviders().catch(() => {});
+    refreshProviderUsage();
   }, [loadAuthProviders, loadModels]);
 
   return {

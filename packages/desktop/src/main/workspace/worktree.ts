@@ -24,6 +24,12 @@ export const managedWorktreeRoot = (baseDir: string) => path.join(baseDir, 'work
 export const worktreePathFor = (baseDir: string, repoRoot: string, slug: string) =>
   path.join(managedWorktreeRoot(baseDir), repoFolderName(repoRoot), slug);
 
+export const managedWorktreeRepoFolder = (baseDir: string, candidate: string) => {
+  const relative = relativeInside(managedWorktreeRoot(baseDir), candidate);
+  if (!relative) return '';
+  return relative.split(path.sep)[0] ?? '';
+};
+
 export const isManagedWorktree = (baseDir: string, candidate: string) => {
   const relative = relativeInside(managedWorktreeRoot(baseDir), candidate);
   return relative !== null && relative !== '';

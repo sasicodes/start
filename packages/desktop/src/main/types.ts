@@ -234,9 +234,10 @@ export type ScopedChatEvent<T> = {
 export type WorkspaceFolder = {
   name: string;
   path: string;
+  active: boolean;
   modified: number;
-  status?: AgentTabStatus;
   sessionCount: number;
+  status?: AgentTabStatus;
   noticeKind?: SessionNoticeKind;
 };
 

@@ -28,7 +28,7 @@ import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@mai
 import { closeStartDb, openStartDb } from '@main/db';
 import { historyDetail, imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
-import { addWorktree, getGitBranch, gitTopLevel, listWorktrees } from '@main/git';
+import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -40,17 +40,19 @@ import {
   providerAuthKind,
   providerAuthLabel,
   providerAuthSlots,
+  subscriptionProviderId,
   textDelta,
   thinkingDelta
 } from '@main/helpers';
 import { historyTurns } from '@main/history';
 import { disposeMcpClients } from '@main/mcp/clients';
 import { mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
+import { modelScore } from '@main/models';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveAuthBackend } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
-import { warmWebSearchTools } from '@main/providers/tools/search/index';
 import { createStartCustomTools } from '@main/providers/tools/index';
+import { warmWebSearchTools } from '@main/providers/tools/search/index';
 import type { SessionController, SessionEnvironment, SessionSummary } from '@main/providers/tools/sessions';
 import type { WorktreeOwner } from '@main/providers/tools/worktree';
 import { disposeWorkspaceFinders, refreshWorkspaceFinder, warmWorkspaceFinder } from '@main/search/client';
@@ -67,7 +69,6 @@ import {
   updateSessionTitle,
   upsertSessionOnStart
 } from '@main/sessions';
-import { modelScore } from '@main/models';
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
 import type { WorkflowModelOption } from '@main/subagents/types';
@@ -101,11 +102,19 @@ import {
   type SwitchWorkspaceResult,
   type WorkspaceFolder
 } from '@main/types';
+import type { ProviderUsageCredential } from '@main/usage/types';
 import { directoryStatus, workspaceDisplayName } from '@main/utils/workspace';
 import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
 import { workspaceHistoryWith } from '@main/workspace/history';
-import { isManagedWorktree, worktreeBranch, worktreePathFor, worktreeSlug } from '@main/workspace/worktree';
+import {
+  isManagedWorktree,
+  managedWorktreeRepoFolder,
+  repoFolderName,
+  worktreeBranch,
+  worktreePathFor,
+  worktreeSlug
+} from '@main/workspace/worktree';
 import type { WebContents } from 'electron';
 import electron from 'electron';
 
@@ -202,6 +211,12 @@ interface MobileSendInput {
 interface MobileSessionChange {
   sessionId: string;
   workspacePath: string;
+}
+
+interface ManagedWorktree {
+  path: string;
+  branch: string;
+  repoRoot: string;
 }
 
 type MobileSessionChangeHandler = (change: MobileSessionChange) => void;
@@ -687,20 +702,40 @@ export class ChatService {
     };
   }
 
-  private async addManagedWorktree(branchName?: string, base?: string): Promise<string> {
-    const repoRoot = await gitTopLevel(this.workspaceCwd);
-    if (!repoRoot) return '';
+  private async addManagedWorktree(cwd: string, branchName?: string, base?: string): Promise<ManagedWorktree> {
+    const repoRoot = await gitMainWorktree(cwd);
+    if (!repoRoot) throw new Error(`${cwd} is not a Git repository.`);
+    if (isManagedWorktree(baseDir, repoRoot))
+      throw new Error(`Could not resolve the primary Git repository for ${cwd}.`);
     const slug = `${worktreeSlug(branchName ?? '')}-${randomBytes(4).toString('hex')}`;
-    const worktree = await addWorktree(repoRoot, worktreePathFor(baseDir, repoRoot, slug), {
-      branch: worktreeBranch(slug),
-      ...(base ? { base } : {})
-    });
-    return worktree ? worktree.path : '';
+    const branch = worktreeBranch(slug);
+    const worktreePath = worktreePathFor(baseDir, repoRoot, slug);
+    const worktree = await addWorktree(repoRoot, worktreePath, { branch, ...(base ? { base } : {}) });
+    return { branch, repoRoot, path: worktree.path };
+  }
+
+  private async withManagedWorktree<T>(
+    cwd: string,
+    run: (workspacePath: string) => Promise<T>,
+    branchName?: string,
+    base?: string
+  ): Promise<T> {
+    const worktree = await this.addManagedWorktree(cwd, branchName, base);
+    try {
+      return await run(worktree.path);
+    } catch (error) {
+      await discardWorktree(worktree.repoRoot, worktree.path, worktree.branch);
+      throw error;
+    }
   }
 
   async createWorktreeTab(branchName?: string, base?: string): Promise<AgentTab> {
-    const worktreePath = await this.addManagedWorktree(branchName, base);
-    return worktreePath ? this.createTab(worktreePath) : this.createTab();
+    return this.withManagedWorktree(
+      this.workspaceCwd,
+      (workspacePath) => this.createTab(workspacePath),
+      branchName,
+      base
+    );
   }
 
   private async createBackgroundSession(workspacePath: string): Promise<AgentSession> {
@@ -781,22 +816,42 @@ export class ChatService {
     return this.sessionResult(session);
   }
 
-  private async workspaceRootForCwd(cwd: string): Promise<string> {
+  private knownWorkspaceRootFor(cwd: string, candidates: readonly string[] = []): string {
+    const folder = managedWorktreeRepoFolder(baseDir, cwd);
+    if (!folder) return '';
+
+    const history = Object.keys(this.appState.workspaceHistory ?? {});
+    return (
+      [...new Set([this.workspaceCwd, ...history, ...candidates])].find(
+        (candidate) => !isManagedWorktree(baseDir, candidate) && repoFolderName(candidate) === folder
+      ) ?? ''
+    );
+  }
+
+  private async workspaceRootForCwd(cwd: string, candidates: readonly string[] = []): Promise<string> {
     if (!cwd || !isManagedWorktree(baseDir, cwd)) return cwd;
 
     const cached = this.worktreeRepoCache.get(cwd);
     if (cached) return cached;
 
-    const repoRoot = (await listWorktrees(cwd)).find((tree) => tree.isMain)?.path ?? cwd;
-    this.worktreeRepoCache.set(cwd, repoRoot);
+    const known = this.knownWorkspaceRootFor(cwd, candidates);
+    if (known) {
+      this.worktreeRepoCache.set(cwd, known);
+      return known;
+    }
+
+    const resolved = await gitMainWorktree(cwd);
+    const repoRoot = !isManagedWorktree(baseDir, resolved) ? resolved : '';
+    if (repoRoot) this.worktreeRepoCache.set(cwd, repoRoot);
     return repoRoot;
   }
 
   private async warmWorkspaceRoots(cwds: string[]): Promise<void> {
-    await Promise.all([...new Set(cwds)].map((cwd) => this.workspaceRootForCwd(cwd)));
+    await Promise.all([...new Set(cwds)].map((cwd) => this.workspaceRootForCwd(cwd, cwds)));
   }
 
   private async managedWorktreesFor(repoRoot: string): Promise<WorktreeRef[]> {
+    if (!repoRoot) return [];
     return (await listWorktrees(repoRoot))
       .filter((tree) => isManagedWorktree(baseDir, tree.path))
       .map((tree) => ({ path: tree.path, branch: tree.branch }));
@@ -826,38 +881,36 @@ export class ChatService {
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
-    await this.warmWorkspaceRoots([
-      this.workspaceCwd,
-      ...rawAttention.keys(),
-      ...sessions.flatMap((session) => (session.cwd ? [session.cwd] : []))
-    ]);
-    const attentionStatuses = await this.resolvedAttentionStatuses(rawAttention);
-    const activeRoot = await this.workspaceRootForCwd(this.workspaceCwd);
-    folders.set(activeRoot, {
-      sessionCount: 0,
-      path: activeRoot,
-      modified: Date.now(),
-      name: workspaceDisplayName(activeRoot),
-      ...this.workspaceAttention(activeRoot, attentionStatuses)
-    });
-
     const workspaceHistory = this.appState.workspaceHistory ?? {};
-    for (const [workspacePath, lastOpenedAt] of Object.entries(workspaceHistory)) {
-      if (folders.has(workspacePath)) continue;
+    const sessionCwds = sessions.flatMap((session) => (session.cwd ? [session.cwd] : []));
+    const workspaceCwds = [this.workspaceCwd, ...Object.keys(workspaceHistory), ...rawAttention.keys(), ...sessionCwds];
+    await this.warmWorkspaceRoots(workspaceCwds);
+    const activeRoot = await this.workspaceRootForCwd(this.workspaceCwd, workspaceCwds);
+    const attentionStatuses = await this.resolvedAttentionStatuses(rawAttention, workspaceCwds);
+    const workspaceFolder = (path: string, modified: number, sessionCount: number): WorkspaceFolder => ({
+      path,
+      modified,
+      sessionCount,
+      active: path === activeRoot,
+      name: workspaceDisplayName(path),
+      ...this.workspaceAttention(path, attentionStatuses)
+    });
+    if (activeRoot) {
+      folders.set(activeRoot, workspaceFolder(activeRoot, Date.now(), 0));
+    }
 
-      folders.set(workspacePath, {
-        sessionCount: 0,
-        path: workspacePath,
-        modified: lastOpenedAt,
-        name: workspaceDisplayName(workspacePath),
-        ...this.workspaceAttention(workspacePath, attentionStatuses)
-      });
+    for (const [workspacePath, lastOpenedAt] of Object.entries(workspaceHistory)) {
+      const root = await this.workspaceRootForCwd(workspacePath, workspaceCwds);
+      if (!root || folders.has(root)) continue;
+
+      folders.set(root, workspaceFolder(root, lastOpenedAt, 0));
     }
 
     for (const session of sessions) {
       if (!session.cwd || session.messageCount === 0) continue;
 
-      const root = await this.workspaceRootForCwd(session.cwd);
+      const root = await this.workspaceRootForCwd(session.cwd, workspaceCwds);
+      if (!root) continue;
       const current = folders.get(root);
       const modified = session.modified.getTime();
       if (current) {
@@ -865,26 +918,14 @@ export class ChatService {
         current.sessionCount += 1;
         Object.assign(current, this.workspaceAttention(root, attentionStatuses));
       } else {
-        folders.set(root, {
-          modified,
-          sessionCount: 1,
-          path: root,
-          name: workspaceDisplayName(root),
-          ...this.workspaceAttention(root, attentionStatuses)
-        });
+        folders.set(root, workspaceFolder(root, modified, 1));
       }
     }
 
     for (const workspacePath of attentionStatuses.keys()) {
       if (folders.has(workspacePath)) continue;
 
-      folders.set(workspacePath, {
-        sessionCount: 0,
-        path: workspacePath,
-        modified: Date.now(),
-        name: workspaceDisplayName(workspacePath),
-        ...this.workspaceAttention(workspacePath, attentionStatuses)
-      });
+      folders.set(workspacePath, workspaceFolder(workspacePath, Date.now(), 0));
     }
 
     const list = [...folders.values()].sort((a, b) => b.modified - a.modified);
@@ -898,7 +939,7 @@ export class ChatService {
 
     const missingCandidates = [...missingPaths];
     const currentStatuses = await Promise.all(missingCandidates.map((workspacePath) => directoryStatus(workspacePath)));
-    const currentActiveRoot = await this.workspaceRootForCwd(this.workspaceCwd);
+    const currentActiveRoot = await this.workspaceRootForCwd(this.workspaceCwd, workspaceCwds);
     const confirmedMissingPaths = new Set(
       missingCandidates.filter(
         (workspacePath, index) => workspacePath !== currentActiveRoot && currentStatuses[index] === 'missing'
@@ -1015,6 +1056,24 @@ export class ChatService {
     ];
   }
 
+  async getProviderUsageCredential(provider: ProviderKey): Promise<ProviderUsageCredential | null> {
+    const providerId = subscriptionProviderId(provider);
+    const credential = this.authStorage.get(providerId);
+    if (credential?.type !== 'oauth') return null;
+    const token = await this.authStorage.getApiKey(providerId, { includeFallback: false });
+    if (!token) return null;
+
+    const accountId = credential.accountId;
+    return {
+      token,
+      ...(typeof accountId === 'string' && accountId ? { accountId } : {})
+    };
+  }
+
+  prepareProviderUsageCredentials(): void {
+    this.authStorage.reload();
+  }
+
   async setApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
     const cleanProvider = provider.trim().toLowerCase();
     const cleanApiKey = apiKey.trim();
@@ -1037,7 +1096,7 @@ export class ChatService {
   }
 
   async loginSubscription(provider: string, webContents: WebContents): Promise<ProviderLoginResult> {
-    const providerId = provider === 'openai' ? 'openai-codex' : provider;
+    const providerId = subscriptionProviderId(provider);
     this.authInputReject?.(new Error('Login restarted.'));
     this.clearSubscriptionAuthInput();
 
@@ -1979,15 +2038,18 @@ export class ChatService {
     kind: SessionNotice['kind'],
     webContents?: WebContents
   ): void {
-    this.notices.set(sessionId, {
+    const payload: SessionNotice = {
       kind,
       sessionId,
       workspacePath,
       createdAt: Date.now()
-    });
+    };
+    this.notices.set(sessionId, payload);
     this.persistNotices();
-    webContents?.send('chat:recent-sessions-changed', { workspacePath });
-    webContents?.send('chat:notice', { tabId: sessionId, payload: this.notices.get(sessionId), workspacePath });
+    const notice = { tabId: sessionId, payload, workspacePath };
+    sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
+    if (webContents) webContents.send('chat:notice', notice);
+    else sendToMainWindowIfOpen('chat:notice', notice);
   }
 
   private persistNotices(): void {
@@ -2035,10 +2097,14 @@ export class ChatService {
     return this.collapseTopStatuses(statuses);
   }
 
-  private async resolvedAttentionStatuses(raw: Map<string, AgentTabStatus>): Promise<Map<string, AgentTabStatus>> {
+  private async resolvedAttentionStatuses(
+    raw: Map<string, AgentTabStatus>,
+    candidates: readonly string[] = []
+  ): Promise<Map<string, AgentTabStatus>> {
     const grouped = new Map<string, AgentTabStatus[]>();
     for (const [workspacePath, status] of raw) {
-      const root = await this.workspaceRootForCwd(workspacePath);
+      const root = await this.workspaceRootForCwd(workspacePath, candidates);
+      if (!root) continue;
       grouped.set(root, [...(grouped.get(root) ?? []), status]);
     }
 
@@ -2098,13 +2164,13 @@ export class ChatService {
 
     return {
       ...base,
-      sessions: this.sessionController(),
+      sessions: this.sessionController(cwd),
       customTools: subagentSessionTools,
       worktreeOwners: (path) => this.worktreeOwners(path)
     };
   }
 
-  private sessionController(): SessionController {
+  private sessionController(cwd: string): SessionController {
     const toSummary = (tab: AgentTab) => ({
       id: tab.id,
       status: tab.status,
@@ -2124,7 +2190,7 @@ export class ChatService {
         if (!session) return;
         this.generate(session, sessionWorkspacePath(session, this.workspaceCwd), prompt, []).catch(() => {});
       },
-      create: (input) => this.startSession(input)
+      create: (input) => this.startSession({ ...input, cwd })
     };
   }
 
@@ -2137,17 +2203,32 @@ export class ChatService {
   }
 
   async startSession({
+    cwd = this.workspaceCwd,
     prompt,
     environment,
     attachments = []
   }: {
+    cwd?: string;
     prompt: string;
     environment: SessionEnvironment;
     attachments?: ImageAttachment[];
   }): Promise<SessionSummary> {
-    const worktreePath =
-      environment.type === 'worktree' ? await this.addManagedWorktree(environment.branch, environment.base) : '';
-    const workspacePath = worktreePath || this.workspaceCwd;
+    if (environment.type === 'worktree') {
+      return this.withManagedWorktree(
+        cwd,
+        (workspacePath) => this.startBackgroundSession(workspacePath, prompt, attachments),
+        environment.branch,
+        environment.base
+      );
+    }
+    return this.startBackgroundSession(cwd, prompt, attachments);
+  }
+
+  private async startBackgroundSession(
+    workspacePath: string,
+    prompt: string,
+    attachments: ImageAttachment[]
+  ): Promise<SessionSummary> {
     const session = await this.createBackgroundSession(workspacePath);
     this.generate(session, workspacePath, prompt, attachments).catch(() => {});
     return {
@@ -2256,7 +2337,7 @@ export class ChatService {
     const apiKeyStatus = this.authStorage.getAuthStatus(key);
     const hasApiKey = apiKeyStatus.configured;
     const supportsSubscription = key === 'anthropic' || key === 'openai';
-    const subscriptionProvider = key === 'openai' ? 'openai-codex' : key;
+    const subscriptionProvider = subscriptionProviderId(key);
     const hasSubscription =
       supportsSubscription &&
       (this.authStorage.get(subscriptionProvider)?.type === 'oauth' ||

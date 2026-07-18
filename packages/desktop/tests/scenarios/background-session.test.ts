@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
+import { broadcastsByChannel } from '../fakes/window.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 describe('background session creation', () => {
@@ -22,6 +23,15 @@ describe('background session creation', () => {
     expect(chat.getTabs().some((tab) => tab.id === summary.id)).toBe(true);
 
     background?.finishPrompt();
+    await vi.waitFor(() => expect(broadcastsByChannel('chat:notice')).toHaveLength(1));
+    expect(broadcastsByChannel('chat:notice')[0]?.args[0]).toMatchObject({
+      tabId: summary.id,
+      payload: { kind: 'completed', sessionId: summary.id }
+    });
+    expect(broadcastsByChannel('chat:recent-sessions-changed').at(-1)?.args[0]).toEqual({
+      workspacePath: summary.workspacePath
+    });
+
     activeSession?.finishPrompt();
     await send;
   });

@@ -1,4 +1,4 @@
-import { workspaceFoldersAttention } from '@renderer/shared/attention-status';
+import { workspaceFoldersAttention } from '@renderer/shared/attention';
 import { AttentionBadge } from '@renderer/shared/badge';
 import { useWorkspaceFolders } from '@renderer/shared/workspace/folders';
 import { useWorkspace } from '@renderer/shared/workspace/info';
@@ -16,8 +16,8 @@ interface WorkspaceProps {
 export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace }: WorkspaceProps) => {
   const [open, setOpen] = useState(false);
   const workspace = useWorkspace(workspacePath);
-  const { folders } = useWorkspaceFolders({ workspacePath });
-  const { kind: attention, countLabel } = workspaceFoldersAttention(folders, workspacePath);
+  const { folders } = useWorkspaceFolders();
+  const { kind: attention, countLabel } = workspaceFoldersAttention(folders);
 
   if (!workspace) return null;
 
@@ -42,12 +42,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
             <MenuPanel className="w-64">
-              <WorkspaceMenu
-                folders={folders}
-                onSelect={onSelectWorkspace}
-                workspacePath={workspacePath}
-                onChooseDirectory={onChooseDirectory}
-              />
+              <WorkspaceMenu folders={folders} onSelect={onSelectWorkspace} onChooseDirectory={onChooseDirectory} />
             </MenuPanel>
           </AppMenu.Positioner>
         </AppMenu.Portal>

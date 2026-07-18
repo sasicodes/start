@@ -1,8 +1,17 @@
-import type { AppSettingsResult } from '@preload/index';
+import type { AppSettingsResult, ProviderUsage } from '@preload/index';
 import { signal } from '@preact/signals';
 
 export const keepAwake = signal(true);
 export const composerShortcut = signal('Control+Space');
+export const providerUsage = signal<ProviderUsage[]>([]);
+
+export const refreshProviderUsage = async () => {
+  try {
+    providerUsage.value = await window.pi.app.providerUsage();
+  } catch {
+    providerUsage.value = [];
+  }
+};
 
 export const updateKeepAwake = async (enabled: boolean): Promise<AppSettingsResult> => {
   try {

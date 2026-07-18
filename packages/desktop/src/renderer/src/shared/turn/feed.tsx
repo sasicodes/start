@@ -18,7 +18,7 @@ export const TurnFeed = memo(() => {
 
   turnIndexesRef.current = turnIndexes;
 
-  const { roomRef, scrollRef, contentRef, positioned, roomVisible, onVirtualRangeChange } = useTurnRoom({
+  const { roomRef, scrollRef, contentRef, positioned, initialEnd, roomVisible, onVirtualRangeChange } = useTurnRoom({
     streaming,
     turnIndex,
     virtualRef,
@@ -37,7 +37,12 @@ export const TurnFeed = memo(() => {
       )}
     >
       <div ref={contentRef} class="mx-auto flex min-h-full max-w-3xl flex-col justify-end px-5">
-        <TurnArticles virtualRef={virtualRef} preserveScrollEnd={!roomVisible} onRangeChange={onVirtualRangeChange} />
+        <TurnArticles
+          initialEnd={initialEnd}
+          virtualRef={virtualRef}
+          preserveScrollEnd={!roomVisible}
+          onRangeChange={onVirtualRangeChange}
+        />
         {roomVisible && <div ref={roomRef} class="shrink-0" aria-hidden="true" />}
       </div>
     </section>

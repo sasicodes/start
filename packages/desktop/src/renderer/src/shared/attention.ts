@@ -34,12 +34,9 @@ export const topAttentionStatus = (statuses: AttentionState[]): AttentionState =
   return '';
 };
 
-export const workspaceFoldersAttention = (
-  folders: WorkspaceFolder[],
-  activeWorkspacePath: string
-): { kind: AttentionState; countLabel: string } => {
+export const workspaceFoldersAttention = (folders: WorkspaceFolder[]): { kind: AttentionState; countLabel: string } => {
   const statuses = folders
-    .filter((folder) => folder.path !== activeWorkspacePath)
+    .filter((folder) => !folder.active)
     .map((folder) => attentionStatus(folder.status, folder.noticeKind));
   return { kind: topAttentionStatus(statuses), countLabel: attentionCountLabel(attentionStatusCount(statuses)) };
 };

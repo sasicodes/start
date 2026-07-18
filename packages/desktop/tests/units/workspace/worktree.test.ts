@@ -1,5 +1,6 @@
 import {
   isManagedWorktree,
+  managedWorktreeRepoFolder,
   managedWorktreeRoot,
   repoFolderName,
   repoKey,
@@ -50,6 +51,17 @@ describe('worktreePathFor', () => {
   it('nests slugs under the managed root keyed by repo name and hash', () => {
     const folder = repoFolderName('/a/repo');
     expect(worktreePathFor('/data', '/a/repo', 'feature')).toBe(`${managedWorktreeRoot('/data')}/${folder}/feature`);
+  });
+});
+
+describe('managedWorktreeRepoFolder', () => {
+  it('returns the repository folder encoded in a managed worktree path', () => {
+    const path = worktreePathFor('/data', '/a/repo', 'feature');
+    expect(managedWorktreeRepoFolder('/data', path)).toBe(repoFolderName('/a/repo'));
+  });
+
+  it('rejects paths outside the managed root', () => {
+    expect(managedWorktreeRepoFolder('/data', '/somewhere/else')).toBe('');
   });
 });
 

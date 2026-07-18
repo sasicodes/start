@@ -1,5 +1,8 @@
-import type { ProviderAuthStatus } from '@preload/index';
-import { AnthropicIcon, ChevronDownIcon, OpenAIIcon } from '@renderer/ui/icons';
+import type { ProviderAuthStatus, ProviderUsage } from '@preload/index';
+import { providerUsage } from '@renderer/shared/settings/state';
+import { usageLabel } from '@renderer/shared/settings/usage';
+import { AnthropicIcon, ChevronDownIcon, OpenAIIcon, UsageIcon } from '@renderer/ui/icons';
+import { Tooltip } from '@renderer/ui/tooltip';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
@@ -37,6 +40,7 @@ interface ProviderHeadingProps {
   authLabel: string;
   connected: boolean;
   authDetail: string;
+  usage?: ProviderUsage;
 }
 
 const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) =>
@@ -53,9 +57,22 @@ const ProviderAvatar = ({ provider }: { provider: ProviderKey }) => (
   </div>
 );
 
-const ProviderHeading = ({ name, authLabel, connected, authDetail }: ProviderHeadingProps) => (
+const ProviderHeading = ({ name, authLabel, connected, authDetail, usage }: ProviderHeadingProps) => (
   <div class="min-w-0 flex-1">
-    <h3 class="m-0 text-sm leading-5 font-medium text-ink">{name}</h3>
+    <h3 class="m-0 flex items-center gap-1 text-sm leading-5 font-medium text-ink">
+      {name}
+      {usage && (
+        <Tooltip label={usageLabel(usage)}>
+          <button
+            type="button"
+            aria-label={`${name} usage`}
+            class="relative grid size-4 place-items-center border-0 bg-transparent p-0 text-soft transition-colors hover:text-ink before:absolute before:-inset-1"
+          >
+            <UsageIcon class="size-3.5" />
+          </button>
+        </Tooltip>
+      )}
+    </h3>
     <p class="m-0 text-xs leading-4 text-soft">
       {connected ? (
         <>
@@ -111,6 +128,7 @@ export const Providers = ({
         const authDetail = connected ? connectionDetail(auth?.label) : '';
         const expandable = !hasCredentials;
         const open = expandable && openProvider === provider.key;
+        const usage = connected ? providerUsage.value.find((item) => item.id === provider.key) : undefined;
 
         return (
           <div class={tw(index > 0 ? 'pt-4 pb-4' : 'pb-4')} key={provider.key}>
@@ -127,6 +145,7 @@ export const Providers = ({
                   authLabel={authLabel}
                   connected={connected}
                   authDetail={authDetail}
+                  {...(usage ? { usage } : {})}
                 />
                 <ChevronDownIcon
                   class={tw('size-4 flex-none text-soft transition-transform duration-150', open && 'rotate-180')}
@@ -140,6 +159,7 @@ export const Providers = ({
                   authLabel={authLabel}
                   connected={connected}
                   authDetail={authDetail}
+                  {...(usage ? { usage } : {})}
                 />
                 <button
                   type="button"

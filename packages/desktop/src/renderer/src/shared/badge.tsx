@@ -1,4 +1,4 @@
-import type { AttentionState } from '@renderer/shared/attention-status';
+import type { AttentionState } from '@renderer/shared/attention';
 import { tw } from '@renderer/utils/tw';
 
 interface AttentionBadgeProps {

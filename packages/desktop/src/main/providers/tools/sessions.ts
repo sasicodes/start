@@ -57,12 +57,16 @@ interface CreateArgs {
 export const runCreateSession = async (controller: SessionController, { prompt, environment }: CreateArgs) => {
   if (!prompt.trim()) return toolResult('Provide a non-empty prompt.', null);
   const env: SessionEnvironment = environment ?? { type: 'local' };
-  const session = await controller.create({ prompt, environment: env });
-  const message =
-    env.type === 'worktree' && !session.isolated
-      ? `Could not isolate a worktree (not a git repository or git failed). Started a local session ${session.id} at ${session.workspacePath} instead.`
-      : `Created ${session.isolated ? 'worktree' : 'local'} session ${session.id} at ${session.workspacePath}`;
-  return toolResult(message, null);
+  try {
+    const session = await controller.create({ prompt, environment: env });
+    return toolResult(
+      `Created ${session.isolated ? 'worktree' : 'local'} session ${session.id} at ${session.workspacePath}`,
+      null
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'The session could not be created.';
+    return toolResult(`Could not create ${env.type} session: ${reason}`, null);
+  }
 };
 
 export const runListSessions = (
