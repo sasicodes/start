@@ -727,6 +727,7 @@ export class ChatService {
   }
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+    this.applyWorkspaceModelDefault(workspacePath);
     const session = await this.buildSession(workspacePath);
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.attachments.clear();
@@ -1044,6 +1045,7 @@ export class ChatService {
       this.session = this.backgroundSessionForWorkspace(nextCwd);
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
       this.attachments.clear();
+      this.applyWorkspaceModelDefault(nextCwd);
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
       if (this.activeSessionId) this.applyStoredSessionSelection(this.activeSessionId);
@@ -1254,6 +1256,7 @@ export class ChatService {
     }
     this.selectedThinkingLevel = nextThinkingLevel;
     this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
+    this.recordWorkspaceModelDefault();
 
     return {
       ready: true,
@@ -1297,6 +1300,7 @@ export class ChatService {
     this.selectedThinkingLevel = clampThinkingLevel(model, level);
     this.session?.setThinkingLevel(this.selectedThinkingLevel);
     this.persistState({ selectedThinkingLevel: this.selectedThinkingLevel });
+    this.recordWorkspaceModelDefault();
 
     return {
       ready: true,
@@ -2424,6 +2428,28 @@ export class ChatService {
     const model = this.findModelByKey(storedKey);
     this.selectedModelKey = storedKey;
     if (thinkingLevel && model) this.selectedThinkingLevel = clampThinkingLevel(model, thinkingLevel);
+  }
+
+  private applyWorkspaceModelDefault(workspacePath: string): void {
+    const workspaceDefault = this.appState.workspaceModelDefaults?.[workspacePath];
+    const model = workspaceDefault?.modelKey ? this.findModelByKey(workspaceDefault.modelKey) : undefined;
+    if (!workspaceDefault?.modelKey || !model) return;
+
+    this.selectedModelKey = workspaceDefault.modelKey;
+    if (workspaceDefault.thinkingLevel) {
+      this.selectedThinkingLevel = clampThinkingLevel(model, workspaceDefault.thinkingLevel);
+    }
+  }
+
+  private recordWorkspaceModelDefault(): void {
+    const workspaceModelDefaults = {
+      ...this.appState.workspaceModelDefaults,
+      [this.workspaceCwd]: {
+        thinkingLevel: this.selectedThinkingLevel,
+        ...(this.selectedModelKey ? { modelKey: this.selectedModelKey } : {})
+      }
+    };
+    this.persistState({ workspaceModelDefaults });
   }
 
   private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {
