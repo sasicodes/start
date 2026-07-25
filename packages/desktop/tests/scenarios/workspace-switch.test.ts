@@ -67,7 +67,7 @@ describe('workspace switching', () => {
     const superseded = await pendingSwitch;
 
     expect(activation.ok).toBe(true);
-    expect(superseded.ok).toBe(true);
+    expect(superseded).toEqual(expect.objectContaining({ ok: true, unchanged: true }));
     expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-a');
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
 
