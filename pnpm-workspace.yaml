@@ -32,6 +32,8 @@ overrides:
   'js-yaml@>=4.0.0 <4.3.0': 4.3.0
   'fast-uri@>=3.0.0 <3.1.4': 3.1.4
   'protobufjs@>=7.5.0 <7.6.5': 7.6.5
+  'brace-expansion@<=5.0.7': 5.0.8
+  '@hono/node-server@<2.0.5': 2.0.11
 patchedDependencies:
   '@ff-labs/fff-node@0.10.1': patches/@ff-labs__fff-node@0.10.1.patch
   '@earendil-works/pi-ai@0.82.0': patches/@earendil-works__pi-ai@0.82.0.patch
