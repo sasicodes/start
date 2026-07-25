@@ -736,6 +736,7 @@ export class ChatService {
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
     await this.ensureReady();
     this.sessionOpenSequence += 1;
+    const openSequence = this.sessionOpenSequence;
     await this.refreshAuth();
     const selection = this.workspaceSelection(workspacePath);
     const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
@@ -743,6 +744,11 @@ export class ChatService {
     const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
 
     const session = await this.buildSession(workspacePath, model, thinkingLevel);
+    if (this.sessionOpenSequence !== openSequence) {
+      this.parkSupersededSession(session);
+      throw new Error('Tab creation was superseded.');
+    }
+
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.attachments.clear();
     this.session = session;
