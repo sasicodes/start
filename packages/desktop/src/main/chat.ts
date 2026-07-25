@@ -1056,14 +1056,17 @@ export class ChatService {
   }
 
   async switchWorkspace(cwd: string, options: { restoreSession?: boolean } = {}): Promise<SwitchWorkspaceResult> {
-    await this.refreshAuth();
     const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: this.chatStatus() };
+    if (nextCwd === this.workspaceCwd) {
+      await this.refreshAuth();
+      return { ok: true, unchanged: true, status: this.chatStatus() };
+    }
 
+    this.sessionOpenSequence += 1;
     try {
-      this.sessionOpenSequence += 1;
+      await this.refreshAuth();
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = this.backgroundSessionForWorkspace(nextCwd);
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
