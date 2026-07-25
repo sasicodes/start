@@ -43,6 +43,7 @@ import {
   providerAuthLabel,
   providerAuthSlots,
   providerCredentialFlags,
+  restoredSessionSelection,
   subscriptionProviderId,
   textDelta,
   thinkingDelta
@@ -573,11 +574,12 @@ export class ChatService {
 
     try {
       await this.refreshAuth();
+      const sessionManager = SessionManager.open(path);
+      const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
+      this.applyStoredSessionSelection(sessionManager.getSessionId());
       const model = this.pickModel();
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
 
-      const sessionManager = SessionManager.open(path);
-      const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
       const [resourceLoader, customTools] = await Promise.all([
@@ -858,6 +860,7 @@ export class ChatService {
     this.backgroundSessions.delete(id);
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
+    this.applyStoredSessionSelection(id);
     this.setActiveSession(session.sessionManager);
     this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
@@ -1043,6 +1046,7 @@ export class ChatService {
       this.attachments.clear();
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
+      if (this.activeSessionId) this.applyStoredSessionSelection(this.activeSessionId);
       if (this.session) this.syncSessionRuntime(this.session);
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
@@ -2409,6 +2413,17 @@ export class ChatService {
 
   private findModelByKey(selectedModelKey: string) {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
+  }
+
+  private applyStoredSessionSelection(sessionId: string): void {
+    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(getSession(sessionId), (key) =>
+      Boolean(this.findModelByKey(key))
+    );
+    if (!storedKey) return;
+
+    const model = this.findModelByKey(storedKey);
+    this.selectedModelKey = storedKey;
+    if (thinkingLevel && model) this.selectedThinkingLevel = clampThinkingLevel(model, thinkingLevel);
   }
 
   private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {

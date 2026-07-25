@@ -12,6 +12,7 @@ import {
   providerAuthLabel,
   providerAuthSlots,
   providerCredentialFlags,
+  restoredSessionSelection,
   textDelta,
   thinkingDelta
 } from '@main/helpers';
@@ -62,6 +63,25 @@ describe('helpers', () => {
       { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
     expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-fable-5', 'claude-sonnet-5']);
+  });
+
+  it('restores a stored session model and thinking level when the model is available', () => {
+    const available = (key: string) => key === 'anthropic:claude-opus-5' || key === 'openai:gpt-5.5';
+
+    expect(
+      restoredSessionSelection(
+        { modelProvider: 'anthropic', modelId: 'claude-opus-5', thinkingLevel: 'high' },
+        available
+      )
+    ).toEqual({ modelKey: 'anthropic:claude-opus-5', thinkingLevel: 'high' });
+    expect(
+      restoredSessionSelection({ modelProvider: 'anthropic', modelId: 'retired', thinkingLevel: 'high' }, available)
+    ).toEqual({});
+    expect(restoredSessionSelection({ thinkingLevel: 'high' }, available)).toEqual({});
+    expect(restoredSessionSelection(undefined, available)).toEqual({});
+    expect(
+      restoredSessionSelection({ modelProvider: 'openai', modelId: 'gpt-5.5', thinkingLevel: 'insane' }, available)
+    ).toEqual({ modelKey: 'openai:gpt-5.5' });
   });
 
   it('distinguishes api keys from subscriptions by credential type', () => {

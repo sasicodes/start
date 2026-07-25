@@ -63,6 +63,23 @@ export const providerAuthSlots = (provider: string): string[] => {
 
 export const subscriptionProviderId = (provider: string) => (provider === 'openai' ? 'openai-codex' : provider);
 
+interface StoredSessionSelection {
+  modelId?: string;
+  modelProvider?: string;
+  thinkingLevel?: string;
+}
+
+export const restoredSessionSelection = (
+  record: StoredSessionSelection | undefined,
+  isAvailable: (modelKey: string) => boolean
+): { modelKey?: string; thinkingLevel?: EffortLevel } => {
+  if (!record?.modelId || !record.modelProvider) return {};
+  const modelKey = `${record.modelProvider}:${record.modelId}`;
+  if (!isAvailable(modelKey)) return {};
+  const thinkingLevel = effortLevels.find((level) => level === record.thinkingLevel);
+  return { modelKey, ...(thinkingLevel ? { thinkingLevel } : {}) };
+};
+
 interface ProviderCredentialFlagsInput {
   envApiKey: boolean;
   supportsSubscription: boolean;
