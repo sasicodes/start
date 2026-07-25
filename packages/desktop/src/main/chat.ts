@@ -729,6 +729,7 @@ export class ChatService {
   }
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
+    await this.ensureReady();
     this.applyWorkspaceModelDefault(workspacePath);
     const session = await this.buildSession(workspacePath);
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
@@ -2449,13 +2450,18 @@ export class ChatService {
 
   private applyWorkspaceModelDefault(workspacePath: string): void {
     const workspaceDefault = this.appState.workspaceModelDefaults?.[workspacePath];
-    const model = workspaceDefault?.modelKey ? this.findModelByKey(workspaceDefault.modelKey) : undefined;
-    if (!workspaceDefault?.modelKey || !model) return;
+    const isAvailable = (key: string) => Boolean(this.findModelByKey(key));
+    const resolvedKey = [workspaceDefault?.modelKey, this.appState.selectedModelKey].find(
+      (key): key is string => typeof key === 'string' && key.length > 0 && isAvailable(key)
+    );
+    const model = resolvedKey ? this.findModelByKey(resolvedKey) : undefined;
+    if (!resolvedKey || !model) return;
 
-    this.selectedModelKey = workspaceDefault.modelKey;
-    if (workspaceDefault.thinkingLevel) {
-      this.selectedThinkingLevel = clampThinkingLevel(model, workspaceDefault.thinkingLevel);
-    }
+    this.selectedModelKey = resolvedKey;
+    this.selectedThinkingLevel = clampThinkingLevel(
+      model,
+      workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel
+    );
   }
 
   private recordWorkspaceModelDefault(): void {
