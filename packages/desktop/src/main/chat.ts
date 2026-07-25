@@ -870,6 +870,7 @@ export class ChatService {
   }
 
   async getNotices(): Promise<SessionNotice[]> {
+    this.pruneOrphanedNotices();
     return [...this.notices.values()];
   }
 
@@ -939,6 +940,7 @@ export class ChatService {
   }
 
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
+    this.pruneOrphanedNotices();
     const workspacePath = await this.workspaceRootForCwd(options.workspacePath ?? this.workspaceCwd);
     const worktrees = await this.managedWorktreesFor(workspacePath);
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
