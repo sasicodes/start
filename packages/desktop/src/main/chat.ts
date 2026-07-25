@@ -2423,15 +2423,20 @@ export class ChatService {
 
   private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
     const record = getSession(sessionId);
-    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(record, (key) =>
-      Boolean(this.findModelByKey(key))
-    );
-    const model = storedKey ? this.findModelByKey(storedKey) : undefined;
-    if (!storedKey || !model) return null;
+    const isAvailable = (key: string) => Boolean(this.findModelByKey(key));
+    const workspaceDefault = record?.cwd ? this.appState.workspaceModelDefaults?.[record.cwd] : undefined;
 
-    const workspaceLevel = record?.cwd ? this.appState.workspaceModelDefaults?.[record.cwd]?.thinkingLevel : undefined;
-    const fallbackLevel = thinkingLevel ?? workspaceLevel ?? this.appState.selectedThinkingLevel;
-    return { modelKey: storedKey, thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
+    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(record, isAvailable);
+    const resolvedKey =
+      storedKey ??
+      [workspaceDefault?.modelKey, this.appState.selectedModelKey].find(
+        (key): key is string => typeof key === 'string' && key.length > 0 && isAvailable(key)
+      );
+    const model = resolvedKey ? this.findModelByKey(resolvedKey) : undefined;
+    if (!resolvedKey || !model) return null;
+
+    const fallbackLevel = thinkingLevel ?? workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
+    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
   }
 
   private applyStoredSessionSelection(sessionId: string): void {
