@@ -735,6 +735,7 @@ export class ChatService {
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
     await this.ensureReady();
+    this.sessionOpenSequence += 1;
     await this.refreshAuth();
     const selection = this.workspaceSelection(workspacePath);
     const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
