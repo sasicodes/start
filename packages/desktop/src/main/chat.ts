@@ -3,6 +3,7 @@ import '@main/environment';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai';
+import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
 import {
   type AgentSession,
   createAgentSession,
@@ -293,6 +294,7 @@ export class ChatService {
 
   private async initializeModels(): Promise<void> {
     try {
+      registerBunOAuthFlows();
       const runtime = await ModelRuntime.create({ credentials: this.credentials, allowModelNetwork: true });
       this.modelServicesState = { status: 'ready', registry: new ModelRegistry(runtime), runtime };
     } catch (error) {
@@ -1115,7 +1117,7 @@ export class ChatService {
     const providerId = subscriptionProviderId(provider);
     const credential = await this.credentials.read(providerId);
     if (credential?.type !== 'oauth') return null;
-    const token = (await this.modelRuntime.getAuth(providerId))?.auth.apiKey;
+    const token = (await this.modelRegistry.getApiKeyForProvider(providerId)) ?? credential.access;
     if (!token) return null;
 
     const accountId = credential.accountId;
