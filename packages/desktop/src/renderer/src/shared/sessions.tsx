@@ -66,16 +66,22 @@ const SessionRow = ({ active, attention, session, onOpen }: SessionRowProps) => 
   <AppMenu.Item
     onClick={() => onOpen(session)}
     className={tw(
-      'flex w-full flex-col gap-1 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
+      'grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-xl px-3 py-2 text-left text-ink outline-0 transition-colors select-none data-[highlighted]:bg-control',
       active && 'bg-control text-hover'
     )}
   >
-    <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
-    <span class="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-soft">
-      {attention && <Indicator kind={attention} />}
-      <span class="flex-none">{formatRelativeTime(session.modified)}</span>
-      {session.branch && <span class="truncate font-mono">[{session.branch}]</span>}
+    <span class="flex min-w-0 flex-col gap-1">
+      <span class="truncate text-sm leading-5 font-medium">{session.title}</span>
+      <span class="flex min-w-0 items-center gap-1.5 text-xs leading-4 text-soft">
+        <span class="flex-none">{formatRelativeTime(session.modified)}</span>
+        {session.branch && <span class="truncate font-mono">[{session.branch}]</span>}
+      </span>
     </span>
+    {attention && (
+      <span class="flex h-5 items-center">
+        <Indicator kind={attention} />
+      </span>
+    )}
   </AppMenu.Item>
 );
 
