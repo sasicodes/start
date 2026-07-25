@@ -103,6 +103,7 @@ const createFinder = (overrides: Partial<FileFinderApi>): FileFinderApi => ({
   mixedSearch: vi.fn(() => ok(emptyMixed)),
   grep: vi.fn(() => ok(emptyGrep)),
   multiGrep: vi.fn(() => ok(emptyGrep)),
+  watch: vi.fn(() => ok(noValue)),
   scanFiles: vi.fn(() => okVoid()),
   refreshGitStatus: vi.fn(() => ok(0)),
   trackQuery: vi.fn(() => ok(true)),

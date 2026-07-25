@@ -21,15 +21,13 @@
     "allowSyntheticDefaultImports": true,
     "types": ["node", "vitest/globals"],
     "noEmit": true,
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
-      "@main/*.js": ["src/main/*.ts"],
-      "@main/*": ["src/main/*.ts"],
-      "@preload/*.js": ["src/preload/*.ts"],
-      "@preload/*": ["src/preload/*.ts"],
-      "@renderer/*.js": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx", "src/renderer/src/*/index.ts"],
-      "@renderer/*": ["src/renderer/src/*.ts", "src/renderer/src/*.tsx", "src/renderer/src/*/index.ts"]
+      "@main/*.js": ["./src/main/*.ts"],
+      "@main/*": ["./src/main/*.ts"],
+      "@preload/*.js": ["./src/preload/*.ts"],
+      "@preload/*": ["./src/preload/*.ts"],
+      "@renderer/*.js": ["./src/renderer/src/*.ts", "./src/renderer/src/*.tsx", "./src/renderer/src/*/index.ts"],
+      "@renderer/*": ["./src/renderer/src/*.ts", "./src/renderer/src/*.tsx", "./src/renderer/src/*/index.ts"]
     }
   },
   "include": ["tests/**/*.ts", "vitest.config.ts", "src/renderer/src/global.d.ts"]

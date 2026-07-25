@@ -29,6 +29,6 @@
     "web": "pnpm --filter @start/web dev"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.2"
+    "@biomejs/biome": "2.5.5"
   }
 }
