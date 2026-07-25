@@ -48,9 +48,9 @@ describe('helpers', () => {
 
   it('classifies OpenAI and Anthropic models from identifiers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'openai')).toBe(true);
-    expect(isProviderModel({ id: 'claude-opus-5', name: 'Claude Opus 5', provider: 'anthropic' }, 'anthropic')).toBe(
-      true
-    );
+    expect(
+      isProviderModel({ id: 'claude-opus-4-8', name: 'Claude Opus 4 8', provider: 'anthropic' }, 'anthropic')
+    ).toBe(true);
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
   });
 
@@ -58,14 +58,14 @@ describe('helpers', () => {
     const sorted = getLatestProviderModels('anthropic', [
       { id: 'claude-sonnet-5', name: 'Sonnet 5', provider: 'anthropic' },
       { id: 'claude-fable-5', name: 'Fable 5', provider: 'anthropic' },
-      { id: 'claude-opus-5', name: 'Opus 5', provider: 'anthropic' }
+      { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-5', 'claude-fable-5', 'claude-sonnet-5']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-fable-5', 'claude-sonnet-5']);
   });
 
   it('exposes labels and keys for models', () => {
-    expect(modelKey({ id: 'claude-opus-5', provider: 'anthropic' })).toBe('anthropic:claude-opus-5');
-    expect(modelLabel({ name: 'claude-opus-5', provider: 'anthropic' })).toBe('claude opus 5');
+    expect(modelKey({ id: 'claude-opus-4-8', provider: 'anthropic' })).toBe('anthropic:claude-opus-4-8');
+    expect(modelLabel({ name: 'claude-opus-4-8', provider: 'anthropic' })).toBe('claude opus 4 8');
   });
 
   it('extracts text and thinking deltas from agent session events', () => {
@@ -94,12 +94,12 @@ describe('helpers', () => {
     const models = [
       { id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' },
       { id: 'gpt-5.6-sol', name: 'GPT 5.6 Sol', provider: 'openai' },
-      { id: 'claude-opus-5', name: 'Claude Opus', provider: 'anthropic' },
+      { id: 'claude-opus-4-8', name: 'Claude Opus', provider: 'anthropic' },
       { id: 'llama3.1:8b', name: 'Llama 3.1 8B', provider: 'ollama-home' },
       { id: 'gpt-4', name: 'GPT 4', provider: 'pydantic-proxy' }
     ];
     const visible = getVisibleModels(models);
-    expect(visible.map((model) => model.id)).toEqual(['gpt-5.6-sol', 'gpt-5.5', 'claude-opus-5']);
+    expect(visible.map((model) => model.id)).toEqual(['gpt-5.6-sol', 'gpt-5.5', 'claude-opus-4-8']);
   });
 
   it('drops non-registered provider models even when their ids look familiar', () => {

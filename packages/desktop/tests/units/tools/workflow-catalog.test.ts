@@ -3,8 +3,8 @@ import { workflowModelMenu, workflowToolDescription } from '@main/subagents/util
 import { describe, expect, it } from 'vitest';
 
 const option = (overrides: Partial<WorkflowModelOption>): WorkflowModelOption => ({
-  key: 'anthropic:claude-opus-5',
-  name: 'Claude Opus 5',
+  key: 'anthropic:claude-opus-4-8',
+  name: 'Claude Opus 4 8',
   provider: 'anthropic',
   effortLevels: ['low', 'medium', 'high'],
   score: { affordability: 4, intelligence: 7, taste: 8 },
@@ -21,7 +21,7 @@ describe('workflow catalog', () => {
     expect(menu).toBe(
       [
         '- openai:gpt-5.5 (GPT 5.5): affordability 9, intelligence 8, taste 5; effort low/medium/high',
-        '- anthropic:claude-opus-5 (Claude Opus 5): affordability 4, intelligence 7, taste 8; effort low/medium/high'
+        '- anthropic:claude-opus-4-8 (Claude Opus 4 8): affordability 4, intelligence 7, taste 8; effort low/medium/high'
       ].join('\n')
     );
   });
@@ -33,7 +33,7 @@ describe('workflow catalog', () => {
     expect(description).toContain('affordability higher means cheaper');
     expect(description).toContain('Do not default to the highest scores');
     expect(description).toContain('minimum capability it needs');
-    expect(description).toContain('anthropic:claude-opus-5');
+    expect(description).toContain('anthropic:claude-opus-4-8');
   });
 
   it('tells the agent to set up a provider when nothing is available', () => {
