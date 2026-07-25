@@ -457,6 +457,7 @@ export class ChatService {
   }
 
   async getMobileSessionIndex(options: RecentSessionsOptions = {}): Promise<MobileSessionIndex> {
+    this.pruneOrphanedNotices();
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const limit = mobilePageLimit(options.limit, mobileDefaultSessionLimit);
     const offset = mobilePageOffset(options.offset);
