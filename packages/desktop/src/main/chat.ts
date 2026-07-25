@@ -1065,8 +1065,10 @@ export class ChatService {
     }
 
     this.sessionOpenSequence += 1;
+    const openSequence = this.sessionOpenSequence;
     try {
       await this.refreshAuth();
+      if (this.sessionOpenSequence !== openSequence) return { ok: true, status: this.chatStatus() };
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = this.backgroundSessionForWorkspace(nextCwd);
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
