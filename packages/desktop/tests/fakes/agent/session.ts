@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { FakeAuthStorage, FakeModelRegistry } from './auth.js';
+import type { FakeModelRuntime } from './auth.js';
 import type { FakeSessionManager } from './session-manager.js';
 import type { FakeModel } from './state.js';
 import { sessionRegistry } from './state.js';
@@ -26,9 +26,8 @@ export interface CreateAgentSessionOptions {
   cwd: string;
   model: FakeModel;
   thinkingLevel: string;
-  authStorage: FakeAuthStorage;
   customTools?: FakeTool[];
-  modelRegistry: FakeModelRegistry;
+  modelRuntime: FakeModelRuntime;
   sessionManager: FakeSessionManager;
 }
 

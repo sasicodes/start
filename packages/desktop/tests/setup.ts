@@ -4,8 +4,8 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
   const fake = await import('./fakes/agent/index.js');
   return {
     AgentSession: fake.AgentSession,
-    AuthStorage: fake.AuthStorage,
     ModelRegistry: fake.ModelRegistry,
+    ModelRuntime: fake.ModelRuntime,
     SessionManager: fake.SessionManager,
     SettingsManager: fake.SettingsManager,
     createAgentSession: fake.createAgentSession,

@@ -131,4 +131,5 @@ export const chatEvent = (event: AgentSessionEvent, context: ChatEventContext = 
     case 'turn_start':
       return;
   }
+  return;
 };

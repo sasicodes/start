@@ -1,9 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   type AgentSession,
-  type AuthStorage,
   createAgentSession,
-  type ModelRegistry,
+  type ModelRuntime,
   SessionManager,
   type SettingsManager,
   type ToolDefinition
@@ -19,9 +18,8 @@ import type { SubagentActivity } from '@main/types';
 interface RunSubagentsOptions {
   cwd: string;
   signal?: AbortSignal;
-  authStorage: AuthStorage;
   tasks: SubagentTaskInput[];
-  modelRegistry: ModelRegistry;
+  modelRuntime: ModelRuntime;
   settingsManager: SettingsManager;
   customTools: () => ToolDefinition[];
   nameAllocator: SubagentNameAllocator;
@@ -96,10 +94,9 @@ export const runSubagents = async ({
   tasks,
   signal,
   onUpdate,
-  authStorage,
   customTools,
   resolveModel,
-  modelRegistry,
+  modelRuntime,
   nameAllocator,
   settingsManager
 }: RunSubagentsOptions): Promise<SubagentRunResult> => {
@@ -139,8 +136,7 @@ export const runSubagents = async ({
       const result = await createAgentSession({
         cwd,
         model,
-        authStorage,
-        modelRegistry,
+        modelRuntime,
         sessionManager,
         resourceLoader,
         customTools: customTools(),

@@ -1,7 +1,6 @@
 import {
-  type AuthStorage,
   defineTool,
-  type ModelRegistry,
+  type ModelRuntime,
   type SettingsManager,
   type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
@@ -49,8 +48,7 @@ const spawnToolParameters = {
 
 interface CreateSubagentToolsOptions {
   cwd: () => string;
-  authStorage: AuthStorage;
-  modelRegistry: ModelRegistry;
+  modelRuntime: ModelRuntime;
   settingsManager: SettingsManager;
   customTools: () => ToolDefinition[];
   nameAllocator: () => SubagentNameAllocator;
@@ -60,10 +58,9 @@ interface CreateSubagentToolsOptions {
 
 export const createSubagentTools = ({
   cwd,
-  authStorage,
   customTools,
   resolveModel,
-  modelRegistry,
+  modelRuntime,
   nameAllocator,
   availableModels,
   settingsManager
@@ -84,10 +81,9 @@ export const createSubagentTools = ({
       const result = await runSubagents({
         tasks,
         cwd: cwd(),
-        authStorage,
         customTools,
         resolveModel,
-        modelRegistry,
+        modelRuntime,
         settingsManager,
         ...(signal ? { signal } : {}),
         nameAllocator: nameAllocator(),
