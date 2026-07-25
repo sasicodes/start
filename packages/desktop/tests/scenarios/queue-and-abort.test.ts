@@ -29,6 +29,7 @@ describe('queue and abort', () => {
     session?.finishPrompt();
     await firstSend;
 
+    expect(eventsByChannel(webContents, 'chat:done').at(-1)?.args[0]).toBe('aborted');
     expect(session?.followUpQueue).toEqual([]);
     const finalQueueUpdate = eventsByChannel(webContents, 'chat:queue-update').at(-1)?.args[0] as { text: string }[];
     expect(finalQueueUpdate.map((message) => message.text)).toEqual(['queued follow-up']);

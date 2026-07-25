@@ -75,6 +75,7 @@ import type { WorkflowModelOption } from '@main/subagents/types';
 import {
   type AgentTab,
   type AgentTabStatus,
+  type ChatDoneReason,
   type ChatEvent,
   type ChatStatus,
   type CommandResult,
@@ -120,6 +121,8 @@ import electron from 'electron';
 
 const { shell } = electron;
 
+const abortedDoneReason: ChatDoneReason = 'aborted';
+const completedDoneReason: ChatDoneReason = 'completed';
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 const mobileMaxPageLimit = 50;
 const streamDeltaFlushMs = 50;
@@ -746,10 +749,18 @@ export class ChatService {
   }
 
   async closeTab(id: string): Promise<void> {
-    if (this.activeSessionId === id && this.session) {
-      this.session.abortBash();
-      await this.session.abort();
-      this.session.dispose();
+    const activeSession = this.activeSessionId === id ? this.session : null;
+    const closingSession = activeSession ?? this.backgroundSessions.get(id);
+    if (closingSession) {
+      const runtimeState = this.runtimeStateForSession(closingSession);
+      runtimeState.abortSequence += 1;
+      delete runtimeState.liveAssistantTurn;
+    }
+
+    if (activeSession) {
+      activeSession.abortBash();
+      await activeSession.abort();
+      activeSession.dispose();
       this.deleteRuntimeState(id);
       this.deleteSubagentNameAllocator(id);
       this.session = null;
@@ -1384,11 +1395,11 @@ export class ChatService {
           delete state.liveAssistantTurn;
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit('done', '', webContents);
+            this.emit('done', completedDoneReason, webContents);
           } else {
             this.setNotice(sessionId, workspacePath, 'completed', webContents);
           }
-          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, completedDoneReason);
           return { ok: true, sessionId };
         }
 
@@ -1396,9 +1407,9 @@ export class ChatService {
         if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit('done', '', webContents);
+            this.emit('done', abortedDoneReason, webContents);
           }
-          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, abortedDoneReason);
           return { ok: true, sessionId };
         }
 
@@ -1415,20 +1426,20 @@ export class ChatService {
       if (this.isActiveSession(sessionId, workspacePath)) {
         delete state.liveAssistantTurn;
         this.setActiveSession(session.sessionManager);
-        this.emit('done', '', webContents);
+        this.emit('done', completedDoneReason, webContents);
       } else {
         delete state.liveAssistantTurn;
         this.setNotice(sessionId, workspacePath, 'completed', webContents);
       }
-      this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+      this.emitScoped('chat:scoped-done', sessionId, workspacePath, completedDoneReason);
       return { ok: true, sessionId };
     } catch (error) {
       if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
         if (this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
-          this.emit('done', '', webContents);
+          this.emit('done', abortedDoneReason, webContents);
         }
-        if (sessionId) this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+        if (sessionId) this.emitScoped('chat:scoped-done', sessionId, workspacePath, abortedDoneReason);
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 

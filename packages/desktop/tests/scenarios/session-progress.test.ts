@@ -32,6 +32,7 @@ describe('session progress', () => {
 
     const done = eventsByChannel(webContents, 'chat:done');
     expect(done.length).toBe(1);
+    expect(done[0]?.args[0]).toBe('completed');
   });
 
   it('captures tool execution events as chat events on the active tab', async () => {

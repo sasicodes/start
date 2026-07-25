@@ -4,7 +4,6 @@ import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
 import { syncOpenedWorkspace } from '@renderer/shared/chat/open-workspace';
-import { noticeSound } from '@renderer/shared/chat/notice';
 import { endsMidWord } from '@renderer/shared/chat/segment';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
@@ -215,10 +214,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       streamFlush.flushNow();
       assistantFlush.flushNow();
-      if (id) {
-        finishAssistantTurn(id);
-        playDoneSound();
-      }
+      if (id) finishAssistantTurn(id);
       activityClearedAssistantId = null;
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
@@ -257,7 +253,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       optionsRef.current.assistantIdRef.current = null;
       optionsRef.current.terminalIdRef.current = null;
       setIsGenerating(false);
-      playErrorSound();
       setTurns((current) => [...current, createTurn('system', turn)]);
     });
 
@@ -307,16 +302,14 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       if (activity) setTurnActivity(optionsRef.current.assistantIdRef.current ?? id, activity);
     });
 
-    const offScopedDone = window.pi.chat.onScopedDone(({ tabId }) => {
+    const offScopedDone = window.pi.chat.onScopedDone(({ tabId, payload }) => {
+      if (payload === 'completed') playDoneSound();
       if (!restoredStreaming()) return;
       if (!activeScopedSession(tabId)) return;
       const id = optionsRef.current.assistantIdRef.current;
       streamFlush.flushNow();
       assistantFlush.flushNow();
-      if (id) {
-        finishAssistantTurn(id);
-        playDoneSound();
-      }
+      if (id) finishAssistantTurn(id);
       activityClearedAssistantId = null;
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
@@ -325,6 +318,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     });
 
     const offScopedError = window.pi.chat.onScopedError(({ tabId, payload }) => {
+      playErrorSound();
       if (!restoredStreaming()) return;
       if (!activeScopedSession(tabId)) return;
       const assistantId = optionsRef.current.assistantIdRef.current;
@@ -335,17 +329,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       textAssistantId = '';
       optionsRef.current.assistantIdRef.current = null;
       setIsGenerating(false);
-      playErrorSound();
       setTurns((current) => [...current, createTurn('system', payload)]);
-    });
-
-    const offNotice = window.pi.chat.onNotice(({ tabId, payload }) => {
-      if (!payload || activeScopedSession(tabId)) return;
-      if (noticeSound(payload.kind) === 'error') {
-        playErrorSound();
-        return;
-      }
-      playDoneSound();
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);
@@ -357,7 +341,6 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     const offResourcesRefreshed = window.pi.chat.onResourcesRefreshed(clearSlashCommandsCache);
 
     return () => {
-      offNotice();
       offDone();
       offDelta();
       offError();
