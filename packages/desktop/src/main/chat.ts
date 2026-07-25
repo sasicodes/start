@@ -2,7 +2,7 @@ import '@main/environment';
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai';
+import type { Api, AuthEvent, AuthPrompt, Model } from '@earendil-works/pi-ai';
 import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
 import {
   type AgentSession,
@@ -703,10 +703,15 @@ export class ChatService {
     return [...tabs.values()];
   }
 
-  private async buildSession(workspacePath: string): Promise<AgentSession> {
+  private async buildSession(
+    workspacePath: string,
+    providedModel?: Model<Api>,
+    providedThinkingLevel?: EffortLevel
+  ): Promise<AgentSession> {
     await this.refreshAuth();
-    const model = this.pickModel();
+    const model = providedModel ?? this.pickModel();
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+    const thinkingLevel = providedThinkingLevel ?? this.selectedThinkingLevel;
 
     const sessionManager = SessionManager.create(workspacePath);
     const [resourceLoader, customTools] = await Promise.all([
@@ -721,7 +726,7 @@ export class ChatService {
       modelRuntime: this.modelRuntime,
       customTools,
       settingsManager: this.settingsManager,
-      thinkingLevel: this.selectedThinkingLevel
+      thinkingLevel
     });
     enableRegisteredTools(session);
     this.subscribeIndexSync(session, model.provider, model.id);
@@ -730,12 +735,19 @@ export class ChatService {
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
     await this.ensureReady();
-    if (workspacePath === this.workspaceCwd) this.applyWorkspaceModelDefault(workspacePath);
-    const session = await this.buildSession(workspacePath);
+    await this.refreshAuth();
+    const selection = this.workspaceSelection(workspacePath);
+    const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
+    if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+    const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
+
+    const session = await this.buildSession(workspacePath, model, thinkingLevel);
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.attachments.clear();
     this.session = session;
     this.workspaceCwd = workspacePath;
+    this.selectedModelKey = modelKey(model);
+    this.selectedThinkingLevel = thinkingLevel;
     this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
     this.setActiveSession(session.sessionManager);
@@ -2449,20 +2461,25 @@ export class ChatService {
     this.selectedThinkingLevel = selection.thinkingLevel;
   }
 
-  private applyWorkspaceModelDefault(workspacePath: string): void {
+  private workspaceSelection(workspacePath: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
     const workspaceDefault = this.appState.workspaceModelDefaults?.[workspacePath];
     const isAvailable = (key: string) => Boolean(this.findModelByKey(key));
     const resolvedKey = [workspaceDefault?.modelKey, this.appState.selectedModelKey].find(
       (key): key is string => typeof key === 'string' && key.length > 0 && isAvailable(key)
     );
     const model = resolvedKey ? this.findModelByKey(resolvedKey) : undefined;
-    if (!resolvedKey || !model) return;
+    if (!resolvedKey || !model) return null;
 
-    this.selectedModelKey = resolvedKey;
-    this.selectedThinkingLevel = clampThinkingLevel(
-      model,
-      workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel
-    );
+    const level = workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
+    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, level) };
+  }
+
+  private applyWorkspaceModelDefault(workspacePath: string): void {
+    const selection = this.workspaceSelection(workspacePath);
+    if (!selection) return;
+
+    this.selectedModelKey = selection.modelKey;
+    this.selectedThinkingLevel = selection.thinkingLevel;
   }
 
   private recordWorkspaceModelDefault(): void {
