@@ -59,6 +59,29 @@ describe('model and thinking level', () => {
     expect(tabs.some((entry) => entry.id === tab.id)).toBe(true);
   });
 
+  it('remembers a per-workspace default model for new sessions', async () => {
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      models: twoAnthropicModels,
+      selectedModelKey: 'anthropic:claude-opus-4-7'
+    });
+
+    const setA = await chat.selectModel('anthropic:claude-sonnet-4-6');
+    expect(setA.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
+    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-a']?.modelKey).toBe(
+      'anthropic:claude-sonnet-4-6'
+    );
+
+    await chat.switchWorkspace('/tmp/workspace-b');
+    await chat.selectModel('anthropic:claude-opus-4-7');
+    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-b']?.modelKey).toBe(
+      'anthropic:claude-opus-4-7'
+    );
+
+    const backToA = await chat.switchWorkspace('/tmp/workspace-a');
+    expect(backToA.status?.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
+  });
+
   it('refuses to swap models while a response is streaming', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a', models: twoAnthropicModels });
     const webContents = newWebContents();

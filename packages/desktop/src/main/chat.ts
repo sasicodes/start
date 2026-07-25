@@ -2,7 +2,7 @@ import '@main/environment';
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai';
+import type { Api, AuthEvent, AuthPrompt, Model } from '@earendil-works/pi-ai';
 import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
 import {
   type AgentSession,
@@ -43,6 +43,7 @@ import {
   providerAuthLabel,
   providerAuthSlots,
   providerCredentialFlags,
+  restoredSessionSelection,
   subscriptionProviderId,
   textDelta,
   thinkingDelta
@@ -573,13 +574,13 @@ export class ChatService {
 
     try {
       await this.refreshAuth();
-      const model = this.pickModel();
-      if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
-
       const sessionManager = SessionManager.open(path);
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
-      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
-      this.session = null;
+      const selection = this.resolveSessionSelection(sessionManager.getSessionId());
+      const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
+      if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
+      const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
+
       const [resourceLoader, customTools] = await Promise.all([
         createStartResourceLoader(workspacePath),
         this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
@@ -592,7 +593,7 @@ export class ChatService {
         modelRuntime: this.modelRuntime,
         customTools,
         settingsManager: this.settingsManager,
-        thinkingLevel: this.selectedThinkingLevel
+        thinkingLevel
       });
 
       if (this.sessionOpenSequence !== openSequence) {
@@ -600,6 +601,9 @@ export class ChatService {
         return { ok: false, error: 'Session open was superseded.' };
       }
 
+      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
+      this.selectedModelKey = modelKey(model);
+      this.selectedThinkingLevel = thinkingLevel;
       enableRegisteredTools(session);
       this.subscribeIndexSync(session, model.provider, model.id);
       this.session = session;
@@ -699,10 +703,15 @@ export class ChatService {
     return [...tabs.values()];
   }
 
-  private async buildSession(workspacePath: string): Promise<AgentSession> {
+  private async buildSession(
+    workspacePath: string,
+    providedModel?: Model<Api>,
+    providedThinkingLevel?: EffortLevel
+  ): Promise<AgentSession> {
     await this.refreshAuth();
-    const model = this.pickModel();
+    const model = providedModel ?? this.pickModel();
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+    const thinkingLevel = providedThinkingLevel ?? this.selectedThinkingLevel;
 
     const sessionManager = SessionManager.create(workspacePath);
     const [resourceLoader, customTools] = await Promise.all([
@@ -717,7 +726,7 @@ export class ChatService {
       modelRuntime: this.modelRuntime,
       customTools,
       settingsManager: this.settingsManager,
-      thinkingLevel: this.selectedThinkingLevel
+      thinkingLevel
     });
     enableRegisteredTools(session);
     this.subscribeIndexSync(session, model.provider, model.id);
@@ -725,11 +734,27 @@ export class ChatService {
   }
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
-    const session = await this.buildSession(workspacePath);
+    await this.ensureReady();
+    this.sessionOpenSequence += 1;
+    const openSequence = this.sessionOpenSequence;
+    await this.refreshAuth();
+    const selection = this.workspaceSelection(workspacePath);
+    const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
+    if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
+    const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
+
+    const session = await this.buildSession(workspacePath, model, thinkingLevel);
+    if (this.sessionOpenSequence !== openSequence) {
+      this.parkSupersededSession(session);
+      throw new Error('Tab creation was superseded.');
+    }
+
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.attachments.clear();
     this.session = session;
     this.workspaceCwd = workspacePath;
+    this.selectedModelKey = modelKey(model);
+    this.selectedThinkingLevel = thinkingLevel;
     this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
     this.setActiveSession(session.sessionManager);
@@ -854,10 +879,12 @@ export class ChatService {
     const session = this.backgroundSessions.get(id);
     if (!session) return this.openSessionId(id);
 
+    this.sessionOpenSequence += 1;
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.backgroundSessions.delete(id);
     this.session = session;
     this.workspaceCwd = sessionWorkspacePath(session, this.workspaceCwd);
+    this.applyStoredSessionSelection(id);
     this.setActiveSession(session.sessionManager);
     this.syncSessionRuntime(session);
     this.shouldCreateSession = false;
@@ -1029,20 +1056,25 @@ export class ChatService {
   }
 
   async switchWorkspace(cwd: string, options: { restoreSession?: boolean } = {}): Promise<SwitchWorkspaceResult> {
-    await this.refreshAuth();
     const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: this.chatStatus() };
+    if (nextCwd === this.workspaceCwd) {
+      await this.refreshAuth();
+      return { ok: true, unchanged: true, status: this.chatStatus() };
+    }
 
+    this.sessionOpenSequence += 1;
     try {
-      this.sessionOpenSequence += 1;
+      await this.refreshAuth();
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = this.backgroundSessionForWorkspace(nextCwd);
       if (this.session) this.backgroundSessions.delete(this.session.sessionManager.getSessionId());
       this.attachments.clear();
+      this.applyWorkspaceModelDefault(nextCwd);
       this.activeSessionId = this.session?.sessionManager.getSessionId() ?? '';
       if (this.activeSessionId) this.markNoticeSeen(this.activeSessionId);
+      if (this.activeSessionId) this.applyStoredSessionSelection(this.activeSessionId);
       if (this.session) this.syncSessionRuntime(this.session);
       this.shouldCreateSession = !this.session;
       this.workspaceCwd = nextCwd;
@@ -1250,6 +1282,7 @@ export class ChatService {
     }
     this.selectedThinkingLevel = nextThinkingLevel;
     this.persistState({ selectedModelKey: nextModelKey, selectedThinkingLevel: this.selectedThinkingLevel });
+    this.recordWorkspaceModelDefault();
 
     return {
       ready: true,
@@ -1293,6 +1326,7 @@ export class ChatService {
     this.selectedThinkingLevel = clampThinkingLevel(model, level);
     this.session?.setThinkingLevel(this.selectedThinkingLevel);
     this.persistState({ selectedThinkingLevel: this.selectedThinkingLevel });
+    this.recordWorkspaceModelDefault();
 
     return {
       ready: true,
@@ -2419,6 +2453,64 @@ export class ChatService {
 
   private findModelByKey(selectedModelKey: string) {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
+  }
+
+  private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
+    const record = getSession(sessionId);
+    const isAvailable = (key: string) => Boolean(this.findModelByKey(key));
+    const workspaceDefault = record?.cwd ? this.appState.workspaceModelDefaults?.[record.cwd] : undefined;
+
+    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(record, isAvailable);
+    const resolvedKey =
+      storedKey ??
+      [workspaceDefault?.modelKey, this.appState.selectedModelKey].find(
+        (key): key is string => typeof key === 'string' && key.length > 0 && isAvailable(key)
+      );
+    const model = resolvedKey ? this.findModelByKey(resolvedKey) : undefined;
+    if (!resolvedKey || !model) return null;
+
+    const fallbackLevel = thinkingLevel ?? workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
+    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
+  }
+
+  private applyStoredSessionSelection(sessionId: string): void {
+    const selection = this.resolveSessionSelection(sessionId);
+    if (!selection) return;
+
+    this.selectedModelKey = selection.modelKey;
+    this.selectedThinkingLevel = selection.thinkingLevel;
+  }
+
+  private workspaceSelection(workspacePath: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
+    const workspaceDefault = this.appState.workspaceModelDefaults?.[workspacePath];
+    const isAvailable = (key: string) => Boolean(this.findModelByKey(key));
+    const resolvedKey = [workspaceDefault?.modelKey, this.appState.selectedModelKey].find(
+      (key): key is string => typeof key === 'string' && key.length > 0 && isAvailable(key)
+    );
+    const model = resolvedKey ? this.findModelByKey(resolvedKey) : undefined;
+    if (!resolvedKey || !model) return null;
+
+    const level = workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
+    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, level) };
+  }
+
+  private applyWorkspaceModelDefault(workspacePath: string): void {
+    const selection = this.workspaceSelection(workspacePath);
+    if (!selection) return;
+
+    this.selectedModelKey = selection.modelKey;
+    this.selectedThinkingLevel = selection.thinkingLevel;
+  }
+
+  private recordWorkspaceModelDefault(): void {
+    const workspaceModelDefaults = {
+      ...this.appState.workspaceModelDefaults,
+      [this.workspaceCwd]: {
+        thinkingLevel: this.selectedThinkingLevel,
+        ...(this.selectedModelKey ? { modelKey: this.selectedModelKey } : {})
+      }
+    };
+    this.persistState({ workspaceModelDefaults });
   }
 
   private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {

@@ -105,6 +105,21 @@ describe('parseStartState', () => {
     });
   });
 
+  it('keeps only valid workspace model defaults', () => {
+    const state = parseStartState({
+      workspaceModelDefaults: {
+        '   ': { modelKey: 'anthropic:claude-opus-5' },
+        '/blank': {},
+        '/level': { thinkingLevel: 'wat' },
+        ' /ws ': { modelKey: ' anthropic:claude-opus-5 ', thinkingLevel: 'high' }
+      }
+    });
+
+    expect(state.workspaceModelDefaults).toEqual({
+      '/ws': { modelKey: 'anthropic:claude-opus-5', thinkingLevel: 'high' }
+    });
+  });
+
   it('keeps only valid workspace history entries', () => {
     const state = parseStartState({
       workspaceHistory: {

@@ -1,5 +1,5 @@
 import type { EffortLevel, SessionNotice } from '@main/types';
-import type { TrustedMobileDevice } from '@main/storage';
+import type { TrustedMobileDevice, WorkspaceModelDefault } from '@main/storage';
 
 export interface MobileRelaySettings {
   desktopId: string;
@@ -20,6 +20,7 @@ export interface StartState {
   workspaceBookmarks?: Record<string, string>;
   sessionNotices?: Record<string, SessionNotice>;
   trustedMobileDevices?: Record<string, TrustedMobileDevice>;
+  workspaceModelDefaults?: Record<string, WorkspaceModelDefault>;
 }
 
 const defaultStartState: StartState = {
