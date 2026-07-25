@@ -51,6 +51,30 @@ describe('workspace switching', () => {
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
   });
 
+  it('ignores a workspace switch superseded by a tab activation during auth refresh', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tabA = await chat.createTab('/tmp/workspace-a');
+    const sendA = chat.send('one', webContents);
+    const sessionA = getFakeSession(tabA.id);
+    if (!sessionA) throw new Error('Expected fake session.');
+    await sessionA.awaitPromptCall();
+    await chat.switchWorkspace('/tmp/workspace-b');
+
+    const pendingSwitch = chat.switchWorkspace('/tmp/workspace-c');
+    const activation = await chat.activateTab(tabA.id);
+    const superseded = await pendingSwitch;
+
+    expect(activation.ok).toBe(true);
+    expect(superseded).toEqual(expect.objectContaining({ ok: true, unchanged: true }));
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-a');
+    expect((await chat.getStatus()).sessionId).toBe(tabA.id);
+
+    sessionA.finishPrompt();
+    await sendA;
+  });
+
   it('does not carry prior assistant message text into a later message of the same turn', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();
