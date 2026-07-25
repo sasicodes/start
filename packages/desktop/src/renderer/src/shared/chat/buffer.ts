@@ -2,10 +2,34 @@ import type { ChatEvent } from '@preload/index';
 
 export type StreamEvent = { kind: 'thinking'; delta: string } | { kind: 'detail'; event: ChatEvent };
 
+interface TargetBuffer<T> {
+  drain: (target: string) => T[];
+  push: (target: string, value: T) => void;
+}
+
 interface StreamHandlers {
   onThinking: (delta: string) => void;
   onDetails: (events: ChatEvent[]) => void;
 }
+
+export const createTargetBuffer = <T>(): TargetBuffer<T> => {
+  let bufferedTarget = '';
+  let values: T[] = [];
+
+  return {
+    drain: (target) => {
+      const bufferedValues = bufferedTarget === target ? values : [];
+      bufferedTarget = '';
+      values = [];
+      return bufferedValues;
+    },
+    push: (target, value) => {
+      if (bufferedTarget && bufferedTarget !== target) values = [];
+      bufferedTarget = target;
+      values.push(value);
+    }
+  };
+};
 
 export const drainStreamBuffer = (events: StreamEvent[], handlers: StreamHandlers) => {
   let index = 0;

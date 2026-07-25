@@ -272,6 +272,7 @@ export type OpenSessionResult = {
   ok: boolean;
   id?: string;
   error?: string;
+  status?: ChatStatus;
   turns?: HistoryTurn[];
   queuedMessages?: QueuedMessage[];
 };

@@ -1,8 +1,29 @@
 import type { ChatEvent } from '@preload/index';
-import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
+import { createTargetBuffer, drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { describe, expect, it, vi } from 'vitest';
 
 const detail = (key: string): ChatEvent => ({ key, title: key, kind: 'tool', state: 'done' });
+
+describe('target buffer', () => {
+  it('drains values only for the session generation that queued them', () => {
+    const buffer = createTargetBuffer<string>();
+
+    buffer.push('1:session-a', 'first');
+    buffer.push('1:session-a', 'second');
+
+    expect(buffer.drain('2:session-a')).toEqual([]);
+    expect(buffer.drain('1:session-a')).toEqual([]);
+  });
+
+  it('drops buffered values when a new target starts', () => {
+    const buffer = createTargetBuffer<string>();
+
+    buffer.push('1:session-a', 'stale');
+    buffer.push('2:session-b', 'current');
+
+    expect(buffer.drain('2:session-b')).toEqual(['current']);
+  });
+});
 
 describe('drainStreamBuffer', () => {
   it('preserves chronological order across thinking and detail boundaries', () => {

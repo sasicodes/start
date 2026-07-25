@@ -22,11 +22,11 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { createDeltaCoalescer } from '@main/chat/deltas';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
-import { appendLiveAssistantTurn } from '@main/chat/live';
+import { appendLiveAssistantTurn, upsertLiveAssistantDetail } from '@main/chat/live';
 import { type LiveRecentSession, recentSessionsPage, type WorktreeRef } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
-import { historyDetail, imageAttachments, textContent } from '@main/details';
+import { imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
 import {
@@ -235,6 +235,7 @@ type SessionRuntimeState = {
   abortSequence: number;
   isGenerating: boolean;
   queueRebuildDepth: number;
+  discardPendingDeltas?: () => void;
   liveAssistantTurn?: LiveAssistantTurn;
   queuedMessages: PendingQueuedMessage[];
   queueDeliveryCandidates: QueuedMessage[];
@@ -295,6 +296,10 @@ export class ChatService {
   }
 
   async getStatus(): Promise<ChatStatus> {
+    return this.chatStatus();
+  }
+
+  private chatStatus(): ChatStatus {
     this.refreshAuth();
     const model = this.pickModel();
 
@@ -991,7 +996,7 @@ export class ChatService {
     const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: await this.getStatus() };
+    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: this.chatStatus() };
 
     try {
       this.sessionOpenSequence += 1;
@@ -1014,7 +1019,7 @@ export class ChatService {
         session = this.session ? this.sessionResult(this.session) : await this.resumeRecentSession(nextCwd);
       }
 
-      return { ok: true, status: await this.getStatus(), ...(session ? { session } : {}) };
+      return { ok: true, status: this.chatStatus(), ...(session ? { session } : {}) };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Workspace could not be switched.' };
     }
@@ -1037,17 +1042,21 @@ export class ChatService {
   }
 
   private sessionResult(session: AgentSession): OpenSessionResult {
+    const runtimeState = this.runtimeStateForSession(session);
+    runtimeState.discardPendingDeltas?.();
+
     return {
       ok: true,
       id: session.sessionManager.getSessionId(),
+      status: this.chatStatus(),
       turns: this.sessionTurns(session),
-      queuedMessages: this.visibleQueuedMessages(this.runtimeStateForSession(session))
+      queuedMessages: this.visibleQueuedMessages(runtimeState)
     };
   }
 
   private syncSessionRuntime(session: AgentSession): void {
     const runtimeState = this.runtimeStateForSession(session);
-    runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    runtimeState.isGenerating = Boolean(runtimeState.isGenerating || session.isStreaming || session.isBashRunning);
     runtimeState.queueDeliveryCandidates = [];
   }
 
@@ -1328,6 +1337,7 @@ export class ChatService {
           this.emitScoped(scopedChannel, sessionId, workspacePath, chunk.delta);
         }
       });
+      state.discardPendingDeltas = deltas.discard;
 
       let generationStartNotified = false;
       const unsubscribe = session.subscribe((event) => {
@@ -1388,6 +1398,7 @@ export class ChatService {
       } finally {
         unsubscribe();
         deltas.flush();
+        if (state.discardPendingDeltas === deltas.discard) delete state.discardPendingDeltas;
       }
 
       if (endError) {
@@ -2011,7 +2022,7 @@ export class ChatService {
     const turn = runtimeState?.liveAssistantTurn;
     if (!turn) return;
 
-    turn.details = [...(turn.details ?? []), historyDetail(event, turn.details?.length ?? 0, turn.id, Date.now())];
+    turn.details = upsertLiveAssistantDetail(turn.details, event, turn.id, Date.now());
   }
 
   private deleteWorkspaceSessionReferences(sessionId: string): void {

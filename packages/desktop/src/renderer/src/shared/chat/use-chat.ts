@@ -253,18 +253,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   );
 
   const applyOpenSession = useCallback(
-    async (result: OpenSessionResult, requestId: number) => {
-      if (!result.ok) return false;
-
-      let nextStatus: ChatStatus;
-      try {
-        nextStatus = await window.pi.chat.status();
-      } catch {
-        return false;
-      }
+    (result: OpenSessionResult, requestId: number) => {
+      if (!result.ok || !result.status) return false;
       if (sessionRequestRef.current !== requestId) return false;
+
       setDraft('');
-      applySessionSnapshot(result, nextStatus);
+      applySessionSnapshot(result, result.status);
       return true;
     },
     [applySessionSnapshot]
@@ -323,7 +317,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       clearSession(options);
 
       if (result.session?.ok) {
-        applySessionSnapshot(result.session, result.status);
+        applySessionSnapshot(result.session, result.session.status ?? result.status);
         return true;
       }
 
@@ -404,6 +398,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     terminalIdRef,
     assistantIdRef,
     onShowSettings,
+    sessionRequestRef,
     activeSessionId,
     setIsGenerating,
     onOpenSession: openSessionId,

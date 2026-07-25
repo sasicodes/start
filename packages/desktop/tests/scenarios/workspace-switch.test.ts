@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FakeSessionManager, getFakeSession } from '../fakes/agent/index.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
+import { broadcastsByChannel } from '../fakes/window.js';
 import { activationLog } from '../fakes/workspace-access.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
@@ -48,6 +49,53 @@ describe('workspace switching', () => {
     expect(backToA.session?.id).toBe(tabA.id);
     expect(backToA.session?.turns?.map((turn) => turn.text)).toEqual(['one']);
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
+  });
+
+  it('restores a background stream without replaying buffered output', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tabA = await chat.createTab('/tmp/workspace-a');
+    const sendA = chat.send('one', webContents);
+    const sessionA = getFakeSession(tabA.id);
+    if (!sessionA) throw new Error('Expected fake session.');
+    await sessionA.awaitPromptCall();
+    await chat.switchWorkspace('/tmp/workspace-b');
+
+    sessionA.pushEvent({
+      type: 'tool_execution_start',
+      toolCallId: 'read-1',
+      toolName: 'read',
+      args: { path: '/tmp/a' }
+    });
+    sessionA.pushEvent({
+      type: 'tool_execution_end',
+      toolCallId: 'read-1',
+      toolName: 'read',
+      result: { output: 'A' }
+    });
+    sessionA.pushEvent({
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'background answer' }
+    });
+
+    const backToA = await chat.switchWorkspace('/tmp/workspace-a');
+    const streamingTurn = backToA.session?.turns?.find((turn) => turn.streaming);
+
+    expect(backToA.session?.status?.isGenerating).toBe(true);
+    expect(streamingTurn?.text).toBe('background answer');
+    expect(streamingTurn?.details).toEqual([expect.objectContaining({ key: 'tool:read-1', count: 2, state: 'done' })]);
+
+    await new Promise((resolve) => setTimeout(resolve, 75));
+    expect(
+      broadcastsByChannel('chat:scoped-delta').filter((event) => {
+        const payload = event.args[0] as { tabId: string; payload: string };
+        return payload.tabId === tabA.id && payload.payload === 'background answer';
+      })
+    ).toHaveLength(0);
+
+    sessionA.finishPrompt();
+    await sendA;
   });
 
   it('opens the most recent stored session when switching into a workspace with history', async () => {

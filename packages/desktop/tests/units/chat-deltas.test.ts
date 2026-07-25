@@ -76,6 +76,20 @@ describe('createDeltaCoalescer', () => {
     expect(flushes).toEqual([]);
   });
 
+  it('discards pending deltas while remaining reusable', () => {
+    const flushes: DeltaChunk[][] = [];
+    const coalescer = createDeltaCoalescer(50, (chunks) => flushes.push(chunks));
+
+    coalescer.push('text', 'stale', false);
+    coalescer.discard();
+    vi.advanceTimersByTime(50);
+    expect(flushes).toEqual([]);
+
+    coalescer.push('text', 'current', true);
+    vi.advanceTimersByTime(50);
+    expect(flushes).toEqual([[{ kind: 'text', delta: 'current', senderDelta: 'current' }]]);
+  });
+
   it('keeps accepting deltas after a flush', () => {
     const flushes: DeltaChunk[][] = [];
     const coalescer = createDeltaCoalescer(50, (chunks) => flushes.push(chunks));
