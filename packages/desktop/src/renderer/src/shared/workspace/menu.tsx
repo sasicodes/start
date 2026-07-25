@@ -38,7 +38,9 @@ const WorkspaceRow = ({ folder, selected, onSelect }: WorkspaceRowProps) => (
   >
     <span class="flex min-w-0 flex-col gap-0.5">
       <span class="truncate text-sm leading-5 font-medium">{folder.name}</span>
-      <span class="truncate text-xs leading-4 font-normal text-soft">{folder.path}</span>
+      <span class="truncate text-left text-xs leading-4 font-normal text-soft [direction:rtl] hover:[direction:ltr]">
+        {folder.path}
+      </span>
     </span>
     <WorkspaceAttention folder={folder} />
   </AppMenu.Item>
