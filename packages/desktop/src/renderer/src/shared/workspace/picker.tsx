@@ -108,7 +108,7 @@ export const Workspace = memo(
           </Tooltip>
           <AppMenu.Portal>
             <AppMenu.Positioner side="top" sideOffset={12} anchor={rootRef} className="z-50" collisionPadding={12}>
-              <MenuPanel className="w-64" finalFocus={false}>
+              <MenuPanel className="w-90" finalFocus={false}>
                 <WorkspaceMenu folders={folders} onSelect={onSelectWorkspace} onChooseDirectory={onChooseDirectory} />
               </MenuPanel>
             </AppMenu.Positioner>

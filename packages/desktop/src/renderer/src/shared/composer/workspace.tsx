@@ -41,7 +41,7 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
         <AttentionBadge kind={attention} countLabel={countLabel} />
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
-            <MenuPanel className="w-64">
+            <MenuPanel className="w-90">
               <WorkspaceMenu folders={folders} onSelect={onSelectWorkspace} onChooseDirectory={onChooseDirectory} />
             </MenuPanel>
           </AppMenu.Positioner>
