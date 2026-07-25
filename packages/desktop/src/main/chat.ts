@@ -581,8 +581,6 @@ export class ChatService {
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
       const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
 
-      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
-      this.session = null;
       const [resourceLoader, customTools] = await Promise.all([
         createStartResourceLoader(workspacePath),
         this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
@@ -603,6 +601,7 @@ export class ChatService {
         return { ok: false, error: 'Session open was superseded.' };
       }
 
+      if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.selectedModelKey = modelKey(model);
       this.selectedThinkingLevel = thinkingLevel;
       enableRegisteredTools(session);
@@ -2423,16 +2422,16 @@ export class ChatService {
   }
 
   private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
-    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(getSession(sessionId), (key) =>
+    const record = getSession(sessionId);
+    const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(record, (key) =>
       Boolean(this.findModelByKey(key))
     );
     const model = storedKey ? this.findModelByKey(storedKey) : undefined;
     if (!storedKey || !model) return null;
 
-    return {
-      modelKey: storedKey,
-      thinkingLevel: clampThinkingLevel(model, thinkingLevel ?? this.appState.selectedThinkingLevel)
-    };
+    const workspaceLevel = record?.cwd ? this.appState.workspaceModelDefaults?.[record.cwd]?.thinkingLevel : undefined;
+    const fallbackLevel = thinkingLevel ?? workspaceLevel ?? this.appState.selectedThinkingLevel;
+    return { modelKey: storedKey, thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
   }
 
   private applyStoredSessionSelection(sessionId: string): void {
