@@ -1,6 +1,12 @@
 import { ChatService } from '@main/chat';
 import type { WebContents } from 'electron';
-import { type FakeModel, resetAgentRegistry, setAvailableModels, setModelRegistryError } from '../fakes/agent/index.js';
+import {
+  type FakeModel,
+  fakeModelDefaults,
+  resetAgentRegistry,
+  setAvailableModels,
+  setModelRegistryError
+} from '../fakes/agent/index.js';
 import { createFakeWebContents, type FakeWebContents } from '../fakes/electron.js';
 import { resetStorage } from '../fakes/storage.js';
 import { resetBroadcasts } from '../fakes/window.js';
@@ -16,6 +22,7 @@ export interface FreshServiceOptions {
 
 const defaultModels: FakeModel[] = [
   {
+    ...fakeModelDefaults,
     reasoning: true,
     input: ['text', 'image'],
     contextWindow: 200000,

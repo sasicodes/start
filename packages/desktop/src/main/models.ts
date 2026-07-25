@@ -17,9 +17,11 @@ export const models: readonly AllowedModel[] = [
   { provider: 'openai', id: 'gpt-5.6-terra', score: { taste: 6, intelligence: 7, affordability: 7 } },
   { provider: 'openai', id: 'gpt-5.6-luna', score: { taste: 5, intelligence: 5, affordability: 9 } },
   { provider: 'openai', id: 'gpt-5.5', score: { taste: 7, intelligence: 7, affordability: 6 } },
+  { provider: 'anthropic', id: 'claude-opus-5', score: { taste: 9, intelligence: 9, affordability: 3 } },
   { provider: 'anthropic', id: 'claude-opus-4-8', score: { taste: 7, intelligence: 7, affordability: 6 } },
   { provider: 'anthropic', id: 'claude-fable-5', score: { taste: 9, intelligence: 9, affordability: 3 } },
-  { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 5, intelligence: 5, affordability: 9 } }
+  { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 5, intelligence: 5, affordability: 9 } },
+  { provider: 'anthropic', id: 'claude-haiku-4-5', score: { taste: 4, intelligence: 4, affordability: 10 } }
 ] as const;
 
 const scoresById = new Map(models.map((model) => [model.id, model.score]));

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { FakeModel } from '../fakes/agent/index.js';
-import { getFakeSession } from '../fakes/agent/index.js';
+import { type FakeModel, fakeModelDefaults, getFakeSession } from '../fakes/agent/index.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 const twoAnthropicModels: FakeModel[] = [
   {
+    ...fakeModelDefaults,
     reasoning: true,
     input: ['text'],
     contextWindow: 200000,
@@ -14,6 +14,7 @@ const twoAnthropicModels: FakeModel[] = [
     provider: 'anthropic'
   },
   {
+    ...fakeModelDefaults,
     reasoning: true,
     input: ['text'],
     contextWindow: 200000,
@@ -88,6 +89,7 @@ describe('model and thinking level', () => {
     const chat = freshChatService({
       models: [
         {
+          ...fakeModelDefaults,
           reasoning: true,
           input: ['text'],
           contextWindow: 200000,

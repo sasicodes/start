@@ -63,6 +63,23 @@ export const providerAuthSlots = (provider: string): string[] => {
 
 export const subscriptionProviderId = (provider: string) => (provider === 'openai' ? 'openai-codex' : provider);
 
+interface ProviderCredentialFlagsInput {
+  envApiKey: boolean;
+  supportsSubscription: boolean;
+  keyCredentialType?: 'api_key' | 'oauth';
+  subscriptionCredentialType?: 'api_key' | 'oauth';
+}
+
+export const providerCredentialFlags = ({
+  envApiKey,
+  supportsSubscription,
+  keyCredentialType,
+  subscriptionCredentialType
+}: ProviderCredentialFlagsInput): { hasApiKey: boolean; hasSubscription: boolean } => ({
+  hasApiKey: keyCredentialType === 'api_key' || envApiKey,
+  hasSubscription: supportsSubscription && subscriptionCredentialType === 'oauth'
+});
+
 export const isProviderModel = (model: { provider: string; id: string; name?: string }, provider: ProviderKey) => {
   const haystack = `${model.provider} ${model.id} ${model.name ?? ''}`.toLowerCase();
   if (provider === 'openai') {
@@ -82,20 +99,22 @@ export const isAllowedLatestProviderModel = (
 
 export const getLatestProviderModels = <T extends { provider: string; id: string; name?: string }>(
   provider: ProviderKey,
-  models: T[]
-) => {
+  models: readonly T[]
+): T[] => {
   const order = allowedLatestModelOrder(provider);
   return models
     .filter((model) => isAllowedLatestProviderModel(model, provider))
     .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 };
 
-export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(models: T[]) => {
+export const getVisibleModels = <T extends { provider: string; id: string; name?: string }>(
+  models: readonly T[]
+): T[] => {
   const openAiModels = getLatestProviderModels('openai', models);
   const anthropicModels = getLatestProviderModels('anthropic', models);
   const latestModels = [...openAiModels, ...anthropicModels];
 
-  if (latestModels.length === 0) return models;
+  if (latestModels.length === 0) return [...models];
   return latestModels;
 };
 

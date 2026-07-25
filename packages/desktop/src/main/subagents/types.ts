@@ -1,8 +1,8 @@
-import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
+import type { Api, Model } from '@earendil-works/pi-ai';
 import type { ModelScore } from '@main/models';
 import type { EffortLevel, SubagentActivity } from '@main/types';
 
-export type ResolvedModel = ModelRegistry['getAvailable'] extends () => Array<infer ModelItem> ? ModelItem : never;
+export type ResolvedModel = Model<Api>;
 
 export interface SubagentTaskInput {
   model: string;

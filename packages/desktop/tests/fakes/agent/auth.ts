@@ -1,35 +1,39 @@
 import { type FakeModel, getAvailableModels, getModelRegistryError } from './state.js';
 
-export class FakeAuthStorage {
-  static create() {
-    return new FakeAuthStorage();
+export class FakeModelRuntime {
+  static async create() {
+    return new FakeModelRuntime();
   }
 
-  static fromStorage(_backend: unknown) {
-    return new FakeAuthStorage();
+  async refresh() {}
+
+  getAvailableSnapshot(): FakeModel[] {
+    return getAvailableModels();
   }
 
-  reload() {}
-
-  setRuntimeApiKey(_provider: string, _apiKey: string) {}
-
-  get(_provider: string): { type: 'oauth' | 'api_key' } | undefined {
-    return;
+  getError(): string | undefined {
+    return getModelRegistryError();
   }
 
-  getAuthStatus(_provider: string): { configured: boolean } {
+  getProviderAuthStatus(_provider: string): { configured: boolean } {
     return { configured: false };
   }
 
-  async login(_provider: string, _callbacks: unknown): Promise<void> {}
+  async getAuth(_provider: string) {
+    return;
+  }
+
+  async setRuntimeApiKey(_provider: string, _apiKey: string) {}
+
+  async removeRuntimeApiKey(_provider: string) {}
+
+  async logout(_provider: string) {}
+
+  async login(_provider: string, _type: string, _interaction: unknown) {}
 }
 
 export class FakeModelRegistry {
-  static create(_authStorage: FakeAuthStorage) {
-    return new FakeModelRegistry();
-  }
-
-  refresh() {}
+  async refresh() {}
 
   getAvailable(): FakeModel[] {
     return getAvailableModels();

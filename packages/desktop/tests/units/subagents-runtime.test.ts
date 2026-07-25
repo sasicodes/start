@@ -1,24 +1,20 @@
-import type { AuthStorage, ModelRegistry, SettingsManager, ToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { ModelRuntime, SettingsManager, ToolDefinition } from '@earendil-works/pi-coding-agent';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
 import { runSubagents } from '@main/subagents/runtime';
 import type { SubagentRunSnapshot } from '@main/subagents/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  FakeAuthStorage,
   FakeModelRegistry,
+  FakeModelRuntime,
   FakeSessionManager,
   listFakeSessions,
   resetAgentRegistry
 } from '../fakes/agent/index.js';
 
-const authStorage = new FakeAuthStorage() as unknown as AuthStorage;
-const modelRegistry = new FakeModelRegistry() as unknown as ModelRegistry;
+const modelRuntime = new FakeModelRuntime() as unknown as ModelRuntime;
 const settingsManager = {} as unknown as SettingsManager;
-const model = new FakeModelRegistry().getAvailable()[0] as ModelRegistry['getAvailable'] extends () => Array<
-  infer ModelItem
->
-  ? ModelItem
-  : never;
+const model = new FakeModelRegistry().getAvailable()[0];
+if (!model) throw new Error('Expected a fake model.');
 
 const tool = (name: string) => ({ name }) as ToolDefinition;
 
@@ -30,8 +26,7 @@ describe('sub-agent runtime', () => {
   it('keeps full sub-agent tools enabled', async () => {
     const snapshots: SubagentRunSnapshot[] = [];
     const run = runSubagents({
-      authStorage,
-      modelRegistry,
+      modelRuntime,
       settingsManager,
       resolveModel: () => model,
       cwd: '/workspace/project',
@@ -58,8 +53,7 @@ describe('sub-agent runtime', () => {
 
   it('runs at most four sub-agents at once', async () => {
     const run = runSubagents({
-      authStorage,
-      modelRegistry,
+      modelRuntime,
       settingsManager,
       onUpdate: () => {},
       customTools: () => [],

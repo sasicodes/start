@@ -2,12 +2,14 @@ import '@main/environment';
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
+import type { AuthEvent, AuthPrompt } from '@earendil-works/pi-ai';
+import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
 import {
   type AgentSession,
-  AuthStorage,
   createAgentSession,
   getLastAssistantUsage,
   ModelRegistry,
+  ModelRuntime,
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
@@ -40,6 +42,7 @@ import {
   providerAuthKind,
   providerAuthLabel,
   providerAuthSlots,
+  providerCredentialFlags,
   subscriptionProviderId,
   textDelta,
   thinkingDelta
@@ -49,7 +52,7 @@ import { disposeMcpClients } from '@main/mcp/clients';
 import { mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { modelScore } from '@main/models';
 import { createStartResourceLoader } from '@main/prompt/loader';
-import { resolveAuthBackend } from '@main/providers/auth';
+import { resolveCredentialStore } from '@main/providers/auth';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
 import { warmWebSearchTools } from '@main/providers/tools/search/index';
@@ -224,6 +227,11 @@ interface ManagedWorktree {
 
 type MobileSessionChangeHandler = (change: MobileSessionChange) => void;
 
+type ModelServicesState =
+  | { status: 'loading' }
+  | { status: 'ready'; registry: ModelRegistry; runtime: ModelRuntime }
+  | { status: 'error'; error: Error };
+
 const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => ({
   id: message.id,
   kind: message.kind,
@@ -263,9 +271,10 @@ export class ChatService {
   private selectedThinkingLevel: EffortLevel = this.appState.selectedThinkingLevel;
 
   private readonly db = openStartDb();
-  private readonly authStorage = AuthStorage.fromStorage(resolveAuthBackend(this.db));
-  private readonly modelRegistry = ModelRegistry.create(this.authStorage);
+  private readonly credentials = resolveCredentialStore(this.db);
   private readonly settingsManager = SettingsManager.fromStorage(new InMemorySettingsBackend());
+  private readonly initPromise: Promise<void>;
+  private modelServicesState: ModelServicesState = { status: 'loading' };
   private readonly liveTitles = new Map<string, string>();
   private readonly backgroundSessions = new Map<string, AgentSession>();
   private readonly activeSessionByWorkspace = new Map<string, string>();
@@ -278,10 +287,39 @@ export class ChatService {
   private mobileSessionChangeHandler: MobileSessionChangeHandler = () => {};
 
   constructor() {
-    this.modelRegistry.refresh();
+    this.initPromise = this.initializeModels();
     this.persistState({ workspaceHistory: this.workspaceHistoryFor(this.workspaceCwd) });
     warmMcpServers(this.workspaceCwd);
     warmWebSearchTools();
+  }
+
+  private async initializeModels(): Promise<void> {
+    try {
+      registerBunOAuthFlows();
+      const runtime = await ModelRuntime.create({ credentials: this.credentials, allowModelNetwork: true });
+      this.modelServicesState = { status: 'ready', registry: new ModelRegistry(runtime), runtime };
+    } catch (error) {
+      this.modelServicesState = {
+        status: 'error',
+        error: error instanceof Error ? error : new Error('Model runtime could not be initialized.')
+      };
+    }
+  }
+
+  private async ensureReady(): Promise<void> {
+    await this.initPromise;
+    if (this.modelServicesState.status === 'error') throw this.modelServicesState.error;
+    if (this.modelServicesState.status !== 'ready') throw new Error('Model runtime is not ready.');
+  }
+
+  private get modelRegistry(): ModelRegistry {
+    if (this.modelServicesState.status !== 'ready') throw new Error('Model runtime is not ready.');
+    return this.modelServicesState.registry;
+  }
+
+  private get modelRuntime(): ModelRuntime {
+    if (this.modelServicesState.status !== 'ready') throw new Error('Model runtime is not ready.');
+    return this.modelServicesState.runtime;
   }
 
   private async sessionCustomTools(sessionId: string, workspacePath: string) {
@@ -296,11 +334,11 @@ export class ChatService {
   }
 
   async getStatus(): Promise<ChatStatus> {
+    await this.refreshAuth();
     return this.chatStatus();
   }
 
   private chatStatus(): ChatStatus {
-    this.refreshAuth();
     const model = this.pickModel();
 
     if (!model) {
@@ -377,7 +415,7 @@ export class ChatService {
     error?: string;
     selectedModelKey?: string;
   }> {
-    this.refreshAuth();
+    await this.refreshAuth();
     const available = this.getPickerModels();
     const models = available.map((model) => ({
       key: modelKey(model),
@@ -534,7 +572,7 @@ export class ChatService {
     this.sessionOpenSequence = openSequence;
 
     try {
-      this.refreshAuth();
+      await this.refreshAuth();
       const model = this.pickModel();
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
 
@@ -551,8 +589,7 @@ export class ChatService {
         model,
         sessionManager,
         resourceLoader,
-        authStorage: this.authStorage,
-        modelRegistry: this.modelRegistry,
+        modelRuntime: this.modelRuntime,
         customTools,
         settingsManager: this.settingsManager,
         thinkingLevel: this.selectedThinkingLevel
@@ -663,7 +700,7 @@ export class ChatService {
   }
 
   private async buildSession(workspacePath: string): Promise<AgentSession> {
-    this.refreshAuth();
+    await this.refreshAuth();
     const model = this.pickModel();
     if (!model) throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
 
@@ -677,8 +714,7 @@ export class ChatService {
       model,
       sessionManager,
       resourceLoader,
-      authStorage: this.authStorage,
-      modelRegistry: this.modelRegistry,
+      modelRuntime: this.modelRuntime,
       customTools,
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
@@ -993,6 +1029,7 @@ export class ChatService {
   }
 
   async switchWorkspace(cwd: string, options: { restoreSession?: boolean } = {}): Promise<SwitchWorkspaceResult> {
+    await this.refreshAuth();
     const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
@@ -1065,22 +1102,29 @@ export class ChatService {
   }
 
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {
-    this.refreshAuth();
+    await this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
-    const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
-    const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
 
-    return [
-      this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
-      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0)
-    ];
+    return Promise.all([
+      this.providerAuthStatus(
+        'openai',
+        'OpenAI',
+        available.some((model) => isProviderModel(model, 'openai'))
+      ),
+      this.providerAuthStatus(
+        'anthropic',
+        'Anthropic',
+        available.some((model) => isProviderModel(model, 'anthropic'))
+      )
+    ]);
   }
 
   async getProviderUsageCredential(provider: ProviderKey): Promise<ProviderUsageCredential | null> {
+    await this.ensureReady();
     const providerId = subscriptionProviderId(provider);
-    const credential = this.authStorage.get(providerId);
+    const credential = await this.credentials.read(providerId);
     if (credential?.type !== 'oauth') return null;
-    const token = await this.authStorage.getApiKey(providerId, { includeFallback: false });
+    const token = (await this.modelRegistry.getApiKeyForProvider(providerId)) ?? credential.access;
     if (!token) return null;
 
     const accountId = credential.accountId;
@@ -1091,7 +1135,7 @@ export class ChatService {
   }
 
   prepareProviderUsageCredentials(): void {
-    this.authStorage.reload();
+    this.credentials.reload();
   }
 
   async setApiKey(provider: string, apiKey: string): Promise<ProviderAuthStatus[]> {
@@ -1099,8 +1143,8 @@ export class ChatService {
     const cleanApiKey = apiKey.trim();
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
 
-    this.authStorage.set(cleanProvider, { type: 'api_key', key: cleanApiKey });
-    this.modelRegistry.refresh();
+    await this.ensureReady();
+    await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
 
     return this.getAuthProviders();
   }
@@ -1109,53 +1153,26 @@ export class ChatService {
     const cleanProvider = provider.trim().toLowerCase();
     if (!cleanProvider) return this.getAuthProviders();
 
-    for (const slot of providerAuthSlots(cleanProvider)) this.authStorage.remove(slot);
-    this.modelRegistry.refresh();
+    await this.ensureReady();
+    for (const slot of providerAuthSlots(cleanProvider)) {
+      await this.modelRuntime.removeRuntimeApiKey(slot);
+      await this.modelRuntime.logout(slot);
+    }
 
     return this.getAuthProviders();
   }
 
   async loginSubscription(provider: string, webContents: WebContents): Promise<ProviderLoginResult> {
+    await this.ensureReady();
     const providerId = subscriptionProviderId(provider);
     this.authInputReject?.(new Error('Login restarted.'));
     this.clearSubscriptionAuthInput();
 
     try {
-      await this.authStorage.login(providerId, {
-        onAuth: (info) => {
-          webContents.send('chat:subscription-auth-update', {
-            provider,
-            url: info.url,
-            instructions: info.instructions,
-            message: 'Complete login in your browser, or paste the redirect URL/code below.'
-          });
-          shell.openExternal(info.url).catch(() => {});
-        },
-        onDeviceCode: (info) => {
-          webContents.send('chat:subscription-auth-update', {
-            provider,
-            url: info.verificationUri,
-            instructions: `Enter code ${info.userCode} after opening the verification page.`,
-            message: 'Open the verification page and enter the device code to finish login.'
-          });
-          shell.openExternal(info.verificationUri).catch(() => {});
-        },
-        onManualCodeInput: () => this.createSubscriptionAuthInput(),
-        onProgress: (progress) => {
-          webContents.send('chat:subscription-auth-update', { provider, progress });
-        },
-        onPrompt: (prompt) => {
-          webContents.send('chat:subscription-auth-update', {
-            provider,
-            message: prompt.message,
-            placeholder: prompt.placeholder
-          });
-          return this.createSubscriptionAuthInput();
-        },
-        onSelect: async (prompt) => prompt.options[0]?.id
+      await this.modelRuntime.login(providerId, 'oauth', {
+        notify: (event) => this.notifySubscriptionAuth(provider, event, webContents),
+        prompt: (prompt) => this.promptSubscriptionAuth(provider, prompt, webContents)
       });
-
-      this.modelRegistry.refresh();
 
       return { ok: true, providers: await this.getAuthProviders() };
     } catch (error) {
@@ -1180,6 +1197,7 @@ export class ChatService {
   }
 
   async selectModel(selectedKey: string): Promise<ChatStatus> {
+    await this.ensureReady();
     if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
@@ -1189,7 +1207,7 @@ export class ChatService {
       };
     }
 
-    this.refreshAuth();
+    await this.refreshAuth();
     const model = this.findModelByKey(selectedKey);
     if (!model) {
       return {
@@ -1243,6 +1261,7 @@ export class ChatService {
   }
 
   async selectThinkingLevel(level: string): Promise<ChatStatus> {
+    await this.ensureReady();
     if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
@@ -1260,7 +1279,7 @@ export class ChatService {
       };
     }
 
-    this.refreshAuth();
+    await this.refreshAuth();
     const model = this.pickModel();
     if (!model) {
       return {
@@ -2136,7 +2155,7 @@ export class ChatService {
   private async getSession(): Promise<AgentSession> {
     if (this.session) return this.session;
 
-    this.refreshAuth();
+    await this.refreshAuth();
     const model = this.pickModel();
     if (!model) {
       throw new Error(this.modelRegistry.getError() ?? 'No configured models found.');
@@ -2153,8 +2172,7 @@ export class ChatService {
       model,
       sessionManager,
       resourceLoader,
-      authStorage: this.authStorage,
-      modelRegistry: this.modelRegistry,
+      modelRuntime: this.modelRuntime,
       customTools,
       settingsManager: this.settingsManager,
       thinkingLevel: this.selectedThinkingLevel
@@ -2173,9 +2191,8 @@ export class ChatService {
     const allocator = this.subagentNameAllocator(sessionId);
     const base = {
       cwd: () => cwd,
-      authStorage: this.authStorage,
       nameAllocator: () => allocator,
-      modelRegistry: this.modelRegistry,
+      modelRuntime: this.modelRuntime,
       settingsManager: this.settingsManager,
       model: () => this.pickModel() ?? null,
       availableModels: () => this.workflowModels(),
@@ -2274,9 +2291,48 @@ export class ChatService {
     this.subagentNameAllocators.delete(sessionId);
   }
 
-  private refreshAuth(): void {
-    this.authStorage.reload();
-    this.modelRegistry.refresh();
+  private async refreshAuth(): Promise<void> {
+    await this.ensureReady();
+    this.credentials.reload();
+    await this.modelRegistry.refresh();
+  }
+
+  private notifySubscriptionAuth(provider: string, event: AuthEvent, webContents: WebContents): void {
+    if (event.type === 'auth_url') {
+      webContents.send('chat:subscription-auth-update', {
+        provider,
+        url: event.url,
+        instructions: event.instructions,
+        message: 'Complete login in your browser, or paste the redirect URL/code below.'
+      });
+      shell.openExternal(event.url).catch(() => {});
+      return;
+    }
+    if (event.type === 'device_code') {
+      webContents.send('chat:subscription-auth-update', {
+        provider,
+        url: event.verificationUri,
+        instructions: `Enter code ${event.userCode} after opening the verification page.`,
+        message: 'Open the verification page and enter the device code to finish login.'
+      });
+      shell.openExternal(event.verificationUri).catch(() => {});
+      return;
+    }
+    if (event.type === 'progress') {
+      webContents.send('chat:subscription-auth-update', { provider, progress: event.message });
+      return;
+    }
+    webContents.send('chat:subscription-auth-update', { provider, message: event.message });
+  }
+
+  private promptSubscriptionAuth(provider: string, prompt: AuthPrompt, webContents: WebContents): Promise<string> {
+    if (prompt.type === 'select') return Promise.resolve(prompt.options[0]?.id ?? '');
+    webContents.send('chat:subscription-auth-update', {
+      provider,
+      message: prompt.message,
+      ...(prompt.placeholder ? { placeholder: prompt.placeholder } : {})
+    });
+    return this.createSubscriptionAuthInput();
   }
 
   private clearSubscriptionAuthInput(): void {
@@ -2355,15 +2411,18 @@ export class ChatService {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
   }
 
-  private providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): ProviderAuthStatus {
-    const apiKeyStatus = this.authStorage.getAuthStatus(key);
-    const hasApiKey = apiKeyStatus.configured;
-    const supportsSubscription = key === 'anthropic' || key === 'openai';
+  private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {
     const subscriptionProvider = subscriptionProviderId(key);
-    const hasSubscription =
-      supportsSubscription &&
-      (this.authStorage.get(subscriptionProvider)?.type === 'oauth' ||
-        this.authStorage.getAuthStatus(subscriptionProvider).configured);
+    const [keyCredential, subscriptionCredential] = await Promise.all([
+      this.credentials.read(key),
+      this.credentials.read(subscriptionProvider)
+    ]);
+    const { hasApiKey, hasSubscription } = providerCredentialFlags({
+      supportsSubscription: key === 'anthropic' || key === 'openai',
+      envApiKey: this.modelRuntime.getProviderAuthStatus(key).source === 'environment',
+      ...(keyCredential ? { keyCredentialType: keyCredential.type } : {}),
+      ...(subscriptionCredential ? { subscriptionCredentialType: subscriptionCredential.type } : {})
+    });
     const hasCredentials = hasApiKey || hasSubscription;
     const kind = providerAuthKind(hasModels, hasSubscription, hasApiKey);
 

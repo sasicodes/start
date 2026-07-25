@@ -10,8 +10,10 @@ describe('models allowlist', () => {
   it('returns a set for each provider with the right ids', () => {
     const anthropic = allowedLatestModelIds('anthropic');
     expect(anthropic.has('claude-fable-5')).toBe(true);
+    expect(anthropic.has('claude-opus-5')).toBe(true);
     expect(anthropic.has('claude-opus-4-8')).toBe(true);
     expect(anthropic.has('claude-sonnet-5')).toBe(true);
+    expect(anthropic.has('claude-haiku-4-5')).toBe(true);
 
     const openai = allowedLatestModelIds('openai');
     expect(openai.has('gpt-5.5')).toBe(true);

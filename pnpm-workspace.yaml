@@ -34,5 +34,5 @@ overrides:
   'protobufjs@>=7.5.0 <7.6.5': 7.6.5
 patchedDependencies:
   '@ff-labs/fff-node@0.10.1': patches/@ff-labs__fff-node@0.10.1.patch
-  '@earendil-works/pi-ai@0.80.6': patches/@earendil-works__pi-ai@0.80.6.patch
-  '@earendil-works/pi-coding-agent@0.80.6': patches/@earendil-works__pi-coding-agent@0.80.6.patch
+  '@earendil-works/pi-ai@0.82.0': patches/@earendil-works__pi-ai@0.82.0.patch
+  '@earendil-works/pi-coding-agent@0.82.0': patches/@earendil-works__pi-coding-agent@0.82.0.patch

@@ -1,17 +1,30 @@
+import type { Api, ModelCost } from '@earendil-works/pi-ai';
 import type { FakeAgentSession } from './session.js';
 import type { FakeSessionManager } from './session-manager.js';
 
 export interface FakeModel {
   id: string;
+  api: Api;
   name: string;
+  cost: ModelCost;
+  baseUrl: string;
   provider: string;
+  maxTokens: number;
   reasoning: boolean;
   contextWindow: number;
   input: ('text' | 'image')[];
   thinkingLevelMap?: Record<string, string | null>;
 }
 
+export const fakeModelDefaults = {
+  api: 'anthropic-messages',
+  baseUrl: 'https://api.anthropic.com',
+  cost: { input: 1, output: 1, cacheRead: 1, cacheWrite: 1 },
+  maxTokens: 8192
+} as const;
+
 const defaultModel: FakeModel = {
+  ...fakeModelDefaults,
   reasoning: true,
   input: ['text', 'image'],
   contextWindow: 200000,
