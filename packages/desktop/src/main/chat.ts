@@ -1,6 +1,7 @@
 import '@main/environment';
 
 import { randomBytes, randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { Api, AuthEvent, AuthPrompt, Model } from '@earendil-works/pi-ai';
 import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
@@ -41,6 +42,7 @@ import {
   modelLabel,
   providerAuthKind,
   providerAuthLabel,
+  orphanedNoticeIds,
   providerAuthSlots,
   providerCredentialFlags,
   restoredSessionSelection,
@@ -957,6 +959,7 @@ export class ChatService {
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
+    this.pruneOrphanedNotices();
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
@@ -2114,6 +2117,17 @@ export class ChatService {
 
   private markNoticeSeen(sessionId: string): void {
     if (!this.notices.delete(sessionId)) return;
+    this.persistNotices();
+  }
+
+  private pruneOrphanedNotices(): void {
+    const orphaned = orphanedNoticeIds(
+      this.notices,
+      (workspacePath) => isManagedWorktree(baseDir, workspacePath) && !existsSync(workspacePath)
+    );
+    if (orphaned.length === 0) return;
+
+    for (const sessionId of orphaned) this.notices.delete(sessionId);
     this.persistNotices();
   }
 

@@ -5,8 +5,20 @@ import {
   effortLevels,
   type ProviderAuthKind,
   type ProviderKey,
+  type SessionNotice,
   type ThinkingModel
 } from '@main/types';
+
+export const orphanedNoticeIds = (
+  notices: Iterable<readonly [string, SessionNotice]>,
+  isOrphaned: (workspacePath: string) => boolean
+): string[] => {
+  const orphaned: string[] = [];
+  for (const [sessionId, notice] of notices) {
+    if (isOrphaned(notice.workspacePath)) orphaned.push(sessionId);
+  }
+  return orphaned;
+};
 
 export const getSupportedEffortLevels = (model: ThinkingModel): EffortLevel[] => {
   if (!model.reasoning) return [];
