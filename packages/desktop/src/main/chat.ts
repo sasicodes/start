@@ -576,9 +576,10 @@ export class ChatService {
       await this.refreshAuth();
       const sessionManager = SessionManager.open(path);
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
-      this.applyStoredSessionSelection(sessionManager.getSessionId());
-      const model = this.pickModel();
+      const selection = this.resolveSessionSelection(sessionManager.getSessionId());
+      const model = (selection ? this.findModelByKey(selection.modelKey) : undefined) ?? this.pickModel();
       if (!model) return { ok: false, error: this.modelRegistry.getError() ?? 'No configured models found.' };
+      const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
 
       if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
       this.session = null;
@@ -594,7 +595,7 @@ export class ChatService {
         modelRuntime: this.modelRuntime,
         customTools,
         settingsManager: this.settingsManager,
-        thinkingLevel: this.selectedThinkingLevel
+        thinkingLevel
       });
 
       if (this.sessionOpenSequence !== openSequence) {
@@ -602,6 +603,8 @@ export class ChatService {
         return { ok: false, error: 'Session open was superseded.' };
       }
 
+      this.selectedModelKey = modelKey(model);
+      this.selectedThinkingLevel = thinkingLevel;
       enableRegisteredTools(session);
       this.subscribeIndexSync(session, model.provider, model.id);
       this.session = session;
@@ -2419,15 +2422,25 @@ export class ChatService {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
   }
 
-  private applyStoredSessionSelection(sessionId: string): void {
+  private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
     const { modelKey: storedKey, thinkingLevel } = restoredSessionSelection(getSession(sessionId), (key) =>
       Boolean(this.findModelByKey(key))
     );
-    if (!storedKey) return;
+    const model = storedKey ? this.findModelByKey(storedKey) : undefined;
+    if (!storedKey || !model) return null;
 
-    const model = this.findModelByKey(storedKey);
-    this.selectedModelKey = storedKey;
-    if (thinkingLevel && model) this.selectedThinkingLevel = clampThinkingLevel(model, thinkingLevel);
+    return {
+      modelKey: storedKey,
+      thinkingLevel: clampThinkingLevel(model, thinkingLevel ?? this.appState.selectedThinkingLevel)
+    };
+  }
+
+  private applyStoredSessionSelection(sessionId: string): void {
+    const selection = this.resolveSessionSelection(sessionId);
+    if (!selection) return;
+
+    this.selectedModelKey = selection.modelKey;
+    this.selectedThinkingLevel = selection.thinkingLevel;
   }
 
   private applyWorkspaceModelDefault(workspacePath: string): void {
