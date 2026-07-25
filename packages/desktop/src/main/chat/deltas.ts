@@ -5,6 +5,7 @@ export interface DeltaChunk {
 }
 
 export interface DeltaCoalescer {
+  discard: () => void;
   flush: () => void;
   push: (kind: 'text' | 'thinking', delta: string, sender: boolean) => void;
 }
@@ -13,11 +14,15 @@ export const createDeltaCoalescer = (flushMs: number, onFlush: (chunks: DeltaChu
   let timer: NodeJS.Timeout | null = null;
   let pending: DeltaChunk[] = [];
 
+  const discard = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    pending = [];
+  };
+
   const flush = () => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
+    if (timer) clearTimeout(timer);
+    timer = null;
 
     if (pending.length === 0) return;
     const chunks = pending;
@@ -39,5 +44,5 @@ export const createDeltaCoalescer = (flushMs: number, onFlush: (chunks: DeltaChu
     if (!timer) timer = setTimeout(flush, flushMs);
   };
 
-  return { push, flush };
+  return { discard, flush, push };
 };

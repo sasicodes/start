@@ -20,13 +20,11 @@
     "allowSyntheticDefaultImports": true,
     "types": ["node", "electron-vite/node"],
     "noEmit": true,
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
-      "@main/*.js": ["src/main/*.ts"],
-      "@main/*": ["src/main/*.ts"],
-      "@preload/*.js": ["src/preload/*.ts"],
-      "@preload/*": ["src/preload/*.ts"]
+      "@main/*.js": ["./src/main/*.ts"],
+      "@main/*": ["./src/main/*.ts"],
+      "@preload/*.js": ["./src/preload/*.ts"],
+      "@preload/*": ["./src/preload/*.ts"]
     }
   },
   "include": ["electron.vite.config.ts", "src/main/**/*.ts", "src/preload/**/*.ts"]

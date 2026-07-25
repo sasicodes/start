@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { getFakeSession } from '../fakes/agent/index.js';
+import { broadcastsByChannel } from '../fakes/window.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
 
 describe('session lifecycle', () => {
@@ -20,6 +21,49 @@ describe('session lifecycle', () => {
 
     expect(session?.disposed).toBe(true);
     expect(chat.getTabs().some((entry) => entry.id === tab.id)).toBe(false);
+  });
+
+  it('treats closing a generating tab as a silent abort', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const sendPromise = chat.send('hello', webContents);
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+
+    await chat.closeTab(tab.id);
+    session?.finishPrompt();
+    await sendPromise;
+
+    expect(await chat.getNotices()).toEqual([]);
+    expect(broadcastsByChannel('chat:scoped-error')).toEqual([]);
+    expect(broadcastsByChannel('chat:scoped-done').at(-1)?.args[0]).toMatchObject({
+      payload: 'aborted',
+      tabId: tab.id
+    });
+  });
+
+  it('treats closing a generating background tab as a silent abort', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const sendPromise = chat.send('hello', webContents);
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+    await chat.switchWorkspace('/tmp/workspace-b');
+
+    await chat.closeTab(tab.id);
+    session?.finishPrompt();
+    await sendPromise;
+
+    expect(await chat.getNotices()).toEqual([]);
+    expect(broadcastsByChannel('chat:scoped-error')).toEqual([]);
+    expect(broadcastsByChannel('chat:scoped-done').at(-1)?.args[0]).toMatchObject({
+      payload: 'aborted',
+      tabId: tab.id
+    });
   });
 
   it('newSession parks the current tab to the background and clears the active id', async () => {

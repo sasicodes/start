@@ -41,6 +41,17 @@ describe('background notices', () => {
     expect(notices[0]?.sessionId).toBe(tabA.id);
     expect(notices[0]?.workspacePath).toBe('/tmp/workspace-a');
 
+    const scopedDone = broadcastsByChannel('chat:scoped-done').at(-1)?.args[0] as {
+      tabId: string;
+      payload: string;
+      workspacePath: string;
+    };
+    expect(scopedDone).toEqual({
+      tabId: tabA.id,
+      payload: 'completed',
+      workspacePath: '/tmp/workspace-a'
+    });
+
     const persisted = getStorageSnapshot();
     expect(persisted.sessionNotices?.[tabA.id]?.kind).toBe('completed');
   });

@@ -13,16 +13,16 @@
     "typecheck": "tsc -p tsconfig.json --pretty false"
   },
   "dependencies": {
-    "@hono/node-server": "2.0.8",
-    "hono": "4.12.28",
+    "@hono/node-server": "2.0.11",
+    "hono": "4.12.31",
     "valibot": "1.4.2",
-    "ws": "8.21.0"
+    "ws": "8.21.1"
   },
   "devDependencies": {
-    "@types/node": "26.1.0",
+    "@types/node": "26.1.1",
     "@types/ws": "8.18.1",
     "esbuild": "0.28.1",
-    "typescript": "6.0.3",
+    "typescript": "7.0.2",
     "vitest": "4.1.10"
   }
 }

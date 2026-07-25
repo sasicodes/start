@@ -36,9 +36,9 @@ export const Workspace = ({ workspacePath, onChooseDirectory, onSelectWorkspace 
               draggable={false}
               class="relative z-10 size-full rounded-full object-cover"
             />
-            <AttentionBadge kind={attention} countLabel={countLabel} />
           </AppMenu.Trigger>
         </Tooltip>
+        <AttentionBadge kind={attention} countLabel={countLabel} />
         <AppMenu.Portal>
           <AppMenu.Positioner side="top" sideOffset={12} className="z-50" collisionPadding={12}>
             <MenuPanel className="w-64">

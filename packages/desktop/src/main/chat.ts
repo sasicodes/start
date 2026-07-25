@@ -22,11 +22,11 @@ import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/comm
 import { contextPercent } from '@main/chat/context';
 import { createDeltaCoalescer } from '@main/chat/deltas';
 import { shouldCompleteAfterStreamError } from '@main/chat/errors';
-import { appendLiveAssistantTurn } from '@main/chat/live';
+import { appendLiveAssistantTurn, upsertLiveAssistantDetail } from '@main/chat/live';
 import { type LiveRecentSession, recentSessionsPage, type WorktreeRef } from '@main/chat/recents';
 import { sessionWorkspacePath, tabFromSession, tabFromSessionStatus } from '@main/chat/tabs';
 import { closeStartDb, openStartDb } from '@main/db';
-import { historyDetail, imageAttachments, textContent } from '@main/details';
+import { imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
 import {
@@ -75,6 +75,7 @@ import type { WorkflowModelOption } from '@main/subagents/types';
 import {
   type AgentTab,
   type AgentTabStatus,
+  type ChatDoneReason,
   type ChatEvent,
   type ChatStatus,
   type CommandResult,
@@ -120,6 +121,8 @@ import electron from 'electron';
 
 const { shell } = electron;
 
+const abortedDoneReason: ChatDoneReason = 'aborted';
+const completedDoneReason: ChatDoneReason = 'completed';
 const attachmentMaxAgeMs = 15 * 60 * 1000;
 const mobileMaxPageLimit = 50;
 const streamDeltaFlushMs = 50;
@@ -232,6 +235,7 @@ type SessionRuntimeState = {
   abortSequence: number;
   isGenerating: boolean;
   queueRebuildDepth: number;
+  discardPendingDeltas?: () => void;
   liveAssistantTurn?: LiveAssistantTurn;
   queuedMessages: PendingQueuedMessage[];
   queueDeliveryCandidates: QueuedMessage[];
@@ -292,6 +296,10 @@ export class ChatService {
   }
 
   async getStatus(): Promise<ChatStatus> {
+    return this.chatStatus();
+  }
+
+  private chatStatus(): ChatStatus {
     this.refreshAuth();
     const model = this.pickModel();
 
@@ -746,10 +754,18 @@ export class ChatService {
   }
 
   async closeTab(id: string): Promise<void> {
-    if (this.activeSessionId === id && this.session) {
-      this.session.abortBash();
-      await this.session.abort();
-      this.session.dispose();
+    const activeSession = this.activeSessionId === id ? this.session : null;
+    const closingSession = activeSession ?? this.backgroundSessions.get(id);
+    if (closingSession) {
+      const runtimeState = this.runtimeStateForSession(closingSession);
+      runtimeState.abortSequence += 1;
+      delete runtimeState.liveAssistantTurn;
+    }
+
+    if (activeSession) {
+      activeSession.abortBash();
+      await activeSession.abort();
+      activeSession.dispose();
       this.deleteRuntimeState(id);
       this.deleteSubagentNameAllocator(id);
       this.session = null;
@@ -980,7 +996,7 @@ export class ChatService {
     const { restoreSession = true } = options;
     const nextCwd = cwd.trim();
     if (!nextCwd) return { ok: false, error: 'Workspace path is empty.' };
-    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: await this.getStatus() };
+    if (nextCwd === this.workspaceCwd) return { ok: true, unchanged: true, status: this.chatStatus() };
 
     try {
       this.sessionOpenSequence += 1;
@@ -1003,7 +1019,7 @@ export class ChatService {
         session = this.session ? this.sessionResult(this.session) : await this.resumeRecentSession(nextCwd);
       }
 
-      return { ok: true, status: await this.getStatus(), ...(session ? { session } : {}) };
+      return { ok: true, status: this.chatStatus(), ...(session ? { session } : {}) };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Workspace could not be switched.' };
     }
@@ -1026,17 +1042,21 @@ export class ChatService {
   }
 
   private sessionResult(session: AgentSession): OpenSessionResult {
+    const runtimeState = this.runtimeStateForSession(session);
+    runtimeState.discardPendingDeltas?.();
+
     return {
       ok: true,
       id: session.sessionManager.getSessionId(),
+      status: this.chatStatus(),
       turns: this.sessionTurns(session),
-      queuedMessages: this.visibleQueuedMessages(this.runtimeStateForSession(session))
+      queuedMessages: this.visibleQueuedMessages(runtimeState)
     };
   }
 
   private syncSessionRuntime(session: AgentSession): void {
     const runtimeState = this.runtimeStateForSession(session);
-    runtimeState.isGenerating = Boolean(session.isStreaming || session.isBashRunning);
+    runtimeState.isGenerating = Boolean(runtimeState.isGenerating || session.isStreaming || session.isBashRunning);
     runtimeState.queueDeliveryCandidates = [];
   }
 
@@ -1317,6 +1337,7 @@ export class ChatService {
           this.emitScoped(scopedChannel, sessionId, workspacePath, chunk.delta);
         }
       });
+      state.discardPendingDeltas = deltas.discard;
 
       let generationStartNotified = false;
       const unsubscribe = session.subscribe((event) => {
@@ -1377,6 +1398,7 @@ export class ChatService {
       } finally {
         unsubscribe();
         deltas.flush();
+        if (state.discardPendingDeltas === deltas.discard) delete state.discardPendingDeltas;
       }
 
       if (endError) {
@@ -1384,11 +1406,11 @@ export class ChatService {
           delete state.liveAssistantTurn;
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit('done', '', webContents);
+            this.emit('done', completedDoneReason, webContents);
           } else {
             this.setNotice(sessionId, workspacePath, 'completed', webContents);
           }
-          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, completedDoneReason);
           return { ok: true, sessionId };
         }
 
@@ -1396,9 +1418,9 @@ export class ChatService {
         if (state.abortSequence !== sendAbortSequence) {
           if (this.isActiveSession(sessionId, workspacePath)) {
             this.setActiveSession(session.sessionManager);
-            this.emit('done', '', webContents);
+            this.emit('done', abortedDoneReason, webContents);
           }
-          this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+          this.emitScoped('chat:scoped-done', sessionId, workspacePath, abortedDoneReason);
           return { ok: true, sessionId };
         }
 
@@ -1415,20 +1437,20 @@ export class ChatService {
       if (this.isActiveSession(sessionId, workspacePath)) {
         delete state.liveAssistantTurn;
         this.setActiveSession(session.sessionManager);
-        this.emit('done', '', webContents);
+        this.emit('done', completedDoneReason, webContents);
       } else {
         delete state.liveAssistantTurn;
         this.setNotice(sessionId, workspacePath, 'completed', webContents);
       }
-      this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+      this.emitScoped('chat:scoped-done', sessionId, workspacePath, completedDoneReason);
       return { ok: true, sessionId };
     } catch (error) {
       if (runtimeState && runtimeState.abortSequence !== sendAbortSequence) {
         if (this.isActiveSession(sessionId, workspacePath)) {
           this.setActiveSession(activeSession.sessionManager);
-          this.emit('done', '', webContents);
+          this.emit('done', abortedDoneReason, webContents);
         }
-        if (sessionId) this.emitScoped('chat:scoped-done', sessionId, workspacePath, '');
+        if (sessionId) this.emitScoped('chat:scoped-done', sessionId, workspacePath, abortedDoneReason);
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
@@ -2000,7 +2022,7 @@ export class ChatService {
     const turn = runtimeState?.liveAssistantTurn;
     if (!turn) return;
 
-    turn.details = [...(turn.details ?? []), historyDetail(event, turn.details?.length ?? 0, turn.id, Date.now())];
+    turn.details = upsertLiveAssistantDetail(turn.details, event, turn.id, Date.now());
   }
 
   private deleteWorkspaceSessionReferences(sessionId: string): void {

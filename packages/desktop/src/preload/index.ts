@@ -190,6 +190,7 @@ export interface HistoryTurn {
   role: 'user' | 'assistant' | 'terminal' | 'event';
 }
 
+export type ChatDoneReason = 'aborted' | 'completed';
 export type SessionNoticeKind = 'completed' | 'failed';
 
 export interface RecentSession {
@@ -297,6 +298,7 @@ export interface OpenSessionResult {
   ok: boolean;
   id?: string;
   error?: string;
+  status?: ChatStatus;
   turns?: HistoryTurn[];
   queuedMessages?: QueuedMessage[];
 }
@@ -550,7 +552,7 @@ const api = {
     onDelta: (listener: (delta: string) => void): IpcDisposer => onIpc<[string]>('chat:delta', listener),
     onThinkingDelta: (listener: (delta: string) => void): IpcDisposer =>
       onIpc<[string]>('chat:thinking-delta', listener),
-    onDone: (listener: (text: string) => void): IpcDisposer => onIpc<[string]>('chat:done', listener),
+    onDone: (listener: (reason: ChatDoneReason) => void): IpcDisposer => onIpc<[ChatDoneReason]>('chat:done', listener),
     onCommandDelta: (listener: (delta: string) => void): IpcDisposer => onIpc<[string]>('chat:command-delta', listener),
     onCommandDone: (listener: (output: string) => void): IpcDisposer => onIpc<[string]>('chat:command-done', listener),
     onError: (listener: (message: string) => void): IpcDisposer => onIpc<[string]>('chat:error', listener),
@@ -565,8 +567,8 @@ const api = {
       onIpc<[ScopedChatEvent<string>]>('chat:scoped-delta', listener),
     onScopedThinkingDelta: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
       onIpc<[ScopedChatEvent<string>]>('chat:scoped-thinking-delta', listener),
-    onScopedDone: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
-      onIpc<[ScopedChatEvent<string>]>('chat:scoped-done', listener),
+    onScopedDone: (listener: (event: ScopedChatEvent<ChatDoneReason>) => void): IpcDisposer =>
+      onIpc<[ScopedChatEvent<ChatDoneReason>]>('chat:scoped-done', listener),
     onScopedError: (listener: (event: ScopedChatEvent<string>) => void): IpcDisposer =>
       onIpc<[ScopedChatEvent<string>]>('chat:scoped-error', listener),
     onNotice: (listener: (event: ScopedChatEvent<SessionNotice | undefined>) => void): IpcDisposer =>

@@ -17,9 +17,15 @@ const folder = (path: string, status?: WorkspaceFolder['status'], active = false
 });
 
 describe('attention status', () => {
-  it('hides status for the active session', () => {
-    expect(sessionAttentionStatus('session-a', 'session-a', 'generating')).toBe('');
+  it('shows generating status for the active session', () => {
+    expect(sessionAttentionStatus('session-a', 'session-a', 'generating')).toBe('generating');
+  });
+
+  it('hides terminal status for the active session', () => {
+    expect(sessionAttentionStatus('session-a', 'session-a', 'completed')).toBe('');
+    expect(sessionAttentionStatus('session-a', 'session-a', 'failed')).toBe('');
     expect(sessionAttentionStatus('session-a', 'session-a', undefined, 'completed')).toBe('');
+    expect(sessionAttentionStatus('session-a', 'session-a', undefined, 'failed')).toBe('');
   });
 
   it('keeps status for inactive sessions', () => {
@@ -42,7 +48,7 @@ describe('attention status', () => {
     expect(attentionCountLabel(100)).toBe('99+');
   });
 
-  it('summarizes folder attention while excluding the active workspace', () => {
+  it('summarizes workspace attention including active generation', () => {
     const folders = [
       folder('/active', 'generating', true),
       folder('/other', 'completed'),
@@ -50,22 +56,38 @@ describe('attention status', () => {
       folder('/idle')
     ];
 
-    expect(workspaceFoldersAttention(folders)).toEqual({ kind: 'failed', countLabel: '2' });
+    expect(workspaceFoldersAttention(folders)).toEqual({ kind: 'failed', countLabel: '3' });
   });
 
-  it('reports no attention when only the active workspace is busy', () => {
+  it('reports attention when the active workspace is generating', () => {
     expect(workspaceFoldersAttention([folder('/active', 'generating', true)])).toEqual({
+      kind: 'generating',
+      countLabel: '1'
+    });
+  });
+
+  it('hides failure when the active workspace failed', () => {
+    expect(workspaceFoldersAttention([folder('/active', 'failed', true)])).toEqual({
       kind: '',
       countLabel: '0'
     });
   });
 
-  it('excludes the canonical active repository for a worktree session', () => {
+  it('hides active completion from cumulative workspace attention', () => {
+    const folders = [folder('/active', 'completed', true), folder('/other', 'generating')];
+
+    expect(workspaceFoldersAttention(folders)).toEqual({
+      kind: 'generating',
+      countLabel: '1'
+    });
+  });
+
+  it('includes the active repository generation for a worktree session', () => {
     const folders = [folder('/repo', 'generating', true), folder('/other', 'completed')];
 
     expect(workspaceFoldersAttention(folders)).toEqual({
-      kind: 'completed',
-      countLabel: '1'
+      kind: 'generating',
+      countLabel: '2'
     });
   });
 });

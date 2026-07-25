@@ -140,6 +140,7 @@ export type HistoryTurn = {
   role: 'user' | 'event' | 'terminal' | 'assistant';
 };
 
+export type ChatDoneReason = 'aborted' | 'completed';
 export type SessionNoticeKind = 'failed' | 'completed';
 
 export type RecentSession = {
@@ -271,6 +272,7 @@ export type OpenSessionResult = {
   ok: boolean;
   id?: string;
   error?: string;
+  status?: ChatStatus;
   turns?: HistoryTurn[];
   queuedMessages?: QueuedMessage[];
 };
