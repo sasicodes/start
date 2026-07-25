@@ -4,10 +4,11 @@ import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
 import { syncOpenedWorkspace } from '@renderer/shared/chat/open-workspace';
+import { noticeSound } from '@renderer/shared/chat/notice';
 import { endsMidWord } from '@renderer/shared/chat/segment';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
-import { playAttentionSound, playDoneSound, playErrorSound } from '@renderer/ui/sounds';
+import { playDoneSound, playErrorSound } from '@renderer/ui/sounds';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
@@ -339,7 +340,12 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
     });
 
     const offNotice = window.pi.chat.onNotice(({ tabId, payload }) => {
-      if (payload && !activeScopedSession(tabId)) playAttentionSound();
+      if (!payload || activeScopedSession(tabId)) return;
+      if (noticeSound(payload.kind) === 'error') {
+        playErrorSound();
+        return;
+      }
+      playDoneSound();
     });
 
     const offStatusChanged = window.pi.chat.onStatusChanged(refreshChatState);

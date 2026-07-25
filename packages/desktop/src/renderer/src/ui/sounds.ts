@@ -156,7 +156,7 @@ const tone = (audioContext: AudioContext, time: number, options: ToneOptions) =>
   };
 };
 
-type AgentSound = 'done' | 'attention' | 'error';
+type AgentSound = 'done' | 'error';
 
 const agentSoundThrottled = createThrottle(400);
 
@@ -169,14 +169,6 @@ export const playDoneSound = () => {
   tone(audioContext, time, { frequency: 523, duration: 0.15, volume: 0.09 });
   tone(audioContext, time + 0.1, { frequency: 659, duration: 0.18, volume: 0.09 });
   tone(audioContext, time + 0.2, { frequency: 784, duration: 0.22, volume: 0.08 });
-};
-
-export const playAttentionSound = () => {
-  if (agentSoundBlocked('attention')) return;
-  const audioContext = resumedContext();
-  const time = audioContext.currentTime;
-  tone(audioContext, time, { frequency: 880, duration: 0.12, volume: 0.08 });
-  tone(audioContext, time + 0.15, { frequency: 880, duration: 0.12, volume: 0.08 });
 };
 
 export const playErrorSound = () => {
