@@ -1104,12 +1104,18 @@ export class ChatService {
   async getAuthProviders(): Promise<ProviderAuthStatus[]> {
     await this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
-    const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
-    const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
 
     return Promise.all([
-      this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
-      this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0)
+      this.providerAuthStatus(
+        'openai',
+        'OpenAI',
+        available.some((model) => isProviderModel(model, 'openai'))
+      ),
+      this.providerAuthStatus(
+        'anthropic',
+        'Anthropic',
+        available.some((model) => isProviderModel(model, 'anthropic'))
+      )
     ]);
   }
 
@@ -1139,7 +1145,6 @@ export class ChatService {
 
     await this.ensureReady();
     await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
-    await this.modelRuntime.refresh();
 
     return this.getAuthProviders();
   }
