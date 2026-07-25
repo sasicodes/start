@@ -8,6 +8,7 @@ import {
   isProviderModel,
   modelKey,
   modelLabel,
+  orphanedNoticeIds,
   providerAuthKind,
   providerAuthLabel,
   providerAuthSlots,
@@ -154,5 +155,20 @@ describe('helpers', () => {
   it('returns the original list as a fallback when nothing matches', () => {
     const models = [{ id: 'mystery-1', name: 'Mystery', provider: 'unknown' }];
     expect(getVisibleModels(models)).toEqual(models);
+  });
+
+  it('collects notice ids whose workspace path is orphaned', () => {
+    const notice = (sessionId: string, workspacePath: string) => ({
+      kind: 'completed' as const,
+      sessionId,
+      workspacePath,
+      createdAt: 0
+    });
+    const notices = new Map([
+      ['live', notice('live', '/repo/main')],
+      ['gone', notice('gone', '/repo/worktrees/deleted')]
+    ]);
+    const orphaned = orphanedNoticeIds(notices, (workspacePath) => workspacePath === '/repo/worktrees/deleted');
+    expect(orphaned).toEqual(['gone']);
   });
 });

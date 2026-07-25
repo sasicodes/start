@@ -1,6 +1,7 @@
 import '@main/environment';
 
 import { randomBytes, randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { Api, AuthEvent, AuthPrompt, Model } from '@earendil-works/pi-ai';
 import { registerBunOAuthFlows } from '@earendil-works/pi-ai/bun-oauth';
@@ -41,6 +42,7 @@ import {
   modelLabel,
   providerAuthKind,
   providerAuthLabel,
+  orphanedNoticeIds,
   providerAuthSlots,
   providerCredentialFlags,
   restoredSessionSelection,
@@ -455,6 +457,7 @@ export class ChatService {
   }
 
   async getMobileSessionIndex(options: RecentSessionsOptions = {}): Promise<MobileSessionIndex> {
+    this.pruneOrphanedNotices();
     const workspacePath = options.workspacePath ?? this.workspaceCwd;
     const limit = mobilePageLimit(options.limit, mobileDefaultSessionLimit);
     const offset = mobilePageOffset(options.offset);
@@ -868,6 +871,7 @@ export class ChatService {
   }
 
   async getNotices(): Promise<SessionNotice[]> {
+    this.pruneOrphanedNotices();
     return [...this.notices.values()];
   }
 
@@ -937,6 +941,7 @@ export class ChatService {
   }
 
   async getRecentSessionsPage(options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> {
+    this.pruneOrphanedNotices();
     const workspacePath = await this.workspaceRootForCwd(options.workspacePath ?? this.workspaceCwd);
     const worktrees = await this.managedWorktreesFor(workspacePath);
     const statuses = new Map(this.getTabs().map((tab) => [tab.id, tab.status]));
@@ -957,6 +962,7 @@ export class ChatService {
   }
 
   async getWorkspaceFolders(): Promise<WorkspaceFolder[]> {
+    this.pruneOrphanedNotices();
     const sessions = await SessionManager.listAll();
     const folders = new Map<string, WorkspaceFolder>();
     const rawAttention = this.workspaceAttentionStatuses();
@@ -2116,6 +2122,17 @@ export class ChatService {
 
   private markNoticeSeen(sessionId: string): void {
     if (!this.notices.delete(sessionId)) return;
+    this.persistNotices();
+  }
+
+  private pruneOrphanedNotices(): void {
+    const orphaned = orphanedNoticeIds(
+      this.notices,
+      (workspacePath) => isManagedWorktree(baseDir, workspacePath) && !existsSync(workspacePath)
+    );
+    if (orphaned.length === 0) return;
+
+    for (const sessionId of orphaned) this.notices.delete(sessionId);
     this.persistNotices();
   }
 
