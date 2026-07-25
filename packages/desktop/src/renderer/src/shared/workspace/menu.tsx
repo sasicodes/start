@@ -1,12 +1,12 @@
 import type { WorkspaceFolder } from '@preload/index';
-import { attentionStatus } from '@renderer/shared/attention';
+import { visibleAttentionStatus } from '@renderer/shared/attention';
 import { Indicator } from '@renderer/shared/indicator';
 import { FolderIcon } from '@renderer/ui/icons';
 import { AppMenu } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 
 const WorkspaceAttention = ({ folder }: { folder: WorkspaceFolder }) => {
-  const attention = attentionStatus(folder.status, folder.noticeKind);
+  const attention = visibleAttentionStatus(folder.active, folder.status, folder.noticeKind);
   if (!attention) return null;
   return (
     <span class="flex h-5 items-center">
@@ -40,7 +40,7 @@ const WorkspaceRow = ({ folder, selected, onSelect }: WorkspaceRowProps) => (
       <span class="truncate text-sm leading-5 font-medium">{folder.name}</span>
       <span class="truncate text-xs leading-4 font-normal text-soft">{folder.path}</span>
     </span>
-    {!selected && <WorkspaceAttention folder={folder} />}
+    <WorkspaceAttention folder={folder} />
   </AppMenu.Item>
 );
 
