@@ -12,10 +12,10 @@ export const AttentionBadge = ({ kind, countLabel }: AttentionBadgeProps) => {
   return (
     <span
       class={tw(
-        'pointer-events-none absolute -top-0.5 -right-0.5 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold text-white tabular-nums shadow-shell',
-        kind === 'failed' && 'bg-danger',
-        kind === 'completed' && 'bg-success',
-        kind === 'generating' && 'bg-progress'
+        'pointer-events-none absolute -top-0.5 -right-0.5 z-10 grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 text-[10px] leading-none font-semibold tabular-nums shadow-shell',
+        kind === 'failed' && 'bg-danger text-white',
+        kind === 'completed' && 'bg-success text-white',
+        kind === 'generating' && 'bg-progress text-black'
       )}
     >
       {countLabel}
