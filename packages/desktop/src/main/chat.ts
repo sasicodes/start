@@ -730,7 +730,7 @@ export class ChatService {
 
   async createTab(workspacePath = this.workspaceCwd): Promise<AgentTab> {
     await this.ensureReady();
-    this.applyWorkspaceModelDefault(workspacePath);
+    if (workspacePath === this.workspaceCwd) this.applyWorkspaceModelDefault(workspacePath);
     const session = await this.buildSession(workspacePath);
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.attachments.clear();
@@ -860,6 +860,7 @@ export class ChatService {
     const session = this.backgroundSessions.get(id);
     if (!session) return this.openSessionId(id);
 
+    this.sessionOpenSequence += 1;
     if (this.session) this.storeBackgroundSession(this.workspaceCwd, this.session);
     this.backgroundSessions.delete(id);
     this.session = session;
