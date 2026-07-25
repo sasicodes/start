@@ -11,6 +11,7 @@ import {
   providerAuthKind,
   providerAuthLabel,
   providerAuthSlots,
+  providerCredentialFlags,
   textDelta,
   thinkingDelta
 } from '@main/helpers';
@@ -61,6 +62,25 @@ describe('helpers', () => {
       { id: 'claude-opus-4-8', name: 'Opus 4 8', provider: 'anthropic' }
     ]);
     expect(sorted.map((model) => model.id)).toEqual(['claude-opus-4-8', 'claude-fable-5', 'claude-sonnet-5']);
+  });
+
+  it('distinguishes api keys from subscriptions by credential type', () => {
+    const base = { supportsSubscription: true, envApiKey: false } as const;
+
+    expect(providerCredentialFlags({ ...base, subscriptionCredentialType: 'oauth' })).toEqual({
+      hasApiKey: false,
+      hasSubscription: true
+    });
+    expect(
+      providerCredentialFlags({ ...base, keyCredentialType: 'api_key', subscriptionCredentialType: 'api_key' })
+    ).toEqual({ hasApiKey: true, hasSubscription: false });
+    expect(providerCredentialFlags({ ...base, envApiKey: true })).toEqual({ hasApiKey: true, hasSubscription: false });
+  });
+
+  it('never reports a subscription for providers without subscription support', () => {
+    expect(
+      providerCredentialFlags({ supportsSubscription: false, envApiKey: false, subscriptionCredentialType: 'oauth' })
+    ).toEqual({ hasApiKey: false, hasSubscription: false });
   });
 
   it('exposes labels and keys for models', () => {

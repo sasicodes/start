@@ -42,6 +42,7 @@ import {
   providerAuthKind,
   providerAuthLabel,
   providerAuthSlots,
+  providerCredentialFlags,
   subscriptionProviderId,
   textDelta,
   thinkingDelta
@@ -1106,10 +1107,10 @@ export class ChatService {
     const openAiModels = available.filter((model) => isProviderModel(model, 'openai'));
     const anthropicModels = available.filter((model) => isProviderModel(model, 'anthropic'));
 
-    return [
+    return Promise.all([
       this.providerAuthStatus('openai', 'OpenAI', openAiModels.length > 0),
       this.providerAuthStatus('anthropic', 'Anthropic', anthropicModels.length > 0)
-    ];
+    ]);
   }
 
   async getProviderUsageCredential(provider: ProviderKey): Promise<ProviderUsageCredential | null> {
@@ -1138,7 +1139,7 @@ export class ChatService {
 
     await this.ensureReady();
     await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
-    await this.modelRuntime.setRuntimeApiKey(cleanProvider, cleanApiKey);
+    await this.modelRuntime.refresh();
 
     return this.getAuthProviders();
   }
@@ -2405,12 +2406,18 @@ export class ChatService {
     return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
   }
 
-  private providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): ProviderAuthStatus {
-    const hasApiKey = this.modelRuntime.getProviderAuthStatus(key).configured;
-    const supportsSubscription = key === 'anthropic' || key === 'openai';
+  private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {
     const subscriptionProvider = subscriptionProviderId(key);
-    const hasSubscription =
-      supportsSubscription && this.modelRuntime.getProviderAuthStatus(subscriptionProvider).configured;
+    const [keyCredential, subscriptionCredential] = await Promise.all([
+      this.credentials.read(key),
+      this.credentials.read(subscriptionProvider)
+    ]);
+    const { hasApiKey, hasSubscription } = providerCredentialFlags({
+      supportsSubscription: key === 'anthropic' || key === 'openai',
+      envApiKey: this.modelRuntime.getProviderAuthStatus(key).source === 'environment',
+      ...(keyCredential ? { keyCredentialType: keyCredential.type } : {}),
+      ...(subscriptionCredential ? { subscriptionCredentialType: subscriptionCredential.type } : {})
+    });
     const hasCredentials = hasApiKey || hasSubscription;
     const kind = providerAuthKind(hasModels, hasSubscription, hasApiKey);
 

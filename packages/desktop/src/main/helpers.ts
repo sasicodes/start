@@ -63,6 +63,23 @@ export const providerAuthSlots = (provider: string): string[] => {
 
 export const subscriptionProviderId = (provider: string) => (provider === 'openai' ? 'openai-codex' : provider);
 
+interface ProviderCredentialFlagsInput {
+  envApiKey: boolean;
+  supportsSubscription: boolean;
+  keyCredentialType?: 'api_key' | 'oauth';
+  subscriptionCredentialType?: 'api_key' | 'oauth';
+}
+
+export const providerCredentialFlags = ({
+  envApiKey,
+  supportsSubscription,
+  keyCredentialType,
+  subscriptionCredentialType
+}: ProviderCredentialFlagsInput): { hasApiKey: boolean; hasSubscription: boolean } => ({
+  hasApiKey: keyCredentialType === 'api_key' || envApiKey,
+  hasSubscription: supportsSubscription && subscriptionCredentialType === 'oauth'
+});
+
 export const isProviderModel = (model: { provider: string; id: string; name?: string }, provider: ProviderKey) => {
   const haystack = `${model.provider} ${model.id} ${model.name ?? ''}`.toLowerCase();
   if (provider === 'openai') {
