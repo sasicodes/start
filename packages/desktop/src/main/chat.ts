@@ -1372,9 +1372,19 @@ export class ChatService {
           return;
         }
 
-        if (active && event.type === 'message_start' && event.message.role === 'user') {
+        if (event.type === 'message_start' && event.message.role === 'user') {
           deltas.flush();
-          this.emitQueuedTurnStart(event.message.content, state, webContents);
+          this.resetLiveAssistantTurn(session, state);
+          if (active) this.emitQueuedTurnStart(event.message.content, state, webContents);
+        }
+
+        if (event.type === 'message_start' && event.message.role === 'assistant') {
+          deltas.flush();
+          const liveTurn = state.liveAssistantTurn;
+          if (liveTurn) {
+            liveTurn.text = '';
+            liveTurn.thinking = '';
+          }
         }
 
         if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {

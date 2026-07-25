@@ -51,6 +51,35 @@ describe('workspace switching', () => {
     expect((await chat.getStatus()).sessionId).toBe(tabA.id);
   });
 
+  it('does not carry prior assistant message text into a later message of the same turn', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tabA = await chat.createTab('/tmp/workspace-a');
+    const sendA = chat.send('go', webContents);
+    const sessionA = getFakeSession(tabA.id);
+    if (!sessionA) throw new Error('Expected fake session.');
+    await sessionA.awaitPromptCall();
+
+    sessionA.pushEvent({
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'first answer' }
+    });
+    sessionA.pushEvent({ type: 'message_start', message: { role: 'assistant', content: '' } });
+    sessionA.pushEvent({
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'second answer' }
+    });
+
+    await chat.switchWorkspace('/tmp/workspace-b');
+    const backToA = await chat.switchWorkspace('/tmp/workspace-a');
+    const streamingTurn = backToA.session?.turns?.find((turn) => turn.streaming);
+    expect(streamingTurn?.text).toBe('second answer');
+
+    sessionA.finishPrompt();
+    await sendA;
+  });
+
   it('restores a background stream without replaying buffered output', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
     const webContents = newWebContents();

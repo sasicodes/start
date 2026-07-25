@@ -328,8 +328,8 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
     ownerWindowGoneHandler = () => {
       if (ownerWindow === window) closeBrowserTabs();
     };
-    ownerWindowNavigationHandler = (_event, _url, _inPlace, mainFrame) => {
-      if (mainFrame && ownerWindow === window) closeBrowserTabs();
+    ownerWindowNavigationHandler = (_event, _url, inPlace, mainFrame) => {
+      if (!inPlace && mainFrame && ownerWindow === window) closeBrowserTabs();
     };
 
     window.on('closed', ownerWindowClosedHandler);

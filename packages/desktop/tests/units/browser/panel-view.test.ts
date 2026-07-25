@@ -317,7 +317,7 @@ describe('browser panel view', () => {
     expect(view.webContents.closed).toBe(true);
   });
 
-  it('keeps the native browser view during owner in-page navigation', () => {
+  it('keeps the native browser view during owner same-document navigation', () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -325,7 +325,7 @@ describe('browser panel view', () => {
     const view = window.contentView.children[0];
     if (!view) throw new Error('Expected browser view.');
 
-    window.webContents.emit('did-start-navigation', {}, 'http://localhost:5173/#session', true, false);
+    window.webContents.emit('did-start-navigation', {}, 'http://localhost:5173/#session', true, true);
 
     expect(window.contentView.children).toEqual([view]);
     expect(view.webContents.closed).toBe(false);
