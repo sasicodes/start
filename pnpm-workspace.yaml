@@ -36,5 +36,5 @@ overrides:
   '@hono/node-server@<2.0.5': 2.0.11
 patchedDependencies:
   '@ff-labs/fff-node@0.10.1': patches/@ff-labs__fff-node@0.10.1.patch
-  '@earendil-works/pi-ai@0.82.0': patches/@earendil-works__pi-ai@0.82.0.patch
-  '@earendil-works/pi-coding-agent@0.82.0': patches/@earendil-works__pi-coding-agent@0.82.0.patch
+  '@earendil-works/pi-ai@0.83.0': patches/@earendil-works__pi-ai@0.83.0.patch
+  '@earendil-works/pi-coding-agent@0.83.0': patches/@earendil-works__pi-coding-agent@0.83.0.patch

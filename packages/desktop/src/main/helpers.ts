@@ -141,10 +141,7 @@ export const getVisibleModels = <T extends { provider: string; id: string; name?
 ): T[] => {
   const openAiModels = getLatestProviderModels('openai', models);
   const anthropicModels = getLatestProviderModels('anthropic', models);
-  const latestModels = [...openAiModels, ...anthropicModels];
-
-  if (latestModels.length === 0) return [...models];
-  return latestModels;
+  return [...openAiModels, ...anthropicModels];
 };
 
 export const modelKey = (model: { provider: string; id: string }) => {

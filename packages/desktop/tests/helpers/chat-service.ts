@@ -26,8 +26,8 @@ const defaultModels: FakeModel[] = [
     reasoning: true,
     input: ['text', 'image'],
     contextWindow: 200000,
-    id: 'claude-opus-4-7',
-    name: 'Claude Opus 4 7',
+    id: 'claude-opus-5',
+    name: 'Claude Opus 5',
     provider: 'anthropic'
   }
 ];
