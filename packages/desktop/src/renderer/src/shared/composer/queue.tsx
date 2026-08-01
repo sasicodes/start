@@ -76,7 +76,12 @@ export const Queue = ({ messages, visible, generating, onDelete, onReorder, onSe
                   <span class="truncate">{text}</span>
                 </div>
               </div>
-              <div class="flex flex-none items-center gap-1">
+              <div
+                class={tw(
+                  'flex flex-none items-center gap-1 transition-opacity',
+                  dragging && reorder.dragId !== id && 'opacity-0'
+                )}
+              >
                 <button
                   type="button"
                   disabled={generating && steering}

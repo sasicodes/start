@@ -9,8 +9,8 @@ const twoAnthropicModels: FakeModel[] = [
     reasoning: true,
     input: ['text'],
     contextWindow: 200000,
-    id: 'claude-opus-4-7',
-    name: 'Claude Opus 4 7',
+    id: 'claude-opus-5',
+    name: 'Claude Opus 5',
     provider: 'anthropic'
   },
   {
@@ -18,8 +18,8 @@ const twoAnthropicModels: FakeModel[] = [
     reasoning: true,
     input: ['text'],
     contextWindow: 200000,
-    id: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4 6',
+    id: 'claude-sonnet-5',
+    name: 'Claude Sonnet 5',
     provider: 'anthropic'
   }
 ];
@@ -29,7 +29,7 @@ describe('model and thinking level', () => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
       models: twoAnthropicModels,
-      selectedModelKey: 'anthropic:claude-opus-4-7'
+      selectedModelKey: 'anthropic:claude-opus-5'
     });
     const webContents = newWebContents();
 
@@ -40,16 +40,16 @@ describe('model and thinking level', () => {
     session?.finishPrompt();
     await sendPromise;
 
-    const swap = await chat.selectModel('anthropic:claude-sonnet-4-6');
+    const swap = await chat.selectModel('anthropic:claude-sonnet-5');
     expect(swap.ready).toBe(true);
-    expect(swap.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
-    expect(getStorageSnapshot().selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
-    expect(session?.model.id).toBe('claude-sonnet-4-6');
+    expect(swap.selectedModelKey).toBe('anthropic:claude-sonnet-5');
+    expect(getStorageSnapshot().selectedModelKey).toBe('anthropic:claude-sonnet-5');
+    expect(session?.model.id).toBe('claude-sonnet-5');
     expect(session?.sessionManager.getEntries()).toContainEqual(
       expect.objectContaining({
         type: 'model_change',
         provider: 'anthropic',
-        modelId: 'claude-sonnet-4-6'
+        modelId: 'claude-sonnet-5'
       })
     );
 
@@ -63,23 +63,21 @@ describe('model and thinking level', () => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
       models: twoAnthropicModels,
-      selectedModelKey: 'anthropic:claude-opus-4-7'
+      selectedModelKey: 'anthropic:claude-opus-5'
     });
 
-    const setA = await chat.selectModel('anthropic:claude-sonnet-4-6');
-    expect(setA.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
+    const setA = await chat.selectModel('anthropic:claude-sonnet-5');
+    expect(setA.selectedModelKey).toBe('anthropic:claude-sonnet-5');
     expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-a']?.modelKey).toBe(
-      'anthropic:claude-sonnet-4-6'
+      'anthropic:claude-sonnet-5'
     );
 
     await chat.switchWorkspace('/tmp/workspace-b');
-    await chat.selectModel('anthropic:claude-opus-4-7');
-    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-b']?.modelKey).toBe(
-      'anthropic:claude-opus-4-7'
-    );
+    await chat.selectModel('anthropic:claude-opus-5');
+    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-b']?.modelKey).toBe('anthropic:claude-opus-5');
 
     const backToA = await chat.switchWorkspace('/tmp/workspace-a');
-    expect(backToA.status?.selectedModelKey).toBe('anthropic:claude-sonnet-4-6');
+    expect(backToA.status?.selectedModelKey).toBe('anthropic:claude-sonnet-5');
   });
 
   it('refuses to swap models while a response is streaming', async () => {
@@ -91,7 +89,7 @@ describe('model and thinking level', () => {
     const session = getFakeSession(tab.id);
     await session?.awaitPromptCall();
 
-    const blocked = await chat.selectModel('anthropic:claude-sonnet-4-6');
+    const blocked = await chat.selectModel('anthropic:claude-sonnet-5');
     expect(blocked.ready).toBe(false);
     expect(blocked.error).toBe('Stop the current response before changing models.');
 
@@ -116,8 +114,8 @@ describe('model and thinking level', () => {
           reasoning: true,
           input: ['text'],
           contextWindow: 200000,
-          id: 'gpt-5.5',
-          name: 'GPT 5.5',
+          id: 'gpt-5.6-sol',
+          name: 'GPT 5.6 Sol',
           provider: 'openai'
         }
       ]
@@ -126,8 +124,8 @@ describe('model and thinking level', () => {
     const state = await chat.getMobileModelsState();
     expect(state.models).toEqual([
       {
-        key: 'openai:gpt-5.5',
-        name: 'GPT 5.5',
+        key: 'openai:gpt-5.6-sol',
+        name: 'GPT 5.6 Sol',
         provider: 'openai',
         reasoning: true,
         effortLevels: ['low', 'medium', 'high']
