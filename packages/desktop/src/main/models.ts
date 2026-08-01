@@ -18,8 +18,7 @@ export const models: readonly AllowedModel[] = [
   { provider: 'openai', id: 'gpt-5.6-luna', score: { taste: 5, intelligence: 5, affordability: 9 } },
   { provider: 'anthropic', id: 'claude-opus-5', score: { taste: 9, intelligence: 9, affordability: 3 } },
   { provider: 'anthropic', id: 'claude-fable-5', score: { taste: 9, intelligence: 9, affordability: 3 } },
-  { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 5, intelligence: 5, affordability: 9 } },
-  { provider: 'anthropic', id: 'claude-haiku-4-5', score: { taste: 4, intelligence: 4, affordability: 10 } }
+  { provider: 'anthropic', id: 'claude-sonnet-5', score: { taste: 5, intelligence: 5, affordability: 9 } }
 ] as const;
 
 const scoresById = new Map(models.map((model) => [model.id, model.score]));
