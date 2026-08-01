@@ -125,7 +125,8 @@ const createParameters = {
         type: {
           type: 'string',
           enum: ['local', 'worktree'],
-          description: 'local: the current workspace. worktree: an isolated branch and directory.'
+          description:
+            'local: the current workspace. worktree: an isolated, fully managed branch and directory created under the app data folder.'
         },
         branch: {
           type: 'string',
@@ -171,7 +172,8 @@ export const createSessionTools = ({ sessions }: { sessions: SessionController }
     name: 'create_session',
     label: 'create session',
     parameters: createParameters,
-    description: 'Start a new parallel session for a task. It runs in the background and does not take focus.',
+    description:
+      'Start a new parallel session for a task. It runs in the background and does not take focus. To create a git worktree, always use this with environment.type "worktree" instead of running git worktree add yourself, so the worktree stays managed under the app data folder.',
     promptSnippet: 'Start a parallel session, optionally isolated in a worktree.',
     execute: (_toolCallId, args) => runCreateSession(sessions, args)
   }),
