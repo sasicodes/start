@@ -1,8 +1,8 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index 099e74e87220ed9c57990771d0466416184d4304..5a54872cd99463df3b7aeb40340a24e60d3a6c9a 100644
+index 324d30a..78864f9 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -53,7 +53,16 @@ const VIRTUAL_MODULES = {
+@@ -54,7 +54,16 @@ const VIRTUAL_MODULES = {
      "@mariozechner/pi-ai/providers/all": _bundledPiAiProviders,
      "@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
  };
@@ -17,10 +17,10 @@ index 099e74e87220ed9c57990771d0466416184d4304..5a54872cd99463df3b7aeb40340a24e6
 +    }
 +    throw new Error(`Unable to resolve ${packageName}/${packageRelativePath}.`);
 +};
+ const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
  /**
-  * Get aliases for jiti (used in Node.js/development mode).
-  * In Bun binary mode, virtualModules is used instead.
-@@ -68,22 +77,22 @@ function getAliases() {
+  * Get aliases for jiti (used in built Node.js mode).
+@@ -70,22 +79,22 @@ function getAliases() {
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");
