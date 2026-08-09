@@ -229,6 +229,7 @@ interface ManagedWorktree {
 }
 
 type MobileSessionChangeHandler = (change: MobileSessionChange) => void;
+type WorkChangeHandler = () => void;
 
 type ModelServicesState =
   | { status: 'loading' }
@@ -288,6 +289,7 @@ export class ChatService {
   private readonly worktreeRepoCache = new Map<string, string>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
   private mobileSessionChangeHandler: MobileSessionChangeHandler = () => {};
+  private workChangeHandler: WorkChangeHandler = () => {};
 
   constructor() {
     this.initPromise = this.initializeModels();
@@ -334,6 +336,10 @@ export class ChatService {
 
   setMobileSessionChangeHandler(handler: MobileSessionChangeHandler): void {
     this.mobileSessionChangeHandler = handler;
+  }
+
+  setWorkChangeHandler(handler: WorkChangeHandler): void {
+    this.workChangeHandler = handler;
   }
 
   async getStatus(): Promise<ChatStatus> {
@@ -1133,7 +1139,10 @@ export class ChatService {
 
   private syncSessionRuntime(session: AgentSession): void {
     const runtimeState = this.runtimeStateForSession(session);
-    runtimeState.isGenerating = Boolean(runtimeState.isGenerating || session.isStreaming || session.isBashRunning);
+    this.setGenerating(
+      runtimeState,
+      Boolean(runtimeState.isGenerating || session.isStreaming || session.isBashRunning)
+    );
     runtimeState.queueDeliveryCandidates = [];
   }
 
@@ -1382,7 +1391,7 @@ export class ChatService {
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
 
       const state = runtimeState;
-      state.isGenerating = true;
+      this.setGenerating(state, true);
       startedGeneration = true;
       sendAbortSequence = state.abortSequence;
       const images = await this.resolveAttachments(attachments);
@@ -1537,7 +1546,7 @@ export class ChatService {
       return { ok: false, error: message };
     } finally {
       if (runtimeState && startedGeneration) {
-        runtimeState.isGenerating = false;
+        this.setGenerating(runtimeState, false);
         notifyMobileSessionChange(true);
       }
     }
@@ -1555,7 +1564,7 @@ export class ChatService {
         return { ok: false, error: 'A response is already running.' };
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
 
-      runtimeState.isGenerating = true;
+      this.setGenerating(runtimeState, true);
 
       const result = await session.executeBash(
         text,
@@ -1577,7 +1586,7 @@ export class ChatService {
       const message = error instanceof Error ? error.message : 'Command failed.';
       return { ok: false, error: message };
     } finally {
-      if (runtimeState) runtimeState.isGenerating = false;
+      if (runtimeState) this.setGenerating(runtimeState, false);
     }
   }
 
@@ -1742,6 +1751,13 @@ export class ChatService {
   workInProgress(): boolean {
     if (this.session && this.sessionIsGenerating(this.session)) return true;
     return [...this.backgroundSessions.values()].some((session) => this.sessionIsGenerating(session));
+  }
+
+  private setGenerating(runtimeState: SessionRuntimeState, isGenerating: boolean): void {
+    if (runtimeState.isGenerating === isGenerating) return;
+
+    runtimeState.isGenerating = isGenerating;
+    this.workChangeHandler();
   }
 
   private deleteRuntimeState(sessionId: string): void {

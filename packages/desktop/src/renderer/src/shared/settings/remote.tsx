@@ -1,7 +1,16 @@
 import { RELAY_FEEDBACK_URL } from '@renderer/constants';
+import { keepAwake, updateKeepAwake } from '@renderer/shared/settings/state';
+import { Toggle } from '@renderer/ui/toggle';
 
 export const Remote = () => (
   <div class="mt-5 grid gap-6">
+    <div class="flex items-center justify-between gap-4">
+      <div class="grid gap-1">
+        <h2 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h2>
+        <p class="m-0 text-xs leading-5 text-soft">Prevent sleep while agents are active and plugged in.</p>
+      </div>
+      <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
+    </div>
     <div class="grid gap-1">
       <h2 class="m-0 text-sm leading-5 font-medium text-ink">Remote access</h2>
       <p class="m-0 text-xs leading-5 text-soft">

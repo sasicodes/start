@@ -1,9 +1,7 @@
 import type { AppSettingsResult, MobileRelaySettings } from '@preload/index';
 import { RELAY_SETUP_URL } from '@renderer/constants';
 import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
-import { keepAwake, updateKeepAwake } from '@renderer/shared/settings/state';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
-import { Toggle } from '@renderer/ui/toggle';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -263,15 +261,6 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
             </button>
           </div>
         </>
-      )}
-      {qrAvailable && (
-        <div class="flex items-center justify-between gap-4">
-          <div class="grid gap-1">
-            <h3 class="m-0 text-sm leading-5 font-medium text-ink">Keep this system awake</h3>
-            <p class="m-0 text-xs leading-5 text-soft">Prevent sleep when plugged in and remote access is enabled.</p>
-          </div>
-          <Toggle checked={keepAwake.value} onChange={updateKeepAwake} label="Keep this system awake" />
-        </div>
       )}
       {qrOpen && <PairingQrDialog code={relayCode} settings={settings} onClose={() => setQrOpen(false)} />}
     </div>
