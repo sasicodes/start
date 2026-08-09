@@ -250,10 +250,12 @@ const refreshStayAwake = () => {
       keepAwake: appSettings?.keepAwake ?? defaultAppSettings.keepAwake,
       onBattery: powerMonitor.isOnBatteryPower(),
       relayActive: desktopRelay.isActive,
-      mobileConnected: desktopRelay.hasPairedMobile
+      workInProgress: chat.workInProgress()
     })
   );
 };
+
+chat.setWorkChangeHandler(refreshStayAwake);
 
 const applyBackgroundWork = () => {
   if (getMainWindow()) {

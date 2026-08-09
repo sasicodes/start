@@ -3,28 +3,23 @@ import electron from 'electron';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 describe('shouldStayAwake', () => {
-  it('stays awake only when enabled, relay active, a mobile is connected, and on AC power', () => {
-    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: true, mobileConnected: true })).toBe(true);
+  it('stays awake on AC power while an agent is working', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: false, workInProgress: true })).toBe(true);
   });
 
-  it('never stays awake while the relay is inactive', () => {
-    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: false, mobileConnected: true })).toBe(
+  it('stays awake on AC power while remote access is active', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: true, workInProgress: false })).toBe(true);
+  });
+
+  it('allows sleep without active work or remote access', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: false, workInProgress: false })).toBe(
       false
     );
   });
 
-  it('never stays awake without a connected mobile', () => {
-    expect(shouldStayAwake({ keepAwake: true, onBattery: false, relayActive: true, mobileConnected: false })).toBe(
-      false
-    );
-  });
-
-  it('never stays awake on battery', () => {
-    expect(shouldStayAwake({ keepAwake: true, onBattery: true, relayActive: true, mobileConnected: true })).toBe(false);
-  });
-
-  it('never stays awake when keep-awake is off', () => {
-    expect(shouldStayAwake({ keepAwake: false, onBattery: false, relayActive: true, mobileConnected: true })).toBe(
+  it('allows sleep on battery or when disabled', () => {
+    expect(shouldStayAwake({ keepAwake: true, onBattery: true, relayActive: true, workInProgress: true })).toBe(false);
+    expect(shouldStayAwake({ keepAwake: false, onBattery: false, relayActive: true, workInProgress: true })).toBe(
       false
     );
   });
