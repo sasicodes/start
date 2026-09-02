@@ -28,6 +28,7 @@ vi.mock('electron', async () => {
     shell: fake.shell,
     dialog: fake.dialog,
     clipboard: fake.clipboard,
+    ClipboardItem: fake.FakeClipboardItem,
     nativeImage: fake.nativeImage,
     BrowserWindow: fake.default.BrowserWindow,
     WebContentsView: fake.default.WebContentsView

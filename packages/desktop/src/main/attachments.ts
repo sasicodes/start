@@ -201,13 +201,30 @@ export const stripAttachmentData = (attachment: PreparedImageAttachment): ImageA
   previewUrl: attachment.previewUrl
 });
 
+const clipboardImagePng = async () => {
+  const items = await clipboard.read().catch(() => []);
+
+  for (const item of items) {
+    const type = item.types.find((entry) => entry.startsWith('image/'));
+    if (!type) continue;
+
+    const blob = (await item.getType(type)) as Blob;
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    if (type === 'image/png') return buffer;
+
+    const image = nativeImage.createFromBuffer(buffer);
+    if (!image.isEmpty()) return image.toPNG();
+  }
+
+  return null;
+};
+
 export const prepareClipboardImage = async () => {
-  const image = clipboard.readImage();
-  if (image.isEmpty()) return null;
+  const buffer = await clipboardImagePng();
+  if (!buffer) return null;
 
   const name = `clipboard-${randomUUID()}.png`;
   const filePath = await tempAttachmentPath(name);
-  const buffer = image.toPNG();
   await writeFile(filePath, buffer);
   return prepareImageBuffer(filePath, buffer, 'image/png');
 };

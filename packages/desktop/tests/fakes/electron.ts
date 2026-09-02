@@ -32,9 +32,25 @@ export const shell = {
   openExternal: async (_url: string) => {}
 };
 
+export class FakeClipboardItem {
+  readonly types: string[];
+  private readonly entries: Record<string, Blob>;
+
+  constructor(entries: Record<string, Blob>) {
+    this.entries = entries;
+    this.types = Object.keys(entries);
+  }
+
+  async getType(type: string): Promise<Blob> {
+    const blob = this.entries[type];
+    if (!blob) throw new Error(`Type ${type} not found in clipboard item.`);
+    return blob;
+  }
+}
+
 export const clipboard = {
-  writeImage: (_image: unknown) => {},
-  readImage: () => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })
+  read: async (): Promise<FakeClipboardItem[]> => [],
+  write: async (_items: FakeClipboardItem[]) => {}
 };
 
 interface FakeNativeImage {
