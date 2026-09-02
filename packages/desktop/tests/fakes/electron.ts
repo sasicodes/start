@@ -48,8 +48,14 @@ export class FakeClipboardItem {
   }
 }
 
+let clipboardItems: FakeClipboardItem[] = [];
+
+export const setClipboardItems = (items: FakeClipboardItem[]) => {
+  clipboardItems = items;
+};
+
 export const clipboard = {
-  read: async (): Promise<FakeClipboardItem[]> => [],
+  read: async (): Promise<FakeClipboardItem[]> => clipboardItems,
   write: async (_items: FakeClipboardItem[]) => {}
 };
 
@@ -109,6 +115,7 @@ export const nativeImage = {
 
 export const app = {
   isPackaged: false,
+  isReady: () => false,
   getVersion: () => '0.0.0-test',
   quit: () => {},
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
