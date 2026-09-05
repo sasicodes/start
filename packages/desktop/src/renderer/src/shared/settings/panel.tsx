@@ -16,7 +16,7 @@ interface SettingsProps {
   onTabChange: (tab: SettingsTab) => void;
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<boolean>;
   onSolidWindowBackgroundChange: (enabled: boolean) => Promise<AppSettingsResult>;
 }
 

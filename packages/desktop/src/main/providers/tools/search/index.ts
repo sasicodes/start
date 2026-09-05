@@ -85,7 +85,7 @@ const maxResultsValue = (value: unknown) => {
   throw new Error(`Web search max_results must be an integer from ${minResultCount} to ${maxResultCount}.`);
 };
 
-export const createWebSearchTools = () => [
+export const createWebSearchTools = (readApiKey?: () => Promise<string>) => [
   defineTool({
     label: 'web',
     name: 'web_search',
@@ -105,8 +105,11 @@ export const createWebSearchTools = () => [
       onUpdate?.(toolResult(`Searching the web for "${searchQuery}".`, { query: searchQuery }));
 
       try {
+        const apiKey = readApiKey ? (await readApiKey()).trim() : '';
+        if (apiKey.includes('${')) throw new Error('Invalid web search credential.');
+        const server = apiKey ? { ...searchServer, headers: { 'x-api-key': apiKey } } : searchServer;
         const result = await callServerTool(
-          searchServer,
+          server,
           searchToolName,
           { query: searchQuery, numResults: maxResults },
           {
@@ -115,7 +118,8 @@ export const createWebSearchTools = () => [
           }
         );
         const failed = result.isError === true;
-        return toolResult(mcpOutputText(result), {
+        const text = mcpOutputText(result);
+        return toolResult(apiKey ? text.replaceAll(apiKey, '[redacted]') : text, {
           query: searchQuery,
           ...(failed ? { error: 'search_failed' } : {})
         });

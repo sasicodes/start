@@ -1,21 +1,23 @@
 import type { ProviderAuthStatus, ProviderUsage } from '@preload/index';
 import { providerUsage } from '@renderer/shared/settings/state';
 import { usageLabel } from '@renderer/shared/settings/usage';
-import { AnthropicIcon, ChevronDownIcon, OpenAIIcon, UsageIcon } from '@renderer/ui/icons';
-import { Tooltip } from '@renderer/ui/tooltip';
+import { AnthropicIcon, ChevronDownIcon, ExaIcon, OpenAIIcon, UsageIcon } from '@renderer/ui/icons';
 import { closeMotionTransition, openMotionTransition } from '@renderer/ui/motion';
+import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'preact/hooks';
 
-type ProviderKey = 'anthropic' | 'openai';
+type ProviderKey = 'exa' | 'anthropic' | 'openai';
 type AccordionKey = '' | ProviderKey;
 
-const providers: {
-  key: ProviderKey;
+interface ProviderDefinition {
   name: string;
+  key: ProviderKey;
   supportsSubscription: boolean;
-}[] = [
+}
+
+const providers: ProviderDefinition[] = [
   {
     key: 'openai',
     name: 'OpenAI',
@@ -25,6 +27,11 @@ const providers: {
     key: 'anthropic',
     name: 'Anthropic',
     supportsSubscription: true
+  },
+  {
+    key: 'exa',
+    name: 'Exa',
+    supportsSubscription: false
   }
 ];
 
@@ -32,7 +39,7 @@ interface ProvidersProps {
   providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<boolean>;
 }
 
 interface ProviderHeadingProps {
@@ -48,6 +55,7 @@ const providerStatus = (providers: ProviderAuthStatus[], provider: ProviderKey) 
 
 const ProviderIcon = ({ provider }: { provider: ProviderKey }) => {
   if (provider === 'openai') return <OpenAIIcon class="size-5" />;
+  if (provider === 'exa') return <ExaIcon class="size-4" />;
   return <AnthropicIcon class="size-5" />;
 };
 
@@ -95,14 +103,17 @@ export const Providers = ({
   providers: authProviders
 }: ProvidersProps) => {
   const [openProvider, setOpenProvider] = useState<AccordionKey>('');
-  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ anthropic: '', openai: '' });
+  const [failedProvider, setFailedProvider] = useState<AccordionKey>('');
+  const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ exa: '', openai: '', anthropic: '' });
 
   const toggleProvider = (provider: AccordionKey) => {
     setOpenProvider((current) => (current !== provider ? provider : ''));
   };
 
   const saveApiKey = async (provider: ProviderKey) => {
-    await onSaveApiKey(provider, apiKeys[provider]);
+    const saved = await onSaveApiKey(provider, apiKeys[provider]);
+    setFailedProvider(!saved ? provider : '');
+    if (!saved) return;
     setApiKeys((current) => ({ ...current, [provider]: '' }));
     setOpenProvider('');
   };
@@ -128,7 +139,7 @@ export const Providers = ({
         const authDetail = connected ? connectionDetail(auth?.label) : '';
         const expandable = !hasCredentials;
         const open = expandable && openProvider === provider.key;
-        const usage = connected ? providerUsage.value.find((item) => item.id === provider.key) : undefined;
+        const usage = providerUsage.value.find((item) => connected && item.id === provider.key);
 
         return (
           <div class={tw(index > 0 ? 'pt-4 pb-4' : 'pb-4')} key={provider.key}>
@@ -163,7 +174,7 @@ export const Providers = ({
                 />
                 <button
                   type="button"
-                  onClick={() => onDisconnectProvider(provider.key).catch(() => {})}
+                  onClick={() => onDisconnectProvider(provider.key)}
                   class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
                 >
                   Disconnect
@@ -186,7 +197,7 @@ export const Providers = ({
                         <div class="rounded-full border border-line bg-composer p-1">
                           <button
                             type="button"
-                            onClick={() => loginSubscription(provider.key).catch(() => {})}
+                            onClick={() => loginSubscription(provider.key)}
                             class="h-8 w-full rounded-full border-0 bg-transparent px-3 text-center text-sm text-ink transition-opacity duration-100 ease-in hover:opacity-80"
                           >
                             Log in with {provider.name}
@@ -206,12 +217,17 @@ export const Providers = ({
                       <button
                         type="button"
                         disabled={!hasDraftKey}
-                        onClick={() => saveApiKey(provider.key).catch(() => {})}
+                        onClick={() => saveApiKey(provider.key)}
                         class="absolute top-1 right-1 h-8 rounded-full border-0 bg-control px-4 text-sm font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80 disabled:opacity-55"
                       >
                         Save
                       </button>
                     </div>
+                    {failedProvider === provider.key && (
+                      <p role="alert" class="m-0 px-3 text-xs text-danger">
+                        Could not save the API key. Try again.
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               )}

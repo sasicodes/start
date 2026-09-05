@@ -1,10 +1,14 @@
+import type { GoalStatus } from '../shared/goal/types.js';
 export type EffortLevel = 'high' | 'low' | 'xhigh' | 'medium';
 export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
 export type ProviderKey = 'openai' | 'anthropic';
 
 export const effortLevels = ['low', 'medium', 'high', 'xhigh'] as const satisfies readonly EffortLevel[];
 
+export type { GoalAction, GoalStatus } from '../shared/goal/types.js';
+
 export type ChatStatus = {
+  goal?: GoalStatus;
   ready: boolean;
   error?: string;
   sessionId?: string;

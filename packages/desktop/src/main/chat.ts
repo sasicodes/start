@@ -32,6 +32,7 @@ import { closeStartDb, openStartDb } from '@main/db';
 import { imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
+import { createGoalController, type GoalController } from '@main/goal/controller';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -88,6 +89,7 @@ import {
   type CommandResult,
   type EffortLevel,
   effortLevels,
+  type GoalAction,
   type HistoryTurn,
   type ImageAttachment,
   type MobileModelsState,
@@ -125,6 +127,8 @@ import {
 } from '@main/workspace/worktree';
 import type { WebContents } from 'electron';
 import electron from 'electron';
+import * as v from 'valibot';
+import { parseUserMentions } from '../shared/mentions/utils.js';
 
 const { shell } = electron;
 
@@ -267,6 +271,7 @@ const createSessionRuntimeState = (): SessionRuntimeState => ({
 });
 
 export class ChatService {
+  private readonly goals = new WeakMap<SessionManager, GoalController>();
   private activeSessionId = '';
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
@@ -335,6 +340,14 @@ export class ChatService {
     return this.modelServicesState.runtime;
   }
 
+  private goalForSession(manager: SessionManager): GoalController {
+    const existing = this.goals.get(manager);
+    if (existing) return existing;
+    const goal = createGoalController(manager, () => sendToRendererWindows('chat:status-changed'));
+    this.goals.set(manager, goal);
+    return goal;
+  }
+
   private async sessionCustomTools(sessionId: string, workspacePath: string) {
     return [
       ...createStartCustomTools(this.subagentToolsOptions(sessionId, workspacePath)),
@@ -357,10 +370,14 @@ export class ChatService {
 
   private chatStatus(): ChatStatus {
     const model = this.pickModel();
+    const sessionId = this.reportableActiveSessionId();
+    const goal = this.session ? this.goalForSession(this.session.sessionManager).get() : null;
 
     if (!model) {
       return {
         ready: false,
+        ...(goal ? { goal } : {}),
+        ...(sessionId ? { sessionId } : {}),
         workspacePath: this.workspaceCwd,
         thinkingLevel: this.selectedThinkingLevel,
         error:
@@ -368,11 +385,11 @@ export class ChatService {
       };
     }
 
-    const sessionId = this.reportableActiveSessionId();
     const percent = this.sessionContextPercent(model.contextWindow);
 
     return {
       ready: true,
+      ...(goal ? { goal } : {}),
       workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       isGenerating: Boolean(this.session && this.sessionIsGenerating(this.session)),
@@ -599,7 +616,7 @@ export class ChatService {
       const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
 
       const [resourceLoader, customTools] = await Promise.all([
-        createStartResourceLoader(workspacePath),
+        createStartResourceLoader(workspacePath, this.goalForSession(sessionManager)),
         this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
       ]);
       const { session } = await createAgentSession({
@@ -732,7 +749,7 @@ export class ChatService {
 
     const sessionManager = SessionManager.create(workspacePath);
     const [resourceLoader, customTools] = await Promise.all([
-      createStartResourceLoader(workspacePath),
+      createStartResourceLoader(workspacePath, this.goalForSession(sessionManager)),
       this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
     ]);
     const { session } = await createAgentSession({
@@ -835,6 +852,7 @@ export class ChatService {
     const activeSession = this.activeSessionId === id ? this.session : null;
     const closingSession = activeSession ?? this.backgroundSessions.get(id);
     if (closingSession) {
+      this.goalForSession(closingSession.sessionManager).pause('Chat closed.');
       const runtimeState = this.runtimeStateForSession(closingSession);
       runtimeState.abortSequence += 1;
       delete runtimeState.liveAssistantTurn;
@@ -879,6 +897,7 @@ export class ChatService {
       runtimeState.abortSequence += 1;
       delete runtimeState.liveAssistantTurn;
     }
+    if (session) this.goalForSession(session.sessionManager).pause('Stopped.');
     this.pauseQueuedMessages(session ?? null, runtimeState);
     session?.abortBash();
     await session?.abort();
@@ -1162,8 +1181,18 @@ export class ChatService {
     if (fresh) await this.authRefreshPromise?.catch(() => {});
     await this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
+    const hasSearchKey = Boolean(await this.webSearchApiKey());
+    const search: ProviderAuthStatus = {
+      key: 'exa',
+      name: 'Exa',
+      connected: hasSearchKey,
+      hasCredentials: hasSearchKey,
+      kind: hasSearchKey ? 'api_key' : 'none',
+      label: hasSearchKey ? 'Connected via API key' : '50 free searches/day'
+    };
 
     return Promise.all([
+      search,
       this.providerAuthStatus(
         'openai',
         'OpenAI',
@@ -1200,6 +1229,12 @@ export class ChatService {
     const cleanProvider = provider.trim().toLowerCase();
     const cleanApiKey = apiKey.trim();
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
+    if (
+      cleanProvider === 'exa' &&
+      (!v.is(v.pipe(v.string(), v.maxLength(4096), v.regex(/^[\x21-\x7e]+$/u)), cleanApiKey) ||
+        cleanApiKey.includes('${'))
+    )
+      throw new Error('Enter a valid Exa API key.');
 
     await this.ensureReady();
     await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
@@ -1212,9 +1247,13 @@ export class ChatService {
     if (!cleanProvider) return this.getAuthProviders();
 
     await this.ensureReady();
-    for (const slot of providerAuthSlots(cleanProvider)) {
-      await this.modelRuntime.removeRuntimeApiKey(slot);
-      await this.modelRuntime.logout(slot);
+    if (cleanProvider === 'exa') {
+      await this.credentials.delete('exa');
+    } else {
+      for (const slot of providerAuthSlots(cleanProvider)) {
+        await this.modelRuntime.removeRuntimeApiKey(slot);
+        await this.modelRuntime.logout(slot);
+      }
     }
 
     return this.getAuthProviders(true);
@@ -1377,8 +1416,81 @@ export class ChatService {
   }
 
   async send(prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
-    if (!prompt.trim()) return { ok: false, error: 'Prompt is empty.' };
-    return this.generate(await this.getSession(), this.workspaceCwd, prompt, attachments, webContents);
+    const text = prompt.trim();
+    if (!text) return { ok: false, error: 'Prompt is empty.' };
+    const session = await this.getSession();
+    try {
+      this.startMentionedGoal(session, text);
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
+    }
+    return this.generate(session, this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  private startMentionedGoal(session: AgentSession, prompt: string): void {
+    const parts = parseUserMentions(prompt);
+    if (!parts.some((part) => part.kind === 'mention' && part.name === 'goal')) return;
+    const goal = this.goalForSession(session.sessionManager);
+    const status = goal.get()?.status;
+    if (status === 'active' || status === 'paused') return;
+    let objective = prompt;
+    for (const part of parts.reverse()) {
+      if (part.kind !== 'mention' || part.name === 'browser') continue;
+      const following = objective.slice(part.start + part.text.length).replace(/^[ \t]+/u, '');
+      objective = objective.slice(0, part.start) + following;
+    }
+    if (!objective.trim()) throw new Error('Add an objective after @Goal.');
+    if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before starting a goal.');
+    goal.start(objective);
+  }
+
+  async updateGoal(sessionId: string, objective: string): Promise<ChatStatus> {
+    const session = this.session;
+    if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
+    try {
+      if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before editing the goal.');
+      this.goalForSession(session.sessionManager).update(objective);
+      return this.chatStatus();
+    } catch (error) {
+      return {
+        ...this.chatStatus(),
+        ready: false,
+        error: error instanceof Error ? error.message : 'Goal could not be updated.'
+      };
+    }
+  }
+
+  async controlGoal(sessionId: string, action: GoalAction, webContents?: WebContents): Promise<ChatStatus> {
+    const session = this.session;
+    if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
+    const goal = this.goalForSession(session.sessionManager);
+    try {
+      if (action === 'resume') {
+        if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before resuming.');
+        goal.resume();
+        const prompt = goal.continuation();
+        const turn = { id: randomUUID(), text: prompt };
+        if (webContents) webContents.send('chat:queued-turn-start', turn);
+        else sendToRendererWindows('chat:queued-turn-start', turn);
+        this.generate(session, this.workspaceCwd, prompt, [], webContents);
+      } else {
+        const status = goal.get()?.status;
+        if (status !== 'active') {
+          if (action === 'cancel' && status === 'paused') goal.cancel();
+          return this.chatStatus();
+        }
+        if (action === 'cancel') goal.cancel();
+        else goal.pause('Paused by you.');
+        await this.abort();
+      }
+      return this.chatStatus();
+    } catch (error) {
+      return {
+        ...this.chatStatus(),
+        ready: false,
+        error: error instanceof Error ? error.message : 'Goal could not be updated.'
+      };
+    }
   }
 
   private async generate(
@@ -1392,6 +1504,7 @@ export class ChatService {
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     let endError = '';
     const activeSession = session;
+    const goal = this.goalForSession(session.sessionManager);
     let runtimeState: SessionRuntimeState | null = null;
     let sendAbortSequence = 0;
     let startedGeneration = false;
@@ -1417,6 +1530,7 @@ export class ChatService {
       startedGeneration = true;
       sendAbortSequence = state.abortSequence;
       const images = await this.resolveAttachments(attachments);
+      if (state.abortSequence !== sendAbortSequence) throw new Error('Request stopped.');
       this.resetLiveAssistantTurn(session, state);
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
@@ -1485,18 +1599,35 @@ export class ChatService {
         if (thought) deltas.push('thinking', thought, active);
         if (renderedEvent || delta || thought) notifyMobileSessionChange();
 
-        const error = agentEndError(event);
-        if (error) endError = error;
+        if (event.type === 'agent_end') endError = agentEndError(event) ?? '';
       });
 
-      if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
-
       try {
+        if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
+        if (state.abortSequence !== sendAbortSequence) throw new Error('Request stopped.');
+        if (goal.get()?.status === 'active') goal.beginIteration();
         if (images.length > 0) {
           await session.prompt(text, { images });
         } else {
           await session.prompt(text);
         }
+        while (!endError && state.abortSequence === sendAbortSequence && goal.get()?.status === 'active') {
+          if (state.editingQueuedMessageId) {
+            goal.pause('A queued message is being edited.');
+            break;
+          }
+          if (!goal.beginIteration()) break;
+          deltas.flush();
+          const continuation = goal.continuation();
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            const turn = { id: randomUUID(), text: continuation };
+            if (webContents) webContents.send('chat:queued-turn-start', turn);
+            else sendToRendererWindows('chat:queued-turn-start', turn);
+          }
+          this.resetLiveAssistantTurn(session, state);
+          await session.prompt(continuation);
+        }
+        if (endError) goal.pause('The model returned an error.');
       } finally {
         unsubscribe();
         deltas.flush();
@@ -1556,6 +1687,7 @@ export class ChatService {
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
+      goal.pause('The request failed.');
       const message = error instanceof Error ? error.message : 'Chat failed.';
       if (runtimeState) delete runtimeState.liveAssistantTurn;
       if (this.isActiveSession(sessionId, workspacePath)) {
@@ -1650,7 +1782,7 @@ export class ChatService {
     if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
       return this.visibleQueuedMessages();
 
-    const canSteerQueuedMessage = runtimeState.isGenerating && session.isStreaming;
+    const canSteerQueuedMessage = runtimeState.isGenerating;
     if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
 
     runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
@@ -1737,6 +1869,7 @@ export class ChatService {
   async abort(): Promise<void> {
     const runtimeState = this.activeRuntimeState();
     if (runtimeState) runtimeState.abortSequence += 1;
+    if (this.session) this.goalForSession(this.session.sessionManager).pause('Stopped.');
     this.pauseQueuedMessages(this.session, runtimeState);
     this.session?.abortBash();
     await this.session?.abort();
@@ -1760,9 +1893,13 @@ export class ChatService {
     this.sessionOpenSequence += 1;
     this.authInputReject?.(new Error('Chat service disposed.'));
     this.clearSubscriptionAuthInput();
+    if (this.session) this.goalForSession(this.session.sessionManager).pause('App closed.');
     this.session?.dispose();
     this.session = null;
-    for (const session of this.backgroundSessions.values()) session.dispose();
+    for (const session of this.backgroundSessions.values()) {
+      this.goalForSession(session.sessionManager).pause('App closed.');
+      session.dispose();
+    }
     this.liveTitles.clear();
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
@@ -1930,12 +2067,12 @@ export class ChatService {
     runtimeState: SessionRuntimeState,
     webContents?: WebContents
   ): Promise<SendResult> {
-    if (!session.isStreaming) return { ok: false, error: 'The response is still starting.' };
-
     const id = randomUUID();
+    const abortSequence = runtimeState.abortSequence;
 
     try {
       const images = await this.resolveAttachments(attachments);
+      if (runtimeState.abortSequence !== abortSequence) return { ok: false, error: 'Request stopped.' };
       const message: PendingQueuedMessage = {
         id,
         kind: 'followUp',
@@ -2297,7 +2434,7 @@ export class ChatService {
     const cwd = this.workspaceCwd;
     const sessionManager = this.shouldCreateSession ? SessionManager.create(cwd) : SessionManager.continueRecent(cwd);
     const [resourceLoader, customTools] = await Promise.all([
-      createStartResourceLoader(cwd),
+      createStartResourceLoader(cwd, this.goalForSession(sessionManager)),
       this.sessionCustomTools(sessionManager.getSessionId(), cwd)
     ]);
     const { session } = await createAgentSession({
@@ -2324,6 +2461,7 @@ export class ChatService {
     const allocator = this.subagentNameAllocator(sessionId);
     const base = {
       cwd: () => cwd,
+      webSearchApiKey: () => this.webSearchApiKey(),
       nameAllocator: () => allocator,
       modelRuntime: this.modelRuntime,
       settingsManager: this.settingsManager,
@@ -2402,6 +2540,12 @@ export class ChatService {
     attachments: ImageAttachment[]
   ): Promise<SessionSummary> {
     const session = await this.createBackgroundSession(workspacePath);
+    try {
+      this.startMentionedGoal(session, prompt);
+    } catch (error) {
+      await this.closeTab(session.sessionManager.getSessionId());
+      throw error;
+    }
     this.generate(session, workspacePath, prompt, attachments).catch(() => {});
     return {
       workspacePath,
@@ -2605,6 +2749,11 @@ export class ChatService {
       }
     };
     this.persistState({ workspaceModelDefaults });
+  }
+
+  private async webSearchApiKey(): Promise<string> {
+    const credential = await this.credentials.read('exa');
+    return credential?.type === 'api_key' ? (credential.key ?? '') : '';
   }
 
   private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {

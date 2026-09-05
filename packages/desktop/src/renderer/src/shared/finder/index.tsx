@@ -1,6 +1,6 @@
 import { Attached } from '@renderer/shared/composer/attached';
 import type { StaticFinderItem } from '@renderer/shared/finder/static';
-import { BrowserIcon, ComposeIcon, FolderIcon } from '@renderer/ui/icons';
+import { BrowserIcon, ComposeIcon, FolderIcon, GoalFilledIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useEffect, useRef } from 'preact/hooks';
 
@@ -36,13 +36,15 @@ interface FinderRowProps {
 }
 
 export const finderItemKey = (item: FinderItem) => {
-  if (item.type === 'browser' || item.type === 'new-session' || item.type === 'command') return item.key;
+  if (item.type === 'goal' || item.type === 'browser' || item.type === 'new-session' || item.type === 'command')
+    return item.key;
   return item.path;
 };
 
 export const finderItemId = (key: string) => `finder-${encodeURIComponent(key)}`;
 
 const FinderRowIcon = ({ type }: { type: FinderItem['type'] }) => {
+  if (type === 'goal') return <GoalFilledIcon class="size-4 shrink-0 text-soft" />;
   if (type === 'browser') return <BrowserIcon class="size-4 shrink-0 text-soft" />;
   if (type === 'new-session') return <ComposeIcon class="size-4 shrink-0 text-soft" />;
   if (type === 'directory') return <FolderIcon class="size-4 shrink-0 text-soft" />;

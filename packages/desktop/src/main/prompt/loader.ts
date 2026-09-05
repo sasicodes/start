@@ -2,6 +2,8 @@ import { homedir } from 'node:os';
 import { join, sep } from 'node:path';
 import { DefaultResourceLoader } from '@earendil-works/pi-coding-agent';
 import { baseDir } from '@main/application';
+import type { GoalController } from '@main/goal/controller';
+import { createGoalExtension } from '@main/goal/extension';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
 import { createToolController } from '@main/tools/create';
 
@@ -14,7 +16,7 @@ const startPromptsPrefix = `${startPromptsDir}${sep}`;
 const globalSkillsDir = join(homedir(), '.agents', 'skills');
 const systemPrompt = buildStartSystemPrompt(startPromptsDir, startSkillsDir);
 
-export const createStartResourceLoader = async (cwd: string) => {
+export const createStartResourceLoader = async (cwd: string, goal?: GoalController) => {
   const projectSkillsDir = join(cwd, '.agents', 'skills');
   const skillDirs = [startSkillsDir, globalSkillsDir, projectSkillsDir];
   const tools = createToolController(startToolsDir);
@@ -45,7 +47,11 @@ export const createStartResourceLoader = async (cwd: string) => {
     }),
     additionalSkillPaths: skillDirs,
     additionalPromptTemplatePaths: [startPromptsDir],
-    extensionFactories: [createStartPromptExtension(startPromptsDir, startSkillsDir), tools.extension]
+    extensionFactories: [
+      createStartPromptExtension(startPromptsDir, startSkillsDir),
+      tools.extension,
+      ...(goal ? [createGoalExtension(goal)] : [])
+    ]
   });
 
   await loader.reload();

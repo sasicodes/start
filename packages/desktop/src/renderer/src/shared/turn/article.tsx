@@ -1,6 +1,7 @@
 import { Markdown } from '@renderer/markdown';
 import { parseSkillBlock, skillCommandText } from '@renderer/shared/skill/parse';
 import { TurnActivity } from '@renderer/shared/turn/activity';
+import { UserText } from '@renderer/shared/turn/user-text';
 import { turnSignal } from '@renderer/state/chat';
 import { CopyButton } from '@renderer/ui/copy';
 import { formatTurnTime } from '@renderer/utils/time';
@@ -82,6 +83,12 @@ const TurnActions = memo(({ actionText = '', turn }: { turn: Turn; actionText?: 
   );
 });
 
+const TurnContent = ({ turn }: { turn: Turn }) => {
+  if (turn.role === 'user') return <UserText text={turn.text} />;
+  if (shouldUseMarkdown(turn)) return <Markdown source={turn.text} streaming={Boolean(turn.streaming)} />;
+  return fallbackText(turn);
+};
+
 const TurnBody = memo(({ turn }: { turn: Turn }) => {
   if (!shouldShowBody(turn)) return null;
 
@@ -105,7 +112,7 @@ const TurnBody = memo(({ turn }: { turn: Turn }) => {
         isTerminal && 'text-xs leading-5 text-ink'
       )}
     >
-      {useMarkdown ? <Markdown source={body.text} streaming={Boolean(body.streaming)} /> : fallbackText(body)}
+      <TurnContent turn={body} />
     </div>
   );
 });

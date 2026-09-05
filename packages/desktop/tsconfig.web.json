@@ -34,5 +34,5 @@
       "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"]
     }
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"]
+  "include": ["src/shared/**/*.ts", "src/renderer/**/*.ts", "src/renderer/**/*.tsx"]
 }

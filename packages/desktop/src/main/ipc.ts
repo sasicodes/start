@@ -70,6 +70,14 @@ export const registerChatIpc = ({
     return result;
   });
   ipcMain.handle('chat:status', () => chat.getStatus());
+  ipcMain.handle('chat:goal', (event, sessionId: unknown, action: unknown) => {
+    const parsed = v.parse(v.tuple([v.string(), v.picklist(['pause', 'resume', 'cancel'])]), [sessionId, action]);
+    return chat.controlGoal(parsed[0], parsed[1], event.sender as WebContents);
+  });
+  ipcMain.handle('chat:update-goal', (_event, sessionId: unknown, objective: unknown) => {
+    const parsed = v.parse(v.tuple([v.string(), v.string()]), [sessionId, objective]);
+    return chat.updateGoal(parsed[0], parsed[1]);
+  });
   ipcMain.handle('chat:command', async (event, command: string, excludeFromContext: boolean) => {
     const result = await chat.command(command, excludeFromContext, event.sender as WebContents);
     trackCommandSent(chat, {

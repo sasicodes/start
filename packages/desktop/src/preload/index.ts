@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { GoalAction, GoalStatus } from '../shared/goal/types.js';
 
 const { contextBridge, ipcRenderer, webUtils } = electron;
 
@@ -40,7 +41,10 @@ export interface CliInstallResult {
   status: CliInstallStatus;
 }
 
+export type { GoalAction, GoalStatus } from '../shared/goal/types.js';
+
 export interface ChatStatus {
+  goal?: GoalStatus;
   ready: boolean;
   error?: string;
   sessionId?: string;
@@ -499,6 +503,10 @@ const api = {
     models: (): Promise<{ error?: string; models: ModelOption[]; selectedModelKey?: string }> =>
       ipcRenderer.invoke('chat:models'),
     slashCommands: (): Promise<SlashCommandItem[]> => ipcRenderer.invoke('chat:slash-commands'),
+    controlGoal: (sessionId: string, action: GoalAction): Promise<ChatStatus> =>
+      ipcRenderer.invoke('chat:goal', sessionId, action),
+    updateGoal: (sessionId: string, objective: string): Promise<ChatStatus> =>
+      ipcRenderer.invoke('chat:update-goal', sessionId, objective),
     recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
       ipcRenderer.invoke('chat:sessions:page', options),
     archiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:archive', sessionId),

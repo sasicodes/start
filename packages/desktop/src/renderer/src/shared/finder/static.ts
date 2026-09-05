@@ -15,7 +15,14 @@ export interface NewSessionFinderItem {
   description: string;
 }
 
-export type StaticFinderItem = BrowserFinderItem | NewSessionFinderItem;
+export interface GoalFinderItem {
+  name: string;
+  key: 'goal';
+  type: 'goal';
+  description: string;
+}
+
+export type StaticFinderItem = GoalFinderItem | BrowserFinderItem | NewSessionFinderItem;
 export type FinderItems = StaticFinderItem | RootItem;
 
 export const browserFinderItem: BrowserFinderItem = {
@@ -32,7 +39,15 @@ export const newSessionFinderItem: NewSessionFinderItem = {
   description: 'Start as a new session'
 };
 
+export const goalFinderItem: GoalFinderItem = {
+  key: 'goal',
+  name: 'Goal',
+  type: 'goal',
+  description: 'Work toward a goal'
+};
+
 const staticFinderEntries: { item: StaticFinderItem; terms: string[] }[] = [
+  { item: goalFinderItem, terms: ['goal'] },
   { item: browserFinderItem, terms: ['browser', 'web'] },
   { item: newSessionFinderItem, terms: ['new', 'session'] }
 ];

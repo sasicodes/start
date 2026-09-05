@@ -15,9 +15,11 @@ import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { cancelQueueEdit, syncQueueEdit } from '@renderer/shared/composer/queue/state';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
+import { clearGoal, goalVersion, syncGoal } from '@renderer/shared/goal/state';
 import { createModelSelection } from '@renderer/shared/models/selection';
 import { refreshProviderUsage } from '@renderer/shared/settings/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { saveProviderKey } from '@renderer/shared/settings/utils/api-key';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
@@ -119,7 +121,8 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, [modelSelection]);
 
   const applyStatus = useCallback(
-    (nextStatus: ChatStatus, modelVersion = modelSelection.version()) => {
+    (nextStatus: ChatStatus, modelVersion = modelSelection.version(), currentGoalVersion = goalVersion()) => {
+      syncGoal(nextStatus, currentGoalVersion);
       primeWorkspaceFolders();
       setWorkspacePath(nextStatus.workspacePath);
       modelSelection.sync(nextStatus.selectedModelKey ?? '', modelVersion, nextStatus.thinkingLevel);
@@ -134,10 +137,11 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     const requestId = statusRequestRef.current + 1;
     statusRequestRef.current = requestId;
     const modelVersion = modelSelection.version();
+    const currentGoalVersion = goalVersion();
     const nextStatus = await window.pi.chat.status();
     if (statusRequestRef.current !== requestId) return;
     if (newSessionRequestRef.current > 0 && nextStatus.sessionId) return;
-    applyStatus(nextStatus, modelVersion);
+    applyStatus(nextStatus, modelVersion, currentGoalVersion);
   }, [applyStatus, modelSelection]);
 
   const updateQueuedMessages = useCallback((messages: QueuedMessage[]) => {
@@ -154,6 +158,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       assistantIdRef.current = null;
       terminalIdRef.current = null;
       cancelQueueEdit();
+      clearGoal();
       if (!preserveDraft) setDraft('');
       setTurns(() => []);
       clearQueuedMessages();
@@ -374,10 +379,11 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const saveApiKey = useCallback(
     async (provider: string, apiKey: string) => {
-      try {
-        setAuthProviders(await window.pi.chat.setApiKey(provider, apiKey));
-        await loadModels();
-      } catch {}
+      const providers = await saveProviderKey(provider, apiKey);
+      if (!providers) return false;
+      setAuthProviders(providers);
+      await loadModels();
+      return true;
     },
     [loadModels]
   );
