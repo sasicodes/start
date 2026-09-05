@@ -1,28 +1,26 @@
-import type { EffortLevel } from '@preload/index';
 import { usePendingAttachments } from '@renderer/app/attachments';
 import { useBrowserPanel } from '@renderer/app/browser';
 import { useComposerOverlay } from '@renderer/app/composer-overlay';
-import { routeForSession, useAppNavigation } from '@renderer/app/navigation';
+import { useAppNavigation } from '@renderer/app/navigation';
 import { AppSidePanel } from '@renderer/app/panel';
 import { useRendererRuntime } from '@renderer/app/runtime';
 import { useSessionPanels } from '@renderer/app/session/panels';
 import { useSessionRoute } from '@renderer/app/session/route';
 import { AppShell } from '@renderer/app/shell';
+import { useAppComposer } from '@renderer/app/use-composer';
+import { useWorkspaceSwitch } from '@renderer/app/use-workspace-switch';
 import { sidePanelModeLabel, sidePanelModeLayout } from '@renderer/app/utils/panel';
 import { prewarmMarkdownRenderer } from '@renderer/markdown';
 import { appendInspectToDraft } from '@renderer/shared/browser/inspect-draft';
 import { Composer } from '@renderer/shared/chat/index';
 import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
-import { newSessionMention } from '@renderer/shared/input';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
-import { canSelectWorkspace } from '@renderer/shared/workspace/select';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
+import { useCallback, useEffect, useRef } from 'preact/hooks';
 
 export const App = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
   const { route, surface, setSurface, navigate, showChat } = useAppNavigation(textareaRef);
   const { composerExiting, composerRevealKey, finishComposerExit, completeComposerExit } = useComposerOverlay({
     setSurface,
@@ -116,32 +114,26 @@ export const App = () => {
     chooseWorkspaceDirectory
   } = useChat({ onShowChat: showChatFromEvent, onShowSettings: showSettings, textareaRef });
 
-  const discardComposerDraft = useCallback(() => {
-    clearPendingAttachments();
-    setDraft('');
-  }, [clearPendingAttachments, setDraft]);
-
   useEffect(() => {
     prewarmMarkdownRenderer();
   }, []);
 
-  useEffect(() => {
-    return window.pi.app.onDiscardComposer(discardComposerDraft);
-  }, [discardComposerDraft]);
-
-  useEffect(() => {
-    return window.pi.app.onSubmitComposer((prompt, incomingAttachments) => {
-      setSurface('main');
-      clearPendingAttachments();
-      const mention = newSessionMention(prompt);
-      if (mention) {
-        if (mention.prompt) void startSession(mention.prompt, incomingAttachments);
-        return;
-      }
-      navigate(routeForSession(activeSessionId), true);
-      void sendText(prompt, incomingAttachments);
-    });
-  }, [activeSessionId, clearPendingAttachments, navigate, sendText, setSurface, startSession]);
+  const { submitDraft, discardComposerOverlay } = useAppComposer({
+    send,
+    draft,
+    setDraft,
+    sendText,
+    navigate,
+    surface,
+    setSurface,
+    startSession,
+    attachments,
+    activeSessionId,
+    setAttachments,
+    composerExiting,
+    finishComposerExit,
+    clearPendingAttachments
+  });
 
   useEffect(() => {
     if (settingsPanelVisible) refreshSettings();
@@ -155,47 +147,20 @@ export const App = () => {
     [setDraft]
   );
 
-  const selectModelFromComposer = useCallback(
-    (modelKey: string) => {
-      void selectModel(modelKey);
-    },
-    [selectModel]
-  );
-
-  const selectThinkingFromComposer = useCallback(
-    (level: EffortLevel) => {
-      void selectThinkingLevel(level);
-    },
-    [selectThinkingLevel]
-  );
-
-  const showSwitchedWorkspace = useCallback(
-    async (switcher: () => Promise<boolean>) => {
-      closeSidePanel();
-      setSwitchingWorkspace(true);
-      navigate({ name: 'chat' }, true);
-      try {
-        await switcher();
-      } finally {
-        setSwitchingWorkspace(false);
-      }
-    },
-    [closeSidePanel, navigate]
-  );
-
-  const chooseWorkspaceFromComposer = useCallback(
-    () => showSwitchedWorkspace(() => chooseWorkspaceDirectory({ preserveDraft: surface === 'composer' })),
-    [chooseWorkspaceDirectory, showSwitchedWorkspace, surface]
-  );
-
-  const selectWorkspaceFromComposer = useCallback(
-    (path: string) => {
-      if (!canSelectWorkspace(path, workspacePath)) return;
-
-      showSwitchedWorkspace(() => switchWorkspace(path, { preserveDraft: true }));
-    },
-    [workspacePath, switchWorkspace, showSwitchedWorkspace]
-  );
+  const {
+    switchingWorkspace,
+    chooseWorkspaceFromDock,
+    selectWorkspaceFromDock,
+    chooseWorkspaceFromComposer,
+    selectWorkspaceFromComposer
+  } = useWorkspaceSwitch({
+    surface,
+    navigate,
+    workspacePath,
+    closeSidePanel,
+    switchWorkspace,
+    chooseWorkspaceDirectory
+  });
 
   const startNewSession = useCallback(() => {
     void newSession();
@@ -220,58 +185,9 @@ export const App = () => {
     window.pi.chat.abort().catch(() => {});
   }, []);
 
-  const submitDraft = useCallback(() => {
-    if (!draft.trim() || composerExiting) return;
-
-    const pendingAttachments = attachments;
-
-    if (surface === 'composer') {
-      finishComposerExit(() => {
-        setAttachments([]);
-        window.pi.app.submitComposer(draft, pendingAttachments).catch(() => {});
-        setDraft('');
-      });
-      return;
-    }
-
-    setAttachments([]);
-    const mention = newSessionMention(draft);
-    if (mention) {
-      setDraft('');
-      if (mention.prompt) void startSession(mention.prompt, pendingAttachments);
-      return;
-    }
-    void send(pendingAttachments);
-  }, [attachments, composerExiting, draft, finishComposerExit, send, setDraft, startSession, surface]);
-
-  const discardComposerOverlay = useCallback(() => {
-    if (surface !== 'composer' || composerExiting) return;
-    finishComposerExit(() => {
-      window.pi.app.hideComposer().catch(() => {});
-    });
-  }, [composerExiting, finishComposerExit, surface]);
-
-  useEffect(() => {
-    return window.pi.app.onHideComposerRequest(discardComposerOverlay);
-  }, [discardComposerOverlay]);
-
   const openAttachment = useCallback((path: string) => {
     window.pi.app.openPath(path).catch(() => {});
   }, []);
-
-  const chooseWorkspaceFromDock = useCallback(
-    () => showSwitchedWorkspace(chooseWorkspaceDirectory),
-    [chooseWorkspaceDirectory, showSwitchedWorkspace]
-  );
-
-  const selectWorkspaceFromDock = useCallback(
-    (path: string) => {
-      if (!canSelectWorkspace(path, workspacePath)) return;
-
-      showSwitchedWorkspace(() => switchWorkspace(path));
-    },
-    [workspacePath, switchWorkspace, showSwitchedWorkspace]
-  );
 
   const sessionRoutePending = surface === 'main' && route.name === 'session' && loadedSessionId !== route.sessionId;
   const hasTurns = turnCount > 0 || sessionRoutePending;
@@ -320,7 +236,7 @@ export const App = () => {
       exiting={overlay && composerExiting}
       onRemoveAttachment={removeAttachment}
       onExitComplete={completeComposerExit}
-      onSelectModel={selectModelFromComposer}
+      onSelectModel={selectModel}
       onSteerQueuedMessage={steerQueuedMessage}
       onSendQueuedMessage={sendQueuedMessage}
       revealKey={overlay ? composerRevealKey : 0}
@@ -328,7 +244,7 @@ export const App = () => {
       onReorderQueuedMessages={reorderQueuedMessages}
       noProvidersConfigured={noProvidersConfigured}
       onSelectWorkspace={selectWorkspaceFromComposer}
-      onSelectThinkingLevel={selectThinkingFromComposer}
+      onSelectThinkingLevel={selectThinkingLevel}
       onChooseWorkspaceDirectory={chooseWorkspaceFromComposer}
     />
   );

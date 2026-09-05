@@ -76,11 +76,13 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const modelSelection = useMemo(
     () =>
       createModelSelection({
+        thinkingLevel: 'medium',
         read: () => selectedModelKeyState.peek(),
         write: (key) => {
           selectedModelKeyState.value = key;
         },
         select: (key) => window.pi.chat.selectModel(key),
+        selectThinking: (level) => window.pi.chat.selectThinkingLevel(level),
         onThinkingLevel: setThinkingLevel
       }),
     []
@@ -120,10 +122,9 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     (nextStatus: ChatStatus, modelVersion = modelSelection.version()) => {
       primeWorkspaceFolders();
       setWorkspacePath(nextStatus.workspacePath);
-      modelSelection.sync(nextStatus.selectedModelKey ?? '', modelVersion);
+      modelSelection.sync(nextStatus.selectedModelKey ?? '', modelVersion, nextStatus.thinkingLevel);
       setCurrentSessionId(nextStatus.sessionId ?? '');
       updateActiveSessionId(nextStatus.sessionId && turnCountRef.current > 0 ? nextStatus.sessionId : '');
-      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
       contextPercentState.value = nextStatus.contextPercent ?? 0;
     },
     [modelSelection, turnCountRef, updateActiveSessionId]
@@ -185,7 +186,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, []);
 
   const { send, sendText } = useChatSend({
-    waitForModel: modelSelection.settle,
+    waitForSelection: modelSelection.settle,
     draft,
     setDraft,
     setTurns,
@@ -236,7 +237,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applySessionSnapshot = useCallback(
     (result: OpenSessionResult, nextStatus: ChatStatus) => {
-      modelSelection.reset(nextStatus.selectedModelKey ?? '');
+      modelSelection.reset(nextStatus.selectedModelKey ?? '', nextStatus.thinkingLevel);
       applyStatus(nextStatus);
       clearSlashCommandsCache();
       assistantIdRef.current = null;
@@ -330,8 +331,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
       clearSlashCommandsCache();
       setWorkspacePath(result.status.workspacePath);
-      modelSelection.reset(result.status.selectedModelKey ?? '');
-      if (result.status.thinkingLevel) setThinkingLevel(result.status.thinkingLevel);
+      modelSelection.reset(result.status.selectedModelKey ?? '', result.status.thinkingLevel);
       primeWorkspaceFolders();
       textareaRef.current?.focus();
       return true;
@@ -411,13 +411,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     setQueuedMessages: updateQueuedMessages
   });
 
-  const selectThinkingLevel = useCallback(async (level: EffortLevel) => {
-    try {
-      const nextStatus = await window.pi.chat.selectThinkingLevel(level);
-      if (nextStatus.ready && nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-    } catch {}
-  }, []);
-
   const refreshSettings = useCallback(() => {
     loadModels().catch(() => {});
     loadAuthProviders().catch(() => {});
@@ -456,7 +449,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     steerQueuedMessage,
     sendQueuedMessage,
     deleteQueuedMessage,
-    selectThinkingLevel,
+    selectThinkingLevel: modelSelection.selectThinking,
     reorderQueuedMessages,
     chooseWorkspaceDirectory
   };

@@ -1,3 +1,5 @@
+import type { Session } from 'electron';
+
 type Handler = (...args: unknown[]) => unknown;
 type WindowEvent = 'closed';
 
@@ -193,7 +195,31 @@ interface FakeWindowOpenResult {
 
 type WindowOpenHandler = (input: FakeWindowOpenInput) => FakeWindowOpenResult;
 
+class FakeBrowserSession {
+  permissionRequestHandler: Parameters<Session['setPermissionRequestHandler']>[0] = null;
+  permissionCheckHandler: Parameters<Session['setPermissionCheckHandler']>[0] = null;
+
+  setPermissionRequestHandler(handler: Parameters<Session['setPermissionRequestHandler']>[0]) {
+    this.permissionRequestHandler = handler;
+  }
+
+  setPermissionCheckHandler(handler: Parameters<Session['setPermissionCheckHandler']>[0]) {
+    this.permissionCheckHandler = handler;
+  }
+}
+
+const browserSessions = new Map<string, FakeBrowserSession>();
+
+const fakeBrowserSession = (partition = '') => {
+  const existing = browserSessions.get(partition);
+  if (existing) return existing;
+  const session = new FakeBrowserSession();
+  browserSessions.set(partition, session);
+  return session;
+};
+
 export interface FakeBrowserWebContents extends FakeWebContents {
+  session: FakeBrowserSession;
   audioMuted: boolean;
   closed: boolean;
   capturePage: () => Promise<FakeNativeImage>;
@@ -243,12 +269,13 @@ export interface FakeBrowserWindow {
 
 const windowsByWebContents = new Map<FakeBrowserWebContents, FakeBrowserWindow>();
 
-const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
+const createFakeBrowserWebContents = (partition = ''): FakeBrowserWebContents => {
   const base = createFakeWebContents();
   let currentUrl = '';
   const handlersByEvent = new Map<string, Set<Handler>>();
   const webContents: FakeBrowserWebContents = {
     ...base,
+    session: fakeBrowserSession(partition),
     audioMuted: false,
     closed: false,
     capturePage: async () => fakeNativeImage(),
@@ -305,7 +332,11 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
 export class FakeWebContentsView {
   bounds: FakeBrowserBounds[] = [];
   backgroundColor = '';
-  webContents = createFakeBrowserWebContents();
+  webContents: FakeBrowserWebContents;
+
+  constructor(options: { webPreferences?: { partition?: string } } = {}) {
+    this.webContents = createFakeBrowserWebContents(options.webPreferences?.partition);
+  }
 
   setBackgroundColor = (color: string) => {
     this.backgroundColor = color;
@@ -349,6 +380,7 @@ export const createFakeBrowserWindow = (): FakeBrowserWindow => {
 
 export const resetFakeBrowserWindows = () => {
   windowsByWebContents.clear();
+  browserSessions.clear();
 };
 
 export const utilityProcess = {

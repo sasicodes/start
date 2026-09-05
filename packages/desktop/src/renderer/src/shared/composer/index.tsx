@@ -8,25 +8,18 @@ import { Queue } from '@renderer/shared/composer/queue';
 import { editingQueuedId } from '@renderer/shared/composer/queue/state';
 import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import type { ComposerProps } from '@renderer/shared/composer/types';
+import { useComposerFinder } from '@renderer/shared/composer/use-finder';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
 import { Workspace } from '@renderer/shared/composer/workspace';
-import { Finder, type FinderItem, finderItemId, finderItemKey } from '@renderer/shared/finder';
-import { useFinderItems } from '@renderer/shared/finder/use-items';
-import { activeFinderToken, activeSlashCommandToken, commandMode, finderTokenPrefix } from '@renderer/shared/input';
+import { Finder, finderItemId } from '@renderer/shared/finder';
+import { commandMode } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder/use-placeholder';
-import { useSlashCommandItems } from '@renderer/shared/slash-commands';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
 import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
-
-interface FinderSelection {
-  index: number;
-  query: string;
-  items: FinderItem[];
-}
 
 export const Composer = memo(
   ({
@@ -69,7 +62,6 @@ export const Composer = memo(
     const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
     const textareaLayoutRef = useRef(initialComposerTextareaLayoutState());
     const [isMultiline, setIsMultiline] = useState(false);
-    const [finderSelection, setFinderSelection] = useState<FinderSelection>(() => ({ index: 0, items: [], query: '' }));
     const resetTextareaLayout = useCallback((element: HTMLTextAreaElement) => {
       element.style.height = '';
       textareaLayoutRef.current = initialComposerTextareaLayoutState();
@@ -89,44 +81,22 @@ export const Composer = memo(
       [draft, singleLine, textareaRef, updateTextareaLayout]
     );
 
-    const finderToken = useMemo(() => activeFinderToken(draft), [draft]);
-    const slashCommandToken = useMemo(() => activeSlashCommandToken(draft), [draft]);
-    const fileItems: FinderItem[] = useFinderItems(finderToken);
-    const commandItems: FinderItem[] = useSlashCommandItems(slashCommandToken);
-    const finderItems: FinderItem[] = slashCommandToken ? commandItems : fileItems;
-    const finderQuery = (slashCommandToken?.query ?? finderToken?.query ?? '').trim().toLowerCase();
-    const finderStart = slashCommandToken?.start ?? finderToken?.start ?? 0;
-    const finderVisible = Boolean(finderToken || slashCommandToken);
+    const {
+      finderToken,
+      finderItems,
+      finderStart,
+      finderVisible,
+      slashCommandToken,
+      selectedFinderKey,
+      selectedFinderItem,
+      moveFinderSelection,
+      completeFinderItem
+    } = useComposerFinder(draft, onDraftChange);
     const hasAttachments = attachments.length > 0;
     const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
-    const defaultFinderIndex = useMemo(() => {
-      const exactIndex = finderItems.findIndex((item) => item.name.toLowerCase() === finderQuery);
-      return Math.max(exactIndex, 0);
-    }, [finderItems, finderQuery]);
-    const activeFinderIndex =
-      finderSelection.items === finderItems && finderSelection.query === finderQuery
-        ? finderSelection.index
-        : defaultFinderIndex;
-    const selectedFinderItem = finderItems[activeFinderIndex] ?? finderItems[0];
-    const selectedFinderKey = selectedFinderItem ? finderItemKey(selectedFinderItem) : '';
     const centered = overlay || !hasTurns;
     const layered = composerIsLayered({ singleLine, hasAttachments, multiline: isMultiline });
     const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
-
-    const moveFinderSelection = useCallback(
-      (delta: number) => {
-        setFinderSelection((current) => {
-          const baseIndex =
-            current.items === finderItems && current.query === finderQuery ? current.index : defaultFinderIndex;
-          return {
-            query: finderQuery,
-            items: finderItems,
-            index: Math.min(Math.max(baseIndex + delta, 0), finderItems.length - 1)
-          };
-        });
-      },
-      [defaultFinderIndex, finderItems, finderQuery]
-    );
 
     useLayoutEffect(() => {
       const element = promptInputRef.current;
@@ -137,25 +107,6 @@ export const Composer = memo(
 
       updateTextareaLayout(element, draft);
     }, [draft, layered, resetTextareaLayout, singleLine, updateTextareaLayout]);
-
-    const completeFinderItem = (item: FinderItem, enterDirectory: boolean) => {
-      if (slashCommandToken) {
-        if (item.type !== 'command') return;
-        onDraftChange(`${draft.slice(0, slashCommandToken.start)}/${item.name} `);
-        return;
-      }
-
-      if (!finderToken) return;
-      if (item.type === 'command') return;
-      if (item.type === 'browser' || item.type === 'new-session') {
-        onDraftChange(`${draft.slice(0, finderToken.start)}${finderTokenPrefix(finderToken.marker)}${item.name} `);
-        return;
-      }
-
-      const suffix = item.type === 'directory' && enterDirectory ? '/' : ' ';
-      const nextToken = `${finderTokenPrefix(finderToken.marker)}${item.path}${suffix}`;
-      onDraftChange(`${draft.slice(0, finderToken.start)}${nextToken}`);
-    };
 
     const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
     const recall = useMessageRecall(recallMessages, recallQueuedIds, draft, onDraftChange);

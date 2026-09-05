@@ -231,6 +231,7 @@ export class GitChangesService {
   }
 
   private scheduleRefresh(entry: GitChangesEntry): void {
+    if (this.entries.get(entry.workspacePath) !== entry) return;
     if (!this.focused()) {
       entry.refreshPending = true;
       return;
@@ -247,6 +248,7 @@ export class GitChangesService {
     const refreshPatch = entry.patchLoaded;
     const patchRequest = refreshPatch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch);
     const [summary, patch] = await Promise.all([getGitChangeSummary(entry.workspacePath), patchRequest]);
+    if (this.entries.get(entry.workspacePath) !== entry) return;
     const previousSummary = entry.summary ?? null;
     const previousPatch = entry.patch ?? null;
     const nextSummary = summary ?? null;
@@ -277,6 +279,7 @@ export class GitChangesService {
   }
 
   private applyWatchTargets(entry: GitChangesEntry, targets: GitWatchTarget[]): void {
+    if (this.entries.get(entry.workspacePath) !== entry) return;
     const targetPaths = new Set(targets.map((target) => target.path));
 
     for (const targetPath of entry.watchers.keys()) {
@@ -314,6 +317,7 @@ export class GitChangesService {
   }
 
   private handleRefreshFailure(entry: GitChangesEntry): void {
+    if (this.entries.get(entry.workspacePath) !== entry) return;
     const hadPatch = Boolean(entry.patch);
     const hadSummary = Boolean(entry.summary);
     const hadCachedState = hadPatch || hadSummary;

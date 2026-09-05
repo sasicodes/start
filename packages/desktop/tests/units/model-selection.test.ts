@@ -11,16 +11,24 @@ const setup = () => {
     requests.push(request);
     return request.promise;
   });
+  const thinkingRequests: ReturnType<typeof deferred<ChatStatus>>[] = [];
+  const selectThinking = vi.fn(() => {
+    const request = deferred<ChatStatus>();
+    thinkingRequests.push(request);
+    return request.promise;
+  });
   const onThinkingLevel = vi.fn();
   const controller = createModelSelection({
     select,
+    selectThinking,
     onThinkingLevel,
+    thinkingLevel: 'medium',
     read: () => selected,
     write: (key) => {
       selected = key;
     }
   });
-  return { select, requests, controller, onThinkingLevel, selected: () => selected };
+  return { select, requests, controller, selectThinking, thinkingRequests, onThinkingLevel, selected: () => selected };
 };
 
 const success = (key: string): ChatStatus => ({ ready: true, workspacePath: '', selectedModelKey: key });
@@ -102,4 +110,66 @@ it('waits for the latest queued selection before allowing a message to send', as
   await sending;
   expect(send).toHaveBeenCalledTimes(1);
   expect(state.selected()).toBe('last');
+});
+
+it('updates effort immediately and serializes rapid effort changes', async () => {
+  const state = setup();
+  const saving = state.controller.selectThinking('high');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('high');
+  state.controller.selectThinking('xhigh');
+  state.controller.selectThinking('low');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('low');
+  expect(state.selectThinking).toHaveBeenCalledTimes(1);
+  state.thinkingRequests[0]?.resolve({ ...success('old'), thinkingLevel: 'high' });
+  await Promise.resolve();
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('low');
+  expect(state.selectThinking).toHaveBeenLastCalledWith('low');
+  state.thinkingRequests[1]?.resolve({ ...success('old'), thinkingLevel: 'low' });
+  await saving;
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('low');
+});
+
+it('waits for model and effort changes together before sending', async () => {
+  const state = setup();
+  state.controller.select('new');
+  state.controller.selectThinking('xhigh');
+  const send = vi.fn();
+  const sending = state.controller.settle().then(send);
+  expect(state.selectThinking).not.toHaveBeenCalled();
+  state.requests[0]?.resolve({ ...success('new'), thinkingLevel: 'medium' });
+  await Promise.resolve();
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('xhigh');
+  expect(state.selectThinking).toHaveBeenCalledWith('xhigh');
+  expect(send).not.toHaveBeenCalled();
+  state.thinkingRequests[0]?.resolve({ ...success('new'), thinkingLevel: 'xhigh' });
+  await sending;
+  expect(send).toHaveBeenCalledOnce();
+  expect(state.selected()).toBe('new');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('xhigh');
+});
+
+it('ignores stale effort refreshes and restores confirmed effort after a failed change', async () => {
+  const state = setup();
+  const version = state.controller.version();
+  const saving = state.controller.selectThinking('high');
+  state.controller.sync('old', version, 'low');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('high');
+  state.thinkingRequests[0]?.reject(new Error('failed'));
+  await saving;
+  state.controller.sync('old', version, 'low');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('medium');
+  state.controller.sync('external', state.controller.version(), 'xhigh');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('xhigh');
+});
+
+it('drops queued effort and ignores acknowledgments after switching sessions', async () => {
+  const state = setup();
+  const saving = state.controller.selectThinking('high');
+  state.controller.select('queued');
+  state.controller.reset('session-model', 'low');
+  state.thinkingRequests[0]?.resolve({ ...success('old'), thinkingLevel: 'high' });
+  await saving;
+  expect(state.select).not.toHaveBeenCalled();
+  expect(state.selected()).toBe('session-model');
+  expect(state.onThinkingLevel).toHaveBeenLastCalledWith('low');
 });
