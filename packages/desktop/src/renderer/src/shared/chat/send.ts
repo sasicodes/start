@@ -11,6 +11,7 @@ interface MutableRef<T> {
 
 interface UseChatSendOptions {
   draft: string;
+  waitForModel: () => Promise<void>;
   setTurns: TurnUpdater;
   isGenerating: boolean;
   setDraft: (value: string) => void;
@@ -29,6 +30,7 @@ const stopStreamingTurn = (turnId: string) => (turn: ReturnType<typeof createTur
 
 export const useChatSend = ({
   draft,
+  waitForModel,
   setDraft,
   setTurns,
   isGenerating,
@@ -92,6 +94,7 @@ export const useChatSend = ({
       if (isGenerating) {
         setDraft('');
         try {
+          await waitForModel();
           const result = await window.pi.chat.send(text, attachments);
           if (result.sessionId) updateActiveSessionId(result.sessionId);
           if (!result.ok)
@@ -114,6 +117,7 @@ export const useChatSend = ({
 
       let result: SendResult;
       try {
+        await waitForModel();
         result = await window.pi.chat.send(text, attachments);
       } catch {
         if (sessionRequestRef.current !== requestId) return;
@@ -146,6 +150,7 @@ export const useChatSend = ({
       }
     },
     [
+      waitForModel,
       setDraft,
       setTurns,
       isGenerating,

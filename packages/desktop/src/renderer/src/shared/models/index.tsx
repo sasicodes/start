@@ -2,7 +2,6 @@ import type { ModelOption } from '@preload/index';
 import { flyoutRisePx } from '@renderer/shared/animation';
 import { type ModelProviderId, modelProviderId } from '@renderer/shared/models/provider';
 import { providerSettingsTab, type SettingsTab } from '@renderer/shared/settings/tab';
-import { selectedModelKeyState } from '@renderer/state/chat';
 import { AnthropicIcon, CheckIcon, ChevronRightIcon, OpenAIIcon, SettingsIcon } from '@renderer/ui/icons';
 import { AppMenu, MenuPanel, MenuSurface } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
@@ -66,23 +65,16 @@ export const ProviderIconTicker = () => {
 const ModelOptionItem = ({
   model,
   selected,
-  onSelectModel,
   onExitFlyout
 }: {
   model: ModelOption;
   selected: boolean;
-  onSelectModel: (modelKey: string) => void;
   onExitFlyout: MenuKeyHandler;
 }) => {
-  const selectModel = () => {
-    selectedModelKeyState.value = model.key;
-    onSelectModel(model.key);
-  };
-
   return (
-    <AppMenu.Item
-      onClick={selectModel}
-      onPointerDown={selectModel}
+    <AppMenu.RadioItem
+      closeOnClick
+      value={model.key}
       onKeyDown={onExitFlyout}
       className="grid w-full grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2 text-left text-sm leading-5 font-medium text-ink outline-0 select-none data-[highlighted]:bg-control"
     >
@@ -90,7 +82,7 @@ const ModelOptionItem = ({
       <span class="grid size-2.5 place-items-center text-ink">
         {selected && <CheckIcon class="size-2.5 text-hover" />}
       </span>
-    </AppMenu.Item>
+    </AppMenu.RadioItem>
   );
 };
 
@@ -103,15 +95,18 @@ const ModelOptions = ({
   Pick<ModelsProps, 'selectedModel' | 'onSelectModel'> & {
     onExitFlyout: MenuKeyHandler;
   }) => {
-  return models.map((model) => (
-    <ModelOptionItem
-      key={model.key}
-      model={model}
-      selected={selectedModel?.key === model.key}
-      onSelectModel={onSelectModel}
-      onExitFlyout={onExitFlyout}
-    />
-  ));
+  return (
+    <AppMenu.RadioGroup value={selectedModel?.key ?? ''} onValueChange={onSelectModel}>
+      {models.map((model) => (
+        <ModelOptionItem
+          key={model.key}
+          model={model}
+          selected={selectedModel?.key === model.key}
+          onExitFlyout={onExitFlyout}
+        />
+      ))}
+    </AppMenu.RadioGroup>
+  );
 };
 
 const SetupItem = ({
@@ -203,14 +198,14 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
     if (event.key !== 'ArrowRight') return;
     event.preventDefault();
     event.stopPropagation();
-    flyoutRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    flyoutRef.current?.querySelector<HTMLElement>('[role="menuitemradio"], [role="menuitem"]')?.focus();
   };
 
   const exitFlyout = (event: KeyboardEvent) => {
     if (event.key !== 'ArrowLeft') return;
     event.preventDefault();
     event.stopPropagation();
-    rowsRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]')[active]?.focus();
+    rowsRef.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"], [role="menuitem"]')[active]?.focus();
   };
 
   const providers = useMemo<ProviderGroup[]>(() => {

@@ -14,6 +14,7 @@ import {
   SessionManager,
   SettingsManager
 } from '@earendil-works/pi-coding-agent';
+import { configureModelEffort } from '@main/providers/effort';
 import { appVersion, baseDir } from '@main/application';
 import {
   type PreparedImageAttachment,
@@ -305,7 +306,9 @@ export class ChatService {
   private async initializeModels(): Promise<void> {
     try {
       registerBunOAuthFlows();
-      const runtime = await ModelRuntime.create({ credentials: this.credentials, allowModelNetwork: true });
+      const runtime = await ModelRuntime.create({ credentials: this.credentials });
+      configureModelEffort(runtime);
+      await runtime.refresh({ allowNetwork: false });
       this.modelServicesState = { status: 'ready', registry: new ModelRegistry(runtime), runtime };
     } catch (error) {
       this.modelServicesState = {
