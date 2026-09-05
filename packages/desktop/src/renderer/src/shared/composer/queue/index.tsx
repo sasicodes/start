@@ -5,6 +5,7 @@ import { useReorder } from '@renderer/shared/composer/use-reorder';
 import { skillDisplayText } from '@renderer/shared/skill/parse';
 import { DragIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
+import type { ComponentChildren } from 'preact';
 import { useMemo } from 'preact/hooks';
 
 const queueActionText = (generating: boolean, steering: boolean, editing: boolean) => {
@@ -20,6 +21,7 @@ const queueActionLabel = (generating: boolean, steering: boolean, editing: boole
 };
 
 interface QueueProps {
+  children: ComponentChildren;
   messages: QueuedMessage[];
   visible: boolean;
   generating: boolean;
@@ -29,85 +31,97 @@ interface QueueProps {
   onReorder: (orderedIds: string[]) => void;
 }
 
-export const Queue = ({ messages, visible, generating, onDelete, onReorder, onSend, onSteer }: QueueProps) => {
+export const Queue = ({
+  messages,
+  visible,
+  children,
+  generating,
+  onDelete,
+  onReorder,
+  onSend,
+  onSteer
+}: QueueProps) => {
   const ids = useMemo(() => messages.map((message) => message.id), [messages]);
   const byId = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
   const reorder = useReorder(ids, onReorder);
   const dragging = Boolean(reorder.dragId);
 
-  if (!visible || messages.length === 0) return null;
+  if (!visible) return null;
 
   return (
     <Attached contentClass="max-h-56 overflow-y-auto [&::-webkit-scrollbar]:hidden">
-      <ul
-        ref={reorder.listRef}
-        aria-label="Queued messages"
-        class={tw('m-0 flex list-none flex-col gap-1 p-0', dragging && 'select-none')}
-      >
-        {reorder.order.map((id) => {
-          const message = byId.get(id);
-          if (!message) return null;
-          const steering = message.kind === 'steer';
-          const editing = Boolean(message.editing || editingQueuedId.value === id);
-          const text = skillDisplayText(message.text);
+      {children}
+      {messages.length > 0 && (
+        <ul
+          ref={reorder.listRef}
+          aria-label="Queued messages"
+          class={tw('m-0 flex list-none flex-col gap-1 p-0', dragging && 'select-none')}
+        >
+          {reorder.order.map((id) => {
+            const message = byId.get(id);
+            if (!message) return null;
+            const steering = message.kind === 'steer';
+            const editing = Boolean(message.editing || editingQueuedId.value === id);
+            const text = skillDisplayText(message.text);
 
-          return (
-            <li
-              key={id}
-              class={tw(
-                'group/queue relative flex min-w-0 items-center gap-1 rounded-xl py-2 pr-3 pl-1 transition-colors',
-                reorder.dragId === id
-                  ? 'z-10 bg-control opacity-70 shadow-shell'
-                  : !dragging && 'hover:bg-control focus-within:bg-control'
-              )}
-            >
-              <span
-                aria-hidden="true"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  reorder.start(id);
-                }}
+            return (
+              <li
+                key={id}
                 class={tw(
-                  'grid size-5 flex-none cursor-grab touch-none place-items-center text-soft transition-opacity active:cursor-grabbing [&_svg]:size-4',
-                  dragging && reorder.dragId !== id && 'opacity-0'
+                  'group/queue relative flex min-w-0 items-center gap-1 rounded-xl py-2 pr-3 pl-1 transition-colors',
+                  reorder.dragId === id
+                    ? 'z-10 bg-control opacity-70 shadow-shell'
+                    : !dragging && 'hover:bg-control focus-within:bg-control'
                 )}
               >
-                <DragIcon />
-              </span>
-              <div class="min-w-0 flex-1 px-1">
-                <div class="flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium text-ink">
-                  <span class="truncate">{text}</span>
+                <span
+                  aria-hidden="true"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    reorder.start(id);
+                  }}
+                  class={tw(
+                    'grid size-5 flex-none cursor-grab touch-none place-items-center text-soft transition-opacity active:cursor-grabbing [&_svg]:size-4',
+                    dragging && reorder.dragId !== id && 'opacity-0'
+                  )}
+                >
+                  <DragIcon />
+                </span>
+                <div class="min-w-0 flex-1 px-1">
+                  <div class="flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium text-ink">
+                    <span class="truncate">{text}</span>
+                  </div>
                 </div>
-              </div>
-              <div
-                class={tw(
-                  'flex flex-none items-center gap-1 transition-opacity',
-                  dragging && reorder.dragId !== id && 'opacity-0'
-                )}
-              >
-                <button
-                  type="button"
-                  disabled={editing || (generating && steering)}
-                  aria-label={queueActionLabel(generating, steering, editing)}
-                  onClick={() => (generating ? onSteer(id) : onSend(id))}
-                  class="rounded-full border-0 bg-transparent px-2 py-1 text-xs leading-none font-medium text-soft transition-colors hover:text-hover disabled:pointer-events-none disabled:text-hover"
+                <div
+                  class={tw(
+                    'flex flex-none items-center gap-1 transition-opacity',
+                    dragging && reorder.dragId !== id && 'opacity-0'
+                  )}
                 >
-                  {queueActionText(generating, steering, editing)}
-                </button>
-                <button
-                  type="button"
-                  aria-label="Delete queued message"
-                  onClick={() => onDelete(id)}
-                  class="grid size-6 place-items-center rounded-full border-0 bg-transparent p-0 text-soft transition-colors hover:text-danger [&_svg]:size-3.5"
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                  <button
+                    type="button"
+                    disabled={editing || (generating && steering)}
+                    aria-label={queueActionLabel(generating, steering, editing)}
+                    onClick={() => (generating ? onSteer(id) : onSend(id))}
+                    class="rounded-full border-0 bg-transparent px-2 py-1 text-xs leading-none font-medium text-soft transition-colors hover:text-hover disabled:pointer-events-none disabled:text-hover"
+                  >
+                    {queueActionText(generating, steering, editing)}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete queued message"
+                    onClick={() => onDelete(id)}
+                    class="grid size-6 place-items-center rounded-full border-0 bg-transparent p-0 text-soft transition-colors hover:text-danger [&_svg]:size-3.5"
+                  >
+                    <TrashIcon />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Attached>
   );
 };

@@ -59,6 +59,16 @@ export class FakeSessionManager {
     return [...this.entries];
   }
 
+  getBranch(): unknown[] {
+    return this.getEntries();
+  }
+
+  appendCustomEntry(customType: string, data: unknown): string {
+    const id = `custom:${randomUUID()}`;
+    this.appendEntry({ id, type: 'custom', customType, data, timestamp: new Date().toISOString() });
+    return id;
+  }
+
   getSessionFile(): string | undefined {
     return this.id;
   }

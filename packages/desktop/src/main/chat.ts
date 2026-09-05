@@ -32,6 +32,7 @@ import { closeStartDb, openStartDb } from '@main/db';
 import { imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
+import { createGoalController, type GoalController } from '@main/goal/controller';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -88,6 +89,7 @@ import {
   type CommandResult,
   type EffortLevel,
   effortLevels,
+  type GoalAction,
   type HistoryTurn,
   type ImageAttachment,
   type MobileModelsState,
@@ -267,6 +269,7 @@ const createSessionRuntimeState = (): SessionRuntimeState => ({
 });
 
 export class ChatService {
+  private readonly goals = new WeakMap<SessionManager, GoalController>();
   private activeSessionId = '';
   private sessionOpenSequence = 0;
   private shouldCreateSession = true;
@@ -335,6 +338,14 @@ export class ChatService {
     return this.modelServicesState.runtime;
   }
 
+  private goalForSession(manager: SessionManager): GoalController {
+    const existing = this.goals.get(manager);
+    if (existing) return existing;
+    const goal = createGoalController(manager, () => sendToRendererWindows('chat:status-changed'));
+    this.goals.set(manager, goal);
+    return goal;
+  }
+
   private async sessionCustomTools(sessionId: string, workspacePath: string) {
     return [
       ...createStartCustomTools(this.subagentToolsOptions(sessionId, workspacePath)),
@@ -357,10 +368,14 @@ export class ChatService {
 
   private chatStatus(): ChatStatus {
     const model = this.pickModel();
+    const sessionId = this.reportableActiveSessionId();
+    const goal = this.session ? this.goalForSession(this.session.sessionManager).get() : null;
 
     if (!model) {
       return {
         ready: false,
+        ...(goal ? { goal } : {}),
+        ...(sessionId ? { sessionId } : {}),
         workspacePath: this.workspaceCwd,
         thinkingLevel: this.selectedThinkingLevel,
         error:
@@ -368,11 +383,11 @@ export class ChatService {
       };
     }
 
-    const sessionId = this.reportableActiveSessionId();
     const percent = this.sessionContextPercent(model.contextWindow);
 
     return {
       ready: true,
+      ...(goal ? { goal } : {}),
       workspacePath: this.workspaceCwd,
       modelLabel: modelLabel(model),
       isGenerating: Boolean(this.session && this.sessionIsGenerating(this.session)),
@@ -391,7 +406,15 @@ export class ChatService {
 
   async getSlashCommands(): Promise<SlashCommandItem[]> {
     const session = await this.getSession();
-    return sessionSlashCommandItems(session);
+    return [
+      {
+        name: 'goal',
+        key: 'start:goal',
+        source: 'extension',
+        description: 'Work toward an objective until it is complete'
+      },
+      ...sessionSlashCommandItems(session).filter((command) => command.name !== 'goal')
+    ];
   }
 
   async refreshActiveSessionResources(): Promise<boolean> {
@@ -599,7 +622,7 @@ export class ChatService {
       const thinkingLevel = selection?.thinkingLevel ?? clampThinkingLevel(model, this.selectedThinkingLevel);
 
       const [resourceLoader, customTools] = await Promise.all([
-        createStartResourceLoader(workspacePath),
+        createStartResourceLoader(workspacePath, this.goalForSession(sessionManager)),
         this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
       ]);
       const { session } = await createAgentSession({
@@ -732,7 +755,7 @@ export class ChatService {
 
     const sessionManager = SessionManager.create(workspacePath);
     const [resourceLoader, customTools] = await Promise.all([
-      createStartResourceLoader(workspacePath),
+      createStartResourceLoader(workspacePath, this.goalForSession(sessionManager)),
       this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
     ]);
     const { session } = await createAgentSession({
@@ -835,6 +858,7 @@ export class ChatService {
     const activeSession = this.activeSessionId === id ? this.session : null;
     const closingSession = activeSession ?? this.backgroundSessions.get(id);
     if (closingSession) {
+      this.goalForSession(closingSession.sessionManager).pause('Chat closed.');
       const runtimeState = this.runtimeStateForSession(closingSession);
       runtimeState.abortSequence += 1;
       delete runtimeState.liveAssistantTurn;
@@ -879,6 +903,7 @@ export class ChatService {
       runtimeState.abortSequence += 1;
       delete runtimeState.liveAssistantTurn;
     }
+    if (session) this.goalForSession(session.sessionManager).pause('Stopped.');
     this.pauseQueuedMessages(session ?? null, runtimeState);
     session?.abortBash();
     await session?.abort();
@@ -1377,8 +1402,83 @@ export class ChatService {
   }
 
   async send(prompt: string, webContents?: WebContents, attachments: ImageAttachment[] = []): Promise<SendResult> {
-    if (!prompt.trim()) return { ok: false, error: 'Prompt is empty.' };
-    return this.generate(await this.getSession(), this.workspaceCwd, prompt, attachments, webContents);
+    const text = prompt.trim();
+    if (!text) return { ok: false, error: 'Prompt is empty.' };
+    const session = await this.getSession();
+    if (/^\/goal(?:\s|$)/u.test(text)) {
+      const args = text.slice(5).trim();
+      const sessionId = session.sessionManager.getSessionId();
+      const goal = this.goalForSession(session.sessionManager);
+      if (args === 'pause' || args === 'resume' || args === 'cancel') {
+        const generating = this.sessionIsGenerating(session);
+        const status = await this.controlGoal(sessionId, args, webContents, false);
+        if (!status.ready) return { ok: false, error: status.error ?? 'Goal could not be updated.' };
+        if (!generating && args !== 'resume') {
+          this.emit('delta', `Goal ${status.goal?.status ?? 'updated'}.`, webContents);
+          this.emit('done', completedDoneReason, webContents);
+        }
+        return { ok: true, sessionId };
+      }
+      if (!args || args === 'status') {
+        if (!this.sessionIsGenerating(session)) {
+          const current = goal.get();
+          this.emit(
+            'delta',
+            current ? `Goal ${current.status}: ${current.objective}` : 'Use /goal <objective> to start.',
+            webContents
+          );
+          this.emit('done', completedDoneReason, webContents);
+        }
+        return { ok: true, sessionId };
+      }
+      if (this.sessionIsGenerating(session))
+        return { ok: false, error: 'Wait for the current response before starting a goal.' };
+      try {
+        goal.start(args);
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
+      }
+    }
+    return this.generate(session, this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  async controlGoal(
+    sessionId: string,
+    action: GoalAction,
+    webContents?: WebContents,
+    announce = true
+  ): Promise<ChatStatus> {
+    const session = this.session;
+    if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
+    const goal = this.goalForSession(session.sessionManager);
+    try {
+      if (action === 'resume') {
+        if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before resuming.');
+        goal.resume();
+        const prompt = goal.continuation();
+        if (announce) {
+          const turn = { id: randomUUID(), text: prompt };
+          if (webContents) webContents.send('chat:queued-turn-start', turn);
+          else sendToRendererWindows('chat:queued-turn-start', turn);
+        }
+        this.generate(session, this.workspaceCwd, prompt, [], webContents);
+      } else {
+        if (action === 'cancel') goal.cancel();
+        else goal.pause('Paused by you.');
+        const state = this.runtimeStateForSession(session);
+        state.abortSequence += 1;
+        this.pauseQueuedMessages(session, state);
+        session.abortBash();
+        await session.abort();
+      }
+      return this.chatStatus();
+    } catch (error) {
+      return {
+        ...this.chatStatus(),
+        ready: false,
+        error: error instanceof Error ? error.message : 'Goal could not be updated.'
+      };
+    }
   }
 
   private async generate(
@@ -1392,6 +1492,7 @@ export class ChatService {
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     let endError = '';
     const activeSession = session;
+    const goal = this.goalForSession(session.sessionManager);
     let runtimeState: SessionRuntimeState | null = null;
     let sendAbortSequence = 0;
     let startedGeneration = false;
@@ -1417,6 +1518,7 @@ export class ChatService {
       startedGeneration = true;
       sendAbortSequence = state.abortSequence;
       const images = await this.resolveAttachments(attachments);
+      if (state.abortSequence !== sendAbortSequence) throw new Error('Request stopped.');
       this.resetLiveAssistantTurn(session, state);
       notifyMobileSessionChange(true);
       const toolArgs = new Map<string, unknown>();
@@ -1489,14 +1591,32 @@ export class ChatService {
         if (error) endError = error;
       });
 
-      if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
-
       try {
+        if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
+        if (state.abortSequence !== sendAbortSequence) throw new Error('Request stopped.');
+        if (goal.get()?.status === 'active') goal.beginIteration();
         if (images.length > 0) {
           await session.prompt(text, { images });
         } else {
           await session.prompt(text);
         }
+        while (!endError && state.abortSequence === sendAbortSequence && goal.get()?.status === 'active') {
+          if (state.editingQueuedMessageId) {
+            goal.pause('A queued message is being edited.');
+            break;
+          }
+          if (!goal.beginIteration()) break;
+          deltas.flush();
+          const continuation = goal.continuation();
+          if (this.isActiveSession(sessionId, workspacePath)) {
+            const turn = { id: randomUUID(), text: continuation };
+            if (webContents) webContents.send('chat:queued-turn-start', turn);
+            else sendToRendererWindows('chat:queued-turn-start', turn);
+          }
+          this.resetLiveAssistantTurn(session, state);
+          await session.prompt(continuation);
+        }
+        if (endError) goal.pause('The model returned an error.');
       } finally {
         unsubscribe();
         deltas.flush();
@@ -1556,6 +1676,7 @@ export class ChatService {
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
+      goal.pause('The request failed.');
       const message = error instanceof Error ? error.message : 'Chat failed.';
       if (runtimeState) delete runtimeState.liveAssistantTurn;
       if (this.isActiveSession(sessionId, workspacePath)) {
@@ -1650,7 +1771,7 @@ export class ChatService {
     if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
       return this.visibleQueuedMessages();
 
-    const canSteerQueuedMessage = runtimeState.isGenerating && session.isStreaming;
+    const canSteerQueuedMessage = runtimeState.isGenerating;
     if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
 
     runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
@@ -1737,6 +1858,7 @@ export class ChatService {
   async abort(): Promise<void> {
     const runtimeState = this.activeRuntimeState();
     if (runtimeState) runtimeState.abortSequence += 1;
+    if (this.session) this.goalForSession(this.session.sessionManager).pause('Stopped.');
     this.pauseQueuedMessages(this.session, runtimeState);
     this.session?.abortBash();
     await this.session?.abort();
@@ -1760,9 +1882,13 @@ export class ChatService {
     this.sessionOpenSequence += 1;
     this.authInputReject?.(new Error('Chat service disposed.'));
     this.clearSubscriptionAuthInput();
+    if (this.session) this.goalForSession(this.session.sessionManager).pause('App closed.');
     this.session?.dispose();
     this.session = null;
-    for (const session of this.backgroundSessions.values()) session.dispose();
+    for (const session of this.backgroundSessions.values()) {
+      this.goalForSession(session.sessionManager).pause('App closed.');
+      session.dispose();
+    }
     this.liveTitles.clear();
     this.backgroundSessions.clear();
     this.sessionRuntimeStates.clear();
@@ -1930,12 +2056,12 @@ export class ChatService {
     runtimeState: SessionRuntimeState,
     webContents?: WebContents
   ): Promise<SendResult> {
-    if (!session.isStreaming) return { ok: false, error: 'The response is still starting.' };
-
     const id = randomUUID();
+    const abortSequence = runtimeState.abortSequence;
 
     try {
       const images = await this.resolveAttachments(attachments);
+      if (runtimeState.abortSequence !== abortSequence) return { ok: false, error: 'Request stopped.' };
       const message: PendingQueuedMessage = {
         id,
         kind: 'followUp',
@@ -2297,7 +2423,7 @@ export class ChatService {
     const cwd = this.workspaceCwd;
     const sessionManager = this.shouldCreateSession ? SessionManager.create(cwd) : SessionManager.continueRecent(cwd);
     const [resourceLoader, customTools] = await Promise.all([
-      createStartResourceLoader(cwd),
+      createStartResourceLoader(cwd, this.goalForSession(sessionManager)),
       this.sessionCustomTools(sessionManager.getSessionId(), cwd)
     ]);
     const { session } = await createAgentSession({

@@ -12,6 +12,8 @@ import { useComposerFinder } from '@renderer/shared/composer/use-finder';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, finderItemId } from '@renderer/shared/finder';
+import { Goal } from '@renderer/shared/goal';
+import { visibleGoal } from '@renderer/shared/goal/state';
 import { commandMode } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder/use-placeholder';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
@@ -93,7 +95,8 @@ export const Composer = memo(
       completeFinderItem
     } = useComposerFinder(draft, onDraftChange);
     const hasAttachments = attachments.length > 0;
-    const queueVisible = queuedMessages.length > 0 && !finderVisible && !isCommandMode;
+    const hasGoal = !overlay && Boolean(visibleGoal.value);
+    const attachedVisible = (queuedMessages.length > 0 || hasGoal) && !finderVisible && !isCommandMode;
     const centered = overlay || !hasTurns;
     const layered = composerIsLayered({ singleLine, hasAttachments, multiline: isMultiline });
     const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
@@ -219,20 +222,22 @@ export const Composer = memo(
         />
         <Queue
           messages={queuedMessages}
-          visible={queueVisible}
+          visible={attachedVisible}
           generating={isGenerating}
           onSteer={onSteerQueuedMessage}
           onSend={onSendQueuedMessage}
           onDelete={onDeleteQueuedMessage}
           onReorder={onReorderQueuedMessages}
-        />
+        >
+          {!overlay && <Goal />}
+        </Queue>
         <form
           class={tw(
             'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag]',
             layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',
             overlay && 'shadow-composer-overlay',
-            (finderVisible || queueVisible) && !isCommandMode && 'shadow-composer-attached',
-            !finderVisible && !queueVisible && !overlay && 'shadow-shell'
+            (finderVisible || attachedVisible) && !isCommandMode && 'shadow-composer-attached',
+            !finderVisible && !attachedVisible && !overlay && 'shadow-shell'
           )}
           onMouseDown={(event) => {
             if (overlay) event.stopPropagation();

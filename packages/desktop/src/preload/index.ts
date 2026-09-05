@@ -40,7 +40,17 @@ export interface CliInstallResult {
   status: CliInstallStatus;
 }
 
+export interface GoalStatus {
+  objective: string;
+  iterations: number;
+  reason?: string;
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+}
+
+export type GoalAction = 'pause' | 'resume' | 'cancel';
+
 export interface ChatStatus {
+  goal?: GoalStatus;
   ready: boolean;
   error?: string;
   sessionId?: string;
@@ -499,6 +509,8 @@ const api = {
     models: (): Promise<{ error?: string; models: ModelOption[]; selectedModelKey?: string }> =>
       ipcRenderer.invoke('chat:models'),
     slashCommands: (): Promise<SlashCommandItem[]> => ipcRenderer.invoke('chat:slash-commands'),
+    controlGoal: (sessionId: string, action: GoalAction): Promise<ChatStatus> =>
+      ipcRenderer.invoke('chat:goal', sessionId, action),
     recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
       ipcRenderer.invoke('chat:sessions:page', options),
     archiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:archive', sessionId),

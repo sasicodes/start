@@ -4,7 +4,17 @@ export type ProviderKey = 'openai' | 'anthropic';
 
 export const effortLevels = ['low', 'medium', 'high', 'xhigh'] as const satisfies readonly EffortLevel[];
 
+export interface GoalStatus {
+  objective: string;
+  iterations: number;
+  reason?: string;
+  status: 'active' | 'paused' | 'completed' | 'cancelled';
+}
+
+export type GoalAction = 'pause' | 'resume' | 'cancel';
+
 export type ChatStatus = {
+  goal?: GoalStatus;
   ready: boolean;
   error?: string;
   sessionId?: string;
