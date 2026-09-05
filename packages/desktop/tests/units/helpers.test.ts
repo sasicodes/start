@@ -57,13 +57,14 @@ describe('helpers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
   });
 
-  it('sorts the latest provider models into the configured display order', () => {
+  it('replaces fable 5 with fable 5.1 in the configured display order', () => {
     const sorted = getLatestProviderModels('anthropic', [
       { id: 'claude-sonnet-5', name: 'Sonnet 5', provider: 'anthropic' },
       { id: 'claude-fable-5', name: 'Fable 5', provider: 'anthropic' },
+      { id: 'claude-fable-5-1', name: 'Fable 5.1', provider: 'anthropic' },
       { id: 'claude-opus-5', name: 'Opus 5', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-opus-5', 'claude-fable-5', 'claude-sonnet-5']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5-1', 'claude-opus-5', 'claude-sonnet-5']);
   });
 
   it('restores a stored session model and thinking level when the model is available', () => {
