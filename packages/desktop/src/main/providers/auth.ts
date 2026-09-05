@@ -104,9 +104,8 @@ export class DbCredentialStore implements CredentialStore {
   }
 
   private readCurrent(): StoredCredentials {
-    if (!this.codec.available()) return {};
     const row = this.readStmt.get(allProvidersKey);
-    if (!row) return {};
+    if (!row || !this.codec.available()) return {};
     return parseCredentials(this.codec.decode(readRequiredBytes(row, 'ciphertext')));
   }
 
