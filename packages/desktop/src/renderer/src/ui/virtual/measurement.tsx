@@ -9,6 +9,26 @@ interface MeasuredItemProps {
   onHeight: (key: string, height: number) => void;
 }
 
+export const observeHeight = (element: HTMLElement, onHeight: (height: number) => void) => {
+  let frame = 0;
+  let active = true;
+  const measure = () => onHeight(element.offsetHeight);
+  const observer = new ResizeObserver(() => {
+    if (!active || frame) return;
+    frame = window.requestAnimationFrame(() => {
+      frame = 0;
+      measure();
+    });
+  });
+  measure();
+  observer.observe(element);
+  return () => {
+    active = false;
+    observer.disconnect();
+    window.cancelAnimationFrame(frame);
+  };
+};
+
 export const MeasuredItem = ({ itemKey, className, children, onHeight }: MeasuredItemProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -16,11 +36,7 @@ export const MeasuredItem = ({ itemKey, className, children, onHeight }: Measure
     const element = ref.current;
     if (!element) return;
 
-    const measure = () => onHeight(itemKey, element.offsetHeight);
-    const observer = new ResizeObserver(measure);
-    measure();
-    observer.observe(element);
-    return () => observer.disconnect();
+    return observeHeight(element, (height) => onHeight(itemKey, height));
   }, [itemKey, onHeight]);
 
   return (
