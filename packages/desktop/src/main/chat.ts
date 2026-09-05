@@ -127,6 +127,7 @@ import {
 } from '@main/workspace/worktree';
 import type { WebContents } from 'electron';
 import electron from 'electron';
+import * as v from 'valibot';
 
 const { shell } = electron;
 
@@ -1187,8 +1188,18 @@ export class ChatService {
     if (fresh) await this.authRefreshPromise?.catch(() => {});
     await this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
+    const hasSearchKey = Boolean(await this.webSearchApiKey());
+    const search: ProviderAuthStatus = {
+      key: 'exa',
+      name: 'Exa',
+      connected: hasSearchKey,
+      hasCredentials: hasSearchKey,
+      kind: hasSearchKey ? 'api_key' : 'none',
+      label: hasSearchKey ? 'Connected via API key' : '50 free searches/day'
+    };
 
     return Promise.all([
+      search,
       this.providerAuthStatus(
         'openai',
         'OpenAI',
@@ -1225,6 +1236,11 @@ export class ChatService {
     const cleanProvider = provider.trim().toLowerCase();
     const cleanApiKey = apiKey.trim();
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
+    if (
+      cleanProvider === 'exa' &&
+      !v.is(v.pipe(v.string(), v.maxLength(4096), v.regex(/^[\x21-\x7e]+$/u)), cleanApiKey)
+    )
+      throw new Error('Enter a valid Exa API key.');
 
     await this.ensureReady();
     await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
@@ -1237,9 +1253,13 @@ export class ChatService {
     if (!cleanProvider) return this.getAuthProviders();
 
     await this.ensureReady();
-    for (const slot of providerAuthSlots(cleanProvider)) {
-      await this.modelRuntime.removeRuntimeApiKey(slot);
-      await this.modelRuntime.logout(slot);
+    if (cleanProvider === 'exa') {
+      await this.credentials.delete('exa');
+    } else {
+      for (const slot of providerAuthSlots(cleanProvider)) {
+        await this.modelRuntime.removeRuntimeApiKey(slot);
+        await this.modelRuntime.logout(slot);
+      }
     }
 
     return this.getAuthProviders(true);
@@ -2450,6 +2470,7 @@ export class ChatService {
     const allocator = this.subagentNameAllocator(sessionId);
     const base = {
       cwd: () => cwd,
+      webSearchApiKey: () => this.webSearchApiKey(),
       nameAllocator: () => allocator,
       modelRuntime: this.modelRuntime,
       settingsManager: this.settingsManager,
@@ -2731,6 +2752,11 @@ export class ChatService {
       }
     };
     this.persistState({ workspaceModelDefaults });
+  }
+
+  private async webSearchApiKey(): Promise<string> {
+    const credential = await this.credentials.read('exa');
+    return credential?.type === 'api_key' ? (credential.key ?? '') : '';
   }
 
   private async providerAuthStatus(key: ProviderKey, name: string, hasModels: boolean): Promise<ProviderAuthStatus> {

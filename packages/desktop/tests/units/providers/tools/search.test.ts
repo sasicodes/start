@@ -32,7 +32,7 @@ interface TestTool {
   ) => Promise<TestToolResult>;
 }
 
-const tool = () => createWebSearchTools()[0] as unknown as TestTool;
+const tool = (readApiKey?: () => Promise<string>) => createWebSearchTools(readApiKey)[0] as unknown as TestTool;
 
 describe('web_search tool', () => {
   beforeEach(() => {
@@ -114,6 +114,51 @@ describe('web_search tool', () => {
     expect(result.details).toEqual({ query: 'latest docs' });
   });
 
+  it('reads the current saved key for each request and keeps credentials out of the URL and results', async () => {
+    clientsMock.callServerTool.mockResolvedValue({ content: [{ type: 'text', text: 'Search answer' }] });
+    let key = 'first-private-key';
+    const readApiKey = vi.fn(async () => key);
+    const search = tool(readApiKey);
+    expect(readApiKey).not.toHaveBeenCalled();
+
+    for (const value of ['first-private-key', 'changed-private-key', '']) {
+      key = value;
+      const result = await search.execute('call', { query: 'docs' });
+      expect(clientsMock.callServerTool).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          url: 'https://mcp.exa.ai/mcp',
+          headers: value ? { 'x-api-key': value } : {}
+        }),
+        'web_search_exa',
+        { query: 'docs', numResults: 10 },
+        { timeoutMs: 30_000 }
+      );
+      expect(result).toEqual({ content: [{ type: 'text', text: 'Search answer' }], details: { query: 'docs' } });
+    }
+    expect(readApiKey).toHaveBeenCalledTimes(3);
+  });
+
+  it('redacts the saved key if the remote server echoes it in an error result', async () => {
+    clientsMock.callServerTool.mockResolvedValue({
+      isError: true,
+      content: [{ type: 'text', text: 'Invalid x-api-key: private-key' }]
+    });
+    const result = await tool(async () => 'private-key').execute('call', { query: 'docs' });
+    expect(result.content[0]?.text).toBe('Invalid x-api-key: [redacted]');
+    expect(JSON.stringify(result)).not.toContain('private-key');
+  });
+
+  it('returns a generic failure without leaking credential read errors', async () => {
+    const result = await tool(async () => {
+      throw new Error('Unable to read private-key');
+    }).execute('call', { query: 'docs' });
+    expect(clientsMock.callServerTool).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      content: [{ type: 'text', text: 'Web search failed. Try again shortly.' }],
+      details: { query: 'docs', error: 'search_failed' }
+    });
+  });
+
   it('forwards the requested result limit', async () => {
     clientsMock.callServerTool.mockResolvedValue({ content: [{ type: 'text', text: 'Search answer' }] });
 
@@ -141,7 +186,8 @@ describe('web_search tool', () => {
         expect.objectContaining({
           kind: 'remote',
           name: 'web-search',
-          url: 'https://mcp.exa.ai/mcp'
+          url: 'https://mcp.exa.ai/mcp',
+          headers: {}
         })
       )
     );
