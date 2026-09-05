@@ -196,7 +196,7 @@ type WindowOpenHandler = (input: FakeWindowOpenInput) => FakeWindowOpenResult;
 export interface FakeBrowserWebContents extends FakeWebContents {
   audioMuted: boolean;
   closed: boolean;
-  capturePage: () => Promise<{ isEmpty: () => boolean }>;
+  capturePage: () => Promise<FakeNativeImage>;
   close: () => void;
   emit: (event: string, ...args: unknown[]) => void;
   executeJavaScript: (script: string, userGesture?: boolean) => Promise<unknown>;
@@ -251,7 +251,7 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     ...base,
     audioMuted: false,
     closed: false,
-    capturePage: async () => ({ isEmpty: () => false }),
+    capturePage: async () => fakeNativeImage(),
     close: () => {
       webContents.closed = true;
     },

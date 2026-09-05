@@ -204,16 +204,17 @@ export const stripAttachmentData = (attachment: PreparedImageAttachment): ImageA
 const clipboardImagePng = async () => {
   const items = await clipboard.read().catch(() => []);
 
-  for (const item of items) {
-    const type = item.types.find((entry) => entry.startsWith('image/'));
-    if (!type) continue;
+  for (const type of ['image/png', 'image/jpeg']) {
+    for (const item of items) {
+      if (!item.types.includes(type)) continue;
 
-    const blob = (await item.getType(type)) as Blob;
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    if (type === 'image/png') return buffer;
-
-    const image = nativeImage.createFromBuffer(buffer);
-    if (!image.isEmpty()) return image.toPNG();
+      try {
+        const blob = (await item.getType(type)) as Blob;
+        const buffer = Buffer.from(await blob.arrayBuffer());
+        const image = nativeImage.createFromBuffer(buffer);
+        if (!image.isEmpty()) return type === 'image/png' ? buffer : image.toPNG();
+      } catch {}
+    }
   }
 
   return null;
