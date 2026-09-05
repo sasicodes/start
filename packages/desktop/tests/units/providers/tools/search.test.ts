@@ -138,6 +138,16 @@ describe('web_search tool', () => {
     expect(readApiKey).toHaveBeenCalledTimes(3);
   });
 
+  it('rejects previously saved environment templates before sending any credential to MCP', async () => {
+    const result = await tool(async () => `\${PRIVATE_KEY}`).execute('call', { query: 'docs' });
+    expect(clientsMock.callServerTool).not.toHaveBeenCalled();
+    expect(clientsMock.connectServer).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      content: [{ type: 'text', text: 'Web search failed. Try again shortly.' }],
+      details: { query: 'docs', error: 'search_failed' }
+    });
+  });
+
   it('redacts the saved key if the remote server echoes it in an error result', async () => {
     clientsMock.callServerTool.mockResolvedValue({
       isError: true,

@@ -43,8 +43,11 @@ it('stores and removes the Exa key through the existing credential store without
   chat.dispose();
 });
 
-it.each(['bad\nheader', 'a'.repeat(4097)])('rejects unsafe Exa header values', async (key) => {
-  const chat = freshChatService();
-  await expect(chat.setApiKey('exa', key)).rejects.toThrow('Enter a valid Exa API key.');
-  chat.dispose();
-});
+it.each(['bad\nheader', 'a'.repeat(4097), `\${SECRET}`, `prefix-\${API_KEY}-suffix`])(
+  'rejects unsafe Exa header values',
+  async (key) => {
+    const chat = freshChatService();
+    await expect(chat.setApiKey('exa', key)).rejects.toThrow('Enter a valid Exa API key.');
+    chat.dispose();
+  }
+);

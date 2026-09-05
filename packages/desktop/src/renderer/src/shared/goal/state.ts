@@ -71,11 +71,15 @@ const changeGoal = async (
     const result = await run(current.sessionId);
     if (revision !== request || goalState.peek().sessionId !== current.sessionId) return false;
     revision += 1;
-    if (result.sessionId !== current.sessionId || !accepts(result)) {
+    if (result.sessionId !== current.sessionId) {
       goalState.value = { ...current, error: result.error ?? 'Goal could not be updated.' };
       return false;
     }
     writeStatus(result);
+    if (!accepts(result)) {
+      setGoalError(result.error ?? 'Goal could not be updated.');
+      return false;
+    }
     return true;
   } catch {
     if (revision !== request || goalState.peek().sessionId !== current.sessionId) return false;

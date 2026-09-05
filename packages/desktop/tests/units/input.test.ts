@@ -26,3 +26,10 @@ describe('newSessionMention', () => {
     expect(newSessionMention('@New Session\n@new session')).toEqual({ prompt: '' });
   });
 });
+
+it.each(['Explain this:\n```\n@New Session hello\n```', 'Example `` @New Session hello ``'])(
+  'does not route quoted examples into a new session: %s',
+  (draft) => {
+    expect(newSessionMention(draft)).toBeUndefined();
+  }
+);

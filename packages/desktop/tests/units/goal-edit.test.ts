@@ -279,3 +279,18 @@ it('preserves a new session draft when the previous editor is disposed', async (
   expect(state.context.draft).toBe('New session draft');
   expect(state.editor.state.peek().status).toBe('idle');
 });
+
+it('releases a held draft when save returns a terminal goal instead of the requested edit', async () => {
+  const state = setup('paused');
+  await state.editor.begin();
+  state.context.draft = 'Unsaved objective';
+  const response = deferred<ChatStatus>();
+  state.update.mockReturnValueOnce(response.promise);
+  const saving = state.editor.save();
+  syncGoal(goalStatus('cancelled'));
+  response.resolve({ ...goalStatus('cancelled'), ready: false, error: 'Goal is no longer paused.' });
+  expect(await saving).toBe(false);
+  expect(state.context.draft).toBe('');
+  expect(state.editor.state.peek().status).toBe('idle');
+  expect(goalState.peek()).toMatchObject({ goal: { status: 'cancelled' } });
+});

@@ -106,6 +106,7 @@ export const createWebSearchTools = (readApiKey?: () => Promise<string>) => [
 
       try {
         const apiKey = readApiKey ? (await readApiKey()).trim() : '';
+        if (apiKey.includes('${')) throw new Error('Invalid web search credential.');
         const server = apiKey ? { ...searchServer, headers: { 'x-api-key': apiKey } } : searchServer;
         const result = await callServerTool(
           server,

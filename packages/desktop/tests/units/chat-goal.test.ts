@@ -394,3 +394,67 @@ it('rejects background routing markers without an objective and removes the unus
   await sending;
   chat.dispose();
 });
+
+it.each([
+  'Explain this example:\n```\n@Goal say hi\n```',
+  'Explain this example:\n~~~text\n@Goal say hi\n~~~',
+  'Explain ` @Goal say hi ` without running it.',
+  'Explain `` @Goal ` say hi `` without running it.'
+])('does not create a goal from a code example: %s', async (prompt) => {
+  const { chat, session, webContents } = await setup();
+  const sending = chat.send(prompt, webContents);
+  await session.awaitPromptCall();
+  try {
+    expect((await chat.getStatus()).goal).toBeFalsy();
+  } finally {
+    await chat.abort();
+    await sending;
+    chat.dispose();
+  }
+});
+
+it('strips actionable goal markers while retaining mentions inside code in the objective', async () => {
+  const { chat, session, webContents } = await setup();
+  const objective = 'Explain this example:\n```\n@Goal example\n@New Session example\n```\nInspect @src/file.ts';
+  const sending = chat.send(`@Goal ${objective}`, webContents);
+  await session.awaitPromptCall();
+  try {
+    expect((await chat.getStatus()).goal?.objective).toBe(objective);
+  } finally {
+    await chat.abort();
+    await sending;
+    chat.dispose();
+  }
+});
+
+it.each([
+  { recovery: 'automatic retry', willRetry: true, error: 'Rate limit exceeded' },
+  { recovery: 'overflow compaction', willRetry: false, error: 'Context window exceeded' }
+])('continues the goal when $recovery recovers before the prompt settles', async ({ willRetry, error }) => {
+  const { chat, session, webContents } = await setup();
+  const sending = chat.send('@Goal Finish after recovery', webContents);
+  await session.awaitPromptCall();
+  session.pushEvent({ type: 'agent_end', willRetry, messages: [{ errorMessage: error }] });
+  session.finishPrompt();
+  try {
+    await vi.waitFor(async () =>
+      expect((await chat.getStatus()).goal).toMatchObject({ status: 'active', iterations: 2 })
+    );
+    expect(session.isStreaming).toBe(true);
+  } finally {
+    await chat.abort();
+    await sending;
+    chat.dispose();
+  }
+});
+
+it('pauses after retry exhaustion instead of clearing the final failure', async () => {
+  const { chat, session, webContents } = await setup();
+  const sending = chat.send('@Goal Finish after recovery', webContents);
+  await session.awaitPromptCall();
+  session.pushEvent({ type: 'agent_end', willRetry: true, messages: [{ errorMessage: 'Temporary failure' }] });
+  session.failPrompt('Retries exhausted');
+  expect(await sending).toMatchObject({ ok: false, error: 'Retries exhausted' });
+  expect((await chat.getStatus()).goal).toMatchObject({ status: 'paused', iterations: 1 });
+  chat.dispose();
+});

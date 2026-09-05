@@ -119,16 +119,8 @@ export const Providers = ({
   };
 
   const loginSubscription = async (provider: ProviderKey) => {
-    try {
-      await onLoginSubscription(provider);
-      setOpenProvider('');
-    } catch {}
-  };
-
-  const disconnectProvider = async (provider: ProviderKey) => {
-    try {
-      await onDisconnectProvider(provider);
-    } catch {}
+    await onLoginSubscription(provider);
+    setOpenProvider('');
   };
 
   const updateApiKey = (provider: ProviderKey, value: string) => {
@@ -182,7 +174,7 @@ export const Providers = ({
                 />
                 <button
                   type="button"
-                  onClick={() => disconnectProvider(provider.key)}
+                  onClick={() => onDisconnectProvider(provider.key)}
                   class="h-8 flex-none rounded-full border border-line bg-control px-3 text-xs font-medium text-ink transition-opacity duration-100 ease-in hover:opacity-80"
                 >
                   Disconnect

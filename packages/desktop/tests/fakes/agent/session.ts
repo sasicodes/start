@@ -18,7 +18,7 @@ export type FakeAgentSessionEvent =
       type: 'message_update';
       assistantMessageEvent: { type: 'text_delta'; delta: string } | { type: 'thinking_delta'; delta: string };
     }
-  | { type: 'agent_end'; messages: { errorMessage?: string }[] };
+  | { type: 'agent_end'; messages: { errorMessage?: string }[]; willRetry?: boolean };
 
 type Listener = (event: FakeAgentSessionEvent) => void;
 

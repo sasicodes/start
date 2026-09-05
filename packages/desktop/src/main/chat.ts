@@ -128,6 +128,7 @@ import {
 import type { WebContents } from 'electron';
 import electron from 'electron';
 import * as v from 'valibot';
+import { parseUserMentions } from '../shared/mentions/utils.js';
 
 const { shell } = electron;
 
@@ -1230,7 +1231,8 @@ export class ChatService {
     if (!cleanProvider || !cleanApiKey) return this.getAuthProviders();
     if (
       cleanProvider === 'exa' &&
-      !v.is(v.pipe(v.string(), v.maxLength(4096), v.regex(/^[\x21-\x7e]+$/u)), cleanApiKey)
+      (!v.is(v.pipe(v.string(), v.maxLength(4096), v.regex(/^[\x21-\x7e]+$/u)), cleanApiKey) ||
+        cleanApiKey.includes('${'))
     )
       throw new Error('Enter a valid Exa API key.');
 
@@ -1460,12 +1462,18 @@ export class ChatService {
   }
 
   private startMentionedGoal(session: AgentSession, prompt: string): void {
-    if (!/(^|\s)@goal(?=\s|$)/iu.test(prompt)) return;
+    const parts = parseUserMentions(prompt);
+    if (!parts.some((part) => part.kind === 'mention' && part.name === 'goal')) return;
     const goal = this.goalForSession(session.sessionManager);
     const status = goal.get()?.status;
     if (status === 'active' || status === 'paused') return;
-    const objective = prompt.replace(/(?<!\S)@(?:goal|new session)(?!\S)[ \t]*/giu, '').trim();
-    if (!objective) throw new Error('Add an objective after @Goal.');
+    let objective = prompt;
+    for (const part of parts.reverse()) {
+      if (part.kind !== 'mention' || part.name === 'browser') continue;
+      const following = objective.slice(part.start + part.text.length).replace(/^[ \t]+/u, '');
+      objective = objective.slice(0, part.start) + following;
+    }
+    if (!objective.trim()) throw new Error('Add an objective after @Goal.');
     if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before starting a goal.');
     goal.start(objective);
   }
@@ -1636,8 +1644,7 @@ export class ChatService {
         if (thought) deltas.push('thinking', thought, active);
         if (renderedEvent || delta || thought) notifyMobileSessionChange();
 
-        const error = agentEndError(event);
-        if (error) endError = error;
+        if (event.type === 'agent_end') endError = agentEndError(event) ?? '';
       });
 
       try {

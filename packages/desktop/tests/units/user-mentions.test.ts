@@ -1,5 +1,5 @@
-import { parseUserMentions } from '@renderer/shared/turn/user-text';
 import { expect, it } from 'vitest';
+import { parseUserMentions } from '../../src/shared/mentions/utils.js';
 
 const mentions = (text: string) => parseUserMentions(text).filter((part) => part.kind === 'mention');
 

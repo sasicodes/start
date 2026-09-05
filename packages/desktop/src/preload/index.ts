@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { GoalAction, GoalStatus } from '../shared/goal/types.js';
 
 const { contextBridge, ipcRenderer, webUtils } = electron;
 
@@ -40,16 +41,7 @@ export interface CliInstallResult {
   status: CliInstallStatus;
 }
 
-export interface GoalStatus {
-  elapsedMs: number;
-  startedAt?: number;
-  objective: string;
-  iterations: number;
-  reason?: string;
-  status: 'active' | 'paused' | 'completed' | 'cancelled';
-}
-
-export type GoalAction = 'pause' | 'resume' | 'cancel';
+export type { GoalAction, GoalStatus } from '../shared/goal/types.js';
 
 export interface ChatStatus {
   goal?: GoalStatus;

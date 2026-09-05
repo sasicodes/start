@@ -143,3 +143,24 @@ it('keeps a pending control visible and removes the goal after cancellation', as
   clearGoal();
   expect(visibleGoal.peek()).toBeNull();
 });
+
+it.each(['completed', 'cancelled'] as const)(
+  'keeps the authoritative %s state when a pending pause cannot be applied',
+  async (terminal) => {
+    const state = setup();
+    const saving = controlGoal('pause');
+    syncGoal(status('first', terminal));
+    state.response.resolve(status('first', terminal));
+    expect(await saving).toBe(false);
+    expect(goalState.peek()).toMatchObject({ kind: 'ready', goal: { status: terminal } });
+    expect(visibleGoal.peek()).toBeNull();
+  }
+);
+
+it('clears a removed goal returned by a rejected control for the same session', async () => {
+  const state = setup();
+  const saving = controlGoal('pause');
+  state.response.resolve({ ready: false, sessionId: 'first', workspacePath: '', error: 'Goal no longer exists.' });
+  expect(await saving).toBe(false);
+  expect(goalState.peek()).toEqual({ kind: 'empty', sessionId: 'first' });
+});
