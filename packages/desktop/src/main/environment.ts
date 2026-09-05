@@ -15,6 +15,8 @@ process.env.PI_OFFLINE = '1';
 process.env.PI_SKIP_VERSION_CHECK ??= '1';
 process.env.PI_TELEMETRY ??= '0';
 
+export const childEnvironment = (overrides: Record<string, string>) => ({ ...process.env, ...overrides });
+
 export const readEnvironmentValue = (name: string) => {
   const value = process.env[name]?.trim();
   if (!value) return;

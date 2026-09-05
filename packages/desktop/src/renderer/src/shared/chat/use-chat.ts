@@ -15,6 +15,7 @@ import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
 import { cancelQueueEdit, syncQueueEdit } from '@renderer/shared/composer/queue/state';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
+import { createModelSelection } from '@renderer/shared/models/selection';
 import { refreshProviderUsage } from '@renderer/shared/settings/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
@@ -71,7 +72,21 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   const [activeSessionId, setActiveSessionId] = useState('');
   const [loadedSessionId, setLoadedSessionId] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState('');
-  const [selectedModelKey, setSelectedModelKey] = useState('');
+  const selectedModelKey = selectedModelKeyState.value;
+  const modelSelection = useMemo(
+    () =>
+      createModelSelection({
+        thinkingLevel: 'medium',
+        read: () => selectedModelKeyState.peek(),
+        write: (key) => {
+          selectedModelKeyState.value = key;
+        },
+        select: (key) => window.pi.chat.selectModel(key),
+        selectThinking: (level) => window.pi.chat.selectThinkingLevel(level),
+        onThinkingLevel: setThinkingLevel
+      }),
+    []
+  );
   const statusRequestRef = useRef(0);
   const sessionRequestRef = useRef(0);
   const terminalIdRef = useRef<string | null>(null);
@@ -92,39 +107,38 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, []);
 
   const loadModels = useCallback(async () => {
+    const version = modelSelection.version();
     try {
       const modelList = await window.pi.chat.models();
       setModels(modelList.models);
       setModelsLoaded(true);
-      selectedModelKeyState.value = modelList.selectedModelKey ?? '';
-      setSelectedModelKey(modelList.selectedModelKey ?? '');
+      modelSelection.sync(modelList.selectedModelKey ?? '', version);
     } catch {
       setModelsLoaded(true);
     }
-  }, []);
+  }, [modelSelection]);
 
   const applyStatus = useCallback(
-    (nextStatus: ChatStatus) => {
+    (nextStatus: ChatStatus, modelVersion = modelSelection.version()) => {
       primeWorkspaceFolders();
       setWorkspacePath(nextStatus.workspacePath);
-      selectedModelKeyState.value = nextStatus.selectedModelKey ?? '';
-      setSelectedModelKey(nextStatus.selectedModelKey ?? '');
+      modelSelection.sync(nextStatus.selectedModelKey ?? '', modelVersion, nextStatus.thinkingLevel);
       setCurrentSessionId(nextStatus.sessionId ?? '');
       updateActiveSessionId(nextStatus.sessionId && turnCountRef.current > 0 ? nextStatus.sessionId : '');
-      if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
       contextPercentState.value = nextStatus.contextPercent ?? 0;
     },
-    [turnCountRef, updateActiveSessionId]
+    [modelSelection, turnCountRef, updateActiveSessionId]
   );
 
   const syncStatus = useCallback(async () => {
     const requestId = statusRequestRef.current + 1;
     statusRequestRef.current = requestId;
+    const modelVersion = modelSelection.version();
     const nextStatus = await window.pi.chat.status();
     if (statusRequestRef.current !== requestId) return;
     if (newSessionRequestRef.current > 0 && nextStatus.sessionId) return;
-    applyStatus(nextStatus);
-  }, [applyStatus]);
+    applyStatus(nextStatus, modelVersion);
+  }, [applyStatus, modelSelection]);
 
   const updateQueuedMessages = useCallback((messages: QueuedMessage[]) => {
     syncQueueEdit(messages);
@@ -172,6 +186,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, []);
 
   const { send, sendText } = useChatSend({
+    waitForSelection: modelSelection.settle,
     draft,
     setDraft,
     setTurns,
@@ -222,6 +237,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const applySessionSnapshot = useCallback(
     (result: OpenSessionResult, nextStatus: ChatStatus) => {
+      modelSelection.reset(nextStatus.selectedModelKey ?? '', nextStatus.thinkingLevel);
       applyStatus(nextStatus);
       clearSlashCommandsCache();
       assistantIdRef.current = null;
@@ -240,7 +256,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       textareaRef.current?.focus();
       if (result.id) window.pi.chat.markNoticeSeen(result.id).catch(() => {});
     },
-    [applyStatus, updateQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
+    [applyStatus, modelSelection, updateQueuedMessages, setTurns, textareaRef, updateActiveSessionId]
   );
 
   const applyOpenSession = useCallback(
@@ -315,14 +331,12 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
       clearSlashCommandsCache();
       setWorkspacePath(result.status.workspacePath);
-      selectedModelKeyState.value = result.status.selectedModelKey ?? '';
-      setSelectedModelKey(result.status.selectedModelKey ?? '');
-      if (result.status.thinkingLevel) setThinkingLevel(result.status.thinkingLevel);
+      modelSelection.reset(result.status.selectedModelKey ?? '', result.status.thinkingLevel);
       primeWorkspaceFolders();
       textareaRef.current?.focus();
       return true;
     },
-    [applySessionSnapshot, clearSession, textareaRef]
+    [applySessionSnapshot, modelSelection, clearSession, textareaRef]
   );
 
   const switchWorkspace = useCallback(
@@ -397,41 +411,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     setQueuedMessages: updateQueuedMessages
   });
 
-  const selectModel = useCallback(
-    (modelKey: string) => {
-      const previousModelKey = selectedModelKey;
-
-      selectedModelKeyState.value = modelKey;
-      setSelectedModelKey(modelKey);
-
-      void window.pi.chat
-        .selectModel(modelKey)
-        .then((nextStatus) => {
-          if (nextStatus.ready) {
-            selectedModelKeyState.value = nextStatus.selectedModelKey ?? modelKey;
-            setSelectedModelKey(nextStatus.selectedModelKey ?? modelKey);
-            if (nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-            return;
-          }
-
-          selectedModelKeyState.value = previousModelKey;
-          setSelectedModelKey(previousModelKey);
-        })
-        .catch(() => {
-          selectedModelKeyState.value = previousModelKey;
-          setSelectedModelKey(previousModelKey);
-        });
-    },
-    [selectedModelKey]
-  );
-
-  const selectThinkingLevel = useCallback(async (level: EffortLevel) => {
-    try {
-      const nextStatus = await window.pi.chat.selectThinkingLevel(level);
-      if (nextStatus.ready && nextStatus.thinkingLevel) setThinkingLevel(nextStatus.thinkingLevel);
-    } catch {}
-  }, []);
-
   const refreshSettings = useCallback(() => {
     loadModels().catch(() => {});
     loadAuthProviders().catch(() => {});
@@ -448,7 +427,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     newSession,
     startSession,
     saveApiKey,
-    selectModel,
+    selectModel: modelSelection.select,
     openSession,
     modelsLoaded,
     isGenerating,
@@ -470,7 +449,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     steerQueuedMessage,
     sendQueuedMessage,
     deleteQueuedMessage,
-    selectThinkingLevel,
+    selectThinkingLevel: modelSelection.selectThinking,
     reorderQueuedMessages,
     chooseWorkspaceDirectory
   };

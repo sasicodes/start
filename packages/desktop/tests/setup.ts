@@ -41,6 +41,7 @@ vi.mock('@main/window', () => import('./fakes/window.js'));
 vi.mock('@main/workspace/access', () => import('./fakes/workspace-access.js'));
 vi.mock('@main/attachments', () => import('./fakes/attachments.js'));
 vi.mock('@main/environment', () => ({
+  childEnvironment: (overrides: Record<string, string>) => ({ ...process.env, ...overrides }),
   environment: { rendererUrl: undefined },
   readEnvironmentValue: (name: string) => {
     const value = process.env[name]?.trim();

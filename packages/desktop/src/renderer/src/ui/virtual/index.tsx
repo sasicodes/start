@@ -2,15 +2,15 @@ import type { VisibleRange } from '@renderer/ui/virtual/geometry';
 import {
   cumulativeHeights,
   firstVisibleIndex,
-  initialVisibleEnd,
-  initialVisibleStart,
   measuredPrependShift,
   resolveItemHeight,
   shouldCompensateMeasuredDelta,
   shouldPreserveScrollEnd,
-  totalHeight,
-  visibleRange
+  totalHeight
 } from '@renderer/ui/virtual/geometry';
+import { MeasuredItem } from '@renderer/ui/virtual/measurement';
+import { useVisibleRange } from '@renderer/ui/virtual/use-visible-range';
+import { findScrollAncestor } from '@renderer/ui/virtual/utils/scroll';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
 import { Fragment } from 'preact';
@@ -36,114 +36,8 @@ interface VirtualProps<T> {
   renderItem: (item: T, index: number) => ComponentChildren;
 }
 
-interface MeasuredItemProps {
-  itemKey: string;
-  className: string;
-  children: ComponentChildren;
-  onHeight: (key: string, height: number) => void;
-}
-
 const pinnedThreshold = 24;
 const defaultOverscan = 1500;
-const initialViewportGuess = 3000;
-const scrollOverflowValues = new Set(['auto', 'overlay', 'scroll']);
-
-const findScrollAncestor = (element: HTMLElement): HTMLElement | null => {
-  let parent = element.parentElement;
-  while (parent) {
-    if (scrollOverflowValues.has(getComputedStyle(parent).overflowY)) return parent;
-    parent = parent.parentElement;
-  }
-  return null;
-};
-
-const sameRange = (a: VisibleRange, b: VisibleRange) => a.start === b.start && a.end === b.end;
-
-const useVisibleRange = (
-  cumulative: Float64Array,
-  overscan: number,
-  initialEnd: boolean,
-  containerRef: RefObject<HTMLElement>
-): VisibleRange => {
-  const frameRef = useRef(0);
-  const initialEndRef = useRef(initialEnd);
-  const cumulativeRef = useRef(cumulative);
-  const [range, setRange] = useState<VisibleRange>(() =>
-    initialEnd
-      ? { end: cumulative.length - 1, start: initialVisibleStart(cumulative, initialViewportGuess) }
-      : { start: 0, end: initialVisibleEnd(cumulative, initialViewportGuess) }
-  );
-
-  cumulativeRef.current = cumulative;
-
-  const compute = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const scrollAncestor = findScrollAncestor(container);
-    const anchorTop = scrollAncestor ? scrollAncestor.getBoundingClientRect().top : 0;
-    const containerRect = container.getBoundingClientRect();
-    const viewportHeight = scrollAncestor ? scrollAncestor.clientHeight : window.innerHeight;
-    const scrollTop = anchorTop - containerRect.top;
-    const next = visibleRange(cumulativeRef.current, scrollTop, scrollTop + viewportHeight, overscan);
-    setRange((previous) => (sameRange(previous, next) ? previous : next));
-  }, [overscan, containerRef]);
-
-  useEffect(() => {
-    let ancestor: HTMLElement | null = null;
-    let lastTop = Number.NaN;
-    let lastHeight = Number.NaN;
-
-    const tick = () => {
-      const container = containerRef.current;
-      if (container) {
-        if (!ancestor?.isConnected) ancestor = findScrollAncestor(container);
-        const top = ancestor ? ancestor.scrollTop : window.scrollY;
-        const height = ancestor ? ancestor.clientHeight : window.innerHeight;
-        if (top !== lastTop || height !== lastHeight) {
-          lastTop = top;
-          lastHeight = height;
-          compute();
-        }
-      }
-      frameRef.current = window.requestAnimationFrame(tick);
-    };
-
-    frameRef.current = window.requestAnimationFrame(tick);
-    return () => window.cancelAnimationFrame(frameRef.current);
-  }, [compute, containerRef]);
-
-  useLayoutEffect(() => {
-    if (initialEndRef.current) {
-      initialEndRef.current = false;
-      return;
-    }
-    compute();
-  }, [compute, cumulative]);
-
-  return range;
-};
-
-const MeasuredItem = ({ itemKey, className, children, onHeight }: MeasuredItemProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const measure = () => onHeight(itemKey, element.offsetHeight);
-    const observer = new ResizeObserver(measure);
-    measure();
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [itemKey, onHeight]);
-
-  return (
-    <div ref={ref} class={tw('min-w-0', className)}>
-      {children}
-    </div>
-  );
-};
 
 export const Virtual = <T,>({
   items,

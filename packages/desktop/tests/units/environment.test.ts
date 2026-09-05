@@ -3,18 +3,29 @@ import type * as Environment from '../../src/main/environment.js';
 
 vi.unmock('@main/environment');
 
+let childEnvironment: typeof Environment.childEnvironment;
 let mergePathValues: typeof Environment.mergePathValues;
 let parseShellEnvironment: typeof Environment.parseShellEnvironment;
 let shellEnvironmentPayload: typeof Environment.shellEnvironmentPayload;
 
 beforeAll(async () => {
   const environment = await import('../../src/main/environment.js');
+  childEnvironment = environment.childEnvironment;
   mergePathValues = environment.mergePathValues;
   parseShellEnvironment = environment.parseShellEnvironment;
   shellEnvironmentPayload = environment.shellEnvironmentPayload;
 });
 
 describe('main environment', () => {
+  it('copies the child environment with overrides without mutating the parent', () => {
+    const previous = process.env.GIT_OPTIONAL_LOCKS;
+    const result = childEnvironment({ GIT_OPTIONAL_LOCKS: '0' });
+    expect(result.GIT_OPTIONAL_LOCKS).toBe('0');
+    expect(result.PATH).toBe(process.env.PATH);
+    expect(process.env.GIT_OPTIONAL_LOCKS).toBe(previous);
+    expect(result).not.toBe(process.env);
+  });
+
   it('parses null-separated shell environment output after startup noise', () => {
     const environment = parseShellEnvironment(
       'shell startup text\n__START_SHELL_ENV__\0PATH=/opt/homebrew/bin:/usr/bin\0SHELL=/bin/zsh\0noise\0=empty\0'

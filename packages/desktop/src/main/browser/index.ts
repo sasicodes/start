@@ -7,8 +7,8 @@ import { normalizeBrowserUrl } from '@main/browser/url';
 import { sendToRendererWindows } from '@main/window';
 import {
   BrowserWindow,
-  clipboard,
   ClipboardItem,
+  clipboard,
   type BrowserWindow as ElectronBrowserWindow,
   type Event as ElectronEvent,
   type WebContentsView as ElectronWebContentsView,
@@ -205,6 +205,8 @@ const createBrowserView = () => {
       backgroundThrottling: true
     }
   });
+  view.webContents.session.setPermissionCheckHandler(() => false);
+  view.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   view.setBackgroundColor('#00000000');
   view.webContents.setWindowOpenHandler(({ url }) => {
     const normalized = normalizeBrowserUrl(url);

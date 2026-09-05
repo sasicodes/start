@@ -25,3 +25,118 @@ index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..0d9f715c2eb3aceb35357fee9bca999f
      <h1>${heading}</h1>
      <p>${message}</p>
      ${details ? `<div class="details">${details}</div>` : ""}
+diff --git a/dist/providers/openai-codex.models.js b/dist/providers/openai-codex.models.js
+index c53dcaa13ee7106a07383697302e63962bb23f9d..4a0cdef2a4ef47252ea45b9ead5c6009c5b2dd9e 100644
+--- a/dist/providers/openai-codex.models.js
++++ b/dist/providers/openai-codex.models.js
+@@ -2,5 +2,50 @@
+ // Do not edit manually - run 'npm run generate-models' to update
+ import values from "./data/openai-codex.json" with { type: "json" };
+ import { flattenModelCatalog } from "../model-catalog.js";
+-export const OPENAI_CODEX_MODELS = flattenModelCatalog("openai-codex", values);
++export const OPENAI_CODEX_MODELS = {
++    ...flattenModelCatalog("openai-codex", values),
++    "gpt-6-astra": {
++        "id": "gpt-6-astra",
++        "name": "GPT-6 Astra",
++        "api": "openai-codex-responses",
++        "provider": "openai-codex",
++        "baseUrl": "https://chatgpt.com/backend-api",
++        "reasoning": true,
++        "input": [
++            "text",
++            "image"
++        ],
++        "cost": {
++            "input": 10,
++            "output": 50,
++            "cacheRead": 1,
++            "cacheWrite": 12.5,
++            "tiers": [
++                {
++                    "inputTokensAbove": 272000,
++                    "input": 20,
++                    "output": 75,
++                    "cacheRead": 2,
++                    "cacheWrite": 25
++                }
++            ]
++        },
++        "contextWindow": 272000,
++        "maxTokens": 128000,
++        "thinkingLevelMap": {
++            "off": null,
++            "minimal": "low",
++            "low": "low",
++            "medium": "medium",
++            "high": "high",
++            "xhigh": "xhigh",
++            "max": "max"
++        },
++        "compat": {
++            "supportsOpenAIGrammarTools": true,
++            "supportsAdditionalTools": true,
++            "supportsToolSearch": true
++        }
++    }
++};
+ //# sourceMappingURL=openai-codex.models.js.map
+\ No newline at end of file
+diff --git a/dist/providers/openai.models.js b/dist/providers/openai.models.js
+index b64f4cd6014db2429b22dec1923d80460b4cee49..822f49d335c7f84196df951bdc9cf16c9b0247a2 100644
+--- a/dist/providers/openai.models.js
++++ b/dist/providers/openai.models.js
+@@ -2,5 +2,52 @@
+ // Do not edit manually - run 'npm run generate-models' to update
+ import values from "./data/openai.json" with { type: "json" };
+ import { flattenModelCatalog } from "../model-catalog.js";
+-export const OPENAI_MODELS = flattenModelCatalog("openai", values);
++export const OPENAI_MODELS = {
++    ...flattenModelCatalog("openai", values),
++    "gpt-6-astra": {
++        "id": "gpt-6-astra",
++        "name": "GPT-6 Astra",
++        "api": "openai-responses",
++        "baseUrl": "https://api.openai.com/v1",
++        "provider": "openai",
++        "reasoning": true,
++        "input": [
++            "text",
++            "image"
++        ],
++        "cost": {
++            "input": 10,
++            "output": 50,
++            "cacheRead": 1,
++            "cacheWrite": 12.5,
++            "tiers": [
++                {
++                    "inputTokensAbove": 272000,
++                    "input": 20,
++                    "output": 75,
++                    "cacheRead": 2,
++                    "cacheWrite": 25
++                }
++            ]
++        },
++        "contextWindow": 272000,
++        "maxTokens": 128000,
++        "thinkingLevelMap": {
++            "off": null,
++            "minimal": null,
++            "low": "low",
++            "medium": "medium",
++            "high": "high",
++            "xhigh": "xhigh",
++            "max": "max"
++        },
++        "compat": {
++            "supportsStrictMode": true,
++            "supportsOpenAIGrammarTools": true,
++            "supportsAdditionalTools": true,
++            "supportsToolSearch": true,
++            "supportsExplicitPromptCacheMode": true
++        }
++    }
++};
+ //# sourceMappingURL=openai.models.js.map

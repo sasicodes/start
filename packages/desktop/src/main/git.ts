@@ -2,13 +2,14 @@ import { execFile, spawn } from 'node:child_process';
 import { readFile, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { childEnvironment } from '@main/environment';
 import { resolveInside } from '@main/utils/workspace';
 
-export type GitChangeSummary = {
+export interface GitChangeSummary {
   filesChanged: number;
   insertions: number;
   deletions: number;
-};
+}
 
 export type GitPatchSectionKind = 'staged' | 'unstaged' | 'untracked';
 
@@ -18,9 +19,9 @@ export type GitPatchSection = GitChangeSummary & {
   patch: string;
 };
 
-export type GitPatch = {
+export interface GitPatch {
   sections: GitPatchSection[];
-};
+}
 
 export type GitFileRef = 'head' | 'working';
 
@@ -30,19 +31,19 @@ export interface GitFileBlob {
   sizeBytes: number;
 }
 
-type GitSectionStats = {
+interface GitSectionStats {
   files: Set<string>;
   insertions: number;
   deletions: number;
-};
+}
 
 type UntrackedPatchMode = 'full' | 'none' | 'summary';
 
-type UntrackedFileData = {
+interface UntrackedFileData {
   insertions: number;
   patch: string;
   summaryPatch: string;
-};
+}
 
 const maxPatchFiles = 2000;
 const maxUntrackedFiles = 64;
@@ -73,7 +74,7 @@ const mimeFromPath = (filePath: string) => {
   return mimeByExtension[basename.slice(dot + 1).toLowerCase()] ?? 'application/octet-stream';
 };
 
-export const gitEnv = () => ({ ...process.env, GIT_OPTIONAL_LOCKS: '0' });
+export const gitEnv = () => childEnvironment({ GIT_OPTIONAL_LOCKS: '0' });
 
 const git = async (cwd: string, args: string[], timeout = 1200) => {
   const { stdout } = await execFileAsync('git', args, { cwd, timeout, env: gitEnv(), maxBuffer: gitMaxBuffer });

@@ -2,7 +2,7 @@ import type { EffortLevel } from '@preload/index';
 import { tw } from '@renderer/utils/tw';
 
 export const effortLevels = [
-  { id: 'low', label: 'Low' },
+  { id: 'low', label: 'Light' },
   { id: 'medium', label: 'Medium' },
   { id: 'high', label: 'High' },
   { id: 'xhigh', label: 'Extra high' }

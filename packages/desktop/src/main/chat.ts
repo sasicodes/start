@@ -56,6 +56,7 @@ import { mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { modelScore } from '@main/models';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import { resolveCredentialStore } from '@main/providers/auth';
+import { configureModelEffort } from '@main/providers/effort';
 import { InMemorySettingsBackend } from '@main/providers/settings';
 import { createStartCustomTools } from '@main/providers/tools/index';
 import { warmWebSearchTools } from '@main/providers/tools/search/index';
@@ -272,6 +273,7 @@ export class ChatService {
   private appState = readStartState();
   private session: AgentSession | null = null;
   private resourceRefreshPromise: Promise<boolean> | null = null;
+  private authRefreshPromise: ReturnType<ModelRegistry['refresh']> | null = null;
   private workspaceCwd = this.appState.lastWorkspace ?? homedir();
   private authInputReject: ((error: Error) => void) | null = null;
   private authInputResolve: ((value: string) => void) | null = null;
@@ -305,7 +307,9 @@ export class ChatService {
   private async initializeModels(): Promise<void> {
     try {
       registerBunOAuthFlows();
-      const runtime = await ModelRuntime.create({ credentials: this.credentials, allowModelNetwork: true });
+      const runtime = await ModelRuntime.create({ credentials: this.credentials });
+      configureModelEffort(runtime);
+      await runtime.refresh({ allowNetwork: false });
       this.modelServicesState = { status: 'ready', registry: new ModelRegistry(runtime), runtime };
     } catch (error) {
       this.modelServicesState = {
@@ -1154,7 +1158,8 @@ export class ChatService {
     return this.workspaceCwd;
   }
 
-  async getAuthProviders(): Promise<ProviderAuthStatus[]> {
+  async getAuthProviders(fresh = false): Promise<ProviderAuthStatus[]> {
+    if (fresh) await this.authRefreshPromise?.catch(() => {});
     await this.refreshAuth();
     const available = this.modelRegistry.getAvailable();
 
@@ -1199,7 +1204,7 @@ export class ChatService {
     await this.ensureReady();
     await this.credentials.modify(cleanProvider, async () => ({ type: 'api_key', key: cleanApiKey }));
 
-    return this.getAuthProviders();
+    return this.getAuthProviders(true);
   }
 
   async disconnectProvider(provider: string): Promise<ProviderAuthStatus[]> {
@@ -1212,7 +1217,7 @@ export class ChatService {
       await this.modelRuntime.logout(slot);
     }
 
-    return this.getAuthProviders();
+    return this.getAuthProviders(true);
   }
 
   async loginSubscription(provider: string, webContents: WebContents): Promise<ProviderLoginResult> {
@@ -1227,11 +1232,11 @@ export class ChatService {
         prompt: (prompt) => this.promptSubscriptionAuth(provider, prompt, webContents)
       });
 
-      return { ok: true, providers: await this.getAuthProviders() };
+      return { ok: true, providers: await this.getAuthProviders(true) };
     } catch (error) {
       return {
         ok: false,
-        providers: await this.getAuthProviders(),
+        providers: await this.getAuthProviders(true),
         error: error instanceof Error ? error.message : 'Subscription login failed.'
       };
     } finally {
@@ -1249,8 +1254,19 @@ export class ChatService {
     this.clearSubscriptionAuthInput();
   }
 
+  private selectionChangedStatus(): ChatStatus {
+    return {
+      ready: false,
+      workspacePath: this.workspaceCwd,
+      thinkingLevel: this.selectedThinkingLevel,
+      error: 'Chat changed before the selection finished.'
+    };
+  }
+
   async selectModel(selectedKey: string): Promise<ChatStatus> {
-    await this.ensureReady();
+    const openSequence = this.sessionOpenSequence;
+    await this.refreshAuth();
+    if (openSequence !== this.sessionOpenSequence) return this.selectionChangedStatus();
     if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
@@ -1260,7 +1276,6 @@ export class ChatService {
       };
     }
 
-    await this.refreshAuth();
     const model = this.findModelByKey(selectedKey);
     if (!model) {
       return {
@@ -1275,6 +1290,7 @@ export class ChatService {
     const nextThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
     if (this.selectedModelKey !== nextModelKey) {
       const activeSession = this.session;
+      const workspacePath = this.workspaceCwd;
       if (activeSession && this.sessionIsReportable(activeSession)) {
         try {
           await activeSession.setModel(model);
@@ -1290,8 +1306,9 @@ export class ChatService {
           modelId: model.id,
           modelProvider: model.provider
         });
-        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath: this.workspaceCwd });
-        this.notifyMobileSessionChanged(activeSession.sessionManager.getSessionId(), this.workspaceCwd);
+        sendToRendererWindows('chat:recent-sessions-changed', { workspacePath });
+        this.notifyMobileSessionChanged(activeSession.sessionManager.getSessionId(), workspacePath);
+        if (openSequence !== this.sessionOpenSequence) return this.selectionChangedStatus();
       } else {
         this.sessionOpenSequence += 1;
         if (activeSession) this.storeBackgroundSession(this.workspaceCwd, activeSession);
@@ -1315,7 +1332,9 @@ export class ChatService {
   }
 
   async selectThinkingLevel(level: string): Promise<ChatStatus> {
-    await this.ensureReady();
+    const openSequence = this.sessionOpenSequence;
+    await this.refreshAuth();
+    if (openSequence !== this.sessionOpenSequence) return this.selectionChangedStatus();
     if (this.session && this.sessionIsGenerating(this.session)) {
       return {
         ready: false,
@@ -1333,7 +1352,6 @@ export class ChatService {
       };
     }
 
-    await this.refreshAuth();
     const model = this.pickModel();
     if (!model) {
       return {
@@ -2408,8 +2426,13 @@ export class ChatService {
 
   private async refreshAuth(): Promise<void> {
     await this.ensureReady();
-    this.credentials.reload();
-    await this.modelRegistry.refresh();
+    if (!this.authRefreshPromise) {
+      this.credentials.reload();
+      this.authRefreshPromise = this.modelRegistry.refresh().finally(() => {
+        this.authRefreshPromise = null;
+      });
+    }
+    await this.authRefreshPromise;
   }
 
   private notifySubscriptionAuth(provider: string, event: AuthEvent, webContents: WebContents): void {

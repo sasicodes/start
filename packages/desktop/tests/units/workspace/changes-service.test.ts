@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { deferred } from '../../helpers/deferred.js';
 
 const gitMocks = vi.hoisted(() => ({
   getGitPatch: vi.fn(),
@@ -42,6 +43,22 @@ vi.mock('@main/git', async (importOriginal) => ({
 vi.mock('node:child_process', () => childProcessMocks);
 
 const { execFile: execFileMock } = await childProcessMocks;
+
+const delayWatchDirectories = () => {
+  const pending = deferred<string>();
+  execFileMock.mockImplementationOnce(
+    (
+      _command: string,
+      _args: string[],
+      _options: object,
+      callback: (error: Error | null, stdout: string, stderr: string) => void
+    ) => {
+      pending.promise.then((stdout) => callback(null, stdout, ''));
+      return new EventEmitter() as ChildProcess;
+    }
+  );
+  return pending;
+};
 
 vi.mock('node:fs', async () => {
   const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
@@ -265,5 +282,53 @@ describe('GitChangesService', () => {
 
     expect(fsMocks.watchers.length).toBeGreaterThan(0);
     expect(fsMocks.watchers.every((watcher) => watcher.closed)).toBe(true);
+  });
+
+  it.each(['dispose', 'prune'] as const)(
+    'does not restore watchers when enumeration finishes after %s',
+    async (action) => {
+      const pending = delayWatchDirectories();
+      const { GitChangesService } = await import('@main/workspace/changes');
+      const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
+      await service.getSummary('/other');
+
+      if (action === 'dispose') {
+        service.dispose();
+      } else {
+        await vi.advanceTimersByTimeAsync(11 * 60 * 1000);
+        await service.getSummary('/repo');
+      }
+      const watchCount = fsMocks.watch.mock.calls.length;
+      pending.resolve('src/index.ts\0');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(fsMocks.watch).toHaveBeenCalledTimes(watchCount);
+      expect(fsMocks.watchers.slice(0, 2).every((watcher) => watcher.closed)).toBe(true);
+      service.dispose();
+    }
+  );
+
+  it.each(['success', 'failure'] as const)('ignores a refresh %s after disposal', async (outcome) => {
+    const pending = deferred<typeof changedSummary>();
+    const notify = vi.fn();
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ notify, focused: () => true, currentWorkspace: () => '/repo' });
+    await service.getSummary();
+    gitMocks.getGitChangeSummary.mockReturnValueOnce(pending.promise);
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+
+    service.dispose();
+    const watchCount = fsMocks.watch.mock.calls.length;
+    if (outcome === 'success') pending.resolve(changedSummary);
+    else pending.reject(new Error('git failed'));
+    await vi.advanceTimersByTimeAsync(0);
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(fsMocks.watch).toHaveBeenCalledTimes(watchCount);
+    expect(fsMocks.watchers.every((watcher) => watcher.closed)).toBe(true);
+    expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(2);
   });
 });

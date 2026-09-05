@@ -11,6 +11,7 @@ interface MutableRef<T> {
 
 interface UseChatSendOptions {
   draft: string;
+  waitForSelection: () => Promise<void>;
   setTurns: TurnUpdater;
   isGenerating: boolean;
   setDraft: (value: string) => void;
@@ -29,6 +30,7 @@ const stopStreamingTurn = (turnId: string) => (turn: ReturnType<typeof createTur
 
 export const useChatSend = ({
   draft,
+  waitForSelection,
   setDraft,
   setTurns,
   isGenerating,
@@ -90,13 +92,18 @@ export const useChatSend = ({
       }
 
       if (isGenerating) {
+        const requestId = sessionRequestRef.current;
         setDraft('');
         try {
+          await waitForSelection();
+          if (sessionRequestRef.current !== requestId) return;
           const result = await window.pi.chat.send(text, attachments);
+          if (sessionRequestRef.current !== requestId) return;
           if (result.sessionId) updateActiveSessionId(result.sessionId);
           if (!result.ok)
             setTurns((current) => [...current, createTurn('system', result.error ?? 'Message could not be queued.')]);
         } catch {
+          if (sessionRequestRef.current !== requestId) return;
           setTurns((current) => [...current, createTurn('system', 'Message could not be queued.')]);
         }
         return;
@@ -114,6 +121,8 @@ export const useChatSend = ({
 
       let result: SendResult;
       try {
+        await waitForSelection();
+        if (sessionRequestRef.current !== requestId) return;
         result = await window.pi.chat.send(text, attachments);
       } catch {
         if (sessionRequestRef.current !== requestId) return;
@@ -146,6 +155,7 @@ export const useChatSend = ({
       }
     },
     [
+      waitForSelection,
       setDraft,
       setTurns,
       isGenerating,

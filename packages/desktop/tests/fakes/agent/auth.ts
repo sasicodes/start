@@ -5,6 +5,12 @@ export class FakeModelRuntime {
     return new FakeModelRuntime();
   }
 
+  getModels(provider: string): FakeModel[] {
+    return getAvailableModels().filter((model) => model.provider === provider);
+  }
+
+  registerProvider(_provider: string, _config: unknown) {}
+
   async refresh() {}
 
   getAvailableSnapshot(): FakeModel[] {
