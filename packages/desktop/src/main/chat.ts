@@ -407,15 +407,7 @@ export class ChatService {
 
   async getSlashCommands(): Promise<SlashCommandItem[]> {
     const session = await this.getSession();
-    return [
-      {
-        name: 'goal',
-        key: 'start:goal',
-        source: 'extension',
-        description: 'Work toward an objective until it is complete'
-      },
-      ...sessionSlashCommandItems(session).filter((command) => command.name !== 'goal')
-    ];
+    return sessionSlashCommandItems(session);
   }
 
   async refreshActiveSessionResources(): Promise<boolean> {
@@ -1444,7 +1436,7 @@ export class ChatService {
           const current = goal.get();
           this.emit(
             'delta',
-            current ? `Goal ${current.status}: ${current.objective}` : 'Use /goal <objective> to start.',
+            current ? `Goal ${current.status}: ${current.objective}` : 'Use @Goal followed by an objective to start.',
             webContents
           );
           this.emit('done', completedDoneReason, webContents);
@@ -1459,7 +1451,37 @@ export class ChatService {
         return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
       }
     }
+    const currentGoal = this.goalForSession(session.sessionManager);
+    const goalStatus = currentGoal.get()?.status;
+    const mentionsGoal = /(^|\s)@goal(?=\s|$)/iu.test(text);
+    if (mentionsGoal && goalStatus !== 'active' && goalStatus !== 'paused') {
+      const objective = text.replace(/(^|\s)@goal(?:[ \t]+|(?=\s|$))/giu, '$1').trim();
+      if (!objective) return { ok: false, error: 'Add an objective after @Goal.' };
+      if (this.sessionIsGenerating(session))
+        return { ok: false, error: 'Wait for the current response before starting a goal.' };
+      try {
+        currentGoal.start(objective);
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
+      }
+    }
     return this.generate(session, this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  async updateGoal(sessionId: string, objective: string): Promise<ChatStatus> {
+    const session = this.session;
+    if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
+    try {
+      if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before editing the goal.');
+      this.goalForSession(session.sessionManager).update(objective);
+      return this.chatStatus();
+    } catch (error) {
+      return {
+        ...this.chatStatus(),
+        ready: false,
+        error: error instanceof Error ? error.message : 'Goal could not be updated.'
+      };
+    }
   }
 
   async controlGoal(
@@ -1483,6 +1505,11 @@ export class ChatService {
         }
         this.generate(session, this.workspaceCwd, prompt, [], webContents);
       } else {
+        const status = goal.get()?.status;
+        if (status !== 'active') {
+          if (action === 'cancel' && status === 'paused') goal.cancel();
+          return this.chatStatus();
+        }
         if (action === 'cancel') goal.cancel();
         else goal.pause('Paused by you.');
         const state = this.runtimeStateForSession(session);

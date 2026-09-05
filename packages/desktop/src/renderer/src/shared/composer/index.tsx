@@ -1,19 +1,20 @@
 import { queuedRecallIds } from '@renderer/shared/chat/recall';
 import { Attachments } from '@renderer/shared/composer/attachments';
 import { Generate } from '@renderer/shared/composer/generate';
-import { composerIsLayered } from '@renderer/shared/composer/layout';
 import { Model } from '@renderer/shared/composer/model';
 import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
 import { editingQueuedId } from '@renderer/shared/composer/queue/state';
-import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
+import { recallOlderInput } from '@renderer/shared/composer/recall';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { useComposerFinder } from '@renderer/shared/composer/use-finder';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
+import { useComposerTextarea } from '@renderer/shared/composer/use-textarea';
 import { Workspace } from '@renderer/shared/composer/workspace';
 import { Finder, finderItemId } from '@renderer/shared/finder';
 import { Goal } from '@renderer/shared/goal';
 import { visibleGoal } from '@renderer/shared/goal/state';
+import { useGoalEditor } from '@renderer/shared/goal/use-editor';
 import { commandMode } from '@renderer/shared/input';
 import { usePromptPlaceholder } from '@renderer/shared/placeholder/use-placeholder';
 import { ScrollToBottom } from '@renderer/shared/turn/scroll-to-bottom';
@@ -21,7 +22,7 @@ import { composerDockTransition } from '@renderer/ui/motion';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
 import { memo } from 'preact/compat';
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useMemo } from 'preact/hooks';
 
 export const Composer = memo(
   ({
@@ -59,29 +60,13 @@ export const Composer = memo(
     noProvidersConfigured,
     onChooseWorkspaceDirectory
   }: ComposerProps) => {
-    const isCommandMode = commandMode(draft);
     const singleLine = overlay;
-    const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
-    const textareaLayoutRef = useRef(initialComposerTextareaLayoutState());
-    const [isMultiline, setIsMultiline] = useState(false);
-    const resetTextareaLayout = useCallback((element: HTMLTextAreaElement) => {
-      element.style.height = '';
-      textareaLayoutRef.current = initialComposerTextareaLayoutState();
-      setIsMultiline(false);
-    }, []);
-    const updateTextareaLayout = useCallback((element: HTMLTextAreaElement, value: string) => {
-      const nextLayout = syncComposerTextareaLayout(element, value, textareaLayoutRef.current);
-      textareaLayoutRef.current = nextLayout;
-      setIsMultiline(nextLayout.multiline);
-    }, []);
-    const setPromptInputRef = useCallback(
-      (element: HTMLTextAreaElement | null) => {
-        promptInputRef.current = element;
-        textareaRef.current = element;
-        if (element && !singleLine) updateTextareaLayout(element, draft);
-      },
-      [draft, singleLine, textareaRef, updateTextareaLayout]
-    );
+    const hasAttachments = attachments.length > 0;
+    const editor = useGoalEditor({ draft, overlay, hasAttachments, onDraftChange, textareaRef });
+    const goalStatus = editor.state.value.status;
+    const editingGoal = goalStatus !== 'idle';
+    const isCommandMode = !editingGoal && commandMode(draft);
+    const { layered, setPromptInputRef } = useComposerTextarea({ draft, singleLine, hasAttachments, textareaRef });
 
     const {
       finderToken,
@@ -94,27 +79,19 @@ export const Composer = memo(
       moveFinderSelection,
       completeFinderItem
     } = useComposerFinder(draft, onDraftChange);
-    const hasAttachments = attachments.length > 0;
     const hasGoal = !overlay && Boolean(visibleGoal.value);
     const attachedVisible = (queuedMessages.length > 0 || hasGoal) && !finderVisible && !isCommandMode;
     const centered = overlay || !hasTurns;
-    const layered = composerIsLayered({ singleLine, hasAttachments, multiline: isMultiline });
     const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
-
-    useLayoutEffect(() => {
-      const element = promptInputRef.current;
-      if (!element || singleLine) {
-        if (element) resetTextareaLayout(element);
-        return;
-      }
-
-      updateTextareaLayout(element, draft);
-    }, [draft, layered, resetTextareaLayout, singleLine, updateTextareaLayout]);
 
     const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
     const recall = useMessageRecall(recallMessages, recallQueuedIds, draft, onDraftChange);
 
     const submitDraft = () => {
+      if (editor.state.peek().status !== 'idle') {
+        editor.save();
+        return;
+      }
       if (!draft.trim() || noProvidersConfigured) return;
 
       if (editingQueuedId.value) {
@@ -136,6 +113,7 @@ export const Composer = memo(
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      const holdingGoal = editor.state.peek().status !== 'idle';
       if (event.key === 'ArrowDown' && finderVisible && finderItems.length > 0) {
         event.preventDefault();
         moveFinderSelection(1);
@@ -148,17 +126,22 @@ export const Composer = memo(
         return;
       }
 
-      if (event.key === 'ArrowUp' && !finderVisible && recall.older()) {
+      if (
+        event.key === 'ArrowUp' &&
+        !finderVisible &&
+        !holdingGoal &&
+        recallOlderInput(recallQueuedIds.length > 0, recall.older, () => !overlay && editor.recall())
+      ) {
         event.preventDefault();
         return;
       }
 
-      if (event.key === 'ArrowDown' && !finderVisible && recall.newer()) {
+      if (event.key === 'ArrowDown' && !finderVisible && !holdingGoal && recall.newer()) {
         event.preventDefault();
         return;
       }
 
-      if (event.key === 'Escape' && recall.cancel()) {
+      if (event.key === 'Escape' && (editor.cancel() || recall.cancel())) {
         event.preventDefault();
         return;
       }
@@ -282,7 +265,8 @@ export const Composer = memo(
                 onStop={onStop}
                 commandMode={isCommandMode}
                 isGenerating={isGenerating}
-                {...(noProvidersConfigured ? { disabledReason: 'Choose a model' } : {})}
+                {...(goalStatus !== 'idle' ? { editing: goalStatus } : {})}
+                {...(noProvidersConfigured && !editingGoal ? { disabledReason: 'Choose a model' } : {})}
               />
             </div>
           </div>

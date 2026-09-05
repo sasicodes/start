@@ -1,6 +1,6 @@
 import type { RootItem } from '@preload/index';
-import { staticFinderItems, withStaticFinderItems } from '@renderer/shared/finder/static';
 import { fallbackRootItemsForFinderToken, type LoadedFinderItems } from '@renderer/shared/finder/items';
+import { staticFinderItems, withStaticFinderItems } from '@renderer/shared/finder/static';
 import type { FinderToken } from '@renderer/shared/input';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 

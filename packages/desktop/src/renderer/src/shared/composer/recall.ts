@@ -97,3 +97,6 @@ export const createMessageRecall = (context: () => RecallContext) => {
 
   return { older, newer, save, cancel, dispose };
 };
+
+export const recallOlderInput = (hasQueued: boolean, history: () => boolean, goal: () => boolean) =>
+  hasQueued ? history() : goal() || history();

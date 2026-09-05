@@ -30,6 +30,8 @@ const writeStatus = (status: ChatStatus) => {
     current.goal.status === goal.status &&
     current.goal.objective === goal.objective &&
     current.goal.iterations === goal.iterations &&
+    current.goal.elapsedMs === goal.elapsedMs &&
+    current.goal.startedAt === goal.startedAt &&
     current.goal.reason === goal.reason
   )
     return;
@@ -50,29 +52,59 @@ export const syncGoal = (status: ChatStatus, version = revision) => {
   writeStatus(status);
 };
 
-export const controlGoal = async (action: GoalAction) => {
+export const setGoalError = (message: string) => {
   const current = goalState.peek();
   if (current.kind !== 'ready') return;
-  const status = current.goal.status;
-  if (status === 'completed' || status === 'cancelled') return;
-  if ((action === 'pause' && status !== 'active') || (action === 'resume' && status !== 'paused')) return;
+  goalState.value = { ...current, error: message };
+};
 
+const changeGoal = async (
+  run: (sessionId: string) => Promise<ChatStatus>,
+  accepts: (result: ChatStatus) => boolean
+): Promise<boolean> => {
+  const current = goalState.peek();
+  if (current.kind !== 'ready') return false;
   const request = revision + 1;
   revision = request;
   goalState.value = { ...current, kind: 'saving', error: '' };
   try {
-    const result = await window.pi.chat.controlGoal(current.sessionId, action);
-    if (revision !== request || goalState.peek().sessionId !== current.sessionId) return;
+    const result = await run(current.sessionId);
+    if (revision !== request || goalState.peek().sessionId !== current.sessionId) return false;
     revision += 1;
-    const expectedStatus = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'cancelled';
-    if (result.sessionId !== current.sessionId || result.goal?.status !== expectedStatus) {
+    if (result.sessionId !== current.sessionId || !accepts(result)) {
       goalState.value = { ...current, error: result.error ?? 'Goal could not be updated.' };
-      return;
+      return false;
     }
     writeStatus(result);
+    return true;
   } catch {
-    if (revision !== request || goalState.peek().sessionId !== current.sessionId) return;
+    if (revision !== request || goalState.peek().sessionId !== current.sessionId) return false;
     revision += 1;
     goalState.value = { ...current, error: 'Goal could not be updated.' };
+    return false;
   }
+};
+
+export const controlGoal = async (action: GoalAction): Promise<boolean> => {
+  const current = goalState.peek();
+  if (current.kind !== 'ready') return false;
+  const status = current.goal.status;
+  if (status === 'completed' || status === 'cancelled') return false;
+  if ((action === 'pause' && status !== 'active') || (action === 'resume' && status !== 'paused')) return false;
+
+  const expectedStatus = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'cancelled';
+  return changeGoal(
+    (sessionId) => window.pi.chat.controlGoal(sessionId, action),
+    (result) => result.goal?.status === expectedStatus
+  );
+};
+
+export const updateGoal = async (objective: string): Promise<boolean> => {
+  const current = goalState.peek();
+  const nextObjective = objective.trim();
+  if (current.kind !== 'ready' || current.goal.status !== 'paused' || !nextObjective) return false;
+  return changeGoal(
+    (sessionId) => window.pi.chat.updateGoal(sessionId, nextObjective),
+    (result) => result.goal?.status === 'paused' && result.goal.objective === nextObjective
+  );
 };

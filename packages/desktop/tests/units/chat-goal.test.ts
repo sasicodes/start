@@ -1,3 +1,4 @@
+import { SessionManager } from '@earendil-works/pi-coding-agent';
 import * as attachments from '@main/attachments';
 import type { ImageAttachment } from '@main/types';
 import { expect, it, vi } from 'vitest';
@@ -220,5 +221,126 @@ it('preserves held input, steering, reordering, and deletion during a goal', asy
   expect(session.followUpQueue).toEqual(['Updated']);
   await chat.abort();
   await sending;
+  chat.dispose();
+});
+
+it.each([
+  ['@Goal Finish the work', 'Finish the work'],
+  ['Please @gOaL inspect @src/main.ts', 'Please inspect @src/main.ts'],
+  ['@Goal\nKeep\nformatting', 'Keep\nformatting']
+])('starts a goal from standalone mention: %s', async (text, objective) => {
+  const { chat, session, webContents } = await setup();
+  const sending = chat.send(text, webContents);
+  await session.awaitPromptCall();
+  expect((await chat.getStatus()).goal).toMatchObject({ objective, status: 'active' });
+  await chat.abort();
+  await sending;
+  chat.dispose();
+});
+
+it.each(['mention@goal.com', '@goalkeeper inspect', 'Open @Goal/file.ts'])(
+  'does not treat %s as a goal marker',
+  async (text) => {
+    const { chat, session, webContents } = await setup();
+    const sending = chat.send(text, webContents);
+    await session.awaitPromptCall();
+    expect((await chat.getStatus()).goal).toBeFalsy();
+    session.finishPrompt();
+    await sending;
+    chat.dispose();
+  }
+);
+
+it('rejects an empty goal mention and omits goal from slash discovery', async () => {
+  const { chat, webContents } = await setup();
+  expect(await chat.send('@Goal', webContents)).toEqual({ ok: false, error: 'Add an objective after @Goal.' });
+  expect((await chat.getSlashCommands()).some((item) => item.name === 'goal')).toBe(false);
+  expect((await chat.getStatus()).goal).toBeFalsy();
+  chat.dispose();
+});
+
+it('queues goal mentions as ordinary input while a goal already exists', async () => {
+  const { chat, tab, session, webContents } = await setup();
+  const sending = chat.send('@Goal Original objective', webContents);
+  await session.awaitPromptCall();
+  expect(await chat.send('Please @Goal also inspect @src', webContents)).toMatchObject({ ok: true, queued: true });
+  expect((await chat.getStatus()).goal?.objective).toBe('Original objective');
+  const queued = (await chat.openSessionId(tab.id)).queuedMessages?.[0];
+  if (!queued) throw new Error('Missing queue item');
+  expect(queued.text).toBe('Please @Goal also inspect @src');
+  await chat.steerQueuedMessage(queued.id, webContents);
+  expect(session.steerQueue).toEqual(['Please @Goal also inspect @src']);
+  await chat.abort();
+  await sending;
+  chat.dispose();
+});
+
+it('updates only the paused goal in the requested active session', async () => {
+  const { chat, tab, session, webContents } = await setup();
+  const sending = chat.send('@Goal Original objective', webContents);
+  await session.awaitPromptCall();
+  expect((await chat.updateGoal(tab.id, 'too soon')).ready).toBe(false);
+  await chat.controlGoal(tab.id, 'pause', webContents);
+  await sending;
+  expect((await chat.updateGoal('stale-session', 'wrong')).ready).toBe(false);
+  expect((await chat.updateGoal(tab.id, ' ')).ready).toBe(false);
+  expect((await chat.updateGoal(tab.id, 'Updated objective')).goal).toEqual({
+    status: 'paused',
+    objective: 'Updated objective',
+    iterations: 1,
+    elapsedMs: expect.any(Number)
+  });
+  expect(session.isStreaming).toBe(false);
+  await chat.controlGoal(tab.id, 'cancel', webContents);
+  expect((await chat.updateGoal(tab.id, 'cancelled')).ready).toBe(false);
+  expect((await chat.getStatus()).goal?.objective).toBe('Updated objective');
+  chat.dispose();
+});
+
+it.each(['missing', 'completed', 'cancelled'] as const)(
+  'ignores stale goal controls on a %s goal while an ordinary response runs',
+  async (status) => {
+    const chat = freshChatService();
+    const manager = SessionManager.create(process.cwd());
+    if (status !== 'missing') {
+      manager.appendCustomEntry('start-goal', { status, objective: 'Previous goal', iterations: 1, elapsedMs: 2000 });
+    }
+    await chat.openSession(manager.getSessionFile() ?? manager.getSessionId());
+    const session = getFakeSession(manager.getSessionId());
+    if (!session) throw new Error('Missing restored session');
+    const webContents = newWebContents();
+    const sending = chat.send('Ordinary message', webContents);
+    await session.awaitPromptCall();
+    await chat.send('Queued ordinary message', webContents);
+    const abort = vi.spyOn(session, 'abort');
+    for (const action of ['pause', 'cancel'] as const) {
+      await chat.controlGoal(manager.getSessionId(), action, webContents);
+      expect(session.isStreaming).toBe(true);
+      expect(session.followUpQueue).toEqual(['Queued ordinary message']);
+    }
+    expect(abort).not.toHaveBeenCalled();
+    await chat.abort();
+    await sending;
+    chat.dispose();
+  }
+);
+
+it('cancels a paused goal without stopping an ordinary response or clearing its queue', async () => {
+  const { chat, tab, session, webContents } = await setup();
+  const goalRun = chat.send('@Goal Original objective', webContents);
+  await session.awaitPromptCall();
+  await chat.controlGoal(tab.id, 'pause', webContents);
+  await goalRun;
+  const ordinaryRun = chat.send('A separate question', webContents);
+  await session.awaitPromptCall();
+  await chat.send('Follow up on the question', webContents);
+  const abort = vi.spyOn(session, 'abort');
+  await chat.controlGoal(tab.id, 'pause', webContents);
+  expect((await chat.controlGoal(tab.id, 'cancel', webContents)).goal?.status).toBe('cancelled');
+  expect(abort).not.toHaveBeenCalled();
+  expect(session.isStreaming).toBe(true);
+  expect(session.followUpQueue).toEqual(['Follow up on the question']);
+  await chat.abort();
+  await ordinaryRun;
   chat.dispose();
 });

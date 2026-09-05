@@ -41,6 +41,8 @@ export interface CliInstallResult {
 }
 
 export interface GoalStatus {
+  elapsedMs: number;
+  startedAt?: number;
   objective: string;
   iterations: number;
   reason?: string;
@@ -511,6 +513,8 @@ const api = {
     slashCommands: (): Promise<SlashCommandItem[]> => ipcRenderer.invoke('chat:slash-commands'),
     controlGoal: (sessionId: string, action: GoalAction): Promise<ChatStatus> =>
       ipcRenderer.invoke('chat:goal', sessionId, action),
+    updateGoal: (sessionId: string, objective: string): Promise<ChatStatus> =>
+      ipcRenderer.invoke('chat:update-goal', sessionId, objective),
     recentSessionsPage: (options: RecentSessionsOptions = {}): Promise<RecentSessionsPage> =>
       ipcRenderer.invoke('chat:sessions:page', options),
     archiveSession: (sessionId: string): Promise<void> => ipcRenderer.invoke('chat:sessions:archive', sessionId),

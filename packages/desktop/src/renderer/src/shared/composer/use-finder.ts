@@ -1,6 +1,7 @@
+import { completeFinderDraft } from '@renderer/shared/composer/utils/completion';
 import { type FinderItem, finderItemKey } from '@renderer/shared/finder';
 import { useFinderItems } from '@renderer/shared/finder/use-items';
-import { activeFinderToken, activeSlashCommandToken, finderTokenPrefix } from '@renderer/shared/input';
+import { activeFinderToken, activeSlashCommandToken } from '@renderer/shared/input';
 import { useSlashCommandItems } from '@renderer/shared/slash-commands';
 import { useCallback, useMemo, useState } from 'preact/hooks';
 
@@ -48,21 +49,8 @@ export const useComposerFinder = (draft: string, onDraftChange: (value: string) 
   );
 
   const completeFinderItem = (item: FinderItem, enterDirectory: boolean) => {
-    if (slashCommandToken) {
-      if (item.type !== 'command') return;
-      onDraftChange(`${draft.slice(0, slashCommandToken.start)}/${item.name} `);
-      return;
-    }
-
-    if (!finderToken || item.type === 'command') return;
-    if (item.type === 'browser' || item.type === 'new-session') {
-      onDraftChange(`${draft.slice(0, finderToken.start)}${finderTokenPrefix(finderToken.marker)}${item.name} `);
-      return;
-    }
-
-    const suffix = item.type === 'directory' && enterDirectory ? '/' : ' ';
-    const nextToken = `${finderTokenPrefix(finderToken.marker)}${item.path}${suffix}`;
-    onDraftChange(`${draft.slice(0, finderToken.start)}${nextToken}`);
+    const completed = completeFinderDraft(draft, item, enterDirectory);
+    if (completed !== null) onDraftChange(completed);
   };
 
   return {

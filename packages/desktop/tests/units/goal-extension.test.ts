@@ -12,8 +12,9 @@ type PromptHook = (event: { systemPrompt: string }) => Promise<unknown>;
 
 const fixture = async (active: boolean) => {
   const controller: GoalController = {
-    get: () => (active ? { objective: 'test', status: 'active', iterations: 1 } : null),
+    get: () => (active ? { objective: 'test', status: 'active', iterations: 1, elapsedMs: 0 } : null),
     start: vi.fn(),
+    update: vi.fn(),
     pause: vi.fn(),
     resume: vi.fn(),
     cancel: vi.fn(),
@@ -54,13 +55,18 @@ describe('goal extension', () => {
 
   it('reinjects the current objective after compaction and composes with existing workflows', async () => {
     const { hook, controller } = await fixture(true);
-    controller.get = () => ({ objective: 'Verify the release', status: 'active', iterations: 2 });
+    controller.get = () => ({ objective: 'Verify the release', status: 'active', iterations: 2, elapsedMs: 0 });
     const result = await hook({ systemPrompt: 'Compacted context' });
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Objective: Verify the release'));
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('verifying the entire objective'));
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('run_workflow'));
+    expect(result).toHaveProperty(
+      'systemPrompt',
+      expect.stringContaining('call finish_goal before giving the final user-facing answer')
+    );
+    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Give that answer once'));
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('simple goals do not require a workflow'));
-    controller.get = () => ({ objective: 'Verify the release', status: 'paused', iterations: 2 });
+    controller.get = () => ({ objective: 'Verify the release', status: 'paused', iterations: 2, elapsedMs: 0 });
     expect(await hook({ systemPrompt: 'Compacted context' })).toBeFalsy();
   });
 

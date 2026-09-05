@@ -5,6 +5,8 @@ export type ProviderKey = 'openai' | 'anthropic';
 export const effortLevels = ['low', 'medium', 'high', 'xhigh'] as const satisfies readonly EffortLevel[];
 
 export interface GoalStatus {
+  elapsedMs: number;
+  startedAt?: number;
   objective: string;
   iterations: number;
   reason?: string;

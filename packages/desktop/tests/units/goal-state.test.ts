@@ -7,7 +7,7 @@ const status = (sessionId: string, state: GoalStatus['status'] = 'active'): Chat
   sessionId,
   ready: true,
   workspacePath: '',
-  goal: { status: state, iterations: 1, objective: `Goal for ${sessionId}` }
+  goal: { status: state, elapsedMs: 0, iterations: 1, objective: `Goal for ${sessionId}` }
 });
 
 beforeEach(clearGoal);
