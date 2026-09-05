@@ -2,7 +2,7 @@ import { effect } from '@preact/signals';
 import type { ChatStatus, GoalStatus } from '@preload/index';
 import { queueEdit } from '@renderer/shared/composer/queue/state';
 import { createGoalEditor } from '@renderer/shared/goal/edit';
-import { clearGoal, goalState, syncGoal } from '@renderer/shared/goal/state';
+import { clearGoal, controlGoal, goalState, syncGoal } from '@renderer/shared/goal/state';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { deferred } from '../helpers/deferred.js';
 
@@ -178,7 +178,7 @@ it('Escape cancels editing without resuming or updating the paused goal', async 
 it('deleting clears the held edit after cancellation succeeds', async () => {
   const state = setup('paused');
   await state.editor.begin();
-  await state.editor.remove();
+  await controlGoal('cancel');
   expect(state.control).toHaveBeenCalledWith('first', 'cancel');
   expect(state.context.draft).toBe('');
   expect(state.editor.state.peek().status).toBe('idle');
@@ -187,7 +187,7 @@ it('deleting clears the held edit after cancellation succeeds', async () => {
 it('deleting a goal preserves an unrelated draft when there is no held edit', async () => {
   const state = setup('paused');
   state.context.draft = 'Unrelated draft';
-  await state.editor.remove();
+  await controlGoal('cancel');
   expect(state.context.draft).toBe('Unrelated draft');
 });
 
@@ -214,7 +214,7 @@ it('preserves the held edit when delete fails', async () => {
   const state = setup('paused');
   await state.editor.begin();
   state.control.mockRejectedValueOnce(new Error('failed'));
-  await state.editor.remove();
+  await controlGoal('cancel');
   expect(state.context.draft).toBe('Original objective');
   expect(state.editor.state.peek().status).toBe('editing');
 });

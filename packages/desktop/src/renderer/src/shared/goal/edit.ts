@@ -109,11 +109,6 @@ export const createGoalEditor = (context: () => GoalEditContext) => {
     return true;
   };
 
-  const remove = async () => {
-    if (!(await controlGoal('cancel'))) return;
-    sync();
-  };
-
   const dispose = () => {
     const current = state.peek();
     state.value = { status: 'idle' };
@@ -139,7 +134,7 @@ export const createGoalEditor = (context: () => GoalEditContext) => {
     return true;
   };
 
-  return { state, begin, save, cancel, remove, sync, dispose, recall };
+  return { state, begin, save, cancel, sync, dispose, recall };
 };
 
 export const goalEditor = signal<ReturnType<typeof createGoalEditor> | null>(null);

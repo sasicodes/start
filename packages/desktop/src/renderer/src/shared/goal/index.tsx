@@ -44,10 +44,6 @@ export const Goal = () => {
   const toggleLabel = active ? 'Pause goal' : 'Resume goal';
 
   const toggle = () => controlGoal(active ? 'pause' : 'resume');
-  const remove = () => {
-    if (editor) editor.remove();
-    else controlGoal('cancel');
-  };
 
   return (
     <section class="group/goal grid gap-1 rounded-xl py-2 pr-3 pl-1" aria-label="Goal">
@@ -63,7 +59,7 @@ export const Goal = () => {
           <GoalControl label={toggleLabel} disabled={saving || editing} onClick={toggle}>
             {active ? <PauseIcon /> : <PlayIcon />}
           </GoalControl>
-          <GoalControl label="Delete goal" danger disabled={saving} onClick={remove}>
+          <GoalControl label="Delete goal" danger disabled={saving} onClick={() => controlGoal('cancel')}>
             <TrashIcon />
           </GoalControl>
         </div>

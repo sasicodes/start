@@ -36,7 +36,7 @@ it.each(['abort', 'pause', 'cancel'] as const)(
       await gate.promise;
       return { pathTokens: [], attachments: [] };
     });
-    const sending = chat.send('/goal Recover the attachment', webContents, [image]);
+    const sending = chat.send('@Goal Recover the attachment', webContents, [image]);
     await started.promise;
     if (action === 'abort') await chat.abort();
     else await chat.controlGoal(tab.id, action, webContents);
@@ -56,7 +56,7 @@ it.each(['abort', 'pause', 'cancel'] as const)(
   'does not requeue a message after %s during attachment recovery',
   async (action) => {
     const { chat, tab, session, webContents } = await setup();
-    const sending = chat.send('/goal Keep working', webContents);
+    const sending = chat.send('@Goal Keep working', webContents);
     await session.awaitPromptCall();
     const gate = deferred<null>();
     const started = deferred<null>();
@@ -82,7 +82,7 @@ it.each(['abort', 'pause', 'cancel'] as const)(
 
 it('continues after a settled goal response and emits a new visible turn', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Complete two steps', webContents);
+  const sending = chat.send('@Goal Complete two steps', webContents);
   await session.awaitPromptCall();
   expect((await chat.getStatus()).goal).toMatchObject({ status: 'active', iterations: 1 });
   session.finishPrompt();
@@ -97,7 +97,7 @@ it('continues after a settled goal response and emits a new visible turn', async
 
 it('explicitly resumes a paused goal and cancels its next run', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Work until complete', webContents);
+  const sending = chat.send('@Goal Work until complete', webContents);
   await session.awaitPromptCall();
   await chat.abort();
   await sending;
@@ -112,7 +112,7 @@ it('explicitly resumes a paused goal and cancels its next run', async () => {
 
 it('pauses on a model error without automatically retrying the goal', async () => {
   const { chat, session, webContents } = await setup();
-  const sending = chat.send('/goal Complete the task', webContents);
+  const sending = chat.send('@Goal Complete the task', webContents);
   await session.awaitPromptCall();
   session.failPrompt('Provider unavailable');
   expect(await sending).toMatchObject({ ok: false });
@@ -123,7 +123,7 @@ it('pauses on a model error without automatically retrying the goal', async () =
 
 it('keeps a goal tied to its original session across a chat switch', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Finish in this chat', webContents);
+  const sending = chat.send('@Goal Finish in this chat', webContents);
   await session.awaitPromptCall();
   await chat.newSession();
   expect((await chat.getStatus()).goal).toBeFalsy();
@@ -138,7 +138,7 @@ it('keeps a goal tied to its original session across a chat switch', async () =>
 
 it('pauses before continuing while a queued message is being edited', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Finish the task', webContents);
+  const sending = chat.send('@Goal Finish the task', webContents);
   await session.awaitPromptCall();
   await chat.send('Held message', webContents);
   const [queued] = (await chat.openSessionId(tab.id)).queuedMessages ?? [];
@@ -151,19 +151,22 @@ it('pauses before continuing while a queued message is being edited', async () =
   chat.dispose();
 });
 
-it('does not add an automatic loop to an ordinary message', async () => {
-  const { chat, session, webContents } = await setup();
-  const sending = chat.send('hello', webContents);
-  await session.awaitPromptCall();
-  session.finishPrompt();
-  expect(await sending).toMatchObject({ ok: true });
-  expect((await chat.getStatus()).goal).toBeFalsy();
-  chat.dispose();
-});
+it.each(['hello', '/goal explain this command'])(
+  'does not add an automatic loop to ordinary input: %s',
+  async (text) => {
+    const { chat, session, webContents } = await setup();
+    const sending = chat.send(text, webContents);
+    await session.awaitPromptCall();
+    session.finishPrompt();
+    expect(await sending).toMatchObject({ ok: true });
+    expect((await chat.getStatus()).goal).toBeFalsy();
+    chat.dispose();
+  }
+);
 
 it('stops continuation when the tab closes', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Finish later', webContents);
+  const sending = chat.send('@Goal Finish later', webContents);
   await session.awaitPromptCall();
   await chat.closeTab(tab.id);
   await sending;
@@ -181,7 +184,7 @@ it('accepts and steers user input while a goal prompt is starting', async () => 
     await gate.promise;
     await prompt(text, options);
   });
-  const sending = chat.send('/goal Test startup delivery', webContents);
+  const sending = chat.send('@Goal Test startup delivery', webContents);
   await started.promise;
   expect(session.isStreaming).toBe(false);
   expect(await chat.send('New instructions', webContents)).toMatchObject({ ok: true, queued: true });
@@ -199,7 +202,7 @@ it('accepts and steers user input while a goal prompt is starting', async () => 
 
 it('preserves held input, steering, reordering, and deletion during a goal', async () => {
   const { chat, tab, session, webContents } = await setup();
-  const sending = chat.send('/goal Keep working', webContents);
+  const sending = chat.send('@Goal Keep working', webContents);
   await session.awaitPromptCall();
   await chat.send('First', webContents);
   await chat.send('Second', webContents);

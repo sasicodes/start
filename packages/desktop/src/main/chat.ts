@@ -1419,40 +1419,6 @@ export class ChatService {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     const session = await this.getSession();
-    if (/^\/goal(?:\s|$)/u.test(text)) {
-      const args = text.slice(5).trim();
-      const sessionId = session.sessionManager.getSessionId();
-      const goal = this.goalForSession(session.sessionManager);
-      if (args === 'pause' || args === 'resume' || args === 'cancel') {
-        const generating = this.sessionIsGenerating(session);
-        const status = await this.controlGoal(sessionId, args, webContents, false);
-        if (!status.ready) return { ok: false, error: status.error ?? 'Goal could not be updated.' };
-        if (!generating && args !== 'resume') {
-          this.emit('delta', `Goal ${status.goal?.status ?? 'updated'}.`, webContents);
-          this.emit('done', completedDoneReason, webContents);
-        }
-        return { ok: true, sessionId };
-      }
-      if (!args || args === 'status') {
-        if (!this.sessionIsGenerating(session)) {
-          const current = goal.get();
-          this.emit(
-            'delta',
-            current ? `Goal ${current.status}: ${current.objective}` : 'Use @Goal followed by an objective to start.',
-            webContents
-          );
-          this.emit('done', completedDoneReason, webContents);
-        }
-        return { ok: true, sessionId };
-      }
-      if (this.sessionIsGenerating(session))
-        return { ok: false, error: 'Wait for the current response before starting a goal.' };
-      try {
-        goal.start(args);
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
-      }
-    }
     try {
       this.startMentionedGoal(session, text);
     } catch (error) {
@@ -1494,12 +1460,7 @@ export class ChatService {
     }
   }
 
-  async controlGoal(
-    sessionId: string,
-    action: GoalAction,
-    webContents?: WebContents,
-    announce = true
-  ): Promise<ChatStatus> {
+  async controlGoal(sessionId: string, action: GoalAction, webContents?: WebContents): Promise<ChatStatus> {
     const session = this.session;
     if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
     const goal = this.goalForSession(session.sessionManager);
@@ -1508,11 +1469,9 @@ export class ChatService {
         if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before resuming.');
         goal.resume();
         const prompt = goal.continuation();
-        if (announce) {
-          const turn = { id: randomUUID(), text: prompt };
-          if (webContents) webContents.send('chat:queued-turn-start', turn);
-          else sendToRendererWindows('chat:queued-turn-start', turn);
-        }
+        const turn = { id: randomUUID(), text: prompt };
+        if (webContents) webContents.send('chat:queued-turn-start', turn);
+        else sendToRendererWindows('chat:queued-turn-start', turn);
         this.generate(session, this.workspaceCwd, prompt, [], webContents);
       } else {
         const status = goal.get()?.status;
@@ -1522,11 +1481,7 @@ export class ChatService {
         }
         if (action === 'cancel') goal.cancel();
         else goal.pause('Paused by you.');
-        const state = this.runtimeStateForSession(session);
-        state.abortSequence += 1;
-        this.pauseQueuedMessages(session, state);
-        session.abortBash();
-        await session.abort();
+        await this.abort();
       }
       return this.chatStatus();
     } catch (error) {
