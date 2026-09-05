@@ -144,6 +144,16 @@ describe('helpers', () => {
     expect(visible.map((model) => model.id)).toEqual(['gpt-5.6-sol', 'claude-opus-5']);
   });
 
+  it('includes astra for api and subscription providers and fable 5.1', () => {
+    const models = [
+      { id: 'gpt-6-astra', provider: 'openai' },
+      { id: 'gpt-6-astra', provider: 'openai-codex' },
+      { id: 'claude-fable-5-1', provider: 'anthropic' }
+    ];
+
+    expect(getVisibleModels(models)).toEqual(models);
+  });
+
   it('drops non-registered provider models even when their ids look familiar', () => {
     const models = [
       { id: 'gpt-5.6-luna', name: 'GPT 5.6 Luna', provider: 'openai' },

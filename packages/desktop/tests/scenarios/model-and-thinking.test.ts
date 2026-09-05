@@ -25,6 +25,52 @@ const twoAnthropicModels: FakeModel[] = [
 ];
 
 describe('model and thinking level', () => {
+  it.each([
+    ['openai', 'gpt-6-astra', 'GPT-6 Astra'],
+    ['openai-codex', 'gpt-6-astra', 'GPT-6 Astra'],
+    ['anthropic', 'claude-fable-5-1', 'Claude Fable 5.1']
+  ])('selects and persists %s:%s with its reasoning levels', async (provider, id, name) => {
+    const key = `${provider}:${id}`;
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      models: [
+        ...twoAnthropicModels,
+        {
+          ...fakeModelDefaults,
+          id,
+          name,
+          provider,
+          reasoning: true,
+          contextWindow: 272000,
+          input: ['text', 'image'],
+          thinkingLevelMap: { off: null, xhigh: 'xhigh' }
+        }
+      ],
+      selectedModelKey: 'anthropic:claude-opus-5'
+    });
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('hello', newWebContents());
+    const session = getFakeSession(tab.id);
+    await session?.awaitPromptCall();
+    session?.finishPrompt();
+    await send;
+
+    const status = await chat.selectModel(key);
+
+    expect(status.ready).toBe(true);
+    expect((await chat.getStatus()).sessionId).toBe(tab.id);
+    expect(status.selectedModelKey).toBe(key);
+    expect(getStorageSnapshot().selectedModelKey).toBe(key);
+    expect(session?.model.id).toBe(id);
+    expect((await chat.getModels()).models.find((model) => model.key === key)?.effortLevels).toEqual([
+      'low',
+      'medium',
+      'high',
+      'xhigh'
+    ]);
+    expect((await chat.selectThinkingLevel('xhigh')).thinkingLevel).toBe('xhigh');
+  });
+
   it('keeps the active session when the model changes', async () => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',

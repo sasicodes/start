@@ -1,8 +1,7 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index bb022d4..ab19f0d 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -54,7 +54,16 @@ const VIRTUAL_MODULES = {
+@@ -54,7 +54,16 @@
      "@mariozechner/pi-ai/providers/all": _bundledPiAiProviders,
      "@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
  };
@@ -19,8 +18,8 @@ index bb022d4..ab19f0d 100644
 +};
  const isNodeSeaBinary = ("sea" in process.features && process.features.sea === true) ||
      process.getBuiltinModule("node:sea")?.isSea() === true;
- const isBundledNode = typeof PI_BUNDLED_NODE !== "undefined" && PI_BUNDLED_NODE;
-@@ -73,22 +82,22 @@ function getAliases() {
+ const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
+@@ -72,22 +81,22 @@
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");
