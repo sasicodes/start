@@ -19,6 +19,7 @@ import { clearGoal, goalVersion, syncGoal } from '@renderer/shared/goal/state';
 import { createModelSelection } from '@renderer/shared/models/selection';
 import { refreshProviderUsage } from '@renderer/shared/settings/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
+import { saveProviderKey } from '@renderer/shared/settings/utils/api-key';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
 import { scrollSessionToBottom } from '@renderer/shared/turn/scroll';
 import { forgetWorkspace, rememberWorkspace } from '@renderer/shared/workspace/cache';
@@ -378,10 +379,11 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
 
   const saveApiKey = useCallback(
     async (provider: string, apiKey: string) => {
-      try {
-        setAuthProviders(await window.pi.chat.setApiKey(provider, apiKey));
-        await loadModels();
-      } catch {}
+      const providers = await saveProviderKey(provider, apiKey);
+      if (!providers) return false;
+      setAuthProviders(providers);
+      await loadModels();
+      return true;
     },
     [loadModels]
   );

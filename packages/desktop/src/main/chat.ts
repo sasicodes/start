@@ -1451,21 +1451,23 @@ export class ChatService {
         return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
       }
     }
-    const currentGoal = this.goalForSession(session.sessionManager);
-    const goalStatus = currentGoal.get()?.status;
-    const mentionsGoal = /(^|\s)@goal(?=\s|$)/iu.test(text);
-    if (mentionsGoal && goalStatus !== 'active' && goalStatus !== 'paused') {
-      const objective = text.replace(/(^|\s)@goal(?:[ \t]+|(?=\s|$))/giu, '$1').trim();
-      if (!objective) return { ok: false, error: 'Add an objective after @Goal.' };
-      if (this.sessionIsGenerating(session))
-        return { ok: false, error: 'Wait for the current response before starting a goal.' };
-      try {
-        currentGoal.start(objective);
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
-      }
+    try {
+      this.startMentionedGoal(session, text);
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
     }
     return this.generate(session, this.workspaceCwd, prompt, attachments, webContents);
+  }
+
+  private startMentionedGoal(session: AgentSession, prompt: string): void {
+    if (!/(^|\s)@goal(?=\s|$)/iu.test(prompt)) return;
+    const goal = this.goalForSession(session.sessionManager);
+    const status = goal.get()?.status;
+    if (status === 'active' || status === 'paused') return;
+    const objective = prompt.replace(/(?<!\S)@(?:goal|new session)(?!\S)[ \t]*/giu, '').trim();
+    if (!objective) throw new Error('Add an objective after @Goal.');
+    if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before starting a goal.');
+    goal.start(objective);
   }
 
   async updateGoal(sessionId: string, objective: string): Promise<ChatStatus> {
@@ -2576,6 +2578,12 @@ export class ChatService {
     attachments: ImageAttachment[]
   ): Promise<SessionSummary> {
     const session = await this.createBackgroundSession(workspacePath);
+    try {
+      this.startMentionedGoal(session, prompt);
+    } catch (error) {
+      await this.closeTab(session.sessionManager.getSessionId());
+      throw error;
+    }
     this.generate(session, workspacePath, prompt, attachments).catch(() => {});
     return {
       workspacePath,

@@ -344,3 +344,53 @@ it('cancels a paused goal without stopping an ordinary response or clearing its 
   await ordinaryRun;
   chat.dispose();
 });
+
+it('starts combined New Session and Goal mentions in the background without changing the active chat', async () => {
+  const { chat, tab, session, webContents } = await setup();
+  const activeRun = chat.send('Keep this chat active', webContents);
+  await session.awaitPromptCall();
+  const prompt = '@New Session @gOaL Review @src/index.ts\n\nPreserve this formatting.';
+  const summary = await chat.startSession({ prompt, environment: { type: 'local' } });
+  const background = getFakeSession(summary.id);
+  if (!background) throw new Error('Missing background session');
+  await background.awaitPromptCall();
+  expect((await chat.getStatus()).sessionId).toBe(tab.id);
+  expect((await chat.getStatus()).goal).toBeFalsy();
+  expect(background.sessionManager.getBranch()).toContainEqual(
+    expect.objectContaining({
+      customType: 'start-goal',
+      data: expect.objectContaining({
+        status: 'active',
+        objective: 'Review @src/index.ts\n\nPreserve this formatting.',
+        iterations: 1
+      })
+    })
+  );
+  expect(background.sessionManager.getEntries()).toContainEqual(
+    expect.objectContaining({
+      type: 'message',
+      message: expect.objectContaining({ role: 'user', content: prompt })
+    })
+  );
+  background.finishPrompt();
+  await background.awaitPromptCall();
+  expect((await chat.getStatus()).sessionId).toBe(tab.id);
+  await chat.abortTab(summary.id);
+  await chat.abort();
+  await activeRun;
+  chat.dispose();
+});
+
+it('rejects background routing markers without an objective and removes the unused session', async () => {
+  const { chat, tab, session, webContents } = await setup();
+  const sending = chat.send('Keep active', webContents);
+  await session.awaitPromptCall();
+  await expect(chat.startSession({ prompt: '@New Session @Goal', environment: { type: 'local' } })).rejects.toThrow(
+    'Add an objective after @Goal.'
+  );
+  expect((await chat.getStatus()).sessionId).toBe(tab.id);
+  expect(chat.getTabs().map((item) => item.id)).toEqual([tab.id]);
+  await chat.abort();
+  await sending;
+  chat.dispose();
+});

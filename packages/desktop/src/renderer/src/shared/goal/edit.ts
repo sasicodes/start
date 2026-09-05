@@ -115,7 +115,13 @@ export const createGoalEditor = (context: () => GoalEditContext) => {
   };
 
   const dispose = () => {
+    const current = state.peek();
     state.value = { status: 'idle' };
+    if (
+      (current.status === 'editing' || current.status === 'saving') &&
+      current.sessionId === goalState.peek().sessionId
+    )
+      context().onDraftChange('');
   };
 
   const recall = () => {

@@ -39,7 +39,7 @@ interface ProvidersProps {
   providers: ProviderAuthStatus[];
   onLoginSubscription: (provider: string) => Promise<void>;
   onDisconnectProvider: (provider: string) => Promise<void>;
-  onSaveApiKey: (provider: string, apiKey: string) => Promise<void>;
+  onSaveApiKey: (provider: string, apiKey: string) => Promise<boolean>;
 }
 
 interface ProviderHeadingProps {
@@ -103,6 +103,7 @@ export const Providers = ({
   providers: authProviders
 }: ProvidersProps) => {
   const [openProvider, setOpenProvider] = useState<AccordionKey>('');
+  const [failedProvider, setFailedProvider] = useState<AccordionKey>('');
   const [apiKeys, setApiKeys] = useState<Record<ProviderKey, string>>({ exa: '', openai: '', anthropic: '' });
 
   const toggleProvider = (provider: AccordionKey) => {
@@ -110,11 +111,11 @@ export const Providers = ({
   };
 
   const saveApiKey = async (provider: ProviderKey) => {
-    try {
-      await onSaveApiKey(provider, apiKeys[provider]);
-      setApiKeys((current) => ({ ...current, [provider]: '' }));
-      setOpenProvider('');
-    } catch {}
+    const saved = await onSaveApiKey(provider, apiKeys[provider]);
+    setFailedProvider(!saved ? provider : '');
+    if (!saved) return;
+    setApiKeys((current) => ({ ...current, [provider]: '' }));
+    setOpenProvider('');
   };
 
   const loginSubscription = async (provider: ProviderKey) => {
@@ -230,6 +231,11 @@ export const Providers = ({
                         Save
                       </button>
                     </div>
+                    {failedProvider === provider.key && (
+                      <p role="alert" class="m-0 px-3 text-xs text-danger">
+                        Could not save the API key. Try again.
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               )}

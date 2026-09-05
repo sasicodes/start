@@ -235,3 +235,47 @@ it('does not recall a goal over typed text or a terminal goal', () => {
   syncGoal(goalStatus('completed'));
   expect(state.editor.recall()).toBe(false);
 });
+
+it('clears a held objective when the composer releases its editor', async () => {
+  const state = setup('paused');
+  await state.editor.begin();
+  state.context.draft = 'Unsaved goal edit';
+  state.editor.dispose();
+  expect(state.context.draft).toBe('');
+  expect(state.editor.state.peek().status).toBe('idle');
+  expect(goalState.peek()).toMatchObject({ goal: { status: 'paused', objective: 'Original objective' } });
+});
+
+it('clears a saving objective on disposal and ignores its delayed acknowledgment', async () => {
+  const state = setup('paused');
+  await state.editor.begin();
+  state.context.draft = 'Saved objective';
+  const response = deferred<ChatStatus>();
+  state.update.mockReturnValueOnce(response.promise);
+  const saving = state.editor.save();
+  state.editor.dispose();
+  expect(state.context.draft).toBe('');
+  state.context.draft = 'New overlay draft';
+  response.resolve(goalStatus('paused', 'Saved objective'));
+  expect(await saving).toBe(false);
+  expect(state.context.draft).toBe('New overlay draft');
+  expect(state.editor.state.peek().status).toBe('idle');
+});
+
+it('preserves ordinary drafts when an idle editor is disposed', () => {
+  const state = setup('paused');
+  state.context.draft = 'Ordinary message';
+  state.editor.dispose();
+  expect(state.context.draft).toBe('Ordinary message');
+});
+
+it('preserves a new session draft when the previous editor is disposed', async () => {
+  const state = setup('paused');
+  await state.editor.begin();
+  for (const cleanup of cleanups.splice(0)) cleanup();
+  syncGoal(goalStatus('paused', 'Other objective', 'second'));
+  state.context.draft = 'New session draft';
+  state.editor.dispose();
+  expect(state.context.draft).toBe('New session draft');
+  expect(state.editor.state.peek().status).toBe('idle');
+});

@@ -1,7 +1,7 @@
 import { effect } from '@preact/signals';
 import { createGoalEditor, goalEditor } from '@renderer/shared/goal/edit';
 import type { RefObject } from 'preact';
-import { useEffect, useRef } from 'preact/hooks';
+import { useLayoutEffect, useRef } from 'preact/hooks';
 
 interface GoalEditorOptions {
   draft: string;
@@ -18,7 +18,7 @@ export const useGoalEditor = ({ draft, overlay, hasAttachments, onDraftChange, t
   editorRef.current ??= createGoalEditor(() => context.current);
   const editor = editorRef.current;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (overlay) return;
     goalEditor.value = editor;
     const unsubscribe = effect(editor.sync);
