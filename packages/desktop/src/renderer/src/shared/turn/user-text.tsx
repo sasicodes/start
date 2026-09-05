@@ -57,7 +57,7 @@ export const UserText = ({ text }: UserTextProps) => (
       part.kind === 'text' ? (
         part.text
       ) : (
-        <span key={part.start} class="relative whitespace-nowrap pl-5 text-brand-accent">
+        <span key={part.start} class="relative whitespace-nowrap pl-5 font-medium text-brand-accent">
           <span class="absolute top-1/2 left-0 size-4 -translate-y-1/2 [&_svg]:size-full">
             <MentionIcon name={part.name} />
           </span>
