@@ -26,6 +26,35 @@ const twoAnthropicModels: FakeModel[] = [
 
 describe('model and thinking level', () => {
   it.each([
+    ['openai', 'gpt-5.6-sol', 'gpt-6-astra'],
+    ['openai-codex', 'gpt-5.6-sol', 'gpt-6-astra'],
+    ['anthropic', 'claude-opus-5', 'claude-fable-5-1']
+  ])('defaults %s to the latest model for the picker and new sessions', async (provider, previous, latest) => {
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      models: [previous, latest].map((id) => ({
+        ...fakeModelDefaults,
+        id,
+        name: id,
+        provider,
+        input: ['text'],
+        reasoning: true,
+        contextWindow: 200000
+      }))
+    });
+    const key = `${provider}:${latest}`;
+
+    const catalog = await chat.getModels();
+    const tab = await chat.createTab('/tmp/workspace-a');
+
+    expect(catalog.models[0]?.key).toBe(key);
+    expect(catalog.selectedModelKey).toBe(key);
+    expect(getStorageSnapshot().selectedModelKey).toBe(key);
+    expect(getFakeSession(tab.id)?.model.id).toBe(latest);
+    chat.dispose();
+  });
+
+  it.each([
     ['openai', 'gpt-6-astra', 'GPT-6 Astra'],
     ['openai-codex', 'gpt-6-astra', 'GPT-6 Astra'],
     ['anthropic', 'claude-fable-5-1', 'Claude Fable 5.1']
