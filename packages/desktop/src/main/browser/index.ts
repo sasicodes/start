@@ -8,6 +8,7 @@ import { sendToRendererWindows } from '@main/window';
 import {
   BrowserWindow,
   clipboard,
+  ClipboardItem,
   type BrowserWindow as ElectronBrowserWindow,
   type Event as ElectronEvent,
   type WebContentsView as ElectronWebContentsView,
@@ -514,7 +515,9 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
     const image = await tab.view.webContents.capturePage();
     if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
 
-    clipboard.writeImage(image);
+    await clipboard.write([
+      new ClipboardItem({ 'image/png': new Blob([new Uint8Array(image.toPNG())], { type: 'image/png' }) })
+    ]);
     return { ok: true, status: statusFromView() };
   } catch {
     return { ok: false, error: 'Could not capture the browser screenshot.', status: statusFromView() };

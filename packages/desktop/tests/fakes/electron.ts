@@ -32,9 +32,31 @@ export const shell = {
   openExternal: async (_url: string) => {}
 };
 
+export class FakeClipboardItem {
+  readonly types: string[];
+  private readonly entries: Record<string, Blob>;
+
+  constructor(entries: Record<string, Blob>) {
+    this.entries = entries;
+    this.types = Object.keys(entries);
+  }
+
+  async getType(type: string): Promise<Blob> {
+    const blob = this.entries[type];
+    if (!blob) throw new Error(`Type ${type} not found in clipboard item.`);
+    return blob;
+  }
+}
+
+let clipboardItems: FakeClipboardItem[] = [];
+
+export const setClipboardItems = (items: FakeClipboardItem[]) => {
+  clipboardItems = items;
+};
+
 export const clipboard = {
-  writeImage: (_image: unknown) => {},
-  readImage: () => ({ isEmpty: () => true, toPNG: () => Buffer.alloc(0) })
+  read: async (): Promise<FakeClipboardItem[]> => clipboardItems,
+  write: async (_items: FakeClipboardItem[]) => {}
 };
 
 interface FakeNativeImage {
@@ -93,6 +115,7 @@ export const nativeImage = {
 
 export const app = {
   isPackaged: false,
+  isReady: () => false,
   getVersion: () => '0.0.0-test',
   quit: () => {},
   startAccessingSecurityScopedResource: (_bookmark: string) => () => {}
@@ -173,7 +196,7 @@ type WindowOpenHandler = (input: FakeWindowOpenInput) => FakeWindowOpenResult;
 export interface FakeBrowserWebContents extends FakeWebContents {
   audioMuted: boolean;
   closed: boolean;
-  capturePage: () => Promise<{ isEmpty: () => boolean }>;
+  capturePage: () => Promise<FakeNativeImage>;
   close: () => void;
   emit: (event: string, ...args: unknown[]) => void;
   executeJavaScript: (script: string, userGesture?: boolean) => Promise<unknown>;
@@ -228,7 +251,7 @@ const createFakeBrowserWebContents = (): FakeBrowserWebContents => {
     ...base,
     audioMuted: false,
     closed: false,
-    capturePage: async () => ({ isEmpty: () => false }),
+    capturePage: async () => fakeNativeImage(),
     close: () => {
       webContents.closed = true;
     },

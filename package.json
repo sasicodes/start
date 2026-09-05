@@ -4,7 +4,7 @@
   "license": "MIT",
   "description": "your coding assistant",
   "type": "module",
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "pnpm@11.25.0",
   "homepage": "https://start.intelligence.one",
   "scripts": {
     "audit": "pnpm run audit:deps && pnpm run audit:signatures",
@@ -29,6 +29,6 @@
     "web": "pnpm --filter @start/web dev"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.7"
+    "@biomejs/biome": "2.5.11"
   }
 }

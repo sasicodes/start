@@ -1,0 +1,39 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 5a2f088..b729c43 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -163,6 +163,10 @@ function resolveFromNpmPackage() {
+     const packageJsonPath = require2.resolve(`${packageName}/package.json`);
+     const packageDir = (0, import_node_path.dirname)(packageJsonPath);
+     const binaryPath = (0, import_node_path.join)(packageDir, getLibFilename());
++    const unpackedPath = binaryPath.replace(`.asar${import_node_path.sep}`, `.asar.unpacked${import_node_path.sep}`);
++    if (unpackedPath !== binaryPath && (0, import_node_fs.existsSync)(unpackedPath)) {
++      return unpackedPath;
++    }
+     if ((0, import_node_fs.existsSync)(binaryPath)) {
+       return binaryPath;
+     }
+diff --git a/dist/index.js b/dist/index.js
+index ba033d3..ee23a37 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,7 +1,7 @@
+ // src/binary.ts
+ import { existsSync, readFileSync } from "fs";
+ import { createRequire } from "module";
+-import { dirname, join } from "path";
++import { dirname, join, sep } from "path";
+ import { fileURLToPath } from "url";
+ 
+ // src/platform.ts
+@@ -127,6 +127,10 @@ function resolveFromNpmPackage() {
+     const packageJsonPath = require2.resolve(`${packageName}/package.json`);
+     const packageDir = dirname(packageJsonPath);
+     const binaryPath = join(packageDir, getLibFilename());
++    const unpackedPath = binaryPath.replace(`.asar${sep}`, `.asar.unpacked${sep}`);
++    if (unpackedPath !== binaryPath && existsSync(unpackedPath)) {
++      return unpackedPath;
++    }
+     if (existsSync(binaryPath)) {
+       return binaryPath;
+     }

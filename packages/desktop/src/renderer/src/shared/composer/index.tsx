@@ -5,6 +5,7 @@ import { composerIsLayered } from '@renderer/shared/composer/layout';
 import { Model } from '@renderer/shared/composer/model';
 import { Prompt } from '@renderer/shared/composer/prompt';
 import { Queue } from '@renderer/shared/composer/queue';
+import { editingQueuedId } from '@renderer/shared/composer/queue/state';
 import { initialComposerTextareaLayoutState, syncComposerTextareaLayout } from '@renderer/shared/composer/textarea';
 import type { ComposerProps } from '@renderer/shared/composer/types';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
@@ -54,7 +55,6 @@ export const Composer = memo(
     onSteerQueuedMessage,
     onSendQueuedMessage,
     onDeleteQueuedMessage,
-    onEditQueuedMessage,
     onReorderQueuedMessages,
     selectedModelKey,
     onOpenAttachment,
@@ -160,20 +160,11 @@ export const Composer = memo(
     const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
     const recall = useMessageRecall(recallMessages, recallQueuedIds, draft, onDraftChange);
 
-    const editQueued = async (id: string, text: string) => {
-      const updated = await onEditQueuedMessage(id, text);
-      if (!updated) return;
-
-      onDraftChange('');
-      recall.clearEditing();
-    };
-
     const submitDraft = () => {
       if (!draft.trim() || noProvidersConfigured) return;
 
-      const editingId = recall.editingId();
-      if (editingId && queuedMessages.some((message) => message.id === editingId)) {
-        editQueued(editingId, draft.trim());
+      if (editingQueuedId.value) {
+        recall.save();
         return;
       }
 
@@ -209,6 +200,11 @@ export const Composer = memo(
       }
 
       if (event.key === 'ArrowDown' && !finderVisible && recall.newer()) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.key === 'Escape' && recall.cancel()) {
         event.preventDefault();
         return;
       }

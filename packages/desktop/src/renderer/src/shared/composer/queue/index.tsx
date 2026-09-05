@@ -1,17 +1,20 @@
 import type { QueuedMessage } from '@preload/index';
 import { Attached } from '@renderer/shared/composer/attached';
+import { editingQueuedId } from '@renderer/shared/composer/queue/state';
 import { useReorder } from '@renderer/shared/composer/use-reorder';
 import { skillDisplayText } from '@renderer/shared/skill/parse';
 import { DragIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import { useMemo } from 'preact/hooks';
 
-const queueActionText = (generating: boolean, steering: boolean) => {
+const queueActionText = (generating: boolean, steering: boolean, editing: boolean) => {
+  if (editing) return 'Editing';
   if (!generating) return 'Send';
   return steering ? 'Steering' : 'Steer';
 };
 
-const queueActionLabel = (generating: boolean, steering: boolean) => {
+const queueActionLabel = (generating: boolean, steering: boolean, editing: boolean) => {
+  if (editing) return 'Finish editing before sending';
   if (!generating) return 'Send this queued message now';
   return steering ? 'Already steering next' : 'Steer this queued message';
 };
@@ -45,6 +48,7 @@ export const Queue = ({ messages, visible, generating, onDelete, onReorder, onSe
           const message = byId.get(id);
           if (!message) return null;
           const steering = message.kind === 'steer';
+          const editing = Boolean(message.editing || editingQueuedId.value === id);
           const text = skillDisplayText(message.text);
 
           return (
@@ -84,12 +88,12 @@ export const Queue = ({ messages, visible, generating, onDelete, onReorder, onSe
               >
                 <button
                   type="button"
-                  disabled={generating && steering}
-                  aria-label={queueActionLabel(generating, steering)}
+                  disabled={editing || (generating && steering)}
+                  aria-label={queueActionLabel(generating, steering, editing)}
                   onClick={() => (generating ? onSteer(id) : onSend(id))}
                   class="rounded-full border-0 bg-transparent px-2 py-1 text-xs leading-none font-medium text-soft transition-colors hover:text-hover disabled:pointer-events-none disabled:text-hover"
                 >
-                  {queueActionText(generating, steering)}
+                  {queueActionText(generating, steering, editing)}
                 </button>
                 <button
                   type="button"

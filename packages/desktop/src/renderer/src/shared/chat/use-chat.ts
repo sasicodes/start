@@ -13,6 +13,7 @@ import { useChatEvents } from '@renderer/shared/chat/events';
 import { buildRecallList } from '@renderer/shared/chat/recall';
 import { useChatSend } from '@renderer/shared/chat/send';
 import { useTurnSummary } from '@renderer/shared/chat/turn-summary';
+import { cancelQueueEdit, syncQueueEdit } from '@renderer/shared/composer/queue/state';
 import { clearFinderItemsCache } from '@renderer/shared/finder/use-items';
 import { refreshProviderUsage } from '@renderer/shared/settings/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
@@ -45,6 +46,7 @@ const sameQueuedMessages = (first: QueuedMessage[], second: QueuedMessage[]) =>
       nextMessage.id === message.id &&
       nextMessage.kind === message.kind &&
       nextMessage.text === message.text &&
+      nextMessage.editing === message.editing &&
       nextMessage.attachmentCount === message.attachmentCount
     );
   });
@@ -125,6 +127,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
   }, [applyStatus]);
 
   const updateQueuedMessages = useCallback((messages: QueuedMessage[]) => {
+    syncQueueEdit(messages);
     setQueuedMessages((current) => nextQueuedMessages(current, messages));
   }, []);
 
@@ -136,6 +139,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       statusRequestRef.current += 1;
       assistantIdRef.current = null;
       terminalIdRef.current = null;
+      cancelQueueEdit();
       if (!preserveDraft) setDraft('');
       setTurns(() => []);
       clearQueuedMessages();
@@ -207,19 +211,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     [updateQueuedMessages]
   );
 
-  const editQueuedMessage = useCallback(
-    async (id: string, text: string) => {
-      try {
-        const messages = await window.pi.chat.editQueuedMessage(id, text);
-        updateQueuedMessages(messages);
-        return messages.some((message) => message.id === id && message.text === text);
-      } catch {
-        return false;
-      }
-    },
-    [updateQueuedMessages]
-  );
-
   const reorderQueuedMessages = useCallback(
     async (orderedIds: string[]) => {
       try {
@@ -257,6 +248,7 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
       if (!result.ok || !result.status) return false;
       if (sessionRequestRef.current !== requestId) return false;
 
+      cancelQueueEdit();
       setDraft('');
       applySessionSnapshot(result, result.status);
       return true;
@@ -478,7 +470,6 @@ export const useChat = ({ onShowChat, onShowSettings, textareaRef }: UseChatOpti
     steerQueuedMessage,
     sendQueuedMessage,
     deleteQueuedMessage,
-    editQueuedMessage,
     selectThinkingLevel,
     reorderQueuedMessages,
     chooseWorkspaceDirectory

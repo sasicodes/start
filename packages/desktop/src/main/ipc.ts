@@ -14,6 +14,7 @@ import type { withComposerBlurSuppressed } from '@main/window';
 import { openWorkspaceDialogOptions, rememberWorkspaceBookmark } from '@main/workspace/access';
 import type { WebContents } from 'electron';
 import electron from 'electron';
+import * as v from 'valibot';
 
 const { BrowserWindow, dialog, ipcMain } = electron;
 
@@ -169,6 +170,9 @@ export const registerChatIpc = ({
   );
   ipcMain.handle('chat:edit-queued-message', (event, id: string, text: string) =>
     chat.editQueuedMessage(id, text, event.sender as WebContents)
+  );
+  ipcMain.handle('chat:set-queued-message-editing', (event, id: unknown, editing: unknown) =>
+    chat.setQueuedMessageEditing(v.parse(v.string(), id), v.parse(v.boolean(), editing), event.sender as WebContents)
   );
   ipcMain.handle('chat:reorder-queued-messages', (event, orderedIds: string[]) =>
     chat.reorderQueuedMessages(orderedIds, event.sender as WebContents)

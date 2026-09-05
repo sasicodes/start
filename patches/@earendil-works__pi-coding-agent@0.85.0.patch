@@ -1,8 +1,7 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index 324d30a..78864f9 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -54,7 +54,16 @@ const VIRTUAL_MODULES = {
+@@ -54,7 +54,16 @@
      "@mariozechner/pi-ai/providers/all": _bundledPiAiProviders,
      "@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
  };
@@ -17,10 +16,10 @@ index 324d30a..78864f9 100644
 +    }
 +    throw new Error(`Unable to resolve ${packageName}/${packageRelativePath}.`);
 +};
+ const isNodeSeaBinary = ("sea" in process.features && process.features.sea === true) ||
+     process.getBuiltinModule("node:sea")?.isSea() === true;
  const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
- /**
-  * Get aliases for jiti (used in built Node.js mode).
-@@ -70,22 +79,22 @@ function getAliases() {
+@@ -72,22 +81,22 @@
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");

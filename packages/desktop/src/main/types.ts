@@ -81,12 +81,13 @@ export type CommandResult = {
 
 export type QueuedMessageKind = 'steer' | 'followUp';
 
-export type QueuedMessage = {
+export interface QueuedMessage {
   id: string;
   kind: QueuedMessageKind;
   text: string;
+  editing?: boolean;
   attachmentCount?: number;
-};
+}
 
 export type QueuedTurnStart = {
   id: string;

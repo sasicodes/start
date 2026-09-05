@@ -33,7 +33,6 @@ export interface ComposerProps {
   onSteerQueuedMessage: (id: string) => void;
   onSendQueuedMessage: (id: string) => void;
   onDeleteQueuedMessage: (id: string) => void;
-  onEditQueuedMessage: (id: string, text: string) => Promise<boolean>;
   onReorderQueuedMessages: (orderedIds: string[]) => void;
   textareaRef: RefObject<HTMLTextAreaElement>;
   onSelectThinkingLevel: (level: EffortLevel) => void;

@@ -135,6 +135,7 @@ export interface QueuedMessage {
   id: string;
   kind: QueuedMessageKind;
   text: string;
+  editing?: boolean;
   attachmentCount?: number;
 }
 
@@ -533,8 +534,10 @@ const api = {
     steerQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:steer-queued-message', id),
     sendQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:send-queued-message', id),
     deleteQueuedMessage: (id: string): Promise<QueuedMessage[]> => ipcRenderer.invoke('chat:delete-queued-message', id),
-    editQueuedMessage: (id: string, text: string): Promise<QueuedMessage[]> =>
+    editQueuedMessage: (id: string, text: string): Promise<boolean> =>
       ipcRenderer.invoke('chat:edit-queued-message', id, text),
+    setQueuedMessageEditing: (id: string, editing: boolean): Promise<boolean> =>
+      ipcRenderer.invoke('chat:set-queued-message-editing', id, editing),
     reorderQueuedMessages: (orderedIds: string[]): Promise<QueuedMessage[]> =>
       ipcRenderer.invoke('chat:reorder-queued-messages', orderedIds),
     selectModel: (modelKey: string): Promise<ChatStatus> => ipcRenderer.invoke('chat:select-model', modelKey),

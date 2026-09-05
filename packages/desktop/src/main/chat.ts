@@ -40,9 +40,9 @@ import {
   isProviderModel,
   modelKey,
   modelLabel,
+  orphanedNoticeIds,
   providerAuthKind,
   providerAuthLabel,
-  orphanedNoticeIds,
   providerAuthSlots,
   providerCredentialFlags,
   restoredSessionSelection,
@@ -243,21 +243,25 @@ const visibleQueuedMessage = (message: PendingQueuedMessage): QueuedMessage => (
   ...(message.images && message.images.length > 0 ? { attachmentCount: message.images.length } : {})
 });
 
-type SessionRuntimeState = {
+interface SessionRuntimeState {
   abortSequence: number;
   isGenerating: boolean;
+  queueRevision: number;
   queueRebuildDepth: number;
+  editingQueuedMessageId: string;
   discardPendingDeltas?: () => void;
   liveAssistantTurn?: LiveAssistantTurn;
   queuedMessages: PendingQueuedMessage[];
   queueDeliveryCandidates: QueuedMessage[];
-};
+}
 
 const createSessionRuntimeState = (): SessionRuntimeState => ({
   abortSequence: 0,
   queuedMessages: [],
   isGenerating: false,
+  queueRevision: 0,
   queueRebuildDepth: 0,
+  editingQueuedMessageId: '',
   queueDeliveryCandidates: []
 });
 
@@ -1594,7 +1598,8 @@ export class ChatService {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
-    if (!session || !runtimeState || !message) return this.visibleQueuedMessages();
+    if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
+      return this.visibleQueuedMessages();
     if (runtimeState.isGenerating || session.isStreaming) return this.steerQueuedMessage(id, webContents);
 
     runtimeState.queuedMessages = runtimeState.queuedMessages.filter((item) => item.id !== id);
@@ -1624,7 +1629,8 @@ export class ChatService {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
-    if (!session || !runtimeState || !message) return this.visibleQueuedMessages();
+    if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
+      return this.visibleQueuedMessages();
 
     const canSteerQueuedMessage = runtimeState.isGenerating && session.isStreaming;
     if (!canSteerQueuedMessage) return this.visibleQueuedMessages();
@@ -1637,18 +1643,46 @@ export class ChatService {
     return this.visibleQueuedMessages(runtimeState);
   }
 
-  async editQueuedMessage(id: string, text: string, webContents: WebContents): Promise<QueuedMessage[]> {
+  async editQueuedMessage(id: string, text: string, webContents: WebContents): Promise<boolean> {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
-    if (!session || !runtimeState || !message || message.text === text) return this.visibleQueuedMessages();
+    if (!session || !runtimeState || !message || !text.trim() || runtimeState.editingQueuedMessageId !== id)
+      return false;
 
+    runtimeState.editingQueuedMessageId = '';
     runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
       item.id === id ? { ...item, text } : item
     );
+    try {
+      await this.rebuildSessionQueue(session, runtimeState);
+    } catch {
+      if (!runtimeState.editingQueuedMessageId && runtimeState.queuedMessages.some((item) => item.id === id)) {
+        runtimeState.editingQueuedMessageId = id;
+        runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) => (item.id === id ? message : item));
+        await this.rebuildSessionQueue(session, runtimeState).catch(() => {});
+      }
+      this.emitQueueUpdate(webContents);
+      return false;
+    }
+    this.emitQueueUpdate(webContents);
+    return true;
+  }
+
+  async setQueuedMessageEditing(id: string, editing: boolean, webContents: WebContents): Promise<boolean> {
+    const session = editing
+      ? this.session
+      : [this.session, ...this.backgroundSessions.values()].find(
+          (candidate) => candidate && this.runtimeStateForSession(candidate).editingQueuedMessageId === id
+        );
+    if (!session) return false;
+    const runtimeState = this.runtimeStateForSession(session);
+    if (!runtimeState.queuedMessages.some((message) => message.id === id)) return false;
+
+    runtimeState.editingQueuedMessageId = editing ? id : '';
     await this.rebuildSessionQueue(session, runtimeState);
     this.emitQueueUpdate(webContents);
-    return this.visibleQueuedMessages(runtimeState);
+    return !editing || runtimeState.editingQueuedMessageId === id;
   }
 
   async reorderQueuedMessages(orderedIds: string[], webContents: WebContents): Promise<QueuedMessage[]> {
@@ -1676,6 +1710,7 @@ export class ChatService {
       return this.visibleQueuedMessages();
 
     runtimeState.queuedMessages = nextMessages;
+    if (runtimeState.editingQueuedMessageId === id) runtimeState.editingQueuedMessageId = '';
     if (session) await this.rebuildSessionQueue(session, runtimeState);
     this.emitQueueUpdate(webContents);
     return this.visibleQueuedMessages(runtimeState);
@@ -1803,7 +1838,10 @@ export class ChatService {
   }
 
   private visibleQueuedMessages(runtimeState = this.activeRuntimeState()): QueuedMessage[] {
-    return (runtimeState?.queuedMessages ?? []).map(visibleQueuedMessage);
+    return (runtimeState?.queuedMessages ?? []).map((message) => ({
+      ...visibleQueuedMessage(message),
+      ...(message.id === runtimeState?.editingQueuedMessageId ? { editing: true } : {})
+    }));
   }
 
   private emitQueueUpdate(webContents?: WebContents): void {
@@ -1842,7 +1880,9 @@ export class ChatService {
     const deliveredMessages: PendingQueuedMessage[] = [];
 
     for (const message of [...runtimeState.queuedMessages].reverse()) {
-      if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
+      if (message.id === runtimeState.editingQueuedMessageId) {
+        nextMessages.push(message);
+      } else if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
       } else if (message.kind === 'followUp' && this.consumeQueuedMessageText(followUpMessages, message)) {
         nextMessages.push(message);
@@ -1900,10 +1940,13 @@ export class ChatService {
   }
 
   private async rebuildSessionQueue(session: AgentSession, runtimeState: SessionRuntimeState): Promise<void> {
+    const revision = ++runtimeState.queueRevision;
     runtimeState.queueRebuildDepth += 1;
     try {
       session.clearQueue();
       for (const message of runtimeState.queuedMessages) {
+        if (revision !== runtimeState.queueRevision) return;
+        if (message.id === runtimeState.editingQueuedMessageId) continue;
         if (message.kind === 'steer') {
           await session.steer(message.text, message.images);
         } else {
@@ -1918,6 +1961,7 @@ export class ChatService {
   private pauseQueuedMessages(session: AgentSession | null, runtimeState: SessionRuntimeState | null): void {
     if (!runtimeState) return;
 
+    runtimeState.queueRevision += 1;
     runtimeState.queueDeliveryCandidates = [];
     if (!session) return;
 
@@ -1930,16 +1974,7 @@ export class ChatService {
   }
 
   private clearQueuedMessages(webContents?: WebContents, runtimeState = this.activeRuntimeState()): void {
-    if (this.session) {
-      const state = runtimeState ?? this.runtimeStateForSession(this.session);
-      state.queueRebuildDepth += 1;
-      try {
-        this.session.clearQueue();
-      } finally {
-        state.queueRebuildDepth = Math.max(0, state.queueRebuildDepth - 1);
-      }
-    }
-
+    this.pauseQueuedMessages(this.session, runtimeState);
     this.clearQueuedMessageState(runtimeState);
     if (webContents) this.emitQueueUpdate(webContents);
   }
@@ -1948,6 +1983,7 @@ export class ChatService {
     if (!runtimeState) return;
 
     runtimeState.queuedMessages = [];
+    runtimeState.editingQueuedMessageId = '';
     runtimeState.queueDeliveryCandidates = [];
   }
 
