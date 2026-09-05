@@ -111,7 +111,6 @@ export const App = () => {
     steerQueuedMessage,
     sendQueuedMessage,
     deleteQueuedMessage,
-    editQueuedMessage,
     selectThinkingLevel,
     reorderQueuedMessages,
     chooseWorkspaceDirectory
@@ -325,7 +324,6 @@ export const App = () => {
       onSteerQueuedMessage={steerQueuedMessage}
       onSendQueuedMessage={sendQueuedMessage}
       revealKey={overlay ? composerRevealKey : 0}
-      onEditQueuedMessage={editQueuedMessage}
       onDeleteQueuedMessage={deleteQueuedMessage}
       onReorderQueuedMessages={reorderQueuedMessages}
       noProvidersConfigured={noProvidersConfigured}
