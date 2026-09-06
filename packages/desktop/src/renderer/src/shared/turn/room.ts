@@ -126,6 +126,7 @@ export const useTurnRoom = ({ streaming, turnCount, turnIndex, virtualRef }: Use
 
     if (scrollIntent.kind === 'bottom') {
       setRoom('', false);
+      virtualRef.current?.scrollToEnd();
       scrollToBottom(element);
       finishPositioning();
       return;
@@ -139,7 +140,7 @@ export const useTurnRoom = ({ streaming, turnCount, turnIndex, virtualRef }: Use
         frameRef.current = 0;
       }
     };
-  }, [turnCount, scrollIntent, scheduleRoomSync, finishPositioning]);
+  }, [turnCount, scrollIntent, virtualRef, scheduleRoomSync, finishPositioning]);
 
   useEffect(() => {
     const content = contentRef.current;

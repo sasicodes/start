@@ -602,12 +602,16 @@ export class ChatService {
     return this.send(text);
   }
 
-  async openSession(path: string): Promise<OpenSessionResult> {
-    const openSequence = this.sessionOpenSequence + 1;
-    this.sessionOpenSequence = openSequence;
+  openSession(path: string): Promise<OpenSessionResult> {
+    this.sessionOpenSequence += 1;
+    return this.restoreSession(path, this.sessionOpenSequence);
+  }
 
+  private async restoreSession(path: string, openSequence: number): Promise<OpenSessionResult> {
     try {
       await this.refreshAuth();
+      if (this.sessionOpenSequence !== openSequence) return { ok: false, error: 'Session open was superseded.' };
+
       const sessionManager = SessionManager.open(path);
       const workspacePath = sessionManager.getCwd() || this.workspaceCwd;
       const selection = this.resolveSessionSelection(sessionManager.getSessionId());
@@ -619,6 +623,8 @@ export class ChatService {
         createStartResourceLoader(workspacePath, this.goalForSession(sessionManager)),
         this.sessionCustomTools(sessionManager.getSessionId(), workspacePath)
       ]);
+      if (this.sessionOpenSequence !== openSequence) return { ok: false, error: 'Session open was superseded.' };
+
       const { session } = await createAgentSession({
         cwd: workspacePath,
         model,
@@ -1126,8 +1132,12 @@ export class ChatService {
 
       let session: OpenSessionResult | null = null;
       if (restoreSession) {
-        session = this.session ? this.sessionResult(this.session) : await this.resumeRecentSession(nextCwd);
+        session = this.session
+          ? this.sessionResult(this.session)
+          : await this.resumeRecentSession(nextCwd, openSequence);
       }
+
+      if (this.sessionOpenSequence !== openSequence) return { ok: true, unchanged: true, status: this.chatStatus() };
 
       return { ok: true, status: this.chatStatus(), ...(session ? { session } : {}) };
     } catch (error) {
@@ -1135,16 +1145,18 @@ export class ChatService {
     }
   }
 
-  private async resumeRecentSession(workspacePath: string): Promise<OpenSessionResult | null> {
+  private async resumeRecentSession(workspacePath: string, openSequence: number): Promise<OpenSessionResult | null> {
     try {
-      const sessions = await SessionManager.listAll();
+      const sessions = await SessionManager.list(workspacePath);
+      if (this.sessionOpenSequence !== openSequence) return null;
+
       const candidates = sessions
         .filter((session) => session.cwd === workspacePath && session.messageCount > 0)
         .sort((first, second) => second.modified.getTime() - first.modified.getTime());
       const recent = candidates.find((session) => !getSession(session.id)?.archived);
       if (!recent) return null;
 
-      const opened = await this.openSession(recent.path);
+      const opened = await this.restoreSession(recent.path, openSequence);
       return opened.ok ? opened : null;
     } catch {
       return null;
