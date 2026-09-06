@@ -10,13 +10,14 @@ import {
 } from '@renderer/ui/virtual/geometry';
 import { MeasuredItem } from '@renderer/ui/virtual/measurement';
 import { useVisibleRange } from '@renderer/ui/virtual/use-visible-range';
-import { findScrollAncestor } from '@renderer/ui/virtual/utils/scroll';
+import { findScrollAncestor, syncScrollEnd } from '@renderer/ui/virtual/utils/scroll';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
 import { Fragment } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 export interface VirtualHandle {
+  scrollToEnd: () => void;
   scrollToIndex: (index: number) => boolean;
   scrollTopForIndex: (index: number) => number | null;
 }
@@ -119,6 +120,13 @@ export const Virtual = <T,>({
     [scrollTopForIndex]
   );
 
+  const scrollToEnd = useCallback(() => {
+    const container = containerRef.current;
+    const scrollAncestor = container ? findScrollAncestor(container) : null;
+    pinnedRef.current = true;
+    if (scrollAncestor) scrollAncestor.scrollTop = scrollAncestor.scrollHeight;
+  }, []);
+
   const setMeasuredHeight = useCallback((key: string, height: number) => {
     const current = heightCacheRef.current.get(key);
     const index = itemIndexRef.current.get(key);
@@ -146,8 +154,10 @@ export const Virtual = <T,>({
 
     heightCacheRef.current.set(key, height);
     if (scrollAncestor && shouldCompensateMeasuredDelta(committed, anchorAbove, pinnedToEnd)) {
-      scrollAncestor.scrollTop += heightDelta;
-      appliedScrollDeltaRef.current += heightDelta;
+      const previousScrollTop = scrollAncestor.scrollTop;
+      if (pinnedToEnd) scrollAncestor.scrollTop = scrollAncestor.scrollHeight;
+      else scrollAncestor.scrollTop += heightDelta;
+      appliedScrollDeltaRef.current += scrollAncestor.scrollTop - previousScrollTop;
       if (pinnedToEnd) pinnedRef.current = true;
     }
     setHeightRevision((revision) => revision + 1);
@@ -198,21 +208,10 @@ export const Virtual = <T,>({
     const heightDelta = totalDelta - appliedScrollDeltaRef.current;
     appliedScrollDeltaRef.current = 0;
     totalRef.current = total;
-    if (heightDelta <= 0) return;
-
     const container = containerRef.current;
     const scrollAncestor = container ? findScrollAncestor(container) : null;
-    const distanceFromEnd = scrollAncestor
-      ? scrollAncestor.scrollHeight - scrollAncestor.clientHeight - scrollAncestor.scrollTop
-      : 0;
-
-    if (
-      scrollAncestor &&
-      preserveScrollEnd &&
-      (pinnedRef.current || shouldPreserveScrollEnd(distanceFromEnd, heightDelta, pinnedThreshold))
-    ) {
-      scrollAncestor.scrollTop += heightDelta;
-      pinnedRef.current = true;
+    if (scrollAncestor && preserveScrollEnd) {
+      pinnedRef.current = syncScrollEnd(scrollAncestor, pinnedRef.current, heightDelta, pinnedThreshold);
     }
   }, [total, preserveScrollEnd]);
 
@@ -236,11 +235,11 @@ export const Virtual = <T,>({
   useLayoutEffect(() => {
     if (!apiRef) return;
 
-    apiRef.current = { scrollToIndex, scrollTopForIndex };
+    apiRef.current = { scrollToEnd, scrollToIndex, scrollTopForIndex };
     return () => {
       apiRef.current = null;
     };
-  }, [apiRef, scrollToIndex, scrollTopForIndex]);
+  }, [apiRef, scrollToEnd, scrollToIndex, scrollTopForIndex]);
 
   useLayoutEffect(() => {
     onRangeChange?.(range);

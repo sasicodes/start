@@ -1,12 +1,15 @@
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import * as resources from '@main/prompt/loader';
+import * as sessions from '@main/sessions';
+import { describe, expect, it, vi } from 'vitest';
 import { FakeSessionManager, getFakeSession } from '../fakes/agent/index.js';
 import { getStorageSnapshot } from '../fakes/storage.js';
 import { broadcastsByChannel } from '../fakes/window.js';
 import { activationLog } from '../fakes/workspace-access.js';
 import { freshChatService, newWebContents } from '../helpers/chat-service.js';
+import { deferred } from '../helpers/deferred.js';
 
 const workspaceTempRoot = () => mkdtempSync(path.join(tmpdir(), 'start-workspaces-'));
 
@@ -162,6 +165,127 @@ describe('workspace switching', () => {
     expect(result.session?.turns?.map((turn) => turn.text)).toEqual(['stored prompt']);
     expect((await chat.getStatus()).sessionId).toBe(stored.getSessionId());
     expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-b');
+  });
+
+  it('only scans the destination workspace when restoring history', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const stored = seedStoredSession('/tmp/workspace-b');
+    seedStoredSession('/tmp/workspace-c');
+    const list = vi.spyOn(FakeSessionManager, 'list');
+    const listAll = vi.spyOn(FakeSessionManager, 'listAll');
+
+    const result = await chat.switchWorkspace('/tmp/workspace-b');
+
+    expect(result.session?.id).toBe(stored.getSessionId());
+    expect(list).toHaveBeenCalledExactlyOnceWith('/tmp/workspace-b');
+    expect(listAll).not.toHaveBeenCalled();
+  });
+
+  it('restores the newest nonempty, unarchived session', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const older = seedStoredSession('/tmp/workspace-b');
+    const recent = seedStoredSession('/tmp/workspace-b');
+    const archived = seedStoredSession('/tmp/workspace-b');
+    const empty = FakeSessionManager.create('/tmp/workspace-b');
+    const stored = await FakeSessionManager.list('/tmp/workspace-b');
+    const times = new Map([
+      [older.getSessionId(), 1],
+      [recent.getSessionId(), 2],
+      [archived.getSessionId(), 3],
+      [empty.getSessionId(), 4]
+    ]);
+    vi.spyOn(FakeSessionManager, 'list').mockResolvedValue(
+      stored.map((session) => ({ ...session, modified: new Date(times.get(session.id) ?? 0) }))
+    );
+    vi.spyOn(sessions, 'getSession').mockImplementation((id) => {
+      if (id !== archived.getSessionId()) return;
+      return {
+        id,
+        path: id,
+        createdAt: 0,
+        updatedAt: 0,
+        archived: true,
+        title: 'Archived',
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        cwd: '/tmp/workspace-b'
+      };
+    });
+
+    const result = await chat.switchWorkspace('/tmp/workspace-b');
+
+    expect(result.session?.id).toBe(recent.getSessionId());
+  });
+
+  it('ignores a history scan superseded by another workspace selection', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    seedStoredSession('/tmp/workspace-b');
+    const stored = await FakeSessionManager.list('/tmp/workspace-b');
+    const scan = deferred<typeof stored>();
+    const started = deferred<void>();
+    const open = vi.spyOn(FakeSessionManager, 'open');
+    vi.spyOn(FakeSessionManager, 'list').mockImplementationOnce(() => {
+      started.resolve();
+      return scan.promise;
+    });
+
+    const pending = chat.switchWorkspace('/tmp/workspace-b');
+    await started.promise;
+    await chat.switchWorkspace('/tmp/workspace-c', { restoreSession: false });
+    scan.resolve(stored);
+    const result = await pending;
+
+    expect(result).toMatchObject({ ok: true, unchanged: true });
+    expect(result.session).toBeUndefined();
+    expect(open).not.toHaveBeenCalled();
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-c');
+    expect(getStorageSnapshot().lastWorkspace).toBe('/tmp/workspace-c');
+  });
+
+  it('ignores a history restore superseded while resources load', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    seedStoredSession('/tmp/workspace-b');
+    const loading = deferred<Awaited<ReturnType<typeof resources.createStartResourceLoader>>>();
+    const started = deferred<void>();
+    const loader = await resources.createStartResourceLoader('/tmp/workspace-b');
+    vi.spyOn(resources, 'createStartResourceLoader').mockImplementationOnce(() => {
+      started.resolve();
+      return loading.promise;
+    });
+
+    const pending = chat.switchWorkspace('/tmp/workspace-b');
+    await started.promise;
+    await chat.switchWorkspace('/tmp/workspace-c', { restoreSession: false });
+    loading.resolve(loader);
+    const result = await pending;
+
+    expect(result).toMatchObject({ ok: true, unchanged: true });
+    expect(result.session).toBeUndefined();
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-c');
+    expect((await chat.getStatus()).sessionId).toBeUndefined();
+  });
+
+  it('keeps a newly created session when a previous history scan finishes', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    seedStoredSession('/tmp/workspace-b');
+    const stored = await FakeSessionManager.list('/tmp/workspace-b');
+    const scan = deferred<typeof stored>();
+    const started = deferred<void>();
+    vi.spyOn(FakeSessionManager, 'list').mockImplementationOnce(() => {
+      started.resolve();
+      return scan.promise;
+    });
+
+    const pending = chat.switchWorkspace('/tmp/workspace-b');
+    await started.promise;
+    await chat.newSession();
+    scan.resolve(stored);
+    const result = await pending;
+
+    expect(result).toMatchObject({ ok: true, unchanged: true });
+    expect(result.session).toBeUndefined();
+    expect(chat.getWorkspaceCwd()).toBe('/tmp/workspace-b');
+    expect((await chat.getStatus()).sessionId).toBeUndefined();
   });
 
   it('skips session restore when the caller opts out', async () => {

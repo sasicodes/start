@@ -38,13 +38,21 @@ export class FakeSessionManager {
   }
 
   static async listAll() {
-    return [...sessionStore.values()].map((manager) => ({
-      id: manager.id,
-      cwd: manager.cwd,
-      path: manager.id,
+    return [...sessionStore.values()].map((manager) => manager.info());
+  }
+
+  static async list(cwd: string) {
+    return [...sessionStore.values()].filter((manager) => manager.cwd === cwd).map((manager) => manager.info());
+  }
+
+  private info() {
+    return {
+      id: this.id,
+      cwd: this.cwd,
+      path: this.id,
       modified: new Date(),
-      messageCount: manager.entries.length
-    }));
+      messageCount: this.entries.length
+    };
   }
 
   getSessionId() {
