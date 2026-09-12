@@ -48,4 +48,4 @@ The release workflow runs on the tag push and publishes the macOS artifacts.
 
 `patch`, `minor`, and `major` drop the prerelease tag and always produce a stable version, so prerelease bumps must pass the explicit tag.
 
-A tag with a prerelease suffix (`v0.1.0-beta.1`) publishes a GitHub prerelease and updates installs on that line. A plain tag (`v1.0.0`) publishes a stable release.
+Every release publishes as the repository's latest, so the newest tag keeps the Latest badge. Installs update along their own line: a prerelease build takes the next prerelease, a stable build takes the next stable.
