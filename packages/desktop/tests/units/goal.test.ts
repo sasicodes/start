@@ -40,7 +40,8 @@ describe('goal controller', () => {
     });
     expect(entries.at(-1)).toMatchObject({ customType: 'start-goal', data: controller.get() });
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(controller.continuation()).toBe('Continue toward the active goal.');
+    expect(controller.continuation()).toContain('Use get_goal to read the current objective');
+    expect(controller.continuation()).toContain('Call finish_goal before giving the final answer');
     expect(() => controller.start('replace it')).toThrow();
   });
 

@@ -1,4 +1,5 @@
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { globalMcpConfigPath } from '@main/mcp/config';
 import { buildStartSystemPrompt, createStartPromptExtension } from '@main/prompt/index';
 import { describe, expect, it } from 'vitest';
 
@@ -26,9 +27,9 @@ describe('buildStartSystemPrompt', () => {
 
   it('describes start resource locations without pi docs', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
-    expect(prompt).toContain('Project and user resources:');
-    expect(prompt).toContain('Project rules come from AGENTS.md files');
-    expect(prompt).toContain('Use the listed runtime tools for repository file discovery and code search');
+    expect(prompt).toContain('Resources:');
+    expect(prompt).toContain('Project rules: AGENTS.md files in or above cwd.');
+    expect(prompt).toContain('Use listed runtime discovery/search tools before broad shell commands.');
     expect(prompt).not.toContain('Prefer grep/find/ls tools');
     expect(prompt).not.toContain('ripgrep');
     expect(prompt).not.toContain('CLAUDE.md');
@@ -43,6 +44,20 @@ describe('buildStartSystemPrompt', () => {
     expect(prompt).not.toContain('- bash:');
     expect(prompt).not.toContain('- edit:');
     expect(prompt).not.toContain('- write:');
+  });
+
+  it('preserves response guidance, resource formats, and MCP restrictions', () => {
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir);
+
+    expect(prompt).toContain('expert coding assistant');
+    expect(prompt).toContain('Read files, run commands, and write or edit code.');
+    expect(prompt).toContain('Be precise and concise. Keep replies under 1k characters by default; expand when asked.');
+    expect(prompt).toContain('Show file paths clearly');
+    expect(prompt).toContain('<skill-name>/SKILL.md with YAML frontmatter and instructions');
+    expect(prompt).toContain(`${promptsDir}/<name>.md with YAML frontmatter and prompt text`);
+    expect(prompt).toContain(`"mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}`);
+    expect(prompt).toContain('Project servers require a remote "url"; "command" servers are global-only.');
+    expect(prompt).toContain(`Never store secrets in either file; use \${VAR} environment references.`);
   });
 
   it('lists active runtime tools from sdk tool info', () => {
@@ -116,6 +131,10 @@ Current working directory: /tmp/workspace`;
     expect(result.systemPrompt).toContain('<project_context>');
     expect(result.systemPrompt).toContain('Current date: 2026-05-30');
     expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
+    expect(result.systemPrompt).toContain(
+      'Be precise and concise. Keep replies under 1k characters by default; expand when asked.'
+    );
+    expect(result.systemPrompt).toContain(`Never store secrets in either file; use \${VAR} environment references.`);
   });
 
   it('applies runtime capabilities through the pi extension prompt hook', async () => {

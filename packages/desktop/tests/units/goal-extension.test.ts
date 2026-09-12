@@ -42,7 +42,10 @@ describe('goal extension', () => {
     expect(tools.map((tool) => tool.name)).toEqual(['get_goal', 'finish_goal']);
     const result = await hook({ systemPrompt: 'Existing rules' });
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Existing rules'));
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Objective: test'));
+    expect(result).toHaveProperty(
+      'systemPrompt',
+      expect.stringContaining('Use get_goal to read the current objective')
+    );
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('does not override'));
     expect(await get.execute('id', {})).toMatchObject({ details: { objective: 'test', status: 'active' } });
   });
@@ -53,11 +56,15 @@ describe('goal extension', () => {
     expect(await get.execute('id', {})).toMatchObject({ details: null, content: [{ text: 'There is no goal.' }] });
   });
 
-  it('reinjects the current objective after compaction and composes with existing workflows', async () => {
+  it('reads the current objective instead of embedding a stale objective in the system prompt', async () => {
     const { hook, controller } = await fixture(true);
     controller.get = () => ({ objective: 'Verify the release', status: 'active', iterations: 2, elapsedMs: 0 });
     const result = await hook({ systemPrompt: 'Compacted context' });
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Objective: Verify the release'));
+    expect(result).toHaveProperty(
+      'systemPrompt',
+      expect.stringContaining('Use get_goal to read the current objective')
+    );
+    expect(result).toHaveProperty('systemPrompt', expect.not.stringContaining('Verify the release'));
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('verifying the entire objective'));
     expect(result).toHaveProperty('systemPrompt', expect.stringContaining('run_workflow'));
     expect(result).toHaveProperty(

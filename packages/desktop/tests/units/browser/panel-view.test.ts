@@ -1,5 +1,5 @@
-import type { BrowserWindow, WebContents } from 'electron';
 import type { BrowserStatus } from '@preload/index';
+import type { BrowserWindow, WebContents } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeBrowserWindow, resetFakeBrowserWindows } from '../../fakes/electron.js';
 import { broadcastsByChannel, resetBroadcasts } from '../../fakes/window.js';
@@ -18,7 +18,10 @@ const {
   selectBrowserTab,
   typeInBrowser
 } = await import('@main/browser/index');
-const { shouldCloseBrowserPanelForStatus } = await import('@renderer/shared/browser/status');
+const { openReview, openNewTab, completeNewTab, syncBrowserTabs, panelTabs, panelTabOrder } = await import(
+  '@renderer/shared/browser/state'
+);
+const { browserPanelTransition } = await import('@renderer/shared/browser/status');
 
 const webContentsForTest = (window: ReturnType<typeof createFakeBrowserWindow>) =>
   window.webContents as unknown as WebContents;
@@ -38,6 +41,8 @@ const statusWithOpen = (open: boolean): BrowserStatus => ({
 
 describe('browser panel view', () => {
   beforeEach(() => {
+    panelTabOrder.value = [];
+    panelTabs.value = { review: false, choosing: false, selected: 'browser' };
     resetFakeBrowserWindows();
     resetBroadcasts();
     destroyBrowser();
@@ -47,10 +52,16 @@ describe('browser panel view', () => {
     destroyBrowser();
   });
 
-  it('closes the renderer panel only after an open browser status becomes closed', () => {
-    expect(shouldCloseBrowserPanelForStatus(false, statusWithOpen(false))).toBe(false);
-    expect(shouldCloseBrowserPanelForStatus(false, statusWithOpen(true))).toBe(false);
-    expect(shouldCloseBrowserPanelForStatus(true, statusWithOpen(false))).toBe(true);
+  it('closes the panel only after an open browser status becomes closed', () => {
+    expect(
+      browserPanelTransition(false, statusWithOpen(false), { review: false, choosing: false, selected: 'browser' })
+    ).toBe('keep');
+    expect(
+      browserPanelTransition(false, statusWithOpen(true), { review: false, choosing: false, selected: 'browser' })
+    ).toBe('keep');
+    expect(
+      browserPanelTransition(true, statusWithOpen(false), { review: false, choosing: false, selected: 'browser' })
+    ).toBe('close');
   });
 
   it('detaches the native browser view when panel bounds are cleared', () => {
@@ -150,12 +161,31 @@ describe('browser panel view', () => {
     const webContents = webContentsForTest(window);
 
     setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
-    newBrowserTab(webContents);
     const result = await openBrowserUrl(webContents, 'https://example.com', { newTab: true });
 
     expect(result.status?.activeTabId).toBe('tab-1');
     expect(result.status?.tabs).toHaveLength(1);
     expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://example.com/');
+  });
+
+  it('creates a distinct blank tab in chooser order without moving an existing blank tab', () => {
+    const window = createFakeBrowserWindow();
+    const webContents = webContentsForTest(window);
+    const first = newBrowserTab(webContents);
+    if (!first.status) throw new Error('Expected browser status.');
+    syncBrowserTabs(first.status.tabs.map((tab) => tab.id));
+    openReview();
+    openNewTab();
+
+    const second = newBrowserTab(webContents);
+    if (!second.status) throw new Error('Expected browser status.');
+    syncBrowserTabs(second.status.tabs.map((tab) => tab.id));
+    completeNewTab(second.status.activeTabId);
+
+    expect(second.status.activeTabId).toBe('tab-2');
+    expect(second.status.tabs.map((tab) => tab.id)).toEqual(['tab-1', 'tab-2']);
+    expect(panelTabOrder.value).toEqual(['tab-1', 'review', 'tab-2']);
+    expect(panelTabs.value.selected).toBe('browser');
   });
 
   it('opens a new browser tab for a different URL hash', async () => {
@@ -226,7 +256,7 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://start.intelligence.one/');
   });
 
-  it('closes the final browser tab and replaces it with a blank tab', async () => {
+  it('closes the final loaded page without creating a replacement tab', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -238,8 +268,17 @@ describe('browser panel view', () => {
     const result = closeBrowserTab(webContents, 'tab-1');
 
     expect(view.webContents.closed).toBe(true);
-    expect(result.status?.activeTabId).toBe('tab-2');
-    expect(result.status?.tabs).toEqual([{ id: 'tab-2', url: '', title: '', loading: false }]);
+    expect(window.contentView.children).toHaveLength(0);
+    expect(result.status?.activeTabId).toBe('');
+    expect(result.status?.open).toBe(false);
+    expect(result.status?.tabs).toEqual([]);
+    if (!result.status) throw new Error('Expected browser status.');
+    expect(browserPanelTransition(true, result.status, { review: false, choosing: false, selected: 'browser' })).toBe(
+      'close'
+    );
+    expect(browserPanelTransition(true, result.status, { review: true, choosing: false, selected: 'browser' })).toBe(
+      'review'
+    );
   });
 
   it('closes the browser panel when the final blank tab is closed', () => {
@@ -270,10 +309,8 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]?.webContents.getURL()).toBe('https://example.com/');
 
     expect(closeActiveBrowserTab(windowForTest(window))).toBe(true);
-    expect(window.contentView.children[0]?.webContents.getURL()).toBe('');
-
-    expect(closeActiveBrowserTab(windowForTest(window))).toBe(true);
     expect(window.contentView.children).toHaveLength(0);
+    expect(closeActiveBrowserTab(windowForTest(window))).toBe(false);
   });
 
   it('leaves closeActiveBrowserTab a no-op when the browser panel has nothing open', () => {

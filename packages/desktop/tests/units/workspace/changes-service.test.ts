@@ -1,10 +1,11 @@
-import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deferred } from '../../helpers/deferred.js';
 
 const gitMocks = vi.hoisted(() => ({
   getGitPatch: vi.fn(),
+  getGitChanges: vi.fn(),
   getGitChangeSummary: vi.fn()
 }));
 
@@ -114,6 +115,10 @@ describe('GitChangesService', () => {
         return new EventEmitter() as ChildProcess;
       }
     );
+    gitMocks.getGitChanges.mockImplementation(async (_cwd: string, includePatch: boolean) => ({
+      summary: await gitMocks.getGitChangeSummary(),
+      ...(includePatch ? { patch: await gitMocks.getGitPatch() } : {})
+    }));
     gitMocks.getGitPatch.mockResolvedValue(patch);
     gitMocks.getGitChangeSummary.mockResolvedValue(initialSummary);
   });
@@ -165,6 +170,77 @@ describe('GitChangesService', () => {
 
     expect(gitMocks.getGitChangeSummary).toHaveBeenCalledTimes(2);
     expect(notifications).toEqual([{ summary: changedSummary, workspacePath: '/repo' }]);
+  });
+
+  it('serializes watcher refreshes and runs one trailing refresh', async () => {
+    const pending = deferred<{ summary: typeof initialSummary }>();
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ notify: () => {}, focused: () => true, currentWorkspace: () => '/repo' });
+    await service.getSummary();
+    gitMocks.getGitChanges.mockReturnValueOnce(pending.promise);
+
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+    fsMocks.watchers[0]?.listener();
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(gitMocks.getGitChanges).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ summary: initialSummary });
+    await vi.advanceTimersByTimeAsync(180);
+    expect(gitMocks.getGitChanges).toHaveBeenCalledTimes(2);
+    expect(gitMocks.getGitChanges).toHaveBeenLastCalledWith('/repo', false);
+    expect(gitMocks.getGitPatch).not.toHaveBeenCalled();
+    service.dispose();
+  });
+
+  it.each(['dispose', 'unfocus', 'failure'] as const)('handles a pending refresh after %s', async (action) => {
+    let focused = true;
+    const notify = vi.fn();
+    const pending = deferred<{ summary: typeof initialSummary }>();
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({ notify, focused: () => focused, currentWorkspace: () => '/repo' });
+    await service.getSummary();
+    gitMocks.getGitChanges.mockReturnValueOnce(pending.promise);
+    fsMocks.watchers[0]?.listener();
+    await vi.advanceTimersByTimeAsync(180);
+    fsMocks.watchers[0]?.listener();
+
+    if (action === 'dispose') service.dispose();
+    if (action === 'unfocus') focused = false;
+    if (action === 'failure') pending.reject(new Error('git failed'));
+    else pending.resolve({ summary: initialSummary });
+    await vi.advanceTimersByTimeAsync(180);
+
+    expect(gitMocks.getGitChanges).toHaveBeenCalledTimes(action === 'failure' ? 2 : 1);
+    if (action === 'dispose') expect(notify).not.toHaveBeenCalled();
+    if (action === 'unfocus') {
+      focused = true;
+      service.flushPendingRefreshes();
+      await vi.advanceTimersByTimeAsync(180);
+      expect(gitMocks.getGitChanges).toHaveBeenCalledTimes(2);
+    }
+    service.dispose();
+  });
+
+  it('defers a scheduled refresh when focus is lost before its timer fires', async () => {
+    let focused = true;
+    const { GitChangesService } = await import('@main/workspace/changes');
+    const service = new GitChangesService({
+      notify: () => {},
+      focused: () => focused,
+      currentWorkspace: () => '/repo'
+    });
+    await service.getSummary();
+    fsMocks.watchers[0]?.listener();
+    focused = false;
+    await vi.advanceTimersByTimeAsync(180);
+    expect(gitMocks.getGitChanges).not.toHaveBeenCalled();
+    focused = true;
+    service.flushPendingRefreshes();
+    await vi.advanceTimersByTimeAsync(180);
+    expect(gitMocks.getGitChanges).toHaveBeenCalledTimes(1);
+    service.dispose();
   });
 
   it('watches git-visible workspace directories and the git directory', async () => {

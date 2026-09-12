@@ -80,7 +80,7 @@ it.each(['abort', 'pause', 'cancel'] as const)(
   }
 );
 
-it('continues after a settled goal response and emits a new visible turn', async () => {
+it('continues with a hidden message and an assistant-only turn', async () => {
   const { chat, tab, session, webContents } = await setup();
   const sending = chat.send('@Goal Complete two steps', webContents);
   await session.awaitPromptCall();
@@ -88,7 +88,12 @@ it('continues after a settled goal response and emits a new visible turn', async
   session.finishPrompt();
   await session.awaitPromptCall();
   expect((await chat.getStatus()).goal).toMatchObject({ status: 'active', iterations: 2 });
-  expect(webContents.events.some((event) => event.channel === 'chat:queued-turn-start')).toBe(true);
+  expect(webContents.events.filter((event) => event.channel === 'chat:queued-turn-start')).toEqual([
+    { channel: 'chat:queued-turn-start', args: [expect.objectContaining({ kind: 'continuation' })] }
+  ]);
+  expect(session.sessionManager.getEntries()).toContainEqual(
+    expect.objectContaining({ type: 'custom_message', customType: 'start-goal-continuation', display: false })
+  );
   await chat.controlGoal(tab.id, 'pause', webContents);
   await sending;
   expect((await chat.getStatus()).goal?.status).toBe('paused');
@@ -262,7 +267,7 @@ it('rejects an empty goal mention and omits goal from slash discovery', async ()
   chat.dispose();
 });
 
-it('queues goal mentions as ordinary input while a goal already exists', async () => {
+it('holds new goals outside the model queue and prevents steering them into the current goal', async () => {
   const { chat, tab, session, webContents } = await setup();
   const sending = chat.send('@Goal Original objective', webContents);
   await session.awaitPromptCall();
@@ -272,7 +277,9 @@ it('queues goal mentions as ordinary input while a goal already exists', async (
   if (!queued) throw new Error('Missing queue item');
   expect(queued.text).toBe('Please @Goal also inspect @src');
   await chat.steerQueuedMessage(queued.id, webContents);
-  expect(session.steerQueue).toEqual(['Please @Goal also inspect @src']);
+  expect(queued.kind).toBe('goal');
+  expect(session.steerQueue).toEqual([]);
+  expect(session.followUpQueue).toEqual([]);
   await chat.abort();
   await sending;
   chat.dispose();

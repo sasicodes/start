@@ -23,14 +23,33 @@ describe('foldOpenDefault', () => {
 
 describe('setDiffFold', () => {
   beforeEach(() => {
-    diffFold.value = null;
+    setDiffFold(null);
   });
 
   it('writes the shared fold state so late-mounting viewers read it', () => {
     setDiffFold('collapsed');
-    expect(diffFold.value).toBe('collapsed');
+    expect(diffFold.value.mode).toBe('collapsed');
 
     setDiffFold(null);
-    expect(diffFold.value).toBeNull();
+    expect(diffFold.value.mode).toBeNull();
+  });
+});
+
+describe('bulk fold identity', () => {
+  it('invalidates earlier manual overrides when returning to the same mode', () => {
+    setDiffFold('collapsed');
+    const original = diffFold.value;
+    setDiffFold('expanded');
+    expect(diffFold.value).not.toBe(original);
+    setDiffFold('collapsed');
+    expect(diffFold.value.mode).toBe(original.mode);
+    expect(diffFold.value).not.toBe(original);
+  });
+
+  it('invalidates overrides even when the same bulk action is repeated', () => {
+    setDiffFold('collapsed');
+    const original = diffFold.value;
+    setDiffFold('collapsed');
+    expect(diffFold.value).not.toBe(original);
   });
 });

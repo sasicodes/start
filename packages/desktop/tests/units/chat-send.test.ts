@@ -1,11 +1,15 @@
 import type { SendResult } from '@preload/index';
 import { useChatSend } from '@renderer/shared/chat/send';
+import { clearGoal, syncGoal } from '@renderer/shared/goal/state';
 import { afterEach, expect, it, vi } from 'vitest';
 import { deferred } from '../helpers/deferred.js';
 
 vi.mock('preact/hooks', () => ({ useCallback: <T>(callback: T) => callback }));
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  clearGoal();
+  vi.unstubAllGlobals();
+});
 
 const setup = (isGenerating: boolean) => {
   const selection = deferred<void>();
@@ -70,4 +74,20 @@ it.each(['failure', 'rejection'])('ignores a queued-send %s after switching sess
   await sending;
   expect(state.setTurns).not.toHaveBeenCalled();
   expect(state.updateActiveSessionId).not.toHaveBeenCalled();
+});
+
+it('queues a new goal while paused without creating optimistic conversation turns', async () => {
+  const state = setup(false);
+  syncGoal({
+    ready: true,
+    sessionId: 'first',
+    workspacePath: '',
+    goal: { status: 'paused', objective: 'First', iterations: 1, elapsedMs: 0 }
+  });
+  const sending = state.chat.sendText('@Goal Second');
+  state.selection.resolve();
+  state.response.resolve({ ok: true, queued: true, sessionId: 'first' });
+  await sending;
+  expect(state.send).toHaveBeenCalledExactlyOnceWith('@Goal Second', []);
+  expect(state.setTurns).not.toHaveBeenCalled();
 });
