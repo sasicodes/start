@@ -62,7 +62,7 @@ describe('sub-agent tool details', () => {
       }
     });
 
-    expect(detail.title).toBe('Spawning 1 agent');
+    expect(detail.title).toBe('1 running');
     expect(detail.detail).toBeUndefined();
     expect(detail.metric).toBeUndefined();
     expect(detail.subagents?.[0]?.name).toBe('Arul');

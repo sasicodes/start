@@ -181,6 +181,8 @@ export interface SubagentActivity {
   model?: string;
   effort?: EffortLevel;
   summary?: string;
+  activity?: string;
+  lastActivityAt?: number;
   accentColor: string;
   status: SubagentStatus;
 }

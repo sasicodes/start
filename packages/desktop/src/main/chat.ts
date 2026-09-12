@@ -81,6 +81,7 @@ import {
 import { readStartState, type StartState, updateStartState } from '@main/storage';
 import { SubagentNameAllocator } from '@main/subagents/allocator';
 import type { WorkflowModelOption } from '@main/subagents/types';
+import type { Workflow } from '@main/subagents/workflow';
 import {
   type AgentTab,
   type AgentTabStatus,
@@ -298,6 +299,8 @@ export class ChatService {
   private readonly queueUpdateSignatures = new WeakMap<WebContents, string>();
   private readonly notices = new Map<string, SessionNotice>(Object.entries(this.appState.sessionNotices ?? {}));
   private readonly sessionRuntimeStates = new Map<string, SessionRuntimeState>();
+  private readonly subagentLifetimes = new Map<string, AbortController>();
+  private readonly workflows = new Map<string, Map<string, Workflow>>();
   private readonly subagentNameAllocators = new Map<string, SubagentNameAllocator>();
   private readonly worktreeRepoCache = new Map<string, string>();
   private readonly attachments = new Map<string, { createdAt: number; data: string; mimeType: string }>();
@@ -857,6 +860,7 @@ export class ChatService {
   }
 
   async closeTab(id: string): Promise<void> {
+    this.stopSubagents(id);
     const activeSession = this.activeSessionId === id ? this.session : null;
     const closingSession = activeSession ?? this.backgroundSessions.get(id);
     if (closingSession) {
@@ -898,6 +902,7 @@ export class ChatService {
   }
 
   async abortTab(id: string): Promise<void> {
+    this.stopSubagents(id);
     if (this.activeSessionId === id) return this.abort();
     const session = this.backgroundSessions.get(id);
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
@@ -1954,6 +1959,7 @@ export class ChatService {
   }
 
   async abort(advanceGoals = false): Promise<void> {
+    this.stopSubagents(this.activeSessionId);
     const runtimeState = this.activeRuntimeState();
     if (runtimeState) {
       runtimeState.abortSequence += 1;
@@ -1980,6 +1986,9 @@ export class ChatService {
   }
 
   dispose(): void {
+    for (const controller of this.subagentLifetimes.values()) controller.abort();
+    this.subagentLifetimes.clear();
+    this.workflows.clear();
     this.sessionOpenSequence += 1;
     this.authInputReject?.(new Error('Chat service disposed.'));
     this.clearSubscriptionAuthInput();
@@ -2551,6 +2560,11 @@ export class ChatService {
 
   private subagentToolsOptions(sessionId: string, cwd: string): Parameters<typeof createStartCustomTools>[0] {
     const allocator = this.subagentNameAllocator(sessionId);
+    let workflows = this.workflows.get(sessionId);
+    if (!workflows) {
+      workflows = new Map<string, Workflow>();
+      this.workflows.set(sessionId, workflows);
+    }
     const base = {
       cwd: () => cwd,
       webSearchApiKey: () => this.webSearchApiKey(),
@@ -2566,6 +2580,15 @@ export class ChatService {
 
     return {
       ...base,
+      workflows,
+      lifetimeSignal: () => {
+        let controller = this.subagentLifetimes.get(sessionId);
+        if (!controller) {
+          controller = new AbortController();
+          this.subagentLifetimes.set(sessionId, controller);
+        }
+        return controller.signal;
+      },
       sessions: this.sessionController(cwd),
       customTools: subagentSessionTools,
       worktreeOwners: (path) => this.worktreeOwners(path)
@@ -2656,7 +2679,14 @@ export class ChatService {
     return allocator;
   }
 
+  private stopSubagents(sessionId: string): void {
+    this.subagentLifetimes.get(sessionId)?.abort();
+    this.subagentLifetimes.delete(sessionId);
+  }
+
   private deleteSubagentNameAllocator(sessionId: string): void {
+    this.stopSubagents(sessionId);
+    this.workflows.delete(sessionId);
     this.subagentNameAllocators.delete(sessionId);
   }
 

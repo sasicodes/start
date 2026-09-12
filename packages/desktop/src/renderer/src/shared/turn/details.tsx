@@ -15,7 +15,9 @@ const ActivitySequence = ({ items }: { items: TurnActivityItem[] }) => (
         <DetailItem
           key={item.id}
           detail={item.detail}
-          renderSubagents={(detail) => (detail.subagents ? <SubagentList agents={detail.subagents} /> : null)}
+          renderSubagents={(detail) =>
+            detail.subagents ? <SubagentList agents={detail.subagents} live={detail.state === 'active'} /> : null
+          }
         />
       )
     )}
