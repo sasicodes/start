@@ -70,5 +70,9 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" artifacts/* --clobber
           else
-            gh release create "$TAG" artifacts/* --title "$TAG" --generate-notes
+            options=(--title "$TAG" --generate-notes)
+            case "$TAG" in
+              *-*) options+=(--prerelease) ;;
+            esac
+            gh release create "$TAG" artifacts/* "${options[@]}"
           fi
