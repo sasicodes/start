@@ -1,4 +1,5 @@
 import type { AppSurface, SidePanelMode } from '@renderer/app/types';
+import { openReview, panelTabs, selectBrowser } from '@renderer/shared/browser/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { playToggleSound } from '@renderer/ui/sounds';
 import { isEditableTarget } from '@renderer/utils/dom';
@@ -39,6 +40,7 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   const openBrowserPanel = useCallback(() => {
     setSidePanelOpen(true);
     setSidePanelMode('browser');
+    selectBrowser();
   }, []);
 
   const toggleSettingsPanel = useCallback(() => {
@@ -47,9 +49,24 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
   }, [sidePanelMode]);
 
   const toggleGitChangesPanel = useCallback(() => {
-    setSidePanelOpen((open) => (sidePanelMode === 'git' ? !open : true));
-    setSidePanelMode('git');
+    const reviewing = sidePanelMode === 'browser' && panelTabs.peek().selected === 'review';
+    setSidePanelOpen((open) => (reviewing ? !open : true));
+    setSidePanelMode('browser');
+    openReview();
   }, [sidePanelMode]);
+
+  const sidePanelVisible = surface === 'main' && sidePanelOpen;
+  const gitPanelVisible = sidePanelVisible && sidePanelMode === 'browser' && panelTabs.value.selected === 'review';
+  const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
+
+  useEffect(() => {
+    window.pi.app.setSidePanelOpen(sidePanelVisible);
+  }, [sidePanelVisible]);
+
+  useEffect(() => {
+    if (!settingsPanelVisible) return;
+    return window.pi.app.onClosePanelTab(closeSidePanel);
+  }, [closeSidePanel, settingsPanelVisible]);
 
   useEffect(() => {
     if (surface !== 'main') return;
@@ -74,11 +91,6 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [closeSidePanel, sidePanelOpen, surface, toggleSidePanel]);
 
-  const sidePanelVisible = surface === 'main' && sidePanelOpen;
-  const gitPanelVisible = sidePanelVisible && sidePanelMode === 'git';
-  const browserPanelVisible = sidePanelVisible && sidePanelMode === 'browser';
-  const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
-
   return {
     settingsTab,
     sidePanelMode,
@@ -88,7 +100,6 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     sidePanelVisible,
     openBrowserPanel,
     openSettingsPanel,
-    browserPanelVisible,
     openShortcutsPanel,
     settingsPanelVisible,
     toggleSettingsPanel,

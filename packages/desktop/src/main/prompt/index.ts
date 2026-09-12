@@ -4,7 +4,7 @@ import * as v from 'valibot';
 
 interface ToolCapability {
   name: string;
-  description: string;
+  snippet: string;
   promptGuidelines: string[];
 }
 
@@ -14,7 +14,6 @@ interface ToolCapabilitySource {
 }
 
 const trimmed = v.pipe(v.string(), v.trim());
-const fallbackToolDescription = 'Available runtime tool.';
 const filePathGuideline = '- Show file paths clearly when working with files.';
 
 const promptGuidelinesSchema = v.pipe(
@@ -23,7 +22,6 @@ const promptGuidelinesSchema = v.pipe(
 );
 
 const runtimeToolSchema = v.object({
-  description: v.optional(trimmed, ''),
   name: v.pipe(trimmed, v.minLength(1)),
   promptSnippet: v.optional(trimmed, ''),
   promptGuidelines: v.optional(promptGuidelinesSchema, [])
@@ -43,11 +41,10 @@ const readToolCapability = (value: unknown): ToolCapability | null => {
   if (!result.success) return null;
 
   const tool = 'definition' in result.output ? result.output.definition : result.output;
-  const description = singleLineText(tool.promptSnippet || tool.description || fallbackToolDescription);
 
   return {
-    description,
     name: tool.name,
+    snippet: singleLineText(tool.promptSnippet),
     promptGuidelines: tool.promptGuidelines
   };
 };
@@ -66,8 +63,8 @@ const toolCapabilitiesFromSource = (source: ToolCapabilitySource): ToolCapabilit
     (name) =>
       toolsByName.get(name) ?? {
         name,
-        promptGuidelines: [],
-        description: fallbackToolDescription
+        snippet: '',
+        promptGuidelines: []
       }
   );
 };
@@ -75,7 +72,8 @@ const toolCapabilitiesFromSource = (source: ToolCapabilitySource): ToolCapabilit
 const runtimeToolsList = (capabilities: readonly ToolCapability[]) => {
   if (capabilities.length === 0) return '- Runtime tools are loaded from the active session.';
 
-  return capabilities.map(({ name, description }) => `- ${name}: ${description}`).join('\n');
+  const tools = capabilities.map(({ name, snippet }) => (snippet ? `- ${name}: ${snippet}` : `- ${name}`)).join('\n');
+  return `Use each tool's definition for its full purpose, parameters, and usage restrictions.\n${tools}`;
 };
 
 const toolGuidelinesList = (capabilities: readonly ToolCapability[]) => {
@@ -133,21 +131,21 @@ export const buildStartSystemPrompt = (
   const capabilities = capabilitySource ? toolCapabilitiesFromSource(capabilitySource) : [];
   const toolGuidelines = toolGuidelinesList(capabilities);
 
-  return `You are an expert coding assistant. You help users by reading files, executing commands, editing code, and writing new files.
+  return `You are an expert coding assistant. Read files, run commands, and write or edit code.
 
 Available tools:
 ${runtimeToolsList(capabilities)}
 
 Guidelines:
-- Use the listed runtime tools for repository file discovery and code search before broad shell commands.
-- Be concise in your responses.
+- Use listed runtime discovery/search tools before broad shell commands.
+- Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.
 ${filePathGuideline}${toolGuidelines}
 
-Project and user resources:
-- Project rules come from AGENTS.md files in or above the current working directory.
-- Skills are <skill-name>/SKILL.md files with YAML frontmatter and instructions, loaded from ~/.agents/skills and <cwd>/.agents/skills; create Start-managed skills in ${skillsDir}.
-- Slash prompts belong in ${promptsDir}/<name>.md with YAML frontmatter and prompt text.
-- MCP servers are "mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}. Project entries must be remote servers with a "url"; "command" servers only load from the global file. Never write secret values into these files; reference environment variables with \${VAR} placeholders.`;
+Resources:
+- Project rules: AGENTS.md files in or above cwd.
+- Skills: <skill-name>/SKILL.md with YAML frontmatter and instructions; load from ~/.agents/skills and <cwd>/.agents/skills; create Start-managed skills in ${skillsDir}.
+- Slash prompts: ${promptsDir}/<name>.md with YAML frontmatter and prompt text.
+- MCP: "mcpServers" entries in <cwd>/.mcp.json or ${globalMcpConfigPath()}. Project servers require a remote "url"; "command" servers are global-only. Never store secrets in either file; use \${VAR} environment references.`;
 };
 
 export const createStartPromptExtension = (promptsDir: string, skillsDir: string) => (pi: ExtensionAPI) => {

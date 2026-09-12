@@ -51,7 +51,9 @@ describe('buildStartSystemPrompt', () => {
 
     expect(prompt).toContain('expert coding assistant');
     expect(prompt).toContain('Read files, run commands, and write or edit code.');
-    expect(prompt).toContain('Be precise and concise. Keep replies under 1k characters by default; expand when asked.');
+    expect(prompt).toContain(
+      'Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
+    );
     expect(prompt).toContain('Show file paths clearly');
     expect(prompt).toContain('<skill-name>/SKILL.md with YAML frontmatter and instructions');
     expect(prompt).toContain(`${promptsDir}/<name>.md with YAML frontmatter and prompt text`);
@@ -70,8 +72,8 @@ describe('buildStartSystemPrompt', () => {
       ]
     });
 
-    expect(prompt).toContain('- grep: Search file contents.');
-    expect(prompt).toContain('- browser_open: Open an HTTP or HTTPS URL in the browser panel.');
+    expect(prompt).toContain('- grep\n');
+    expect(prompt).toContain('- browser_open\n');
     expect(prompt).toContain('- Prefer targeted searches.');
     expect(prompt).not.toContain('- read:');
   });
@@ -95,13 +97,27 @@ describe('buildStartSystemPrompt', () => {
     );
   });
 
+  it('keeps third-party definitions intact without duplicating or truncating their descriptions', () => {
+    const description = `${'Search archived records. '.repeat(40)}Only use for archived records; live records require live_search.`;
+    const tool = { name: 'archive_search', description };
+    const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
+      getAllTools: () => [tool],
+      getActiveToolNames: () => [tool.name]
+    });
+    expect(prompt).not.toContain(description);
+    expect(prompt).not.toContain('Search archived records.');
+    expect(prompt).toContain('- archive_search\n');
+    expect(prompt).toContain("Use each tool's definition for its full purpose, parameters, and usage restrictions.");
+    expect(tool.description).toBe(description);
+  });
+
   it('keeps active runtime names even when detailed tool info is absent', () => {
     const prompt = buildStartSystemPrompt(promptsDir, skillsDir, {
       getAllTools: () => [],
       getActiveToolNames: () => ['dynamic_tool']
     });
 
-    expect(prompt).toContain('- dynamic_tool: Available runtime tool.');
+    expect(prompt).toContain('- dynamic_tool\n');
   });
 
   it('preserves pi-appended prompt sections when applying capabilities', async () => {
@@ -127,12 +143,12 @@ Current working directory: /tmp/workspace`;
 
     const result = await registered.handler({ systemPrompt: prompt });
 
-    expect(result.systemPrompt).toContain('- grep: Search file contents.');
+    expect(result.systemPrompt).toContain('- grep\n');
     expect(result.systemPrompt).toContain('<project_context>');
     expect(result.systemPrompt).toContain('Current date: 2026-05-30');
     expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
     expect(result.systemPrompt).toContain(
-      'Be precise and concise. Keep replies under 1k characters by default; expand when asked.'
+      'Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
     );
     expect(result.systemPrompt).toContain(`Never store secrets in either file; use \${VAR} environment references.`);
   });
@@ -187,7 +203,7 @@ Current date: 2026-05-30`
 
     const result = await registered.handler({ systemPrompt: 'Current working directory: /tmp/workspace' });
 
-    expect(result.systemPrompt).toContain('- grep: Search file contents.');
+    expect(result.systemPrompt).toContain('- grep\n');
     expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
   });
 

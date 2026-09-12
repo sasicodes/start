@@ -1,35 +1,64 @@
 import { scrollToBottomButtonState } from '@renderer/shared/turn/scroll';
 import type { RefObject } from 'preact';
-import { useCallback, useEffect } from 'preact/hooks';
+import { useEffect } from 'preact/hooks';
 
-const hasPageBelow = (element: HTMLElement) =>
+export const hasContentBelow = (element: HTMLElement) =>
   element.scrollHeight - element.clientHeight - element.scrollTop > element.clientHeight;
 
-const setVisible = (visible: boolean) => {
-  if (scrollToBottomButtonState.value !== visible) scrollToBottomButtonState.value = visible;
+export const observeScrollToBottom = (
+  element: HTMLElement,
+  content: HTMLElement,
+  publish: (visible: boolean) => void
+) => {
+  let frame = 0;
+  let timer = 0;
+  let visible = false;
+
+  const sync = () => {
+    frame = 0;
+    if (!hasContentBelow(element)) {
+      window.clearTimeout(timer);
+      timer = 0;
+      if (visible) publish(false);
+      visible = false;
+      return;
+    }
+    if (visible || timer) return;
+
+    timer = window.setTimeout(() => {
+      timer = 0;
+      if (!hasContentBelow(element)) return;
+      visible = true;
+      publish(true);
+    }, 120);
+  };
+  const schedule = () => {
+    if (!frame) frame = window.requestAnimationFrame(sync);
+  };
+  const observer = new ResizeObserver(schedule);
+  observer.observe(element);
+  observer.observe(content);
+  element.addEventListener('scroll', schedule, { passive: true });
+  publish(false);
+  schedule();
+
+  return () => {
+    window.clearTimeout(timer);
+    window.cancelAnimationFrame(frame);
+    observer.disconnect();
+    element.removeEventListener('scroll', schedule);
+    publish(false);
+  };
 };
 
 export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, contentRef: RefObject<HTMLElement>) => {
-  const sync = useCallback(() => {
-    const element = scrollRef.current;
-    setVisible(Boolean(element && hasPageBelow(element)));
-  }, [scrollRef]);
-
   useEffect(() => {
     const element = scrollRef.current;
-    if (!element) return;
-
-    element.addEventListener('scroll', sync, { passive: true });
-    sync();
-    return () => element.removeEventListener('scroll', sync);
-  }, [sync, scrollRef]);
-
-  useEffect(() => {
     const content = contentRef.current;
-    if (!content) return;
+    if (!element || !content) return;
 
-    const observer = new ResizeObserver(sync);
-    observer.observe(content);
-    return () => observer.disconnect();
-  }, [sync, contentRef]);
+    return observeScrollToBottom(element, content, (visible) => {
+      scrollToBottomButtonState.value = visible;
+    });
+  }, [scrollRef, contentRef]);
 };

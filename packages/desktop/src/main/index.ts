@@ -12,7 +12,6 @@ import { appIconPath, appId, appMenuName, appVersion, isDev, isMac } from '@main
 import {
   type BrowserOpenOptions,
   captureBrowserScreenshot,
-  closeActiveBrowserTab,
   closeBrowserTab,
   destroyBrowser,
   getBrowserStatus,
@@ -41,6 +40,7 @@ import { type GitFileRef, getGitFileBlob } from '@main/git';
 import { installWindowHardening } from '@main/harden';
 import { registerChatIpc } from '@main/ipc';
 import { installApplicationMenu, installStatusItem } from '@main/menu';
+import { closeSidePanelTab, setSidePanelOpen } from '@main/panel';
 import { DesktopRelay, type DesktopRelayCommandContext } from '@main/relay/client';
 import { probeRelay } from '@main/relay/probe';
 import type { DesktopRelayEventPayload, MobileRelayCommand } from '@main/relay/protocol';
@@ -429,7 +429,7 @@ if (!singleInstanceLock) {
 
     appSettings = await readAppSettings();
     stopMainWindowChanged = onMainWindowChanged(applyBackgroundWork);
-    onCloseWindowInput(closeActiveBrowserTab);
+    onCloseWindowInput(closeSidePanelTab);
     powerMonitor.on('on-ac', refreshStayAwake);
     powerMonitor.on('on-battery', refreshStayAwake);
     trackAppOpened(appSettings.composerShortcut, chat.getWorkspaceCwd());
@@ -500,6 +500,7 @@ if (!singleInstanceLock) {
     );
     ipcMain.handle('app:browser-bounds', (event, bounds) => setBrowserBounds(event.sender, bounds));
     ipcMain.handle('app:browser-close', () => destroyBrowser());
+    ipcMain.on('app:side-panel-open', (event, open) => setSidePanelOpen(event.sender, open === true));
     registerUpdateIpc({ prepareQuit: prepareQuitForUpdate });
     ipcMain.handle('app:hide-composer', () => {
       hideComposerWindow();

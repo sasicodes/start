@@ -65,14 +65,12 @@ describe('goal extension', () => {
       expect.stringContaining('Use get_goal to read the current objective')
     );
     expect(result).toHaveProperty('systemPrompt', expect.not.stringContaining('Verify the release'));
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('verifying the entire objective'));
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('run_workflow'));
+    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('entire objective is verified complete'));
     expect(result).toHaveProperty(
       'systemPrompt',
-      expect.stringContaining('call finish_goal before giving the final user-facing answer')
+      expect.stringContaining('Call finish_goal before giving the final answer')
     );
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('Give that answer once'));
-    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('simple goals do not require a workflow'));
+    expect(result).toHaveProperty('systemPrompt', expect.stringContaining('give that answer once'));
     controller.get = () => ({ objective: 'Verify the release', status: 'paused', iterations: 2, elapsedMs: 0 });
     expect(await hook({ systemPrompt: 'Compacted context' })).toBeFalsy();
   });

@@ -1,8 +1,8 @@
 import type { SessionManager } from '@earendil-works/pi-coding-agent';
+import { objectiveSchema } from '@main/goal/utils/objective';
 import type { GoalStatus } from '@main/types';
 import * as v from 'valibot';
 
-const objectiveSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(8000));
 const reasonSchema = v.pipe(v.string(), v.trim(), v.maxLength(2000));
 const goalSchema = v.object({
   objective: objectiveSchema,
@@ -104,6 +104,9 @@ export const createGoalController = (
       runIterations += 1;
       return true;
     },
-    continuation: () => (goal?.status === 'active' ? 'Continue toward the active goal.' : '')
+    continuation: () =>
+      goal?.status === 'active'
+        ? 'Continue the active goal. Use get_goal to read the current objective and status, follow the latest user instructions, and use finish_goal when complete or blocked. Call finish_goal before giving the final answer.'
+        : ''
   };
 };

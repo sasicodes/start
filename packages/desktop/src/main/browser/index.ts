@@ -135,14 +135,6 @@ const touchBrowserTab = (tab: BrowserTab) => {
   tab.lastUsedOrder = browserTabUseOrder;
 };
 
-const blankTab = (): BrowserTab | null => {
-  for (const tab of browserTabs.values()) {
-    if (!tab.loaded) return tab;
-  }
-
-  return null;
-};
-
 const tabForNewPage = (url: string): BrowserTab => {
   const reusable = pickReusableTab(
     [...browserTabs.values()].map((tab) => ({ tab, blank: !tab.loaded, url: tab.view.webContents.getURL() })),
@@ -416,7 +408,7 @@ export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  activeTabId = (blankTab() ?? createBrowserTab()).id;
+  activeTabId = createBrowserTab().id;
   closeInactiveBrowserTabsOverLimit();
   attachActiveBrowserView(window);
   sendStatus();
@@ -439,34 +431,23 @@ export const closeBrowserTab = (sender: WebContents, tabId: string): BrowserActi
   const tab = browserTabs.get(tabId);
   if (!tab) return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
 
-  const wasBlank = !tab.loaded;
   const wasAttached = attachedTabId === tabId;
 
   closeBrowserTabById(tabId);
 
   const window = windowFromSender(sender);
   if (!activeTabId) {
-    if (wasBlank) {
-      closeBrowserTabs();
-      return { ok: true, status: statusFromView() };
-    }
-    if (window) createBrowserTab();
+    closeBrowserTabs();
+    return { ok: true, status: statusFromView() };
   }
 
-  if (activeTabId && window && (wasAttached || ownerWindow === window)) {
+  if (window && wasAttached) {
     attachActiveBrowserView(window);
     activeTab()?.view.webContents.focus();
   }
 
   sendStatus();
   return { ok: true, status: statusFromView() };
-};
-
-export const closeActiveBrowserTab = (window: ElectronBrowserWindow): boolean => {
-  if (ownerWindow !== window || !activeTabId) return false;
-
-  closeBrowserTab(window.webContents, activeTabId);
-  return true;
 };
 
 export const goBackInBrowser = (): BrowserActionResult => {

@@ -1,8 +1,15 @@
 import { execFile } from 'node:child_process';
-import { watch, type FSWatcher } from 'node:fs';
+import { type FSWatcher, watch } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { type GitChangeSummary, type GitPatch, getGitChangeSummary, getGitPatch, gitEnv } from '@main/git';
+import {
+  type GitChangeSummary,
+  type GitPatch,
+  getGitChangeSummary,
+  getGitChanges,
+  getGitPatch,
+  gitEnv
+} from '@main/git';
 
 export interface GitChangesPayload {
   workspacePath: string;
@@ -19,6 +26,7 @@ interface GitChangesEntry {
   lastUsedAt: number;
   patchLoaded: boolean;
   patchRequest?: Promise<MaybeGitPatch>;
+  refreshing?: true;
   refreshPending?: true;
   summary?: GitChangeSummary;
   summaryLoaded: boolean;
@@ -232,7 +240,7 @@ export class GitChangesService {
 
   private scheduleRefresh(entry: GitChangesEntry): void {
     if (this.entries.get(entry.workspacePath) !== entry) return;
-    if (!this.focused()) {
+    if (!this.focused() || entry.refreshing) {
       entry.refreshPending = true;
       return;
     }
@@ -240,14 +248,34 @@ export class GitChangesService {
     if (entry.refreshTimer) clearTimeout(entry.refreshTimer);
     entry.refreshTimer = setTimeout(() => {
       delete entry.refreshTimer;
-      this.refresh(entry).catch(() => this.handleRefreshFailure(entry));
+      this.runRefresh(entry);
     }, gitChangesDebounceMs);
+  }
+
+  private async runRefresh(entry: GitChangesEntry): Promise<void> {
+    if (this.entries.get(entry.workspacePath) !== entry) return;
+    if (!this.focused() || entry.refreshing) {
+      entry.refreshPending = true;
+      return;
+    }
+
+    entry.refreshing = true;
+    try {
+      await this.refresh(entry);
+    } catch {
+      this.handleRefreshFailure(entry);
+    } finally {
+      delete entry.refreshing;
+      if (entry.refreshPending) {
+        delete entry.refreshPending;
+        this.scheduleRefresh(entry);
+      }
+    }
   }
 
   private async refresh(entry: GitChangesEntry): Promise<void> {
     const refreshPatch = entry.patchLoaded;
-    const patchRequest = refreshPatch ? getGitPatch(entry.workspacePath) : Promise.resolve(entry.patch);
-    const [summary, patch] = await Promise.all([getGitChangeSummary(entry.workspacePath), patchRequest]);
+    const { summary, patch } = await getGitChanges(entry.workspacePath, refreshPatch);
     if (this.entries.get(entry.workspacePath) !== entry) return;
     const previousSummary = entry.summary ?? null;
     const previousPatch = entry.patch ?? null;

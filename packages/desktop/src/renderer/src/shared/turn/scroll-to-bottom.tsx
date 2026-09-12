@@ -6,7 +6,10 @@ export const ScrollToBottom = () => {
   if (!scrollToBottomButtonState.value) return null;
 
   return (
-    <div class="pointer-events-none absolute -top-12 inset-x-0 z-10 flex justify-center">
+    <div
+      style={{ top: 'calc(-3rem - var(--composer-overhang, 0px))' }}
+      class="pointer-events-none absolute inset-x-0 z-10 flex justify-center"
+    >
       <Tooltip label="Scroll to latest">
         <button
           type="button"

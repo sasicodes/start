@@ -1,24 +1,14 @@
 import type { QueuedMessage } from '@preload/index';
 import { Attached } from '@renderer/shared/composer/attached';
 import { editingQueuedId } from '@renderer/shared/composer/queue/state';
+import { queueAction } from '@renderer/shared/composer/queue/utils/action';
 import { useReorder } from '@renderer/shared/composer/use-reorder';
+import { visibleGoal } from '@renderer/shared/goal/state';
 import { skillDisplayText } from '@renderer/shared/skill/parse';
 import { DragIcon, TrashIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren } from 'preact';
 import { useMemo } from 'preact/hooks';
-
-const queueActionText = (generating: boolean, steering: boolean, editing: boolean) => {
-  if (editing) return 'Editing';
-  if (!generating) return 'Send';
-  return steering ? 'Steering' : 'Steer';
-};
-
-const queueActionLabel = (generating: boolean, steering: boolean, editing: boolean) => {
-  if (editing) return 'Finish editing before sending';
-  if (!generating) return 'Send this queued message now';
-  return steering ? 'Already steering next' : 'Steer this queued message';
-};
 
 interface QueueProps {
   children: ComponentChildren;
@@ -45,6 +35,8 @@ export const Queue = ({
   const byId = useMemo(() => new Map(messages.map((message) => [message.id, message])), [messages]);
   const reorder = useReorder(ids, onReorder);
   const dragging = Boolean(reorder.dragId);
+  const goalBlocked = generating || Boolean(visibleGoal.value);
+  const firstGoalId = messages.find((message) => message.kind === 'goal')?.id ?? '';
 
   if (!visible) return null;
 
@@ -60,9 +52,15 @@ export const Queue = ({
           {reorder.order.map((id) => {
             const message = byId.get(id);
             if (!message) return null;
-            const steering = message.kind === 'steer';
+            const goal = message.kind === 'goal';
             const editing = Boolean(message.editing || editingQueuedId.value === id);
             const text = skillDisplayText(message.text);
+            const action = queueAction({
+              editing,
+              generating,
+              kind: message.kind,
+              blocked: goalBlocked || firstGoalId !== id
+            });
 
             return (
               <li
@@ -90,6 +88,7 @@ export const Queue = ({
                 </span>
                 <div class="min-w-0 flex-1 px-1">
                   <div class="flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium text-ink">
+                    {goal && <span class="flex-none text-xs text-soft">Queued goal</span>}
                     <span class="truncate">{text}</span>
                   </div>
                 </div>
@@ -101,12 +100,12 @@ export const Queue = ({
                 >
                   <button
                     type="button"
-                    disabled={editing || (generating && steering)}
-                    aria-label={queueActionLabel(generating, steering, editing)}
-                    onClick={() => (generating ? onSteer(id) : onSend(id))}
+                    disabled={action.disabled}
+                    aria-label={action.label}
+                    onClick={() => (action.steer ? onSteer(id) : onSend(id))}
                     class="rounded-full border-0 bg-transparent px-2 py-1 text-xs leading-none font-medium text-soft transition-colors hover:text-hover disabled:pointer-events-none disabled:text-hover"
                   >
-                    {queueActionText(generating, steering, editing)}
+                    {action.text}
                   </button>
                   <button
                     type="button"

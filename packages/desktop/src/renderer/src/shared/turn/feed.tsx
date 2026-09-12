@@ -1,6 +1,7 @@
 import { useComputed } from '@preact/signals';
 import { TurnArticles } from '@renderer/shared/turn/articles';
 import { useTurnRoom } from '@renderer/shared/turn/room';
+import { useTurnClearance } from '@renderer/shared/turn/use-clearance';
 import { useScrollToBottom } from '@renderer/shared/turn/use-scroll-to-bottom';
 import { lastTurnStreaming, turnIdsState } from '@renderer/state/chat';
 import type { VirtualHandle } from '@renderer/ui/virtual';
@@ -24,6 +25,7 @@ export const TurnFeed = memo(() => {
     virtualRef,
     turnCount: turnIds.length
   });
+  useTurnClearance(scrollRef);
   useScrollToBottom(scrollRef, contentRef);
 
   return (

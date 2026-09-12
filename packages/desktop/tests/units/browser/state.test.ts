@@ -1,4 +1,5 @@
 import {
+  closeBrowserSurface,
   closeNewTab,
   closePanelTab,
   closeReview,
@@ -177,6 +178,24 @@ describe('closing panel tabs', () => {
     expect(panelTabs.value.selected).toBe('review');
     openNewTab();
     expect(closePanelTab('review', false)).toBe('keep');
+    expect(panelTabs.value.selected).toBe('new');
+  });
+
+  it('closes the panel when the empty browser surface is the last tab', () => {
+    expect(closeBrowserSurface()).toBe('close');
+    expect(panelTabs.value.selected).toBe('browser');
+  });
+
+  it('falls back to Review or the chooser when the empty browser surface closes', () => {
+    openReview();
+    selectBrowser();
+    expect(closeBrowserSurface()).toBe('keep');
+    expect(panelTabs.value.selected).toBe('review');
+
+    closeReview();
+    openNewTab();
+    selectBrowser();
+    expect(closeBrowserSurface()).toBe('keep');
     expect(panelTabs.value.selected).toBe('new');
   });
 });

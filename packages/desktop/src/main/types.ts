@@ -83,7 +83,7 @@ export type CommandResult = {
   sessionId?: string;
 };
 
-export type QueuedMessageKind = 'steer' | 'followUp';
+export type QueuedMessageKind = 'steer' | 'followUp' | 'goal';
 
 export interface QueuedMessage {
   id: string;
@@ -92,12 +92,6 @@ export interface QueuedMessage {
   editing?: boolean;
   attachmentCount?: number;
 }
-
-export type QueuedTurnStart = {
-  id: string;
-  text: string;
-  attachments?: ImageAttachment[];
-};
 
 export type TurnDetailKind = 'tool' | 'error' | 'metadata';
 export type TurnDetailState = 'done' | 'error' | 'active' | 'queued';

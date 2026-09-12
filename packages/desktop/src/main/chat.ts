@@ -33,6 +33,7 @@ import { imageAttachments, textContent } from '@main/details';
 import { chatEvent } from '@main/events';
 import { addWorktree, discardWorktree, getGitBranch, gitMainWorktree, listWorktrees } from '@main/git';
 import { createGoalController, type GoalController } from '@main/goal/controller';
+import { mentionedGoal, objectiveSchema } from '@main/goal/utils/objective';
 import {
   agentEndError,
   clampThinkingLevel,
@@ -128,7 +129,6 @@ import {
 import type { WebContents } from 'electron';
 import electron from 'electron';
 import * as v from 'valibot';
-import { parseUserMentions } from '../shared/mentions/utils.js';
 
 const { shell } = electron;
 
@@ -253,6 +253,7 @@ interface SessionRuntimeState {
   isGenerating: boolean;
   queueRevision: number;
   queueRebuildDepth: number;
+  advanceQueuedGoals: boolean;
   editingQueuedMessageId: string;
   discardPendingDeltas?: () => void;
   liveAssistantTurn?: LiveAssistantTurn;
@@ -262,10 +263,11 @@ interface SessionRuntimeState {
 
 const createSessionRuntimeState = (): SessionRuntimeState => ({
   abortSequence: 0,
+  queueRevision: 0,
   queuedMessages: [],
   isGenerating: false,
-  queueRevision: 0,
   queueRebuildDepth: 0,
+  advanceQueuedGoals: false,
   editingQueuedMessageId: '',
   queueDeliveryCandidates: []
 });
@@ -1431,29 +1433,43 @@ export class ChatService {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
     const session = await this.getSession();
-    try {
-      this.startMentionedGoal(session, text);
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : 'Goal could not be started.' };
-    }
     return this.generate(session, this.workspaceCwd, prompt, attachments, webContents);
   }
 
-  private startMentionedGoal(session: AgentSession, prompt: string): void {
-    const parts = parseUserMentions(prompt);
-    if (!parts.some((part) => part.kind === 'mention' && part.name === 'goal')) return;
-    const goal = this.goalForSession(session.sessionManager);
-    const status = goal.get()?.status;
-    if (status === 'active' || status === 'paused') return;
-    let objective = prompt;
-    for (const part of parts.reverse()) {
-      if (part.kind !== 'mention' || part.name === 'browser') continue;
-      const following = objective.slice(part.start + part.text.length).replace(/^[ \t]+/u, '');
-      objective = objective.slice(0, part.start) + following;
-    }
-    if (!objective.trim()) throw new Error('Add an objective after @Goal.');
-    if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before starting a goal.');
-    goal.start(objective);
+  private takeQueuedGoal(session: AgentSession, webContents?: WebContents, id = ''): PendingQueuedMessage | null {
+    const state = this.runtimeStateForSession(session);
+    const status = this.goalForSession(session.sessionManager).get()?.status;
+    if (status === 'active' || status === 'paused') return null;
+    const message = state.queuedMessages.find((item) => item.kind === 'goal' && (!id || item.id === id));
+    if (!message || state.editingQueuedMessageId === message.id) return null;
+
+    state.queuedMessages = state.queuedMessages.filter((item) => item.id !== message.id);
+    state.queueDeliveryCandidates.push(visibleQueuedMessage(message));
+    if (this.session === session) this.emitQueueUpdate(webContents);
+    return message;
+  }
+
+  private startNextQueuedGoal(session: AgentSession, workspacePath: string, webContents?: WebContents, id = ''): void {
+    const state = this.runtimeStateForSession(session);
+    if (this.sessionIsGenerating(session)) return;
+    state.advanceQueuedGoals = false;
+    const message = this.takeQueuedGoal(session, webContents, id);
+    if (!message) return;
+    this.generate(
+      session,
+      workspacePath,
+      message.text,
+      this.storeQueuedImages(message.images),
+      webContents,
+      'queued-goal'
+    );
+  }
+
+  private async continueGoal(session: AgentSession, content: string): Promise<void> {
+    await session.sendCustomMessage(
+      { display: false, customType: 'start-goal-continuation', content },
+      { triggerTurn: true }
+    );
   }
 
   async updateGoal(sessionId: string, objective: string): Promise<ChatStatus> {
@@ -1476,24 +1492,24 @@ export class ChatService {
     const session = this.session;
     if (!session || session.sessionManager.getSessionId() !== sessionId) return this.selectionChangedStatus();
     const goal = this.goalForSession(session.sessionManager);
+    const workspacePath = sessionWorkspacePath(session, this.workspaceCwd);
     try {
       if (action === 'resume') {
         if (this.sessionIsGenerating(session)) throw new Error('Wait for the current response before resuming.');
         goal.resume();
-        const prompt = goal.continuation();
-        const turn = { id: randomUUID(), text: prompt };
-        if (webContents) webContents.send('chat:queued-turn-start', turn);
-        else sendToRendererWindows('chat:queued-turn-start', turn);
-        this.generate(session, this.workspaceCwd, prompt, [], webContents);
+        this.generate(session, workspacePath, goal.continuation(), [], webContents, 'continuation');
       } else {
         const status = goal.get()?.status;
-        if (status !== 'active') {
-          if (action === 'cancel' && status === 'paused') goal.cancel();
-          return this.chatStatus();
+        if (status !== 'active' && !(action === 'cancel' && status === 'paused')) return this.chatStatus();
+        const state = this.runtimeStateForSession(session);
+        if (action === 'cancel') {
+          goal.cancel();
+        } else {
+          goal.pause('Paused by you.');
         }
-        if (action === 'cancel') goal.cancel();
-        else goal.pause('Paused by you.');
-        await this.abort();
+        if (status === 'active') await this.abort(action === 'cancel');
+        if (action === 'cancel' && (status === 'paused' || state.advanceQueuedGoals))
+          this.startNextQueuedGoal(session, workspacePath, webContents);
       }
       return this.chatStatus();
     } catch (error) {
@@ -1510,7 +1526,8 @@ export class ChatService {
     workspacePath: string,
     prompt: string,
     attachments: ImageAttachment[],
-    webContents?: WebContents
+    webContents?: WebContents,
+    source: 'user' | 'continuation' | 'queued-goal' = 'user'
   ): Promise<SendResult> {
     const text = prompt.trim();
     if (!text) return { ok: false, error: 'Prompt is empty.' };
@@ -1533,9 +1550,22 @@ export class ChatService {
     try {
       sessionId = session.sessionManager.getSessionId();
       runtimeState = this.runtimeStateForSession(session);
-      if (runtimeState.isGenerating || session.isStreaming)
-        return this.queueFollowUp(text, attachments, session, runtimeState, webContents);
+      sendAbortSequence = runtimeState.abortSequence;
+      const objective = source !== 'continuation' ? mentionedGoal(text) : '';
+      const status = goal.get()?.status;
+      const queuedGoal = source === 'user' && runtimeState.queuedMessages.some((message) => message.kind === 'goal');
+      const waitingForGoal = Boolean(objective && (status === 'active' || status === 'paused' || queuedGoal));
+      if (runtimeState.isGenerating || session.isStreaming || waitingForGoal)
+        return this.queueFollowUp(
+          text,
+          attachments,
+          session,
+          runtimeState,
+          webContents,
+          objective ? 'goal' : 'followUp'
+        );
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
+      if (objective) goal.start(objective);
 
       const state = runtimeState;
       this.setGenerating(state, true);
@@ -1575,6 +1605,20 @@ export class ChatService {
           deltas.flush();
           this.resetLiveAssistantTurn(session, state);
           if (active) this.emitQueuedTurnStart(event.message.content, state, webContents);
+        }
+
+        if (
+          event.type === 'message_start' &&
+          event.message.role === 'custom' &&
+          event.message.customType === 'start-goal-continuation'
+        ) {
+          deltas.flush();
+          this.resetLiveAssistantTurn(session, state);
+          if (active) {
+            const turn = { id: randomUUID(), kind: 'continuation' };
+            if (webContents) webContents.send('chat:queued-turn-start', turn);
+            else sendToRendererWindows('chat:queued-turn-start', turn);
+          }
         }
 
         if (event.type === 'message_start' && event.message.role === 'assistant') {
@@ -1618,26 +1662,28 @@ export class ChatService {
         if (state.queuedMessages.length > 0) await this.rebuildSessionQueue(session, state);
         if (state.abortSequence !== sendAbortSequence) throw new Error('Request stopped.');
         if (goal.get()?.status === 'active') goal.beginIteration();
-        if (images.length > 0) {
-          await session.prompt(text, { images });
+        if (source === 'continuation') {
+          await this.continueGoal(session, text);
         } else {
-          await session.prompt(text);
+          await session.prompt(text, { ...(images.length > 0 ? { images } : {}) });
         }
-        while (!endError && state.abortSequence === sendAbortSequence && goal.get()?.status === 'active') {
+        while (!endError && state.abortSequence === sendAbortSequence) {
           if (state.editingQueuedMessageId) {
             goal.pause('A queued message is being edited.');
             break;
           }
-          if (!goal.beginIteration()) break;
-          deltas.flush();
-          const continuation = goal.continuation();
-          if (this.isActiveSession(sessionId, workspacePath)) {
-            const turn = { id: randomUUID(), text: continuation };
-            if (webContents) webContents.send('chat:queued-turn-start', turn);
-            else sendToRendererWindows('chat:queued-turn-start', turn);
+          if (goal.get()?.status === 'active') {
+            if (!goal.beginIteration()) break;
+            deltas.flush();
+            await this.continueGoal(session, goal.continuation());
+          } else {
+            const next = this.takeQueuedGoal(session, webContents);
+            if (!next) break;
+            goal.start(mentionedGoal(next.text));
+            goal.beginIteration();
+            deltas.flush();
+            await session.prompt(next.text, { ...(next.images ? { images: next.images } : {}) });
           }
-          this.resetLiveAssistantTurn(session, state);
-          await session.prompt(continuation);
         }
         if (endError) goal.pause('The model returned an error.');
       } finally {
@@ -1699,6 +1745,9 @@ export class ChatService {
         return { ok: true, ...(sessionId ? { sessionId } : {}) };
       }
 
+      if (!startedGeneration) {
+        return { ok: false, error: error instanceof Error ? error.message : 'Chat failed.' };
+      }
       goal.pause('The request failed.');
       const message = error instanceof Error ? error.message : 'Chat failed.';
       if (runtimeState) delete runtimeState.liveAssistantTurn;
@@ -1714,6 +1763,7 @@ export class ChatService {
       if (runtimeState && startedGeneration) {
         this.setGenerating(runtimeState, false);
         notifyMobileSessionChange(true);
+        if (runtimeState.advanceQueuedGoals) this.startNextQueuedGoal(session, workspacePath, webContents);
       }
     }
   }
@@ -1721,16 +1771,24 @@ export class ChatService {
   async command(command: string, excludeFromContext: boolean, webContents: WebContents): Promise<CommandResult> {
     const text = command.trim();
     if (!text) return { ok: false, error: 'Command is empty.' };
+    const workspacePath = this.workspaceCwd;
+    let completed = false;
+    let startedGeneration = false;
+    let commandAbortSequence = 0;
+    let activeSession: AgentSession | null = null;
     let runtimeState: SessionRuntimeState | null = null;
 
     try {
       const session = await this.getSession();
+      activeSession = session;
       runtimeState = this.runtimeStateForSession(session);
       if (runtimeState.isGenerating || session.isStreaming)
         return { ok: false, error: 'A response is already running.' };
       if (session.isBashRunning) return { ok: false, error: 'A command is already running.' };
 
       this.setGenerating(runtimeState, true);
+      startedGeneration = true;
+      commandAbortSequence = runtimeState.abortSequence;
 
       const result = await session.executeBash(
         text,
@@ -1739,6 +1797,7 @@ export class ChatService {
         },
         { excludeFromContext }
       );
+      completed = true;
       const output = result.output ?? '';
 
       this.setActiveSession(session.sessionManager);
@@ -1752,7 +1811,11 @@ export class ChatService {
       const message = error instanceof Error ? error.message : 'Command failed.';
       return { ok: false, error: message };
     } finally {
-      if (runtimeState) this.setGenerating(runtimeState, false);
+      if (runtimeState && startedGeneration && activeSession) {
+        this.setGenerating(runtimeState, false);
+        if (completed && runtimeState.abortSequence === commandAbortSequence)
+          this.startNextQueuedGoal(activeSession, workspacePath, webContents);
+      }
     }
   }
 
@@ -1762,6 +1825,10 @@ export class ChatService {
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
     if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
       return this.visibleQueuedMessages();
+    if (message.kind === 'goal') {
+      this.startNextQueuedGoal(session, sessionWorkspacePath(session, this.workspaceCwd), webContents, id);
+      return this.visibleQueuedMessages(runtimeState);
+    }
     if (runtimeState.isGenerating || session.isStreaming) return this.steerQueuedMessage(id, webContents);
 
     runtimeState.queuedMessages = runtimeState.queuedMessages.filter((item) => item.id !== id);
@@ -1791,7 +1858,7 @@ export class ChatService {
     const session = this.session;
     const runtimeState = session ? this.runtimeStateForSession(session) : null;
     const message = runtimeState?.queuedMessages.find((item) => item.id === id);
-    if (!session || !runtimeState || !message || runtimeState.editingQueuedMessageId === id)
+    if (!session || !runtimeState || !message || message.kind === 'goal' || runtimeState.editingQueuedMessageId === id)
       return this.visibleQueuedMessages();
 
     const canSteerQueuedMessage = runtimeState.isGenerating;
@@ -1812,9 +1879,17 @@ export class ChatService {
     if (!session || !runtimeState || !message || !text.trim() || runtimeState.editingQueuedMessageId !== id)
       return false;
 
+    let kind = message.kind;
+    try {
+      if (mentionedGoal(text)) kind = 'goal';
+      else if (kind === 'goal') text = `@Goal ${v.parse(objectiveSchema, text)}`;
+    } catch {
+      return false;
+    }
+
     runtimeState.editingQueuedMessageId = '';
     runtimeState.queuedMessages = runtimeState.queuedMessages.map((item) =>
-      item.id === id ? { ...item, text } : item
+      item.id === id ? { ...item, kind, text } : item
     );
     try {
       await this.rebuildSessionQueue(session, runtimeState);
@@ -1878,9 +1953,12 @@ export class ChatService {
     return this.visibleQueuedMessages(runtimeState);
   }
 
-  async abort(): Promise<void> {
+  async abort(advanceGoals = false): Promise<void> {
     const runtimeState = this.activeRuntimeState();
-    if (runtimeState) runtimeState.abortSequence += 1;
+    if (runtimeState) {
+      runtimeState.abortSequence += 1;
+      runtimeState.advanceQueuedGoals = advanceGoals;
+    }
     if (this.session) this.goalForSession(this.session.sessionManager).pause('Stopped.');
     this.pauseQueuedMessages(this.session, runtimeState);
     this.session?.abortBash();
@@ -2047,7 +2125,7 @@ export class ChatService {
     const deliveredMessages: PendingQueuedMessage[] = [];
 
     for (const message of [...runtimeState.queuedMessages].reverse()) {
-      if (message.id === runtimeState.editingQueuedMessageId) {
+      if (message.kind === 'goal' || message.id === runtimeState.editingQueuedMessageId) {
         nextMessages.push(message);
       } else if (message.kind === 'steer' && this.consumeQueuedMessageText(steeringMessages, message)) {
         nextMessages.push(message);
@@ -2077,7 +2155,8 @@ export class ChatService {
     attachments: ImageAttachment[],
     session: AgentSession,
     runtimeState: SessionRuntimeState,
-    webContents?: WebContents
+    webContents?: WebContents,
+    kind: 'goal' | 'followUp' = 'followUp'
   ): Promise<SendResult> {
     const id = randomUUID();
     const abortSequence = runtimeState.abortSequence;
@@ -2087,12 +2166,16 @@ export class ChatService {
       if (runtimeState.abortSequence !== abortSequence) return { ok: false, error: 'Request stopped.' };
       const message: PendingQueuedMessage = {
         id,
-        kind: 'followUp',
+        kind,
         text,
         ...(images.length > 0 ? { images } : {})
       };
       runtimeState.queuedMessages.push(message);
       this.emitQueueUpdate(webContents);
+      if (kind === 'goal') {
+        this.startNextQueuedGoal(session, sessionWorkspacePath(session, this.workspaceCwd), webContents);
+        return { ok: true, queued: true, sessionId: session.sessionManager.getSessionId() };
+      }
       if (images.length > 0) {
         await session.followUp(text, images);
       } else {
@@ -2113,7 +2196,7 @@ export class ChatService {
       session.clearQueue();
       for (const message of runtimeState.queuedMessages) {
         if (revision !== runtimeState.queueRevision) return;
-        if (message.id === runtimeState.editingQueuedMessageId) continue;
+        if (message.kind === 'goal' || message.id === runtimeState.editingQueuedMessageId) continue;
         if (message.kind === 'steer') {
           await session.steer(message.text, message.images);
         } else {
@@ -2142,16 +2225,13 @@ export class ChatService {
 
   private clearQueuedMessages(webContents?: WebContents, runtimeState = this.activeRuntimeState()): void {
     this.pauseQueuedMessages(this.session, runtimeState);
-    this.clearQueuedMessageState(runtimeState);
+    if (runtimeState) {
+      runtimeState.queuedMessages = runtimeState.queuedMessages.filter((message) => message.kind === 'goal');
+      runtimeState.queueDeliveryCandidates = [];
+      if (!runtimeState.queuedMessages.some((message) => message.id === runtimeState.editingQueuedMessageId))
+        runtimeState.editingQueuedMessageId = '';
+    }
     if (webContents) this.emitQueueUpdate(webContents);
-  }
-
-  private clearQueuedMessageState(runtimeState = this.activeRuntimeState()): void {
-    if (!runtimeState) return;
-
-    runtimeState.queuedMessages = [];
-    runtimeState.editingQueuedMessageId = '';
-    runtimeState.queueDeliveryCandidates = [];
   }
 
   private queuedMessageMatches(message: QueuedMessage, text: string): boolean {
@@ -2553,7 +2633,7 @@ export class ChatService {
   ): Promise<SessionSummary> {
     const session = await this.createBackgroundSession(workspacePath);
     try {
-      this.startMentionedGoal(session, prompt);
+      mentionedGoal(prompt);
     } catch (error) {
       await this.closeTab(session.sessionManager.getSessionId());
       throw error;

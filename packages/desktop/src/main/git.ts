@@ -292,52 +292,54 @@ export const getGitBranch = async (cwd: string) => {
   }
 };
 
-export const getGitChangeSummary = async (cwd: string): Promise<GitChangeSummary | undefined> => {
+export interface GitChanges {
+  patch?: GitPatch;
+  summary?: GitChangeSummary;
+}
+
+export const getGitChanges = async (cwd: string, includePatch = false): Promise<GitChanges> => {
   try {
     const insideWorkTree = (await git(cwd, ['rev-parse', '--is-inside-work-tree'])).trim();
-    if (insideWorkTree !== 'true') return;
+    if (insideWorkTree !== 'true') return {};
 
     const { staged, unstaged, untrackedFiles } = await getWorkingTreeStats(cwd);
-    const untracked = await getUntrackedData(cwd, untrackedFiles, 'none');
-    const files = new Set([...staged.files, ...unstaged.files, ...untracked.files]);
-
-    return {
-      filesChanged: files.size,
-      insertions: staged.insertions + unstaged.insertions + untracked.insertions,
-      deletions: staged.deletions + unstaged.deletions + untracked.deletions
-    };
-  } catch {
-    return;
-  }
-};
-
-export const getGitPatch = async (cwd: string): Promise<GitPatch | undefined> => {
-  try {
-    const insideWorkTree = (await git(cwd, ['rev-parse', '--is-inside-work-tree'])).trim();
-    if (insideWorkTree !== 'true') return;
-
-    const { staged, unstaged, untrackedFiles } = await getWorkingTreeStats(cwd);
-    const stagedLimited = !canLoadPatch(staged);
-    const unstagedLimited = !canLoadPatch(unstaged);
     const includeUntrackedPatch = untrackedFiles.length <= maxUntrackedFiles && untrackedFiles.length <= maxPatchFiles;
-    const untracked = await getUntrackedData(cwd, untrackedFiles, includeUntrackedPatch ? 'full' : 'summary');
-    const untrackedLimited = !includeUntrackedPatch || !canLoadPatch(untracked);
-    const [stagedPatch, unstagedPatch] = await Promise.all([
-      stagedLimited ? '' : gitDiffStaged(cwd, ['--binary', '-M']),
-      unstagedLimited ? '' : gitDiffUnstaged(cwd, ['--binary', '-M'])
-    ]);
+    const patchMode = includePatch ? (includeUntrackedPatch ? 'full' : 'summary') : 'none';
+    const untracked = await getUntrackedData(cwd, untrackedFiles, patchMode);
+    const files = new Set([...staged.files, ...unstaged.files, ...untracked.files]);
+    const summary = {
+      filesChanged: files.size,
+      deletions: staged.deletions + unstaged.deletions + untracked.deletions,
+      insertions: staged.insertions + unstaged.insertions + untracked.insertions
+    };
+    if (!includePatch) return { summary };
 
-    const sections = [
-      patchSection('staged', stagedPatch, staged, stagedLimited),
-      patchSection('unstaged', unstagedPatch, unstaged, unstagedLimited),
-      patchSection('untracked', untracked.patch, untracked, untrackedLimited)
-    ].filter(isPatchSection);
+    try {
+      const stagedLimited = !canLoadPatch(staged);
+      const unstagedLimited = !canLoadPatch(unstaged);
+      const untrackedLimited = !includeUntrackedPatch || !canLoadPatch(untracked);
+      const [stagedPatch, unstagedPatch] = await Promise.all([
+        stagedLimited ? '' : gitDiffStaged(cwd, ['--binary', '-M']),
+        unstagedLimited ? '' : gitDiffUnstaged(cwd, ['--binary', '-M'])
+      ]);
+      const sections = [
+        patchSection('staged', stagedPatch, staged, stagedLimited),
+        patchSection('unstaged', unstagedPatch, unstaged, unstagedLimited),
+        patchSection('untracked', untracked.patch, untracked, untrackedLimited)
+      ].filter(isPatchSection);
 
-    return { sections };
+      return { summary, patch: { sections } };
+    } catch {
+      return { summary };
+    }
   } catch {
-    return;
+    return {};
   }
 };
+
+export const getGitChangeSummary = async (cwd: string) => (await getGitChanges(cwd)).summary;
+
+export const getGitPatch = async (cwd: string) => (await getGitChanges(cwd, true)).patch;
 
 const readWorkingTreeBuffer = async (cwd: string, filePath: string): Promise<Buffer | undefined> => {
   try {

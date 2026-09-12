@@ -42,6 +42,11 @@ describe('sub-agent runtime', () => {
     if (!session) throw new Error('Sub-agent session was not created.');
     await session.awaitPromptCall();
 
+    const instructions = JSON.stringify(session.sessionManager.getEntries());
+    expect(instructions).toContain('Inspect the project.');
+    expect(instructions).toContain('validation performed, and unresolved blockers');
+    expect(instructions).toContain('preserve evidence the parent needs');
+
     expect(session.getAllTools().map(({ name }) => name)).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
     expect(session.getActiveToolNames()).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
 
