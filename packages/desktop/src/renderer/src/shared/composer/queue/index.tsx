@@ -52,7 +52,6 @@ export const Queue = ({
           {reorder.order.map((id) => {
             const message = byId.get(id);
             if (!message) return null;
-            const goal = message.kind === 'goal';
             const editing = Boolean(message.editing || editingQueuedId.value === id);
             const text = skillDisplayText(message.text);
             const action = queueAction({
@@ -88,7 +87,6 @@ export const Queue = ({
                 </span>
                 <div class="min-w-0 flex-1 px-1">
                   <div class="flex min-w-0 items-center gap-1.5 text-sm leading-5 font-medium text-ink">
-                    {goal && <span class="flex-none text-xs text-soft">Queued goal</span>}
                     <span class="truncate">{text}</span>
                   </div>
                 </div>
