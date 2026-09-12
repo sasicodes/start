@@ -99,7 +99,9 @@ export const controlGoal = async (action: GoalAction): Promise<boolean> => {
   const expectedStatus = action === 'pause' ? 'paused' : action === 'resume' ? 'active' : 'cancelled';
   return changeGoal(
     (sessionId) => window.pi.chat.controlGoal(sessionId, action),
-    (result) => result.goal?.status === expectedStatus
+    (result) =>
+      result.goal?.status === expectedStatus ||
+      (action === 'cancel' && result.ready && result.goal?.status === 'active')
   );
 };
 

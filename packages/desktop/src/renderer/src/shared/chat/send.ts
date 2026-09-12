@@ -142,6 +142,14 @@ export const useChatSend = ({
         setLoadedSessionId(result.sessionId);
         updateActiveSessionId(result.sessionId);
       }
+      if (result.ok && result.queued) {
+        if (assistantIdRef.current === assistantTurn.id) {
+          assistantIdRef.current = null;
+          setIsGenerating(false);
+        }
+        setTurns((current) => current.filter((turn) => turn.id !== userTurn.id && turn.id !== assistantTurn.id));
+        return;
+      }
       if (!result.ok) {
         const assistantId = assistantIdRef.current;
         if (!assistantId) return;

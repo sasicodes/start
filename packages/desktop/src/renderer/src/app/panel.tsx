@@ -4,7 +4,6 @@ import type { BrowserNavigation } from '@renderer/shared/browser/navigation';
 import { BrowserPanel } from '@renderer/shared/browser/panel';
 import { Settings } from '@renderer/shared/settings/panel';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
-import { GitChangesPanel } from '@renderer/shared/workspace/changes';
 import { memo } from 'preact/compat';
 
 interface AppSidePanelProps {
@@ -41,11 +40,11 @@ export const AppSidePanel = memo(
     onDisconnectProvider,
     onSolidWindowBackgroundChange
   }: AppSidePanelProps) => {
-    if (mode === 'git') return <GitChangesPanel path={workspacePath} onClose={onClose} />;
     if (mode === 'browser')
       return (
         <BrowserPanel
           onClose={onClose}
+          path={workspacePath}
           navigation={browserNavigation}
           onUrlOpened={onBrowserUrlOpened}
           onInspectText={onBrowserInspectText}

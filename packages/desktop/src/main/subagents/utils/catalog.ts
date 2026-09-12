@@ -10,5 +10,8 @@ export const workflowToolDescription = (options: WorkflowModelOption[]) => {
     return 'Run a workflow of focused sub-agents in parallel. No models are configured; set up a provider before spawning sub-agents.';
   }
 
-  return `Run a workflow of focused sub-agents in parallel. For each task choose one of the model keys listed below exactly (only these models are configured) and an effort, using the scores (0-10, higher is better; affordability higher means cheaper). Do not default to the highest scores, that wastes tokens. Pick the cheapest model and lowest effort that can still do the task well, and only move up when the task truly needs it: reading, lookups, and mechanical edits belong on a cheap model at low effort; design, UX, and architecture want higher taste; genuinely hard reasoning wants higher intelligence at high or xhigh effort. Match each task to the minimum capability it needs.\n\nModels:\n${workflowModelMenu(options)}`;
+  return `Run independent tasks in parallel subagents. Returns after at most 30 seconds with a workflowId and partial results; agents continue running. Use wait_workflow to collect all outcomes and cancel_workflow to stop unfinished work. Address failures explicitly; do not infer failure from silence or retry side-effecting tasks automatically. Choose an exact model key and a supported effort from the catalog for each task. Use the least expensive model and lowest effort sufficient for the task. Scores are 0-10, higher is better: affordability means cheaper, intelligence means reasoning capability, and taste means design suitability.
+
+Models:
+${workflowModelMenu(options)}`;
 };

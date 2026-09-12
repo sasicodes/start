@@ -7,12 +7,12 @@ import {
   type SettingsManager,
   type ToolDefinition
 } from '@earendil-works/pi-coding-agent';
-import { countLabel } from '@main/details';
 import { agentEndError, clampThinkingLevel } from '@main/helpers';
 import { createStartResourceLoader } from '@main/prompt/loader';
 import type { SubagentNameAllocator } from '@main/subagents/allocator';
 import { subagentAccentColor, subagentAvatar } from '@main/subagents/avatar';
 import type { ResolvedModel, SubagentRunResult, SubagentRunSnapshot, SubagentTaskInput } from '@main/subagents/types';
+import { subagentProgress, subagentResults } from '@main/subagents/utils/progress';
 import type { SubagentActivity } from '@main/types';
 
 interface RunSubagentsOptions {
@@ -35,22 +35,13 @@ interface AgentJob {
 
 const maxConcurrentAgents = 4;
 
-const resultText = (agents: SubagentActivity[]) =>
-  agents
-    .map((agent) => {
-      const heading = `From ${agent.name}`;
-      const summary = agent.summary ? `\n${agent.summary}` : '';
-      return `## ${heading}\nTask: ${agent.task}${summary}`;
-    })
-    .join('\n\n');
-
 const finalPrompt = (task: string) =>
-  `You are a sub-agent handling one focused task for the parent agent.
+  `Complete the assigned task independently for the parent agent and stay within its scope.
 
 Task:
 ${task}
 
-Work independently. Return only what the task asks for: concrete findings, file paths, and blockers. Be precise and brief — no preamble, no restating the task, nothing outside its scope.`;
+Return the requested result. Where relevant, include findings or changes, supporting file paths, validation performed, and unresolved blockers. Keep the handoff concise, but preserve evidence the parent needs.`;
 
 const abortSession = async (session: AgentSession) => {
   session.abortBash();
@@ -126,9 +117,12 @@ export const runSubagents = async ({
   const runAgent = async ({ task, agent, model }: AgentJob): Promise<void> => {
     let session: AgentSession | null = null;
     try {
+      if (signal?.aborted) throw new Error('Sub-agent run cancelled.');
       if (!model) throw new Error('No configured model is available. Set up a provider in settings.');
 
       agent.status = 'running';
+      agent.activity = 'Starting agent';
+      agent.lastActivityAt = Date.now();
       update();
 
       const sessionManager = SessionManager.inMemory(cwd);
@@ -146,8 +140,23 @@ export const runSubagents = async ({
       session = result.session;
       session.setActiveToolsByName(session.getAllTools().map(({ name }) => name));
 
+      if (signal?.aborted) throw new Error('Sub-agent run cancelled.');
+      agent.activity = 'Waiting for model response';
+      agent.lastActivityAt = Date.now();
+      update();
+      let lastPublish = 0;
       let endError = '';
       const unsubscribe = session.subscribe((event) => {
+        const activity = subagentProgress(event);
+        if (activity) {
+          const changed = agent.activity !== activity;
+          agent.activity = activity;
+          agent.lastActivityAt = Date.now();
+          if (changed || agent.lastActivityAt - lastPublish >= 1000) {
+            lastPublish = agent.lastActivityAt;
+            update();
+          }
+        }
         const error = agentEndError(event);
         if (error) endError = error;
       });
@@ -158,6 +167,7 @@ export const runSubagents = async ({
         unsubscribe();
       }
 
+      if (signal?.aborted) throw new Error('Sub-agent run cancelled.');
       if (endError) throw new Error(endError);
 
       agent.status = 'completed';
@@ -165,7 +175,9 @@ export const runSubagents = async ({
       update();
     } catch (error) {
       agent.status = signal?.aborted ? 'cancelled' : 'failed';
-      agent.summary = error instanceof Error ? error.message : 'Sub-agent failed.';
+      const reason = error instanceof Error ? error.message : 'Sub-agent failed.';
+      const partial = session?.getLastAssistantText()?.trim().slice(0, 12000) ?? '';
+      agent.summary = `${reason}${partial ? `\n\nPartial response:\n${partial}` : ''}`;
       update();
     } finally {
       session?.dispose();
@@ -179,7 +191,7 @@ export const runSubagents = async ({
   await Promise.all(Array.from({ length: Math.min(maxConcurrentAgents, jobs.length) }, worker));
 
   return {
-    text: `${countLabel(agents.length, 'sub-agent')} finished.\n\n${resultText(agents)}`,
+    text: subagentResults(agents),
     agents
   };
 };

@@ -15,8 +15,4 @@ describe('side panel mode settings', () => {
       minSidePanelWidthRatio: 0.5
     });
   });
-
-  it('leaves git resizable at the default size limits', () => {
-    expect(sidePanelModeLayout('git')).toEqual({ sidePanelResizable: true });
-  });
 });

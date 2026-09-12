@@ -1,5 +1,6 @@
 import type { SendResult } from '@preload/index';
 import { useChatSend } from '@renderer/shared/chat/send';
+import type { Turn } from '@renderer/utils/types';
 import { afterEach, expect, it, vi } from 'vitest';
 import { deferred } from '../helpers/deferred.js';
 
@@ -13,22 +14,36 @@ const setup = (isGenerating: boolean) => {
   const send = vi.fn(() => response.promise);
   vi.stubGlobal('window', { pi: { chat: { send } } });
   const sessionRequestRef = { current: 0 };
-  const setTurns = vi.fn();
+  let turns: Turn[] = [];
+  const setTurns = vi.fn((updater: (current: Turn[]) => Turn[]) => {
+    turns = updater(turns);
+  });
+  const setIsGenerating = vi.fn();
   const updateActiveSessionId = vi.fn();
   const chat = useChatSend({
     draft: '',
     setTurns,
     isGenerating,
+    setIsGenerating,
     sessionRequestRef,
     updateActiveSessionId,
     setDraft: vi.fn(),
-    setIsGenerating: vi.fn(),
     setLoadedSessionId: vi.fn(),
     waitForSelection: () => selection.promise,
     terminalIdRef: { current: null },
     assistantIdRef: { current: null }
   });
-  return { chat, send, response, selection, setTurns, sessionRequestRef, updateActiveSessionId };
+  return {
+    chat,
+    send,
+    response,
+    selection,
+    setTurns,
+    setIsGenerating,
+    sessionRequestRef,
+    updateActiveSessionId,
+    turns: () => turns
+  };
 };
 
 it.each([false, true])(
@@ -70,4 +85,18 @@ it.each(['failure', 'rejection'])('ignores a queued-send %s after switching sess
   await sending;
   expect(state.setTurns).not.toHaveBeenCalled();
   expect(state.updateActiveSessionId).not.toHaveBeenCalled();
+});
+
+it('drops the optimistic turns when the main process queues the message', async () => {
+  const state = setup(false);
+  const sending = state.chat.sendText('@Goal Second');
+  expect(state.turns()).toHaveLength(2);
+
+  state.selection.resolve();
+  state.response.resolve({ ok: true, queued: true, sessionId: 'first' });
+  await sending;
+
+  expect(state.send).toHaveBeenCalledExactlyOnceWith('@Goal Second', []);
+  expect(state.turns()).toEqual([]);
+  expect(state.setIsGenerating).toHaveBeenLastCalledWith(false);
 });

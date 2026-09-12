@@ -1,3 +1,4 @@
+import { useCopied } from '@renderer/ui/copy';
 import { CheckIcon, CopyIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
 import type { ComponentChildren, RefObject } from 'preact';
@@ -57,29 +58,18 @@ const tableText = (table: HTMLTableElement) =>
     .join('\n');
 
 const TableCopyButton = ({ tableRef }: TableCopyButtonProps) => {
-  const timeoutRef = useRef(0);
-  const [copied, setCopied] = useState(false);
+  const { copied, markCopied } = useCopied(1400);
   const Icon = copied ? CheckIcon : CopyIcon;
-  const copyTable = useCallback(() => {
+
+  const copyTable = useCallback(async () => {
     const table = tableRef.current;
     if (!table || !navigator.clipboard) return;
 
-    void navigator.clipboard
-      .writeText(tableText(table))
-      .then(() => {
-        window.clearTimeout(timeoutRef.current);
-        setCopied(true);
-        timeoutRef.current = window.setTimeout(() => setCopied(false), 1400);
-      })
-      .catch(() => {});
-  }, [tableRef]);
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(timeoutRef.current);
-    },
-    []
-  );
+    try {
+      await navigator.clipboard.writeText(tableText(table));
+      markCopied();
+    } catch {}
+  }, [tableRef, markCopied]);
 
   return (
     <button

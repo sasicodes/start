@@ -7,6 +7,7 @@ import { Queue } from '@renderer/shared/composer/queue';
 import { editingQueuedId } from '@renderer/shared/composer/queue/state';
 import { recallOlderInput } from '@renderer/shared/composer/recall';
 import type { ComposerProps } from '@renderer/shared/composer/types';
+import { useComposerClearance } from '@renderer/shared/composer/use-clearance';
 import { useComposerFinder } from '@renderer/shared/composer/use-finder';
 import { useMessageRecall } from '@renderer/shared/composer/use-recall';
 import { useComposerTextarea } from '@renderer/shared/composer/use-textarea';
@@ -82,6 +83,7 @@ export const Composer = memo(
     const hasGoal = !overlay && Boolean(visibleGoal.value);
     const attachedVisible = (queuedMessages.length > 0 || hasGoal) && !finderVisible && !isCommandMode;
     const centered = overlay || !hasTurns;
+    const formRef = useComposerClearance(!centered, finderVisible, attachedVisible);
     const promptPlaceholder = usePromptPlaceholder({ draft, hasTurns, isCommandMode });
 
     const recallQueuedIds = useMemo(() => queuedRecallIds(queuedMessages), [queuedMessages]);
@@ -215,6 +217,7 @@ export const Composer = memo(
           {!overlay && <Goal />}
         </Queue>
         <form
+          ref={formRef}
           class={tw(
             'relative z-30 overflow-hidden border-0 bg-composer [-webkit-app-region:no-drag]',
             layered ? 'rounded-t-2xl rounded-b-3xl' : 'rounded-3xl',

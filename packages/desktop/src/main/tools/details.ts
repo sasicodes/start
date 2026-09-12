@@ -4,7 +4,7 @@ import type { ChatEvent, TurnDetailState } from '@main/types';
 
 const recordPath = (args: Record<string, unknown>) => stringValue(args.path) || '.';
 
-const isWorkflowTool = (toolName: string) => toolName === 'run_workflow';
+const isWorkflowTool = (toolName: string) => ['run_workflow', 'wait_workflow', 'cancel_workflow'].includes(toolName);
 
 const toolDisplayName = (toolName: string) =>
   toolName
@@ -345,6 +345,13 @@ export const toolEventDetail = ({
   if (detail) event.detail = detail;
   if (metric) event.metric = metric;
   const subagents = subagentActivityList(result);
-  if (subagents.length > 0) event.subagents = subagents;
+  if (subagents.length > 0) {
+    event.subagents = subagents;
+    const counts = ['running', 'queued', 'completed', 'failed', 'cancelled'].flatMap((status) => {
+      const count = subagents.filter((agent) => agent.status === status).length;
+      return count ? [`${count} ${status}`] : [];
+    });
+    event.title = counts.join(', ');
+  }
   return event;
 };

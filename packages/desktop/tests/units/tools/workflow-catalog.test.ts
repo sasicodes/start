@@ -30,9 +30,9 @@ describe('workflow catalog', () => {
     const description = workflowToolDescription([option({})]);
 
     expect(description).toContain('higher is better');
-    expect(description).toContain('affordability higher means cheaper');
-    expect(description).toContain('Do not default to the highest scores');
-    expect(description).toContain('minimum capability it needs');
+    expect(description).toContain('affordability means cheaper');
+    expect(description).toContain('least expensive model and lowest effort sufficient');
+    expect(description).toContain('exact model key and a supported effort');
     expect(description).toContain('anthropic:claude-opus-4-8');
   });
 

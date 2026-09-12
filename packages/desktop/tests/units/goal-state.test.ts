@@ -164,3 +164,15 @@ it('clears a removed goal returned by a rejected control for the same session', 
   expect(await saving).toBe(false);
   expect(goalState.peek()).toEqual({ kind: 'empty', sessionId: 'first' });
 });
+
+it('accepts cancellation when the next queued goal has already started', async () => {
+  const state = setup();
+  const saving = controlGoal('cancel');
+  const next = status('first');
+  state.response.resolve({
+    ...next,
+    goal: { ...next.goal, objective: 'Next goal', status: 'active', iterations: 1, elapsedMs: 0 }
+  });
+  expect(await saving).toBe(true);
+  expect(goalState.peek()).toMatchObject({ kind: 'ready', error: '', goal: { objective: 'Next goal' } });
+});

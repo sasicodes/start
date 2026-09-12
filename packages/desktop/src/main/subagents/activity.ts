@@ -13,6 +13,8 @@ const subagentActivitySchema = v.object({
   model: v.optional(v.string()),
   effort: v.optional(v.picklist(effortLevels)),
   summary: v.optional(v.string()),
+  activity: v.optional(v.string()),
+  lastActivityAt: v.optional(v.number()),
   accentColor: v.string(),
   status: subagentStatusSchema
 });
@@ -33,6 +35,8 @@ const parseSubagentActivity = (value: unknown): SubagentActivity | null => {
     avatar: activity.avatar,
     status: activity.status,
     accentColor: activity.accentColor,
+    ...(activity.activity ? { activity: activity.activity } : {}),
+    ...(activity.lastActivityAt ? { lastActivityAt: activity.lastActivityAt } : {}),
     ...(activity.model ? { model: activity.model } : {}),
     ...(activity.effort ? { effort: activity.effort } : {}),
     ...(activity.summary ? { summary: activity.summary } : {})

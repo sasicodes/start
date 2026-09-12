@@ -67,8 +67,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
+          prerelease=false
+          case "$TAG" in
+            *-*) prerelease=true ;;
+          esac
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" artifacts/* --clobber
+            gh release edit "$TAG" --prerelease=$prerelease
           else
-            gh release create "$TAG" artifacts/* --title "$TAG" --generate-notes
+            gh release create "$TAG" artifacts/* --title "$TAG" --generate-notes --prerelease=$prerelease
           fi

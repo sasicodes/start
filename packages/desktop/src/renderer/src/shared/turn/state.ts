@@ -23,7 +23,10 @@ const createDetail = (detail: ChatEvent, createdAt: number): TurnDetail => ({
 });
 
 const isSubagentEvent = (detail: ChatEvent | TurnDetail) =>
-  detail.title === 'Sub-agents failed' || detail.title.startsWith('Spawning ') || detail.title.startsWith('Finished ');
+  Boolean(detail.subagents?.length) ||
+  detail.title === 'Sub-agents failed' ||
+  detail.title.startsWith('Spawning ') ||
+  detail.title.startsWith('Finished ');
 
 const isSupersededSubagentFailure = (detail: TurnDetail, next: ChatEvent) =>
   detail.state === 'error' && detail.title === 'Sub-agents failed' && isSubagentEvent(next) && next.state !== 'error';

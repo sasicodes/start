@@ -12,9 +12,6 @@ export const fileHasTextDiff = (file: PatchFile) => file.hunks.length > 0;
 
 export const isTooLargeToShow = (file: PatchFile) => file.added + file.removed > tooLargeChangeThreshold;
 
-export const isOpenByDefault = (file: PatchFile, kind: PatchFileKind) =>
-  kind === 'image' || (fileHasTextDiff(file) && file.added + file.removed <= 320);
-
 const textBodyHeight = (file: PatchFile) => {
   let totalLines = 0;
   for (const hunk of file.hunks) totalLines += hunk.lines.length;
@@ -22,8 +19,8 @@ const textBodyHeight = (file: PatchFile) => {
   return sectionPaddingTop + totalLines * lineHeight + gaps;
 };
 
-export const estimatedFileHeight = (file: PatchFile, kind: PatchFileKind) => {
-  if (!isOpenByDefault(file, kind)) return fileHeaderHeight;
+export const estimatedFileHeight = (file: PatchFile, kind: PatchFileKind, open = false) => {
+  if (!open || (!fileHasTextDiff(file) && kind !== 'image')) return fileHeaderHeight;
   if (kind === 'image') return fileHeaderHeight + imageBodyHeight;
   return fileHeaderHeight + textBodyHeight(file);
 };

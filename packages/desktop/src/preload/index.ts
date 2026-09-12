@@ -133,7 +133,7 @@ export interface CommandResult {
   sessionId?: string;
 }
 
-export type QueuedMessageKind = 'followUp' | 'steer';
+export type QueuedMessageKind = 'followUp' | 'steer' | 'goal';
 
 export interface QueuedMessage {
   id: string;
@@ -143,11 +143,19 @@ export interface QueuedMessage {
   attachmentCount?: number;
 }
 
-export interface QueuedTurnStart {
+export interface QueuedUserTurnStart {
   id: string;
   text: string;
+  kind?: 'message';
   attachments?: ImageAttachment[];
 }
+
+export interface GoalContinuationStart {
+  id: string;
+  kind: 'continuation';
+}
+
+export type QueuedTurnStart = QueuedUserTurnStart | GoalContinuationStart;
 
 export type TurnDetailKind = 'error' | 'metadata' | 'tool';
 export type TurnDetailState = 'active' | 'done' | 'error' | 'queued';
@@ -173,6 +181,8 @@ export interface SubagentActivity {
   model?: string;
   effort?: EffortLevel;
   summary?: string;
+  activity?: string;
+  lastActivityAt?: number;
   accentColor: string;
   status: SubagentStatus;
 }
@@ -439,6 +449,8 @@ const api = {
     browserBounds: (bounds: BrowserBounds | null): Promise<BrowserActionResult> =>
       ipcRenderer.invoke('app:browser-bounds', bounds),
     browserClose: (): Promise<void> => ipcRenderer.invoke('app:browser-close'),
+    setSidePanelOpen: (open: boolean): void => ipcRenderer.send('app:side-panel-open', open),
+    onClosePanelTab: (listener: () => void): IpcDisposer => onIpc<[]>('app:close-panel-tab', listener),
     browserInspectStart: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-start'),
     browserInspectStop: (): Promise<BrowserActionResult> => ipcRenderer.invoke('app:browser-inspect-stop'),
     filePath: (file: Parameters<typeof webUtils.getPathForFile>[0]): string => webUtils.getPathForFile(file),

@@ -1,8 +1,8 @@
 import type { GitPatchSection } from '@preload/index';
 import { entriesFromResults } from '@renderer/shared/workspace/changes/diff/entries';
-import { estimatedFileHeight, isOpenByDefault } from '@renderer/shared/workspace/changes/diff/estimate';
+import { estimatedFileHeight } from '@renderer/shared/workspace/changes/diff/estimate';
 import { DiffFile } from '@renderer/shared/workspace/changes/diff/file';
-import { type DiffFold, diffFold, foldOpenDefault } from '@renderer/shared/workspace/changes/diff/fold';
+import { type DiffFoldState, diffFold } from '@renderer/shared/workspace/changes/diff/fold';
 import { patchFileKind } from '@renderer/shared/workspace/changes/diff/kind';
 import type { PatchFile } from '@renderer/shared/workspace/changes/diff/parser';
 import { effectiveOpen, toggleOpen } from '@renderer/shared/workspace/changes/diff/toggle';
@@ -21,14 +21,13 @@ interface LoadedDiffEntriesState {
 }
 
 interface FoldToggles {
-  fold: DiffFold | null;
+  fold: DiffFoldState;
   map: ReadonlyMap<string, boolean>;
 }
 
 const emptyToggles: ReadonlyMap<string, boolean> = new Map();
 
 const entryKey = (entry: DiffEntry) => entry.key;
-const estimateEntryHeight = (entry: DiffEntry) => estimatedFileHeight(entry.file, patchFileKind(entry.file));
 
 const Message = ({ text }: { text: string }) => <p class="m-0 px-4 py-2 text-sm leading-6 text-soft">{text}</p>;
 
@@ -107,9 +106,19 @@ export const GitDiffViewer = ({
     [fold]
   );
 
+  const estimateEntryHeight = useCallback(
+    (entry: DiffEntry) =>
+      estimatedFileHeight(
+        entry.file,
+        patchFileKind(entry.file),
+        effectiveOpen(overrides, entry.key, fold.mode === 'expanded')
+      ),
+    [fold, overrides]
+  );
+
   const renderEntry = useCallback(
     (entry: DiffEntry) => {
-      const byDefault = foldOpenDefault(fold, isOpenByDefault(entry.file, patchFileKind(entry.file)));
+      const byDefault = fold.mode === 'expanded';
       const open = effectiveOpen(overrides, entry.key, byDefault);
       return (
         <DiffFile
@@ -130,8 +139,7 @@ export const GitDiffViewer = ({
   );
 
   return (
-    <div class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
-      {entryState.kind === 'parsing' && <Message text="Preparing diff" />}
+    <div data-review-ready={ready} class="flex min-w-0 flex-col font-mono text-sm leading-5 text-ink">
       {ready && limited && <Message text="Diff too large to show." />}
       {ready && !limited && entries.length === 0 && <Message text="No diff to show." />}
       {ready && entries.length > 0 && (

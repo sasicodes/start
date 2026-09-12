@@ -1,13 +1,14 @@
+import { batch } from '@preact/signals';
 import type { ChatEvent, QueuedMessage } from '@preload/index';
-import { createTurn, createUserTurn } from '@renderer/functions/chat';
+import { createTurn } from '@renderer/functions/chat';
 import { useAppFocusChange } from '@renderer/shared/app-focus';
 import { createTargetBuffer, drainStreamBuffer, type StreamEvent } from '@renderer/shared/chat/buffer';
 import { createDeferredFlush } from '@renderer/shared/chat/flush';
 import { syncOpenedWorkspace } from '@renderer/shared/chat/open-workspace';
 import { endsMidWord } from '@renderer/shared/chat/segment';
+import { createQueuedTurns } from '@renderer/shared/chat/utils/queue';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { clearSlashCommandsCache } from '@renderer/shared/slash-commands';
-import { playDoneSound, playErrorSound } from '@renderer/ui/sounds';
 import { scrollTurnToStart } from '@renderer/shared/turn/scroll';
 import {
   appendTurnDelta,
@@ -17,7 +18,7 @@ import {
   setTurnStreaming,
   turnActivityLabel
 } from '@renderer/shared/turn/state';
-import { batch } from '@preact/signals';
+import { playDoneSound, playErrorSound } from '@renderer/ui/sounds';
 import type { Turn } from '@renderer/utils/types';
 import type { RefObject } from 'preact';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
@@ -211,15 +212,14 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.flushNow();
       assistantFlush.flushNow();
       const currentAssistantId = optionsRef.current.assistantIdRef.current;
-      const userTurn = createUserTurn(turn.text, turn.attachments ?? []);
-      const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
+      const { user, assistant } = createQueuedTurns(turn);
       if (currentAssistantId) setTurnStreaming(currentAssistantId, false);
-      optionsRef.current.assistantIdRef.current = assistantTurn.id;
+      optionsRef.current.assistantIdRef.current = assistant.id;
       activityClearedAssistantId = null;
       textAssistantId = '';
       setIsGenerating(true);
-      setTurns((current) => [...current, userTurn, assistantTurn]);
-      scrollTurnToStart(userTurn.id);
+      setTurns((current) => [...current, ...(user ? [user] : []), assistant]);
+      if (user) scrollTurnToStart(user.id);
     });
 
     const offDone = window.pi.chat.onDone(() => {

@@ -42,6 +42,11 @@ describe('sub-agent runtime', () => {
     if (!session) throw new Error('Sub-agent session was not created.');
     await session.awaitPromptCall();
 
+    const instructions = JSON.stringify(session.sessionManager.getEntries());
+    expect(instructions).toContain('Inspect the project.');
+    expect(instructions).toContain('validation performed, and unresolved blockers');
+    expect(instructions).toContain('preserve evidence the parent needs');
+
     expect(session.getAllTools().map(({ name }) => name)).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
     expect(session.getActiveToolNames()).toEqual(['fake-tool', 'browser_open', 'browser_snapshot']);
 
@@ -91,5 +96,41 @@ describe('sub-agent runtime', () => {
     expect(result.agents).toHaveLength(6);
     expect(result.agents.every((agent) => agent.status === 'completed')).toBe(true);
     await expect(FakeSessionManager.listAll()).resolves.toHaveLength(6);
+  });
+  it('reports activity, preserves partial work on failure, and cancels queued agents', async () => {
+    const snapshots: SubagentRunSnapshot[] = [];
+    const controller = new AbortController();
+    const run = runSubagents({
+      modelRuntime,
+      settingsManager,
+      signal: controller.signal,
+      onUpdate: (snapshot) => snapshots.push(snapshot),
+      customTools: () => [],
+      resolveModel: () => model,
+      cwd: '/workspace/project',
+      nameAllocator: new SubagentNameAllocator(),
+      tasks: Array.from({ length: 5 }, (_, index) => ({
+        prompt: `Task ${index}`,
+        model: 'test',
+        effort: 'medium' as const
+      }))
+    });
+    await vi.waitFor(() => expect(listFakeSessions()).toHaveLength(4));
+    const session = listFakeSessions()[0];
+    if (!session) throw new Error('Expected session');
+    await session.awaitPromptCall();
+    session.pushEvent({ type: 'tool_execution_start', toolName: 'bash', toolCallId: '1', args: {} });
+    expect(snapshots.at(-1)?.agents[0]).toMatchObject({ status: 'running', activity: 'Running bash' });
+    vi.spyOn(session, 'getLastAssistantText').mockReturnValue('Reviewed two files.');
+    session.failPrompt('Provider connection lost');
+    await vi.waitFor(() => expect(snapshots.some((snapshot) => snapshot.agents[0]?.status === 'failed')).toBe(true));
+    controller.abort();
+    const result = await run;
+    expect(result.agents[0]?.summary).toContain('Provider connection lost');
+    expect(result.agents[0]?.summary).toContain('Reviewed two files.');
+    expect(result.agents.slice(1).every((agent) => agent.status === 'cancelled')).toBe(true);
+    expect(result.text).toContain('Status: failed');
+    expect(result.text).toContain('Status: cancelled');
+    expect(listFakeSessions()).toHaveLength(0);
   });
 });

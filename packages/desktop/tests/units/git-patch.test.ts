@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { getGitPatch } from '@main/git';
+import { getGitChangeSummary, getGitChanges, getGitPatch } from '@main/git';
 import { parseGitPatch } from '@renderer/shared/workspace/changes/diff/parser';
 import { describe, expect, it } from 'vitest';
 
@@ -22,6 +22,32 @@ const withGitRepo = async (run: (cwd: string) => Promise<void>) => {
 };
 
 describe('getGitPatch', () => {
+  it('shares a snapshot while deduplicating staged and unstaged paths', async () => {
+    await withGitRepo(async (cwd) => {
+      await writeFile(path.join(cwd, 'shared.txt'), 'staged\n');
+      await git(cwd, ['add', 'shared.txt']);
+      await writeFile(path.join(cwd, 'shared.txt'), 'staged\nworking\n');
+      await writeFile(path.join(cwd, 'binary.bin'), Buffer.from([0, 1, 2]));
+      const changes = await getGitChanges(cwd, true);
+
+      expect(changes.summary).toEqual({ filesChanged: 2, insertions: 2, deletions: 0 });
+      expect(changes.summary).toEqual(await getGitChangeSummary(cwd));
+      expect(changes.patch).toEqual(await getGitPatch(cwd));
+      expect(changes.patch?.sections.map((section) => section.kind)).toEqual(['staged', 'unstaged', 'untracked']);
+      expect(changes.patch?.sections[2]?.patch).toContain('Binary files');
+      expect(await getGitChanges(cwd)).toEqual({ summary: changes.summary });
+    });
+  });
+
+  it('returns unavailable outside a repository', async () => {
+    const cwd = await mkdtemp(path.join(tmpdir(), 'start-git-unavailable-'));
+    try {
+      expect(await getGitChanges(cwd, true)).toEqual({});
+    } finally {
+      await rm(cwd, { force: true, recursive: true });
+    }
+  });
+
   it('includes untracked files in the all sections payload', async () => {
     await withGitRepo(async (cwd) => {
       await writeFile(path.join(cwd, 'staged.txt'), 'staged\n');

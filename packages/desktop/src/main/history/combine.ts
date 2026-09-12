@@ -54,7 +54,7 @@ export const combineHistoryTurns = (turns: HistoryTurn[]) => {
   };
 
   const appendPending = (turn: HistoryTurn) => {
-    pendingDetails = [...pendingDetails, ...(turn.details ?? [])];
+    for (const detail of turn.details ?? []) pendingDetails.push(detail);
     pendingThinking = mergeText(pendingThinking, turn.thinking ?? '');
     if (!pendingCreatedAt) pendingCreatedAt = turn.createdAt;
   };
@@ -67,12 +67,7 @@ export const combineHistoryTurns = (turns: HistoryTurn[]) => {
       continue;
     }
 
-    if (detailOnlyTurn(turn)) {
-      appendPending(turn);
-      continue;
-    }
-
-    if (turn.role === 'assistant' && !turn.text) {
+    if (detailOnlyTurn(turn) || (turn.role === 'assistant' && !turn.text)) {
       appendPending(turn);
       continue;
     }
