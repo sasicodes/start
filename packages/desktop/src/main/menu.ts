@@ -14,7 +14,9 @@ type MenuActions = {
   onShowSettings: () => void;
   onShowProviders: () => void;
   onShowShortcuts: () => void;
+  onToggleSettings: () => void;
   onCheckForUpdates: () => void;
+  onToggleShortcuts: () => void;
   providerUsage: ProviderUsage[] | null;
   recentSessions: StatusItemRecentSession[];
   onOpenRecentSession: (id: string) => void;
@@ -129,9 +131,9 @@ export const installStatusItem = ({
 export const installApplicationMenu = ({
   onNewSession,
   onQuickAccess,
-  onShowSettings,
-  onShowShortcuts,
+  onToggleSettings,
   onCheckForUpdates,
+  onToggleShortcuts,
   composerShortcut
 }: MenuActions) => {
   if (!isMac) {
@@ -152,7 +154,7 @@ export const installApplicationMenu = ({
           { type: 'separator' },
           {
             label: 'Settings',
-            click: () => onShowSettings(),
+            click: () => onToggleSettings(),
             accelerator: 'CommandOrControl+,'
           },
           { type: 'separator' },
@@ -201,7 +203,7 @@ export const installApplicationMenu = ({
         submenu: [
           {
             label: 'Keyboard Shortcuts',
-            click: onShowShortcuts,
+            click: () => onToggleShortcuts(),
             accelerator: 'CommandOrControl+/'
           }
         ]

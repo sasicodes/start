@@ -52,7 +52,7 @@ describe('buildStartSystemPrompt', () => {
     expect(prompt).toContain('expert coding assistant');
     expect(prompt).toContain('Read files, run commands, and write or edit code.');
     expect(prompt).toContain(
-      'Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
+      'Be precise and concise. Keep replies under 500 characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
     );
     expect(prompt).toContain('Show file paths clearly');
     expect(prompt).toContain('<skill-name>/SKILL.md with YAML frontmatter and instructions');
@@ -148,7 +148,7 @@ Current working directory: /tmp/workspace`;
     expect(result.systemPrompt).toContain('Current date: 2026-05-30');
     expect(result.systemPrompt).toContain('Current working directory: /tmp/workspace');
     expect(result.systemPrompt).toContain(
-      'Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
+      'Be precise and concise. Keep replies under 500 characters by default; expand when asked or when a subagent handoff needs supporting evidence.'
     );
     expect(result.systemPrompt).toContain(`Never store secrets in either file; use \${VAR} environment references.`);
   });

@@ -17,7 +17,7 @@ export const Shortcuts = memo(() => {
     { label: 'Toggle recent sessions', chords: ['R'] },
     { label: 'Toggle model picker', chords: ['M'] },
     { label: 'Toggle effort level', chords: ['E'] },
-    { label: 'Toggle side panel', chords: [']'] },
+    { label: 'Toggle browser and review', chords: [']'] },
     { label: 'Submit prompt', chords: ['Enter'] },
     { label: 'New line in prompt', chords: ['Shift+Enter'] },
     { label: 'Use previous message', chords: ['ArrowUp'] },

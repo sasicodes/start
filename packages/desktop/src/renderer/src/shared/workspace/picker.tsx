@@ -31,7 +31,7 @@ export const Workspace = memo(
     const { kind: attention, countLabel: visibleAttentionCountLabel } = workspaceFoldersAttention(folders);
 
     const handleOpenChange = (next: boolean) => {
-      if (next) playToggleSound();
+      playToggleSound();
       setOpen(next);
       if (next) refreshFolders();
     };

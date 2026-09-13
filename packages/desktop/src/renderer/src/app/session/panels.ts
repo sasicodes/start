@@ -1,5 +1,6 @@
-import type { AppSurface, SidePanelMode } from '@renderer/app/types';
-import { openReview, panelTabs, selectBrowser } from '@renderer/shared/browser/state';
+import type { AppSurface } from '@renderer/app/types';
+import { type SidePanelState, toggledSidePanel } from '@renderer/app/utils/panel';
+import { openNewTab, openReview, panelTabOrder, panelTabs, selectBrowser } from '@renderer/shared/browser/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { playToggleSound } from '@renderer/ui/sounds';
 import { isEditableTarget } from '@renderer/utils/dom';
@@ -15,47 +16,48 @@ const isBracketToggle = (event: KeyboardEvent) => {
 };
 
 export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
-  const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [sidePanelMode, setSidePanelMode] = useState<SidePanelMode>('settings');
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('personalization');
+  const [sidePanel, setSidePanel] = useState<SidePanelState>({ open: false, mode: 'browser' });
 
   const closeSidePanel = useCallback(() => {
-    setSidePanelOpen(false);
+    setSidePanel((state) => ({ ...state, open: false }));
   }, []);
 
-  const toggleSidePanel = useCallback(() => {
-    setSidePanelOpen((open) => !open);
+  const toggleBrowserPanel = useCallback(() => {
+    playToggleSound();
+    if (panelTabOrder.peek().length === 0) openNewTab();
+    setSidePanel((state) => toggledSidePanel(state, 'browser'));
   }, []);
 
   const openSettingsPanel = useCallback((tab: SettingsTab = 'personalization') => {
-    setSidePanelOpen(true);
-    setSidePanelMode('settings');
+    setSidePanel({ open: true, mode: 'settings' });
     setSettingsTab(tab);
   }, []);
 
-  const openShortcutsPanel = useCallback(() => {
-    openSettingsPanel('shortcuts');
-  }, [openSettingsPanel]);
+  const toggleSettingsPanel = useCallback(
+    (tab: SettingsTab = 'personalization') => {
+      playToggleSound();
+      setSidePanel((state) => toggledSidePanel(state, 'settings', state.mode === 'settings' && settingsTab === tab));
+      setSettingsTab(tab);
+    },
+    [settingsTab]
+  );
 
   const openBrowserPanel = useCallback(() => {
-    setSidePanelOpen(true);
-    setSidePanelMode('browser');
+    setSidePanel({ open: true, mode: 'browser' });
     selectBrowser();
   }, []);
 
-  const toggleSettingsPanel = useCallback(() => {
-    setSidePanelOpen((open) => (sidePanelMode === 'settings' ? !open : true));
-    setSidePanelMode('settings');
-  }, [sidePanelMode]);
-
   const toggleGitChangesPanel = useCallback(() => {
-    const reviewing = sidePanelMode === 'browser' && panelTabs.peek().selected === 'review';
-    setSidePanelOpen((open) => (reviewing ? !open : true));
-    setSidePanelMode('browser');
+    playToggleSound();
+    setSidePanel((state) =>
+      toggledSidePanel(state, 'browser', state.mode === 'browser' && panelTabs.peek().selected === 'review')
+    );
     openReview();
-  }, [sidePanelMode]);
+  }, []);
 
-  const sidePanelVisible = surface === 'main' && sidePanelOpen;
+  const sidePanelMode = sidePanel.mode;
+  const sidePanelVisible = surface === 'main' && sidePanel.open;
   const gitPanelVisible = sidePanelVisible && sidePanelMode === 'browser' && panelTabs.value.selected === 'review';
   const settingsPanelVisible = sidePanelVisible && sidePanelMode === 'settings';
 
@@ -74,8 +76,9 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
 
-      if (event.key === 'Escape' && sidePanelOpen) {
+      if (event.key === 'Escape' && sidePanel.open) {
         event.preventDefault();
+        playToggleSound();
         closeSidePanel();
         return;
       }
@@ -83,13 +86,12 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
       if (!isBracketToggle(event) || isEditableTarget(event.target)) return;
 
       event.preventDefault();
-      playToggleSound();
-      toggleSidePanel();
+      toggleBrowserPanel();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [closeSidePanel, sidePanelOpen, surface, toggleSidePanel]);
+  }, [closeSidePanel, sidePanel.open, surface, toggleBrowserPanel]);
 
   return {
     settingsTab,
@@ -100,9 +102,8 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
     sidePanelVisible,
     openBrowserPanel,
     openSettingsPanel,
-    openShortcutsPanel,
-    settingsPanelVisible,
     toggleSettingsPanel,
+    settingsPanelVisible,
     toggleGitChangesPanel
   };
 };

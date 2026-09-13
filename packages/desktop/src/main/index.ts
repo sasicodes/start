@@ -299,6 +299,10 @@ const showShortcuts = () => {
   sendToMainWindow('app:show-shortcuts');
 };
 
+const toggleSettings = (tab: SettingsTab = 'personalization') => {
+  sendToMainWindow('app:toggle-settings', tab);
+};
+
 const toggleQuickAccess = (source: 'menu' | 'shortcut') => {
   trackQuickAccessToggled(source, chat.getWorkspaceCwd());
   toggleComposerWindow();
@@ -332,12 +336,14 @@ const registerComposerShortcut = (accelerator: string) => {
 const menuActions = () => ({
   onShowSettings: showSettings,
   onShowShortcuts: showShortcuts,
+  onToggleSettings: () => toggleSettings(),
   onNewSession: () => startNewSession('menu'),
   onCheckForUpdates: () => checkForUpdatesNow(),
   onQuickAccess: () => toggleQuickAccess('menu'),
   onShowProviders: () => showSettings('providers'),
   providerUsage: providerUsage?.getUsage() ?? null,
   recentSessions: chat.getStatusItemRecentSessions(),
+  onToggleShortcuts: () => toggleSettings('shortcuts'),
   onOpenRecentSession: (sessionId: string) => openRecentSession(sessionId),
   composerShortcut: appSettings?.composerShortcut ?? defaultAppSettings.composerShortcut
 });
