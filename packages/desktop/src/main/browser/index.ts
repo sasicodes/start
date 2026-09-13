@@ -430,7 +430,10 @@ const navigateBrowser = async (
 
   await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
-  return { ok: true, status: statusFromView() };
+  const status = statusFromView();
+  if (options.requestId && (!status.open || status.activeTabId !== tab.id))
+    return { ok: false, error: 'Browser tab changed. Read browser_status and select the intended tab.', status };
+  return { ok: true, status };
 };
 
 export const openBrowserUrl = async (

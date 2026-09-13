@@ -647,6 +647,24 @@ describe('browser panel view', () => {
     await expect(pending).resolves.toMatchObject({ ok: false, error: 'This site cannot be loaded.' });
   });
 
+  it.each([false, true])('checks the active target after a successful load, switched: %s', async (switched) => {
+    const window = createFakeBrowserWindow();
+    const sender = webContentsForTest(window);
+    setBrowserBounds(sender, { x: 10, y: 20, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Expected browser view.');
+    const load = deferred<void>();
+    view.webContents.loadURL = () => load.promise;
+    const pending = requestBrowserOpen('https://example.com/', { tabId: 'tab-1' });
+    const request = broadcastsByChannel('app:browser-open-request')[0]?.args[0] as { requestId: string };
+    const navigation = openBrowserUrl(sender, 'https://example.com/', { tabId: 'tab-1', requestId: request.requestId });
+    if (switched) newBrowserTab(sender);
+    load.resolve();
+    const expected = switched ? { ok: false, error: expect.stringContaining('Browser tab changed') } : { ok: true };
+    await expect(navigation).resolves.toMatchObject(expected);
+    await expect(pending).resolves.toMatchObject(expected);
+  });
+
   it('does not navigate for an expired open request', async () => {
     const window = createFakeBrowserWindow();
     const sender = webContentsForTest(window);
