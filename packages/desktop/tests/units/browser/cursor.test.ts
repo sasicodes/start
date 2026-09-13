@@ -248,8 +248,9 @@ describe('cursor directional motion', () => {
     for (let i = 0; i < 5; i++) step();
     const transform = styles[3]?.transform ?? '';
     const tilt = Number(/rotate\(([-\d.]+)deg\)/.exec(transform)?.[1]);
-    expect(tilt * sign).toBeGreaterThan(0);
-    expect(Math.abs(tilt)).toBeLessThanOrEqual(10);
+    expect(tilt * sign).toBeGreaterThan(2);
+    expect(styles[3]?.transformOrigin).toBe('9.2px 6.72px');
+    expect(Math.abs(tilt)).toBeLessThanOrEqual(18);
     for (let i = 0; i < 100; i++) step();
     await movement;
     expect(styles[3]?.transform).toBe('rotate(0.00deg) scale(1)');
@@ -286,7 +287,7 @@ describe('cursor click feedback', () => {
   it('anchors tilt at the base and pulses only the shadow on click', async () => {
     const { cursor, styles, animations, finishTimeouts } = cursorRuntime(false);
     const clicked = cursor.tap();
-    expect(styles[3]?.transformOrigin).toBe('13px 15px');
+    expect(styles[3]?.transformOrigin).toBe('9.2px 6.72px');
     expect(styles[4]?.transformOrigin).toBe('13px 15px');
     expect(animations).toHaveLength(1);
     expect(animations[0]).toEqual([

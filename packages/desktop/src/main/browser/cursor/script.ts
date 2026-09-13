@@ -12,7 +12,7 @@ export const cursorScript: string = `
   const GLOW = ' drop-shadow(0 0 8px ' + ACCENT + '33) drop-shadow(0 0 18px ' + ACCENT + '14)';
   const STEP = 1 / 240;
   const MAX_FRAME = 1 / 20;
-  const RESPONSE = 0.19;
+  const RESPONSE = 0.26;
   const DAMPING = 0.9;
   const ARRIVE_PX = 0.6;
   const ARRIVE_SPEED = 12;
@@ -27,7 +27,7 @@ export const cursorScript: string = `
   const REENTRY_MS = 400;
   const STRETCH_SPEED = 9000;
   const MAX_STRETCH = 0.12;
-  const MAX_TILT = 10;
+  const MAX_TILT = 18;
   const ENTRY_X = 0.58;
   const ENTRY_Y = 0.62;
 
@@ -51,7 +51,7 @@ export const cursorScript: string = `
 
   const arrow = document.createElement('div');
   Object.assign(arrow.style, {
-    width: '100%', height: '100%', transformOrigin: '13px 15px'
+    width: '100%', height: '100%', transformOrigin: TIP_X + 'px ' + TIP_Y + 'px'
   });
 
   const glyph = document.createElement('div');
@@ -79,6 +79,12 @@ export const cursorScript: string = `
   svg.appendChild(body);
   glyph.appendChild(svg);
   arrow.appendChild(glyph);
+  const halo = document.createElement('div');
+  Object.assign(halo.style, {
+    position: 'absolute', left: '-24px', top: '-18px', width: '72px', height: '72px',
+    background: 'radial-gradient(ellipse, ' + ACCENT + '40 0%, ' + ACCENT + '1f 30%, transparent 70%)'
+  });
+  root.appendChild(halo);
   root.appendChild(arrow);
   shadow.appendChild(root);
 
@@ -151,7 +157,7 @@ export const cursorScript: string = `
     lastFrame = now;
     advance(axis.x, seconds);
     advance(axis.y, seconds);
-    tilt.target = clamp(axis.x.velocity * 0.006 + axis.y.velocity * 0.002, -MAX_TILT, MAX_TILT);
+    tilt.target = clamp(axis.x.velocity * 0.014 + axis.y.velocity * 0.005, -MAX_TILT, MAX_TILT);
     advance(tilt, seconds);
     render();
     if (!settled()) {
