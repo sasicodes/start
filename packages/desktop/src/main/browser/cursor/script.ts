@@ -81,8 +81,8 @@ export const cursorScript: string = `
   arrow.appendChild(glyph);
   const halo = document.createElement('div');
   Object.assign(halo.style, {
-    position: 'absolute', left: '-24px', top: '-18px', width: '72px', height: '72px',
-    background: 'radial-gradient(ellipse, ' + ACCENT + '40 0%, ' + ACCENT + '1f 30%, transparent 70%)'
+    position: 'absolute', left: '-18px', top: '-12px', width: '60px', height: '60px',
+    background: 'radial-gradient(ellipse, ' + ACCENT + '33 0%, ' + ACCENT + '18 30%, transparent 70%)'
   });
   root.appendChild(halo);
   root.appendChild(arrow);
