@@ -58,12 +58,12 @@ export const Home = () => {
   }, [isVisible, startLoop, stopLoop]);
 
   return (
-    <div className="w-full bg-retro-cream relative">
+    <div className="w-full bg-canvas relative">
       <Rails />
-      <section className="w-full h-dvh md:h-auto flex-1 flex flex-col gap-8 sm:gap-10 sm:justify-around sm:py-24">
+      <section className="flex w-full flex-col py-12 sm:py-16 lg:py-24">
         <Landing />
       </section>
-      <div className="py-40">
+      <div className="pb-12 sm:pb-20 lg:py-24">
         <Showcase />
       </div>
       <Footer />

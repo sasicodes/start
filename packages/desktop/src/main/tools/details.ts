@@ -50,6 +50,18 @@ const browserToolTitles: Record<string, { active: string; done: string; error: s
     active: 'Reloading Browser',
     result: 'Reloaded Browser'
   },
+  browser_scroll: {
+    done: 'Scrolled Browser',
+    error: 'Scroll failed',
+    active: 'Scrolling Browser',
+    result: 'Scrolled Browser'
+  },
+  browser_viewport: {
+    done: 'Resized Browser',
+    error: 'Resize failed',
+    active: 'Resizing Browser',
+    result: 'Resized Browser'
+  },
   browser_status: {
     done: 'Checked Browser',
     error: 'Check failed',

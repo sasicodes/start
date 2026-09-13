@@ -1,9 +1,24 @@
 import { isDev } from '@main/application';
+import { detachCdp } from '@main/browser/cdp';
+import { hideBrowserCursor } from '@main/browser/cursor/index';
+import { pressKeyIn } from '@main/browser/input';
 import { attachInspectListener, startInspect, stopInspect } from '@main/browser/inspect/index';
-import { clickBrowserElement, typeBrowserText } from '@main/browser/interaction';
+import { clickBrowserElement, scrollBrowserPage, typeBrowserText } from '@main/browser/interaction';
+import { browserKey } from '@main/browser/keys';
+import { waitForPageReady } from '@main/browser/ready';
+import type { BrowserScrollDirection } from '@main/browser/scroll';
 import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
 import { pickReusableTab } from '@main/browser/tabs';
 import { normalizeBrowserUrl } from '@main/browser/url';
+import {
+  type BrowserViewportMetrics,
+  browserViewportMetrics,
+  captureViewportPng,
+  clearBrowserViewport,
+  fitBrowserViewport,
+  setBrowserViewport
+} from '@main/browser/viewport';
+import { withTimeout } from '@main/utils/timeout';
 import { sendToRendererWindows } from '@main/window';
 import {
   BrowserWindow,
@@ -12,6 +27,7 @@ import {
   type BrowserWindow as ElectronBrowserWindow,
   type Event as ElectronEvent,
   type WebContentsView as ElectronWebContentsView,
+  nativeImage,
   shell,
   type WebContents,
   WebContentsView
@@ -63,9 +79,14 @@ export interface BrowserSnapshotResult extends BrowserActionResult {
   snapshot?: BrowserSnapshot;
 }
 
+export interface BrowserScreenshotResult extends BrowserActionResult {
+  image?: string;
+}
+
 type OwnerWindowNavigationHandler = (event: ElectronEvent, url: string, inPlace: boolean, mainFrame: boolean) => void;
 
 interface BrowserTab {
+  viewport?: BrowserViewportMetrics;
   id: string;
   loaded: boolean;
   lastUsedOrder: number;
@@ -88,21 +109,8 @@ const browserPartition = 'start-browser';
 const closedPanelError = 'Open the in-app browser panel first.';
 const maxBrowserTabs = 8;
 const statusBroadcastDelayMs = 80;
-const allowedKeyCodes = new Set([
-  'Tab',
-  'End',
-  'Home',
-  'Enter',
-  'Delete',
-  'Escape',
-  'PageUp',
-  'ArrowUp',
-  'PageDown',
-  'ArrowLeft',
-  'ArrowDown',
-  'Backspace',
-  'ArrowRight'
-]);
+const actionReadyTimeoutMs = 3000;
+const screenshotWidth = 1024;
 const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
@@ -251,6 +259,8 @@ const closeBrowserTabById = (tabId: string) => {
   const tab = browserTabs.get(tabId);
   if (!tab) return false;
 
+  detachCdp(tab.view.webContents);
+
   const nextTabId = activeTabId === tabId ? nextActiveTabIdAfterClose(tabId) : activeTabId;
   if (attachedTabId === tabId) detachAttachedTab();
   browserTabs.delete(tabId);
@@ -294,6 +304,7 @@ const closeBrowserTabs = () => {
   clearPendingStatusBroadcast();
   detachBrowserWindow();
   for (const tab of browserTabs.values()) {
+    detachCdp(tab.view.webContents);
     tab.view.webContents.stop();
     tab.view.webContents.close();
   }
@@ -304,6 +315,16 @@ const closeBrowserTabs = () => {
   browserTabUseOrder = 0;
   broadcastStatus();
   sendToRendererWindows('app:browser-inspect-state', false);
+};
+
+const applyBrowserLayout = (tab: BrowserTab, bounds: BrowserBounds): boolean => {
+  if (!tab.viewport) {
+    tab.view.setBounds(bounds);
+    return true;
+  }
+  const fitted = fitBrowserViewport(bounds, tab.viewport);
+  tab.view.setBounds(fitted.bounds);
+  return setBrowserViewport(tab.view.webContents, tab.viewport, fitted.scale);
 };
 
 const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
@@ -338,7 +359,7 @@ const attachActiveBrowserView = (window: ElectronBrowserWindow) => {
   tab.view.webContents.setAudioMuted(false);
   window.contentView.addChildView(tab.view);
   attachedTabId = tab.id;
-  if (lastBounds) tab.view.setBounds(lastBounds);
+  if (lastBounds) applyBrowserLayout(tab, lastBounds);
 
   return tab;
 };
@@ -360,10 +381,15 @@ export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | nu
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  const { view } = attachActiveBrowserView(window);
+  const tab = attachActiveBrowserView(window);
   const scaledBounds = scaleBrowserBounds(bounds, sender.getZoomFactor());
   lastBounds = scaledBounds;
-  view.setBounds(scaledBounds);
+  if (!applyBrowserLayout(tab, scaledBounds)) {
+    clearBrowserViewport(tab.view.webContents);
+    delete tab.viewport;
+    tab.view.setBounds(scaledBounds);
+    return { ok: false, error: 'Viewport preview could not be resized. It has been reset to the panel size.' };
+  }
   return { ok: true, status: statusFromView() };
 };
 
@@ -400,6 +426,7 @@ export const openBrowserUrl = async (
   if (loadError && !isInterruptedNavigation(loadError))
     return { ok: false, error: 'This site cannot be loaded.', status: statusFromView() };
 
+  await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
@@ -495,7 +522,13 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
   if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
   try {
-    const image = await tab.view.webContents.capturePage();
+    const image = await withTimeout(tab.view.webContents.capturePage(), 5000);
+    if (!image)
+      return {
+        ok: false,
+        error: 'Browser screenshot timed out. Try again after the page responds.',
+        status: statusFromView()
+      };
     if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
 
     await clipboard.write([
@@ -505,6 +538,58 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
   } catch {
     return { ok: false, error: 'Could not capture the browser screenshot.', status: statusFromView() };
   }
+};
+
+export const readBrowserScreenshot = async (): Promise<BrowserScreenshotResult> => {
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  try {
+    const png = await captureViewportPng(tab.view.webContents);
+    const image = png ? nativeImage.createFromBuffer(png) : await withTimeout(tab.view.webContents.capturePage(), 5000);
+    if (!image)
+      return {
+        ok: false,
+        error: 'Browser screenshot timed out. Try again after the page responds.',
+        status: statusFromView()
+      };
+    if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
+
+    const scaled = image.getSize().width > screenshotWidth ? image.resize({ width: screenshotWidth }) : image;
+    return { ok: true, image: scaled.toPNG().toString('base64'), status: statusFromView() };
+  } catch {
+    return { ok: false, error: 'Could not capture the browser screenshot.', status: statusFromView() };
+  }
+};
+
+export const resizeBrowserViewport = async (width: number, height?: number): Promise<BrowserActionResult> => {
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  const metrics = browserViewportMetrics(width, height);
+  if (!lastBounds) return { ok: false, error: 'Open the browser panel before resizing its viewport.' };
+  tab.viewport = metrics;
+  if (!applyBrowserLayout(tab, lastBounds)) {
+    delete tab.viewport;
+    clearBrowserViewport(tab.view.webContents);
+    tab.view.setBounds(lastBounds);
+    return { ok: false, error: 'Could not emulate that viewport size.', status: statusFromView() };
+  }
+
+  await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
+  return { ok: true, status: statusFromView() };
+};
+
+export const resetBrowserViewport = async (): Promise<BrowserActionResult> => {
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  if (!clearBrowserViewport(tab.view.webContents))
+    return { ok: false, error: 'Could not reset the viewport size.', status: statusFromView() };
+  delete tab.viewport;
+  if (lastBounds) tab.view.setBounds(lastBounds);
+
+  return { ok: true, status: statusFromView() };
 };
 
 export const captureBrowserSnapshot = async (): Promise<BrowserSnapshotResult> => {
@@ -525,6 +610,7 @@ export const clickInBrowser = async (ref: string): Promise<BrowserActionResult> 
   if (!result.ok)
     return { ok: false, error: result.error ?? 'Could not click the browser element.', status: statusFromView() };
 
+  await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
   return { ok: true, status: statusFromView() };
 };
@@ -541,13 +627,57 @@ export const typeInBrowser = async ({ ref, text, clear }: BrowserTypeOptions): P
   return { ok: true, status: statusFromView() };
 };
 
-export const pressInBrowser = (key: string): BrowserActionResult => {
+export const releaseBrowserControl = () => {
+  for (const tab of browserTabs.values()) {
+    hideBrowserCursor(tab.view.webContents);
+    if (tab.viewport) {
+      clearBrowserViewport(tab.view.webContents);
+      delete tab.viewport;
+      if (lastBounds) tab.view.setBounds(lastBounds);
+    }
+    detachCdp(tab.view.webContents);
+  }
+};
+
+export const scrollInBrowser = async (
+  direction: BrowserScrollDirection,
+  amount?: number
+): Promise<BrowserActionResult> => {
   const tab = activeTab();
   if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
-  if (!allowedKeyCodes.has(key)) return { ok: false, error: 'Unsupported browser key.', status: statusFromView() };
 
-  tab.view.webContents.sendInputEvent({ type: 'keyDown', keyCode: key });
-  tab.view.webContents.sendInputEvent({ type: 'keyUp', keyCode: key });
+  const result = await scrollBrowserPage(tab.view.webContents, direction, amount);
+  if (!result.ok)
+    return { ok: false, error: result.error ?? 'Could not scroll the browser page.', status: statusFromView() };
+
+  sendStatus();
+  return { ok: true, status: statusFromView() };
+};
+
+export const pressInBrowser = async (key: string): Promise<BrowserActionResult> => {
+  const tab = activeTab();
+  if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
+
+  const stroke = browserKey(key);
+  if (!stroke) return { ok: false, error: 'Unsupported browser key.', status: statusFromView() };
+
+  try {
+    if (!(await pressKeyIn(tab.view.webContents, stroke))) {
+      const modifiers = (['alt', 'control', 'meta', 'shift'] as const).filter(
+        (_name, index) => stroke.modifiers & (1 << index)
+      );
+      tab.view.webContents.sendInputEvent({ type: 'keyDown', keyCode: stroke.code, modifiers });
+      tab.view.webContents.sendInputEvent({ type: 'keyUp', keyCode: stroke.code, modifiers });
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Browser key press failed.',
+      status: statusFromView()
+    };
+  }
+
+  await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
   return { ok: true, status: statusFromView() };
 };

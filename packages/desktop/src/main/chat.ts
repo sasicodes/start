@@ -21,6 +21,7 @@ import {
   prepareDroppedFiles as prepareDroppedFileAttachments,
   stripAttachmentData
 } from '@main/attachments';
+import { releaseBrowserControl } from '@main/browser/index';
 import { type SlashCommandItem, sessionSlashCommandItems } from '@main/chat/commands';
 import { contextPercent } from '@main/chat/context';
 import { createDeltaCoalescer } from '@main/chat/deltas';
@@ -2046,6 +2047,7 @@ export class ChatService {
     if (runtimeState.isGenerating === isGenerating) return;
 
     runtimeState.isGenerating = isGenerating;
+    if (!this.workInProgress()) releaseBrowserControl();
     this.workChangeHandler();
   }
 
