@@ -53,8 +53,13 @@ interface DiffReadyState {
   ready: boolean;
 }
 
-const EmptyDiff = ({ message }: { message: string }) => (
-  <div class="grid flex-1 place-items-center px-4 text-sm leading-6 text-soft">{message}</div>
+const EmptyReview = () => (
+  <div class="grid flex-1 place-items-center px-8 text-center">
+    <div class="grid justify-items-center gap-3 text-soft">
+      <ChangesIcon class="size-7" strokeWidth={1.5} />
+      <p class="m-0 max-w-64 text-sm leading-5">No file changes to review</p>
+    </div>
+  </div>
 );
 
 const summaryFromSections = (sections: GitSummaryLike[]) =>
@@ -146,63 +151,64 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
         !emptyReady && 'invisible has-[[data-review-ready=true]]:visible'
       )}
     >
-      <header class="flex h-10 min-w-0 shrink-0 items-center justify-between gap-3 px-4 text-xs leading-5 font-medium">
-        {patch.kind === 'ready' ? (
-          <>
-            <div class="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                disabled={!canCycle}
-                onClick={() => setViewMode((current) => nextViewMode(current, patch.patch.sections))}
-                class={tw(
-                  'inline-flex min-w-0 items-center gap-1.5 truncate border-0 bg-transparent p-0 text-left text-soft outline-0',
-                  canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
-                )}
-              >
-                <span class="min-w-0 truncate">{gitViewLabel(effectiveViewMode, visibleSummary.filesChanged)}</span>
-                {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
-              </button>
-              {hasVisibleDiff && (
+      {!emptyReady && (
+        <header class="flex h-10 min-w-0 shrink-0 items-center justify-between gap-3 px-4 text-xs leading-5 font-medium">
+          {patch.kind === 'ready' ? (
+            <>
+              <div class="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
-                  aria-pressed={!splitDiffView}
-                  aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
-                  onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
-                  class="group/diff-view relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+                  disabled={!canCycle}
+                  onClick={() => setViewMode((current) => nextViewMode(current, patch.patch.sections))}
+                  class={tw(
+                    'inline-flex min-w-0 items-center gap-1.5 truncate border-0 bg-transparent p-0 text-left text-soft outline-0',
+                    canCycle && 'transition-colors hover:text-hover focus-visible:text-hover'
+                  )}
                 >
-                  <DiffSplitIcon
-                    class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')}
-                  />
+                  <span class="min-w-0 truncate">{gitViewLabel(effectiveViewMode, visibleSummary.filesChanged)}</span>
+                  {canCycle && <CycleVerticalIcon class="size-3.5 flex-none" />}
                 </button>
-              )}
-            </div>
-            <div class="flex items-center gap-3 font-medium">
-              {hasVisibleDiff && (
-                <>
-                  <div class="flex items-center gap-2">
-                    <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
-                    <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
-                  </div>
-                  <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'} side="left">
-                    <button
-                      type="button"
-                      onClick={toggleFoldAll}
-                      aria-label={allCollapsed ? 'Expand all files' : 'Collapse all files'}
-                      class="relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
-                    >
-                      {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
-                    </button>
-                  </Tooltip>
-                </>
-              )}
-            </div>
-          </>
-        ) : (
-          <span class="text-soft">Review</span>
-        )}
-      </header>
-      {patch.kind === 'unavailable' && <EmptyDiff message="No diff to show." />}
-      {patch.kind === 'ready' && patch.patch.sections.length === 0 && <EmptyDiff message="No diff to show." />}
+                {hasVisibleDiff && (
+                  <button
+                    type="button"
+                    aria-pressed={!splitDiffView}
+                    aria-label={splitDiffView ? 'Show unified diff' : 'Show split diff'}
+                    onClick={() => setDiffViewMode((mode) => (mode === 'split' ? 'unified' : 'split'))}
+                    class="group/diff-view relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+                  >
+                    <DiffSplitIcon
+                      class={tw('transition-transform duration-100 ease-out', splitDiffView && 'rotate-90')}
+                    />
+                  </button>
+                )}
+              </div>
+              <div class="flex items-center gap-3 font-medium">
+                {hasVisibleDiff && (
+                  <>
+                    <div class="flex items-center gap-2">
+                      <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
+                      <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+                    </div>
+                    <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'} side="left">
+                      <button
+                        type="button"
+                        onClick={toggleFoldAll}
+                        aria-label={allCollapsed ? 'Expand all files' : 'Collapse all files'}
+                        class="relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+                      >
+                        {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
+                      </button>
+                    </Tooltip>
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <span class="text-soft">Review</span>
+          )}
+        </header>
+      )}
+      {emptyReady && <EmptyReview />}
       {patch.kind === 'ready' && patch.patch.sections.length > 0 && (
         <div class="min-h-0 min-w-0 flex-1 overflow-y-auto pb-4">
           <Suspense fallback={null}>

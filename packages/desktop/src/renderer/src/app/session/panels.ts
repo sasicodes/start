@@ -1,6 +1,6 @@
 import type { AppSurface } from '@renderer/app/types';
 import { type SidePanelState, toggledSidePanel } from '@renderer/app/utils/panel';
-import { openReview, panelTabs, selectBrowser } from '@renderer/shared/browser/state';
+import { openNewTab, openReview, panelTabOrder, panelTabs, selectBrowser } from '@renderer/shared/browser/state';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { playToggleSound } from '@renderer/ui/sounds';
 import { isEditableTarget } from '@renderer/utils/dom';
@@ -25,6 +25,7 @@ export const useSessionPanels = ({ surface }: SessionPanelsOptions) => {
 
   const toggleBrowserPanel = useCallback(() => {
     playToggleSound();
+    if (panelTabOrder.peek().length === 0) openNewTab();
     setSidePanel((state) => toggledSidePanel(state, 'browser'));
   }, []);
 

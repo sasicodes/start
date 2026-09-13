@@ -169,3 +169,77 @@ describe('session lifecycle', () => {
     expect(chat.getTabs().some((entry) => entry.id === firstTab.id)).toBe(true);
   });
 });
+
+const runningSession = async (id: string) => {
+  const session = getFakeSession(id);
+  if (!session) throw new Error(`Expected a fake session for ${id}.`);
+  await session.awaitPromptCall();
+  session.isBashRunning = true;
+  return session;
+};
+
+describe('running sessions across workspaces', () => {
+  it('keeps a running session alive after switching to another workspace', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('long command', webContents);
+    const session = await runningSession(tab.id);
+
+    await chat.switchWorkspace('/tmp/workspace-b');
+
+    expect(session.disposed).toBe(false);
+    expect(session.bashAborts).toBe(0);
+    expect(chat.workInProgress()).toBe(true);
+    expect(chat.getTabs().find((entry) => entry.id === tab.id)?.status).toBe('generating');
+
+    session.finishPrompt();
+    await send;
+  });
+
+  it('stops only the targeted session and leaves other workspaces running', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('command a', webContents);
+    const active = await runningSession(tab.id);
+
+    const summary = await chat.startSession({ prompt: 'command b', environment: { type: 'local' } });
+    const background = await runningSession(summary.id);
+
+    await chat.abortTab(summary.id);
+
+    expect(background.bashAborts).toBe(1);
+    expect(background.disposed).toBe(false);
+    expect(active.bashAborts).toBe(0);
+    expect(active.isBashRunning).toBe(true);
+    expect(chat.getTabs().find((entry) => entry.id === tab.id)?.status).toBe('generating');
+
+    active.finishPrompt();
+    await send;
+  });
+
+  it('cancels running commands for every session when the app closes', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
+    const webContents = newWebContents();
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+    const send = chat.send('command a', webContents);
+    const active = await runningSession(tab.id);
+
+    const summary = await chat.startSession({ prompt: 'command b', environment: { type: 'local' } });
+    const background = await runningSession(summary.id);
+
+    active.finishPrompt();
+    await send;
+
+    chat.dispose();
+
+    expect(active.bashAborts).toBe(1);
+    expect(background.bashAborts).toBe(1);
+    expect(active.disposed).toBe(true);
+    expect(background.disposed).toBe(true);
+  });
+});

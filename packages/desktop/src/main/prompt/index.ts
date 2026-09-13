@@ -138,7 +138,7 @@ ${runtimeToolsList(capabilities)}
 
 Guidelines:
 - Use listed runtime discovery/search tools before broad shell commands.
-- Be precise and concise. Keep replies under 1k characters by default; expand when asked or when a subagent handoff needs supporting evidence.
+- Be precise and concise. Keep replies under 500 characters by default; expand when asked or when a subagent handoff needs supporting evidence.
 ${filePathGuideline}${toolGuidelines}
 
 Resources:

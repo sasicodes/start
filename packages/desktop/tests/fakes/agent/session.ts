@@ -43,6 +43,7 @@ export class FakeAgentSession {
   };
 
   isStreaming = false;
+  bashAborts = 0;
   isBashRunning = false;
   disposed = false;
   reloadCount = 0;
@@ -225,10 +226,12 @@ export class FakeAgentSession {
   }
 
   abortBash() {
+    this.bashAborts += 1;
     this.isBashRunning = false;
   }
 
   dispose() {
+    this.abortBash();
     this.disposed = true;
     this.listeners.clear();
     sessionRegistry.delete(this.sessionManager.getSessionId());

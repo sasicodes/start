@@ -222,7 +222,7 @@ export class GitChangesService {
   }
 
   private async loadPatch(entry: GitChangesEntry): Promise<MaybeGitPatch> {
-    if (entry.patchLoaded) return entry.patch;
+    if (entry.patchLoaded && entry.patch) return entry.patch;
     if (entry.patchRequest) return entry.patchRequest;
 
     let request: Promise<MaybeGitPatch>;
