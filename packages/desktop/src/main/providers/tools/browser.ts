@@ -1,18 +1,22 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
   type BrowserStatus,
-  captureBrowserScreenshot,
   captureBrowserSnapshot,
   clickInBrowser,
   getBrowserStatus,
   goBackInBrowser,
   goForwardInBrowser,
   pressInBrowser,
+  readBrowserScreenshot,
   reloadBrowser,
+  resetBrowserViewport,
+  resizeBrowserViewport,
+  scrollInBrowser,
   typeInBrowser
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
-import { toolResult } from '@main/providers/tools/result';
+import { wait } from '@main/browser/utils/wait';
+import { toolImageResult, toolResult } from '@main/providers/tools/result';
 import { sendToMainWindow } from '@main/window';
 import * as v from 'valibot';
 
@@ -96,13 +100,50 @@ const browserTypeSchema = {
   additionalProperties: false
 } as const;
 
+const browserScrollSchema = {
+  type: 'object',
+  required: ['direction'],
+  properties: {
+    direction: {
+      enum: ['up', 'down', 'left', 'right'],
+      type: 'string',
+      description: 'Scroll direction for the page or the scrollable area at the viewport center.'
+    },
+    amount: {
+      type: 'number',
+      description: 'Scroll distance in pixels. Defaults to 600.'
+    }
+  },
+  additionalProperties: false
+} as const;
+
+const browserViewportSchema = {
+  type: 'object',
+  required: [],
+  properties: {
+    width: {
+      type: 'number',
+      description: 'Emulated viewport width in CSS pixels, between 240 and 4000.'
+    },
+    height: {
+      type: 'number',
+      description: 'Emulated viewport height in CSS pixels. Defaults to 900.'
+    },
+    reset: {
+      type: 'boolean',
+      description: 'Restore the real panel viewport when true.'
+    }
+  },
+  additionalProperties: false
+} as const;
+
 const browserPressSchema = {
   type: 'object',
   required: ['key'],
   properties: {
     key: {
       type: 'string',
-      description: 'One supported key, such as Enter, Tab, Escape, or ArrowDown.'
+      description: 'One key such as Enter, Tab, Escape, or ArrowDown, optionally with cmd, ctrl, alt, or shift.'
     }
   },
   additionalProperties: false
@@ -118,8 +159,6 @@ const requiredString = (value: unknown, label: string) => {
   if (result.success) return result.output;
   throw new Error(`Enter a browser ${label}.`);
 };
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const browserOpenSettled = (
   status: BrowserStatus,
@@ -284,9 +323,23 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
+    async execute(_toolCallId, { direction, amount }) {
+      const directionValue = v.parse(v.picklist(['up', 'down', 'left', 'right']), direction);
+      const amountValue = v.parse(v.optional(v.pipe(v.number(), v.finite())), amount);
+      const result = await scrollInBrowser(directionValue, amountValue);
+      if (!result.ok) throw new Error(result.error ?? 'Could not scroll the browser page.');
+      return textResult(`Scrolled the browser page ${direction}.`);
+    },
+    name: 'browser_scroll',
+    parameters: browserScrollSchema,
+    description: 'Scroll the browser page up, down, left, or right.',
+    promptSnippet: 'Scroll the page to reveal content outside the viewport.'
+  }),
+  defineTool({
+    ...browserToolDefaults,
     async execute(_toolCallId, { key }) {
       const keyValue = requiredString(key, 'key');
-      const result = pressInBrowser(keyValue);
+      const result = await pressInBrowser(keyValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not press the browser key.');
       return textResult(`Pressed ${keyValue} in the browser.`);
     },
@@ -298,14 +351,34 @@ export const createBrowserTools = () => [
   defineTool({
     ...browserToolDefaults,
     async execute() {
-      const result = await captureBrowserScreenshot();
-      if (!result.ok) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
-      return textResult('Captured the in-app browser screenshot to the clipboard.');
+      const result = await readBrowserScreenshot();
+      if (!result.ok || !result.image) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
+      return toolImageResult(`Screenshot of ${getBrowserStatus().url || 'the in-app browser'}.`, result.image);
     },
     parameters: emptySchema,
     name: 'browser_screenshot',
-    description: 'Copy a screenshot of the visible browser page.',
+    description: 'Capture the visible browser page and return it as an image.',
     promptSnippet: 'Capture a visible-page screenshot for visual checks.'
+  }),
+  defineTool({
+    ...browserToolDefaults,
+    async execute(_toolCallId, { width, height, reset }) {
+      if (reset === true) {
+        const cleared = await resetBrowserViewport();
+        if (!cleared.ok) throw new Error(cleared.error ?? 'Could not reset the viewport size.');
+        return textResult('Reset the browser viewport to the panel size.');
+      }
+
+      const widthValue = v.parse(v.pipe(v.number('Enter a browser viewport width, or pass reset.'), v.finite()), width);
+      const heightValue = v.parse(v.optional(v.pipe(v.number(), v.finite())), height);
+      const result = await resizeBrowserViewport(widthValue, heightValue);
+      if (!result.ok) throw new Error(result.error ?? 'Could not emulate that viewport size.');
+      return textResult(`Emulating a ${Math.round(widthValue)} px wide browser viewport.`);
+    },
+    name: 'browser_viewport',
+    parameters: browserViewportSchema,
+    description: 'Emulate a viewport size for responsive checks, or reset it.',
+    promptSnippet: 'Emulate a viewport width before a responsive screenshot.'
   }),
   defineTool({
     ...browserToolDefaults,

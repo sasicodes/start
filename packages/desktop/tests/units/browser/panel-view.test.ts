@@ -571,10 +571,13 @@ describe('browser panel view', () => {
     await expect(clickInBrowser('e1')).resolves.toMatchObject({ ok: true });
     await expect(typeInBrowser({ ref: 'e2', text: 'hello', clear: true })).resolves.toMatchObject({ ok: true });
 
+    const methods = view.webContents.debugger.commands.map((command) => command.method);
+    expect(methods.filter((method) => method === 'Input.dispatchMouseEvent')).toHaveLength(6);
+    expect(methods).toContain('Input.insertText');
     expect(view.webContents.inputEvents).toEqual([]);
   });
 
-  it('sends supported browser key presses to the native view', () => {
+  it('sends supported browser key presses to the native view', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
@@ -582,20 +585,21 @@ describe('browser panel view', () => {
     const view = window.contentView.children[0];
     if (!view) throw new Error('Expected browser view.');
 
-    expect(pressInBrowser('Enter')).toMatchObject({ ok: true });
-    expect(view.webContents.inputEvents).toEqual([
-      { type: 'keyDown', keyCode: 'Enter' },
-      { type: 'keyUp', keyCode: 'Enter' }
+    await expect(pressInBrowser('Enter')).resolves.toMatchObject({ ok: true });
+    expect(view.webContents.debugger.commands.map((command) => command.method)).toEqual([
+      'Input.dispatchKeyEvent',
+      'Input.dispatchKeyEvent'
     ]);
+    expect(view.webContents.inputEvents).toEqual([]);
   });
 
-  it('rejects unsupported browser key presses', () => {
+  it('rejects unsupported browser key presses', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);
 
     setBrowserBounds(webContents, { x: 10, y: 20, width: 300, height: 200 });
 
-    expect(pressInBrowser('A')).toMatchObject({ ok: false, error: 'Unsupported browser key.' });
+    await expect(pressInBrowser('F5')).resolves.toMatchObject({ ok: false, error: 'Unsupported browser key.' });
   });
 
   it('keeps interrupted browser navigation structured', async () => {

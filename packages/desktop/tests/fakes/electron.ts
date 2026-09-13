@@ -218,10 +218,22 @@ const fakeBrowserSession = (partition = '') => {
   return session;
 };
 
+export interface FakeDebugger {
+  attached: boolean;
+  commands: { method: string; params: unknown }[];
+  attach: (version?: string) => void;
+  detach: () => void;
+  isAttached: () => boolean;
+  once: (event: string, handler: Handler) => void;
+  sendCommand: (method: string, params?: unknown) => Promise<unknown>;
+}
+
 export interface FakeBrowserWebContents extends FakeWebContents {
   session: FakeBrowserSession;
   audioMuted: boolean;
   closed: boolean;
+  debugger: FakeDebugger;
+  isWaitingForResponse: () => boolean;
   capturePage: () => Promise<FakeNativeImage>;
   close: () => void;
   emit: (event: string, ...args: unknown[]) => void;
@@ -269,6 +281,34 @@ export interface FakeBrowserWindow {
 
 const windowsByWebContents = new Map<FakeBrowserWebContents, FakeBrowserWindow>();
 
+const createFakeDebugger = (): FakeDebugger => {
+  const detachHandlers = new Set<Handler>();
+  const fake: FakeDebugger = {
+    attached: false,
+    commands: [],
+    attach: (_version?: string) => {
+      if (fake.attached) throw new Error('Debugger is already attached to the target');
+      fake.attached = true;
+    },
+    detach: () => {
+      if (!fake.attached) throw new Error('No debugger is attached to the target');
+      fake.attached = false;
+      for (const handler of detachHandlers) handler();
+      detachHandlers.clear();
+    },
+    isAttached: () => fake.attached,
+    once: (event: string, handler: Handler) => {
+      if (event === 'detach') detachHandlers.add(handler);
+    },
+    sendCommand: async (method: string, params?: unknown) => {
+      if (!fake.attached) throw new Error('No debugger is attached to the target');
+      fake.commands.push({ method, params });
+      return {};
+    }
+  };
+  return fake;
+};
+
 const createFakeBrowserWebContents = (partition = ''): FakeBrowserWebContents => {
   const base = createFakeWebContents();
   let currentUrl = '';
@@ -278,6 +318,8 @@ const createFakeBrowserWebContents = (partition = ''): FakeBrowserWebContents =>
     session: fakeBrowserSession(partition),
     audioMuted: false,
     closed: false,
+    debugger: createFakeDebugger(),
+    isWaitingForResponse: () => false,
     capturePage: async () => fakeNativeImage(),
     close: () => {
       webContents.closed = true;
@@ -285,7 +327,10 @@ const createFakeBrowserWebContents = (partition = ''): FakeBrowserWebContents =>
     emit: (event, ...args) => {
       for (const handler of handlersByEvent.get(event) ?? []) handler(...args);
     },
-    executeJavaScript: async (_script: string, _userGesture?: boolean) => ({ ok: true }),
+    executeJavaScript: async (script: string, _userGesture?: boolean) => {
+      if (script.includes('document.readyState')) return 'complete';
+      return { ok: true, x: 1, y: 1 };
+    },
     focus: () => {
       webContents.focusCount += 1;
     },

@@ -2,8 +2,11 @@ import type { BrowserStatus } from '@main/browser/index';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { broadcastsByChannel, resetBroadcasts } from '../../../fakes/window.js';
 
-const captureBrowserScreenshotMock = vi.fn();
 const captureBrowserSnapshotMock = vi.fn();
+const readBrowserScreenshotMock = vi.fn();
+const resetBrowserViewportMock = vi.fn();
+const resizeBrowserViewportMock = vi.fn();
+const scrollInBrowserMock = vi.fn();
 const clickInBrowserMock = vi.fn();
 const getBrowserStatusMock = vi.fn();
 const goBackInBrowserMock = vi.fn();
@@ -16,19 +19,22 @@ vi.mock('@main/browser/index', () => ({
   typeInBrowser: typeInBrowserMock,
   reloadBrowser: reloadBrowserMock,
   pressInBrowser: pressInBrowserMock,
+  scrollInBrowser: scrollInBrowserMock,
   goForwardInBrowser: goForwardInBrowserMock,
   goBackInBrowser: goBackInBrowserMock,
   getBrowserStatus: getBrowserStatusMock,
   clickInBrowser: clickInBrowserMock,
   captureBrowserSnapshot: captureBrowserSnapshotMock,
-  captureBrowserScreenshot: captureBrowserScreenshotMock
+  readBrowserScreenshot: readBrowserScreenshotMock,
+  resetBrowserViewport: resetBrowserViewportMock,
+  resizeBrowserViewport: resizeBrowserViewportMock
 }));
 
 const { browserOpenSettled, createBrowserTools } = await import('@main/providers/tools/browser');
 
 interface TestToolResult {
   details: null;
-  content: { type: string; text: string }[];
+  content: { type: string; text?: string; data?: string; mimeType?: string }[];
 }
 
 interface TestTool {
@@ -51,7 +57,10 @@ const toolByName = (name: string): TestTool => {
 describe('browser tools', () => {
   beforeEach(() => {
     resetBroadcasts();
-    captureBrowserScreenshotMock.mockResolvedValue({ ok: true });
+    readBrowserScreenshotMock.mockResolvedValue({ ok: true, image: 'aW1hZ2U=' });
+    resetBrowserViewportMock.mockResolvedValue({ ok: true });
+    resizeBrowserViewportMock.mockResolvedValue({ ok: true });
+    scrollInBrowserMock.mockResolvedValue({ ok: true });
     captureBrowserSnapshotMock.mockResolvedValue({
       ok: true,
       snapshot: {
@@ -65,7 +74,7 @@ describe('browser tools', () => {
     });
     clickInBrowserMock.mockResolvedValue({ ok: true });
     typeInBrowserMock.mockResolvedValue({ ok: true });
-    pressInBrowserMock.mockReturnValue({ ok: true });
+    pressInBrowserMock.mockResolvedValue({ ok: true });
     getBrowserStatusMock.mockReturnValue({
       url: 'https://example.com/',
       open: true,
@@ -93,8 +102,10 @@ describe('browser tools', () => {
       'browser_reload',
       'browser_click',
       'browser_type',
+      'browser_scroll',
       'browser_press',
       'browser_screenshot',
+      'browser_viewport',
       'browser_snapshot'
     ]);
 
@@ -277,7 +288,43 @@ describe('browser tools', () => {
     expect(goBackInBrowserMock).toHaveBeenCalledOnce();
     expect(goForwardInBrowserMock).toHaveBeenCalledOnce();
     expect(reloadBrowserMock).toHaveBeenCalledOnce();
-    expect(captureBrowserScreenshotMock).toHaveBeenCalledOnce();
+    expect(readBrowserScreenshotMock).toHaveBeenCalledOnce();
+  });
+
+  it('returns the screenshot as image content', async () => {
+    const result = await toolByName('browser_screenshot').execute('call-1', {});
+
+    expect(result.content).toEqual([
+      { type: 'text', text: 'Screenshot of https://example.com/.' },
+      { type: 'image', data: 'aW1hZ2U=', mimeType: 'image/png' }
+    ]);
+  });
+
+  it('emulates and resets the viewport size', async () => {
+    await toolByName('browser_viewport').execute('call-1', { width: 390, height: 844 });
+    await toolByName('browser_viewport').execute('call-2', { reset: true });
+
+    expect(resizeBrowserViewportMock).toHaveBeenCalledWith(390, 844);
+    expect(resetBrowserViewportMock).toHaveBeenCalledOnce();
+    await expect(toolByName('browser_viewport').execute('call-3', {})).rejects.toThrow('viewport width');
+  });
+
+  it('scrolls the page in a direction', async () => {
+    await toolByName('browser_scroll').execute('call-1', { direction: 'down', amount: 400 });
+
+    expect(scrollInBrowserMock).toHaveBeenCalledWith('down', 400);
+  });
+
+  it('rejects invalid scroll directions and non-finite distances', async () => {
+    await expect(toolByName('browser_scroll').execute('call-1', { direction: 'diagonal' })).rejects.toThrow();
+    await expect(toolByName('browser_scroll').execute('call-2', { direction: 'down', amount: NaN })).rejects.toThrow();
+    expect(scrollInBrowserMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-finite viewport dimensions', async () => {
+    await expect(toolByName('browser_viewport').execute('call-1', { width: Infinity })).rejects.toThrow();
+    await expect(toolByName('browser_viewport').execute('call-2', { width: 390, height: NaN })).rejects.toThrow();
+    expect(resizeBrowserViewportMock).not.toHaveBeenCalled();
   });
 
   it('delegates browser interaction actions', async () => {
@@ -329,7 +376,7 @@ describe('browser tools', () => {
     await toolByName('browser_press').execute('call-5', { key: 'Enter' });
 
     expect(captureBrowserSnapshotMock).toHaveBeenCalledOnce();
-    expect(captureBrowserScreenshotMock).toHaveBeenCalledOnce();
+    expect(readBrowserScreenshotMock).toHaveBeenCalledOnce();
     expect(clickInBrowserMock).toHaveBeenCalledWith('e1');
     expect(typeInBrowserMock).toHaveBeenCalledWith({ ref: 'e1', text: 'x', clear: false });
     expect(pressInBrowserMock).toHaveBeenCalledWith('Enter');

@@ -1,4 +1,11 @@
-import { captureBrowserScreenshot, destroyBrowser, setBrowserBounds } from '@main/browser/index';
+import {
+  captureBrowserScreenshot,
+  destroyBrowser,
+  readBrowserScreenshot,
+  resetBrowserViewport,
+  resizeBrowserViewport,
+  setBrowserBounds
+} from '@main/browser/index';
 import type { WebContents } from 'electron';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -69,5 +76,60 @@ describe('captureBrowserScreenshot', () => {
       error: 'Could not capture the browser screenshot.'
     });
     expect(write).toHaveBeenCalledOnce();
+  });
+});
+
+describe('readBrowserScreenshot', () => {
+  beforeEach(() => {
+    destroyBrowser();
+    resetFakeBrowserWindows();
+  });
+
+  afterEach(() => {
+    destroyBrowser();
+  });
+
+  it('prefers the CDP viewport capture so emulated sizes are captured', async () => {
+    const view = openView();
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const capturePage = vi.spyOn(view.webContents, 'capturePage');
+    vi.spyOn(view.webContents.debugger, 'sendCommand').mockResolvedValue({ data: png.toString('base64') });
+
+    await expect(readBrowserScreenshot()).resolves.toMatchObject({ ok: true });
+    expect(capturePage).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the native capture without the debugger', async () => {
+    const view = openView();
+    const capturePage = vi.spyOn(view.webContents, 'capturePage');
+
+    await expect(readBrowserScreenshot()).resolves.toMatchObject({ ok: true, image: expect.any(String) });
+    expect(capturePage).toHaveBeenCalledOnce();
+  });
+});
+
+describe('resizeBrowserViewport', () => {
+  beforeEach(() => {
+    destroyBrowser();
+    resetFakeBrowserWindows();
+  });
+
+  afterEach(() => {
+    destroyBrowser();
+  });
+
+  it('emulates clamped device metrics and clears them again', async () => {
+    const view = openView();
+
+    await expect(resizeBrowserViewport(390, 844)).resolves.toMatchObject({ ok: true });
+    await expect(resetBrowserViewport()).resolves.toMatchObject({ ok: true });
+
+    expect(view.webContents.debugger.commands).toEqual([
+      {
+        method: 'Emulation.setDeviceMetricsOverride',
+        params: { mobile: false, width: 390, height: 844, deviceScaleFactor: 0 }
+      },
+      { method: 'Emulation.clearDeviceMetricsOverride', params: {} }
+    ]);
   });
 });
