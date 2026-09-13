@@ -248,3 +248,11 @@ describe('tool details', () => {
     });
   });
 });
+
+it.each([
+  ['browser_scroll', 'Scrolled Browser', 'Scroll failed'],
+  ['browser_viewport', 'Resized Browser', 'Resize failed']
+])('uses a readable result label for %s', (name, done, error) => {
+  expect(toolResultTitle(name, false)).toBe(done);
+  expect(toolResultTitle(name, true)).toBe(error);
+});

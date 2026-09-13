@@ -55,7 +55,8 @@ export const wheelMouseAt = async (
 };
 
 export const pressKeyIn = async (webContents: WebContents, key: BrowserKey): Promise<boolean> => {
-  const { code, keyCode, modifiers, text } = key;
+  const { code, keyCode, modifiers } = key;
+  const text = modifiers & 7 ? '' : key.text;
   const base = {
     code,
     modifiers,

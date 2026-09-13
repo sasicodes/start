@@ -1,5 +1,7 @@
 import { runInNewContext } from 'node:vm';
+import { pressKeyIn } from '@main/browser/input';
 import { clickBrowserElement, parseLocateResult, scrollBrowserPage, typeBrowserText } from '@main/browser/interaction';
+import { browserKey } from '@main/browser/keys';
 import type { WebContents } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -217,5 +219,28 @@ describe('browser interaction errors', () => {
     });
     expect(click).not.toHaveBeenCalled();
     expect(commands).toHaveLength(0);
+  });
+});
+
+describe('browser key input', () => {
+  it.each(['cmd+Enter', 'ctrl+Tab', 'alt+Space', 'ctrl+shift+Enter'])(
+    'dispatches %s without inserting text',
+    async (value) => {
+      const { webContents, commands } = createWebContents();
+      const key = browserKey(value);
+      if (!key) throw new Error('Expected a supported key.');
+      await pressKeyIn(webContents, key);
+      expect(commands[0]?.params).toMatchObject({ type: 'rawKeyDown', modifiers: key.modifiers });
+      expect(commands[0]?.params).not.toHaveProperty('text');
+      expect(commands[1]?.params).toMatchObject({ type: 'keyUp' });
+    }
+  );
+
+  it.each(['Enter', 'shift+Enter', 'Space'])('preserves text for %s', async (value) => {
+    const { webContents, commands } = createWebContents();
+    const key = browserKey(value);
+    if (!key) throw new Error('Expected a supported key.');
+    await pressKeyIn(webContents, key);
+    expect(commands[0]?.params).toMatchObject({ type: 'keyDown', text: key.text });
   });
 });
