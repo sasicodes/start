@@ -85,7 +85,7 @@ export const useBrowser = ({ onClose, navigation, onUrlOpened, onInspectText }: 
   );
 
   const openAddress = useCallback(
-    async (value: string, newTab = false, tabId = '') => {
+    async (value: string, newTab = false, tabId = '', requestId = '') => {
       const next = value.trim();
       if (!next) {
         setError('');
@@ -98,7 +98,7 @@ export const useBrowser = ({ onClose, navigation, onUrlOpened, onInspectText }: 
       if (!mountedRef.current) return;
 
       const result: BrowserActionResult = await window.pi.app
-        .browserOpen(value, { newTab, ...(tabId ? { tabId } : {}) })
+        .browserOpen(value, { newTab, ...(tabId ? { tabId } : {}), ...(requestId ? { requestId } : {}) })
         .catch(() => ({
           ok: false,
           error: 'This site cannot be loaded.'
@@ -210,9 +210,18 @@ export const useBrowser = ({ onClose, navigation, onUrlOpened, onInspectText }: 
 
     if (!navigation.url) return;
     setAddress(formatBrowserAddress(navigation.url));
-    openAddress(navigation.url, navigation.newTab, navigation.tabId).catch(() => {});
+    openAddress(navigation.url, navigation.newTab, navigation.tabId, navigation.requestId ?? '').catch(() => {});
     onUrlOpened();
-  }, [navigation.id, navigation.newTab, navigation.tabId, navigation.url, onUrlOpened, openAddress, selectTab]);
+  }, [
+    navigation.id,
+    navigation.newTab,
+    navigation.requestId,
+    navigation.tabId,
+    navigation.url,
+    onUrlOpened,
+    openAddress,
+    selectTab
+  ]);
 
   useEffect(
     () => () => {

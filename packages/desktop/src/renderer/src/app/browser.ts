@@ -17,8 +17,8 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
   const [navigation, setNavigation] = useState(emptyBrowserNavigation);
 
   const open = useCallback(
-    (nextUrl: string, newTab = false, tabId = '') => {
-      setNavigation((current) => nextBrowserNavigation(current, nextUrl, newTab, tabId));
+    (nextUrl: string, newTab = false, tabId = '', requestId = '') => {
+      setNavigation((current) => nextBrowserNavigation(current, nextUrl, newTab, tabId, requestId));
       setSurface('main');
       openPanel();
     },
@@ -31,7 +31,9 @@ export const useBrowserPanel = ({ openPanel, setSurface }: UseBrowserPanelInput)
 
   useEffect(
     () =>
-      window.pi.app.onBrowserOpenRequest((request) => open(request.url, request.newTab === true, request.tabId ?? '')),
+      window.pi.app.onBrowserOpenRequest((request) =>
+        open(request.url, request.newTab === true, request.tabId ?? '', request.requestId ?? '')
+      ),
     [open]
   );
 

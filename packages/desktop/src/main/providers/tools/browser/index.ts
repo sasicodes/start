@@ -13,14 +13,10 @@ import {
   scrollInBrowser,
   typeInBrowser
 } from '@main/browser/index';
+import { requestBrowserOpen } from '@main/browser/requests';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { browserViewportMetrics } from '@main/browser/viewport';
-import {
-  requireActiveTab,
-  requiredString,
-  waitForBrowserOpen,
-  waitForBrowserSelection
-} from '@main/providers/tools/browser/navigation';
+import { requireActiveTab, requiredString, waitForBrowserSelection } from '@main/providers/tools/browser/navigation';
 import {
   browserClickSchema,
   browserOpenSchema,
@@ -56,12 +52,10 @@ export const createBrowserTools = () => [
       const tabIdValue = tabId ? requiredString(tabId, 'tab id') : '';
       if (tabIdValue && !getBrowserStatus().tabs.some((tab) => tab.id === tabIdValue))
         throw new Error('Browser tab is not available. Read browser_status before retrying.');
-      sendToMainWindow('app:browser-open-request', {
-        url: normalizedUrl,
+      const result = await requestBrowserOpen(normalizedUrl, {
         ...(tabIdValue ? { tabId: tabIdValue, newTab: newTab === true } : { newTab: newTab !== false })
       });
-      const status = await waitForBrowserOpen(normalizedUrl, tabIdValue);
-      if (!status.open || !status.url) throw new Error('Browser did not open.');
+      if (!result.ok) throw new Error(result.error ?? 'Browser did not open.');
 
       return textResult(`Opened ${normalizedUrl} in the in-app browser.`);
     },

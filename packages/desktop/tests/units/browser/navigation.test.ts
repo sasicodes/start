@@ -32,6 +32,12 @@ describe('browser navigation', () => {
     });
   });
 
+  it('carries an open request id to navigation without reusing it for the next open', () => {
+    const requested = nextBrowserNavigation(emptyBrowserNavigation, 'https://example.com/', true, '', 'request-1');
+    expect(requested.requestId).toBe('request-1');
+    expect(nextBrowserNavigation(requested, 'https://other.example/')).not.toHaveProperty('requestId');
+  });
+
   it('marks an existing tab for selection', () => {
     expect(nextBrowserTabSelection(emptyBrowserNavigation, 'tab-2')).toEqual({
       id: 1,

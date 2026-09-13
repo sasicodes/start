@@ -1,4 +1,4 @@
-import type { BrowserStatus } from '@main/browser/index';
+import { completeBrowserOpen } from '@main/browser/requests';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { broadcastsByChannel, resetBroadcasts } from '../../../fakes/window.js';
 
@@ -31,7 +31,6 @@ vi.mock('@main/browser/index', () => ({
 }));
 
 const { createBrowserTools } = await import('@main/providers/tools/browser/index');
-const { browserOpenSettled } = await import('@main/providers/tools/browser/navigation');
 
 interface TestToolResult {
   details: null;
@@ -131,7 +130,7 @@ describe('browser tools', () => {
     try {
       const pending = toolByName('browser_open').execute('call-timeout', { url: 'https://new.example.com/' });
       const rejected = expect(pending).rejects.toThrow('Browser navigation timed out');
-      await vi.advanceTimersByTimeAsync(5100);
+      await vi.advanceTimersByTimeAsync(15100);
       await rejected;
     } finally {
       vi.useRealTimers();
@@ -166,132 +165,44 @@ describe('browser tools', () => {
     try {
       const pending = toolByName('browser_open').execute('wrong-tab', { url: status.url, tabId: 'tab-2' });
       const rejected = expect(pending).rejects.toThrow('Browser navigation timed out');
-      await vi.advanceTimersByTimeAsync(5100);
+      await vi.advanceTimersByTimeAsync(15100);
       await rejected;
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('opens normalized URLs in the app browser', async () => {
-    getBrowserStatusMock
-      .mockReturnValueOnce({
-        url: '',
-        open: false,
-        title: '',
-        activeTabId: '',
-        loading: false,
-        tabs: [],
-        canGoBack: false,
-        canGoForward: false
-      })
-      .mockReturnValueOnce({
-        url: 'http://localhost:5173/',
-        open: true,
-        title: '',
-        activeTabId: 'tab-2',
-        loading: true,
-        tabs: [{ id: 'tab-2', url: 'http://localhost:5173/', title: '', loading: true }],
-        canGoBack: false,
-        canGoForward: false
-      });
-
-    const result = await toolByName('browser_open').execute('call-1', { url: 'localhost:5173' });
-
-    expect(getBrowserStatusMock).toHaveBeenCalled();
-    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
-      { url: 'http://localhost:5173/', newTab: true }
-    ]);
-    expect(result.content[0]?.text).toBe('Opened http://localhost:5173/ in the in-app browser.');
-  });
-
-  it('opens local file URLs and paths the same as manual navigation', async () => {
-    getBrowserStatusMock
-      .mockReturnValueOnce({
-        url: '',
-        open: false,
-        title: '',
-        activeTabId: '',
-        loading: false,
-        tabs: [],
-        canGoBack: false,
-        canGoForward: false
-      })
-      .mockReturnValueOnce({
-        url: 'file:///tmp/lesson-01.html',
-        open: true,
-        title: '',
-        activeTabId: 'tab-2',
-        loading: false,
-        tabs: [{ id: 'tab-2', url: 'file:///tmp/lesson-01.html', title: '', loading: false }],
-        canGoBack: false,
-        canGoForward: false
-      });
-
-    const result = await toolByName('browser_open').execute('call-1', { url: '/tmp/lesson-01.html' });
-
-    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
-      { url: 'file:///tmp/lesson-01.html', newTab: true }
-    ]);
-    expect(result.content[0]?.text).toBe('Opened file:///tmp/lesson-01.html in the in-app browser.');
-  });
-
-  it('accepts a redirected page once it settles instead of polling out', async () => {
-    getBrowserStatusMock
-      .mockReturnValueOnce({
-        url: '',
-        open: false,
-        title: '',
-        activeTabId: '',
-        loading: false,
-        tabs: [],
-        canGoBack: false,
-        canGoForward: false
-      })
-      .mockReturnValueOnce({
-        url: 'https://example.com/',
-        open: true,
-        title: '',
-        activeTabId: 'tab-1',
-        loading: true,
-        tabs: [{ id: 'tab-1', url: 'https://example.com/', title: '', loading: true }],
-        canGoBack: false,
-        canGoForward: false
-      })
-      .mockReturnValueOnce({
-        url: 'https://example.com/',
-        open: true,
-        title: 'Example',
-        activeTabId: 'tab-1',
-        loading: false,
-        tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
-        canGoBack: false,
-        canGoForward: false
-      });
-
-    const result = await toolByName('browser_open').execute('call-1', { url: 'http://example.com' });
-
-    expect(getBrowserStatusMock).toHaveBeenCalledTimes(3);
-    expect(result.content[0]?.text).toBe('Opened http://example.com/ in the in-app browser.');
+  it.each([
+    ['localhost:5173', 'http://localhost:5173/'],
+    ['/tmp/lesson-01.html', 'file:///tmp/lesson-01.html'],
+    ['http://example.com', 'http://example.com/']
+  ])('opens %s only after its own request completes', async (url, normalizedUrl) => {
+    const pending = toolByName('browser_open').execute('call-1', { url });
+    const request = broadcastsByChannel('app:browser-open-request')[0]?.args[0] as { requestId: string };
+    expect(request).toEqual({ url: normalizedUrl, newTab: true, requestId: expect.any(String) });
+    completeBrowserOpen(request.requestId, { ok: true });
+    const result = await pending;
+    expect(result.content[0]?.text).toBe(`Opened ${normalizedUrl} in the in-app browser.`);
   });
 
   it('opens URLs in a requested existing browser tab', async () => {
-    getBrowserStatusMock.mockReturnValue({
+    const pending = toolByName('browser_open').execute('call-1', { url: 'https://example.com', tabId: 'tab-1' });
+    const request = broadcastsByChannel('app:browser-open-request')[0]?.args[0] as { requestId: string };
+    expect(request).toEqual({
       url: 'https://example.com/',
-      open: true,
-      title: 'Example',
-      activeTabId: 'tab-1',
-      loading: false,
-      tabs: [{ id: 'tab-1', url: 'https://example.com/', title: 'Example', loading: false }],
-      canGoBack: true,
-      canGoForward: false
+      tabId: 'tab-1',
+      newTab: false,
+      requestId: expect.any(String)
     });
+    completeBrowserOpen(request.requestId, { ok: true });
+    await pending;
+  });
 
-    await toolByName('browser_open').execute('call-1', { url: 'https://example.com', tabId: 'tab-1' });
-
-    expect(broadcastsByChannel('app:browser-open-request')[0]?.args).toEqual([
-      { url: 'https://example.com/', tabId: 'tab-1', newTab: false }
-    ]);
+  it('reports the actual navigation failure even if another tab has the requested URL', async () => {
+    const pending = toolByName('browser_open').execute('call-1', { url: 'https://example.com/' });
+    const request = broadcastsByChannel('app:browser-open-request')[0]?.args[0] as { requestId: string };
+    completeBrowserOpen(request.requestId, { ok: false, error: 'This site cannot be loaded.' });
+    await expect(pending).rejects.toThrow('This site cannot be loaded.');
   });
 
   it('selects an existing browser tab', async () => {
@@ -493,53 +404,5 @@ describe('browser tools', () => {
     expect(clickInBrowserMock).toHaveBeenCalledWith('e1');
     expect(typeInBrowserMock).toHaveBeenCalledWith({ ref: 'e1', text: 'x', clear: false });
     expect(pressInBrowserMock).toHaveBeenCalledWith('Enter');
-  });
-});
-
-describe('browserOpenSettled', () => {
-  const openStatus = (overrides: Partial<BrowserStatus> = {}): BrowserStatus => ({
-    url: 'https://example.com/',
-    open: true,
-    title: 'Example',
-    loading: false,
-    canGoBack: false,
-    activeTabId: 'tab-1',
-    canGoForward: false,
-    tabs: [],
-    ...overrides
-  });
-
-  it('fails while the browser panel is closed', () => {
-    expect(browserOpenSettled(openStatus({ open: false }), 'https://example.com/', '', false)).toBe(false);
-  });
-
-  it('succeeds on an exact URL match even while loading', () => {
-    expect(browserOpenSettled(openStatus({ loading: true }), 'https://example.com/', '', false)).toBe(true);
-  });
-
-  it('waits while a redirected page is still loading', () => {
-    const status = openStatus({ url: 'https://example.com/home', loading: true });
-
-    expect(browserOpenSettled(status, 'http://example.com/', '', false)).toBe(false);
-  });
-
-  it('succeeds once a redirected page settles on a new URL', () => {
-    expect(browserOpenSettled(openStatus(), 'http://example.com/', '', false)).toBe(true);
-  });
-
-  it('ignores the settled pre-request page before navigation starts', () => {
-    const status = openStatus({ url: 'https://old.example.com/' });
-
-    expect(browserOpenSettled(status, 'https://new.example.com/', 'https://old.example.com/', false)).toBe(false);
-  });
-
-  it('succeeds when observed navigation lands back on the initial URL', () => {
-    const status = openStatus({ url: 'https://old.example.com/' });
-
-    expect(browserOpenSettled(status, 'https://new.example.com/', 'https://old.example.com/', true)).toBe(true);
-  });
-
-  it('waits while the tab has no URL yet', () => {
-    expect(browserOpenSettled(openStatus({ url: '' }), 'https://example.com/', '', true)).toBe(false);
   });
 });

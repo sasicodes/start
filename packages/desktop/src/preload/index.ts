@@ -378,6 +378,7 @@ export interface BrowserActionResult {
 export interface BrowserOpenOptions {
   tabId?: string;
   newTab?: boolean;
+  requestId?: string;
 }
 
 export interface BrowserOpenRequest extends BrowserOpenOptions {

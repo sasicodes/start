@@ -6,6 +6,7 @@ import { attachInspectListener, startInspect, stopInspect } from '@main/browser/
 import { clickBrowserElement, scrollBrowserPage, typeBrowserText } from '@main/browser/interaction';
 import { browserKey } from '@main/browser/keys';
 import { waitForPageReady } from '@main/browser/ready';
+import { completeBrowserOpen, hasBrowserOpenRequest } from '@main/browser/requests';
 import { type ScreenshotDetail, screenshotSize } from '@main/browser/screenshot';
 import type { BrowserScrollDirection } from '@main/browser/scroll';
 import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
@@ -68,6 +69,7 @@ export interface BrowserActionResult {
 export interface BrowserOpenOptions {
   tabId?: string;
   newTab?: boolean;
+  requestId?: string;
 }
 
 export interface BrowserTypeOptions {
@@ -189,8 +191,6 @@ const clearPendingStatusBroadcast = () => {
 const externalUrl = (url: string) => {
   if (url.startsWith('mailto:')) shell.openExternal(url).catch(() => {});
 };
-
-const isInterruptedNavigation = (error: unknown) => String(error).includes('ERR_ABORTED');
 
 const createBrowserView = () => {
   const view = new WebContentsView({
@@ -393,7 +393,7 @@ export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | nu
   return { ok: true, status: statusFromView() };
 };
 
-export const openBrowserUrl = async (
+const navigateBrowser = async (
   sender: WebContents,
   value: string,
   options: BrowserOpenOptions = {}
@@ -426,12 +426,26 @@ export const openBrowserUrl = async (
     .loadURL(url)
     .then(() => null)
     .catch((error: unknown) => error);
-  if (loadError && !isInterruptedNavigation(loadError))
-    return { ok: false, error: 'This site cannot be loaded.', status: statusFromView() };
+  if (loadError) return { ok: false, error: 'This site cannot be loaded.', status: statusFromView() };
 
   await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
   return { ok: true, status: statusFromView() };
+};
+
+export const openBrowserUrl = async (
+  sender: WebContents,
+  value: string,
+  options: BrowserOpenOptions = {}
+): Promise<BrowserActionResult> => {
+  if (options.requestId && !hasBrowserOpenRequest(options.requestId))
+    return { ok: false, error: 'Browser open request expired.' };
+  const result = await navigateBrowser(sender, value, options).catch(() => ({
+    ok: false,
+    error: 'This site cannot be loaded.'
+  }));
+  if (options.requestId) completeBrowserOpen(options.requestId, result);
+  return result;
 };
 
 export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
