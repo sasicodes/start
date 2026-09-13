@@ -33,7 +33,6 @@ export const usePanelResize = ({
   const abortRef = useRef<AbortController>();
   const frameRef = useRef<number>();
   const lastClientXRef = useRef(0);
-  const rawWidthRef = useRef(initialWidth);
   const resizingRef = useRef(false);
   const settleFrameRef = useRef<number>();
   const settleTimeoutRef = useRef<number>();
@@ -182,26 +181,31 @@ export const usePanelResize = ({
     });
   }, [clearSettle, getMinWidth, onSidePanelCollapse, setOffset, setWidth, stopResize]);
 
-  const finishResize = useCallback(() => {
-    const rawWidth = rawWidthRef.current;
-    const minWidth = getMinWidth();
-    const nextWidth = rawWidth < minWidth ? minWidth : preferredWidthRef.current;
+  const finishResize = useCallback(
+    (event: PointerEvent) => {
+      if (event.type === 'pointerup') lastClientXRef.current = event.clientX;
+      const rawWidth = startWidthRef.current + startClientXRef.current - lastClientXRef.current;
+      applyDragWidth(rawWidth);
+      const minWidth = getMinWidth();
+      const nextWidth = rawWidth < minWidth ? minWidth : preferredWidthRef.current;
 
-    if (rawWidth <= getPanelCollapseWidth(minWidth)) {
-      collapse();
-      return;
-    }
+      if (rawWidth <= getPanelCollapseWidth(minWidth)) {
+        collapse();
+        return;
+      }
 
-    writeStoredPanelWidth(nextWidth);
+      writeStoredPanelWidth(nextWidth);
 
-    if (rawWidth < minWidth) {
-      preferredWidthRef.current = nextWidth;
-      settleWidth(nextWidth);
-      return;
-    }
+      if (rawWidth < minWidth) {
+        preferredWidthRef.current = nextWidth;
+        settleWidth(nextWidth);
+        return;
+      }
 
-    stopResize();
-  }, [collapse, getMinWidth, settleWidth, stopResize]);
+      stopResize();
+    },
+    [applyDragWidth, collapse, getMinWidth, settleWidth, stopResize]
+  );
 
   const scheduleResize = useCallback(
     (event: PointerEvent) => {
@@ -213,7 +217,6 @@ export const usePanelResize = ({
 
         const currentX = lastClientXRef.current;
         const nextWidth = startWidthRef.current + startClientXRef.current - currentX;
-        rawWidthRef.current = nextWidth;
         setDocumentCursor(applyDragWidth(nextWidth));
       });
     },
@@ -235,7 +238,6 @@ export const usePanelResize = ({
       startClientXRef.current = event.clientX;
       startWidthRef.current = widthRef.current;
       lastClientXRef.current = event.clientX;
-      rawWidthRef.current = widthRef.current;
       interactionStyleRef.current = {
         bodyCursor: document.body.style.cursor,
         htmlCursor: document.documentElement.style.cursor,

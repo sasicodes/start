@@ -125,6 +125,30 @@ describe('clickBrowserElement', () => {
 });
 
 describe('typeBrowserText', () => {
+  it.each(['button', 'checkbox', 'readonly'])('rejects %s targets before clicking', async (kind) => {
+    class Input {
+      type = kind === 'readonly' ? 'text' : kind;
+      readOnly = kind === 'readonly';
+      getBoundingClientRect = () => ({ width: 100, height: 30 });
+      getAttribute = () => null;
+    }
+    class Textarea {}
+    const element = new Input();
+    const { commands, webContents } = createWebContents((script: string) =>
+      runInNewContext(script, {
+        HTMLInputElement: Input,
+        HTMLTextAreaElement: Textarea,
+        window: { __startCursor__: {}, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) },
+        document: { querySelectorAll: () => [element] }
+      })
+    );
+    await expect(typeBrowserText(webContents, 'e1', 'hello', true)).resolves.toMatchObject({
+      ok: false,
+      error: expect.stringContaining('editable field')
+    });
+    expect(commands).toHaveLength(0);
+  });
+
   it('clicks the field, clears it, and inserts the text', async () => {
     const { commands, webContents } = createWebContents();
 
@@ -147,20 +171,64 @@ describe('typeBrowserText', () => {
 
 describe('scrollBrowserPage', () => {
   it('reads document scrolling from the scrolling element rather than body', async () => {
-    let reads = 0;
     const body = { scrollTop: 0, scrollLeft: 0 };
-    const root = { scrollTop: 0, scrollLeft: 0 };
+    const root = { scrollTop: 0, scrollLeft: 0, isConnected: true };
+    const context = {
+      window: { innerWidth: 800, innerHeight: 600 },
+      document: { body, documentElement: root, scrollingElement: root, elementFromPoint: () => body }
+    };
     const { webContents } = createWebContents((script: string) => {
-      if (script.includes('const node = document.elementFromPoint')) {
-        root.scrollTop = reads++ === 0 ? 0 : 600;
-        return runInNewContext(script, {
-          window: { innerWidth: 800, innerHeight: 600 },
-          document: { body, documentElement: root, scrollingElement: root, elementFromPoint: () => body }
-        });
+      if (script.includes('__startScrollTarget__')) {
+        if (script.includes('delete window.__startScrollTarget__')) root.scrollTop = 600;
+        return runInNewContext(script, context);
       }
       return { ok: true, x: 50, y: 50 };
     });
     await expect(scrollBrowserPage(webContents, 'down', 600)).resolves.toEqual({ ok: true });
+  });
+
+  it.each([true, false])('uses the vertical ancestor over a horizontal child, CDP: %s', async (attachable) => {
+    const root = { scrollTop: 0, scrollLeft: 0, isConnected: true };
+    const parent = {
+      scrollTop: 0,
+      scrollLeft: 0,
+      scrollHeight: 1200,
+      clientHeight: 400,
+      scrollWidth: 300,
+      clientWidth: 300,
+      isConnected: true,
+      parentElement: root,
+      scrollBy: ({ top }: { top: number }) => {
+        parent.scrollTop += top;
+      }
+    };
+    const child = {
+      scrollTop: 0,
+      scrollLeft: 0,
+      scrollHeight: 100,
+      clientHeight: 100,
+      scrollWidth: 900,
+      clientWidth: 300,
+      isConnected: true,
+      parentElement: parent
+    };
+    const context = {
+      window: { innerWidth: 800, innerHeight: 600, getComputedStyle: () => ({ overflowX: 'auto', overflowY: 'auto' }) },
+      document: { body: root, documentElement: root, scrollingElement: root, elementFromPoint: () => child }
+    };
+    const { webContents } = createWebContents((script: string) => {
+      if (script.includes('__startScrollTarget__')) return runInNewContext(script, context);
+      return { ok: true, x: 400, y: 300 };
+    }, attachable);
+    vi.spyOn(webContents.debugger, 'sendCommand').mockImplementation(async () => {
+      parent.scrollTop = 300;
+      return {};
+    });
+    await expect(scrollBrowserPage(webContents, 'down', 300)).resolves.toEqual({ ok: true });
+    expect(parent.scrollTop).toBe(300);
+    expect(child.scrollLeft).toBe(0);
+    expect(root.scrollTop).toBe(0);
+    expect(context.window).not.toHaveProperty('__startScrollTarget__');
   });
 
   it('wheels at the cursor anchor and reports movement', async () => {

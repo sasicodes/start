@@ -593,6 +593,21 @@ describe('browser panel view', () => {
     expect(view.webContents.inputEvents).toEqual([]);
   });
 
+  it('preserves shortcut modifiers in native fallback', async () => {
+    const window = createFakeBrowserWindow();
+    setBrowserBounds(webContentsForTest(window), { x: 0, y: 0, width: 300, height: 200 });
+    const view = window.contentView.children[0];
+    if (!view) throw new Error('Missing view');
+    vi.spyOn(view.webContents.debugger, 'attach').mockImplementation(() => {
+      throw new Error('in use');
+    });
+    await expect(pressInBrowser('ctrl+shift+Enter')).resolves.toMatchObject({ ok: true });
+    expect(view.webContents.inputEvents).toEqual([
+      { type: 'keyDown', keyCode: 'Enter', modifiers: ['control', 'shift'] },
+      { type: 'keyUp', keyCode: 'Enter', modifiers: ['control', 'shift'] }
+    ]);
+  });
+
   it('rejects unsupported browser key presses', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

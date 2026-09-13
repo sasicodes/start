@@ -16,6 +16,7 @@ import {
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
 import { wait } from '@main/browser/utils/wait';
+import { browserViewportMetrics } from '@main/browser/viewport';
 import { toolImageResult, toolResult } from '@main/providers/tools/result';
 import { sendToMainWindow } from '@main/window';
 import * as v from 'valibot';
@@ -311,7 +312,7 @@ export const createBrowserTools = () => [
     ...browserToolDefaults,
     async execute(_toolCallId, { ref, text, clear }) {
       const refValue = requiredString(ref, 'element ref');
-      const textValue = requiredString(text, 'text value');
+      const textValue = v.parse(v.string('Enter a browser text value.'), text);
       const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear === true });
       if (!result.ok) throw new Error(result.error ?? 'Could not type into the browser element.');
       return textResult(`Typed into browser element ${refValue}.`);
@@ -373,7 +374,10 @@ export const createBrowserTools = () => [
       const heightValue = v.parse(v.optional(v.pipe(v.number(), v.finite())), height);
       const result = await resizeBrowserViewport(widthValue, heightValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not emulate that viewport size.');
-      return textResult(`Emulating a ${Math.round(widthValue)} px wide browser viewport.`);
+      const metrics = browserViewportMetrics(widthValue, heightValue);
+      return textResult(
+        `Emulating a ${metrics.width} × ${metrics.height} px browser viewport, centered and scaled to fit the panel.`
+      );
     },
     name: 'browser_viewport',
     parameters: browserViewportSchema,

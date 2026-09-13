@@ -327,6 +327,18 @@ describe('browser tools', () => {
     expect(resizeBrowserViewportMock).not.toHaveBeenCalled();
   });
 
+  it('preserves whitespace and allows clearing text', async () => {
+    await toolByName('browser_type').execute('call-1', { ref: 'e1', text: '  hello\n', clear: true });
+    expect(typeInBrowserMock).toHaveBeenCalledWith({ ref: 'e1', text: '  hello\n', clear: true });
+    await toolByName('browser_type').execute('call-2', { ref: 'e1', text: '', clear: true });
+    expect(typeInBrowserMock).toHaveBeenLastCalledWith({ ref: 'e1', text: '', clear: true });
+  });
+
+  it('reports actual clamped viewport dimensions', async () => {
+    const result = await toolByName('browser_viewport').execute('call-1', { width: 99999, height: 1 });
+    expect(result.content[0]?.text).toContain('4000 × 240');
+  });
+
   it('delegates browser interaction actions', async () => {
     await toolByName('browser_click').execute('call-1', { ref: 'e1' });
     await toolByName('browser_type').execute('call-2', { ref: 'e2', text: 'hello', clear: true });

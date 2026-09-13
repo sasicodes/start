@@ -233,6 +233,8 @@ export interface FakeBrowserWebContents extends FakeWebContents {
   audioMuted: boolean;
   closed: boolean;
   debugger: FakeDebugger;
+  enableDeviceEmulation: (parameters: unknown) => void;
+  disableDeviceEmulation: () => void;
   isWaitingForResponse: () => boolean;
   capturePage: () => Promise<FakeNativeImage>;
   close: () => void;
@@ -319,6 +321,8 @@ const createFakeBrowserWebContents = (partition = ''): FakeBrowserWebContents =>
     audioMuted: false,
     closed: false,
     debugger: createFakeDebugger(),
+    enableDeviceEmulation: () => {},
+    disableDeviceEmulation: () => {},
     isWaitingForResponse: () => false,
     capturePage: async () => fakeNativeImage(),
     close: () => {

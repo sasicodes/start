@@ -145,10 +145,10 @@ export const cursorScript: string = `
       : 'scale(1)');
   };
 
-  const resolveArrivals = () => {
+  const resolveArrivals = (cancelled = false) => {
     const pending = arrivals;
     arrivals = [];
-    for (const resolve of pending) resolve();
+    for (const resolve of pending) resolve(cancelled);
   };
 
   const frame = (now) => {
@@ -224,7 +224,7 @@ export const cursorScript: string = `
     stopFrames();
     window.clearInterval(watchdog);
     watchdog = 0;
-    resolveArrivals();
+    resolveArrivals(true);
   };
 
   const watch = () => {
@@ -285,15 +285,19 @@ export const cursorScript: string = `
     }
     lastFrame = performance.now();
     schedule();
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let done = false;
-      const finish = () => {
+      const finish = (cancelled = false) => {
         if (done) return;
         done = true;
         window.clearTimeout(timer);
-        resolve();
+        if (cancelled) reject(new Error('Browser cursor movement was cancelled or timed out. Take a fresh snapshot before retrying.'));
+        else resolve();
       };
-      const timer = window.setTimeout(finish, TRAVEL_TIMEOUT_MS);
+      const timer = window.setTimeout(() => {
+        stopFrames();
+        resolveArrivals(true);
+      }, TRAVEL_TIMEOUT_MS);
       arrivals.push(finish);
     });
   };

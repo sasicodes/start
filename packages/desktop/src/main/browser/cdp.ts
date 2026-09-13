@@ -27,7 +27,9 @@ export const sendCdp = async (
   if (!attachCdp(webContents)) return null;
 
   try {
-    return await withTimeout(webContents.debugger.sendCommand(method, params), cdpTimeoutMs);
+    const result = await withTimeout(webContents.debugger.sendCommand(method, params), cdpTimeoutMs);
+    if (result === null) detachCdp(webContents);
+    return result;
   } catch {
     return null;
   }

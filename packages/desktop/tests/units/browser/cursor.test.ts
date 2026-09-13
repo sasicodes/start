@@ -78,9 +78,7 @@ describe('releaseBrowserControl', () => {
     await vi.waitFor(() => expect(view.webContents.debugger.attached).toBe(false));
 
     expect(executeJavaScript).toHaveBeenCalledWith('window.__startCursor__?.hide();', true);
-    expect(view.webContents.debugger.commands.map((command) => command.method)).toContain(
-      'Emulation.clearDeviceMetricsOverride'
-    );
+    expect(view.webContents.debugger.commands).toEqual([]);
   });
 });
 
@@ -255,6 +253,25 @@ describe('cursor directional motion', () => {
     await movement;
     expect(styles[3]?.transform).toBe('rotate(0.00deg) scale(1)');
     expect(frames.size).toBe(0);
+  });
+
+  it('cancels pending movement when the user takes over', async () => {
+    const { cursor, dispatch, frames } = cursorRuntime(false);
+    const movement = cursor.moveTo(700, 400);
+    const result = expect(movement).rejects.toThrow('cancelled');
+    dispatch('pointerdown');
+    await result;
+    expect(frames.size).toBe(0);
+    expect(cursor.isVisible()).toBe(false);
+  });
+
+  it('rejects a movement deadline instead of clicking an unreached target', async () => {
+    const { cursor, finishTimeouts } = cursorRuntime(false);
+    const movement = cursor.moveTo(700, 400);
+    const result = expect(movement).rejects.toThrow('timed out');
+    finishTimeouts();
+    await result;
+    cursor.hide();
   });
 
   it('moves immediately without tilt when reduced motion is enabled', async () => {
