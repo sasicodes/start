@@ -6,6 +6,8 @@ import { attachInspectListener, startInspect, stopInspect } from '@main/browser/
 import { clickBrowserElement, scrollBrowserPage, typeBrowserText } from '@main/browser/interaction';
 import { browserKey } from '@main/browser/keys';
 import { waitForPageReady } from '@main/browser/ready';
+import { completeBrowserOpen, hasBrowserOpenRequest } from '@main/browser/requests';
+import { type ScreenshotDetail, screenshotSize } from '@main/browser/screenshot';
 import type { BrowserScrollDirection } from '@main/browser/scroll';
 import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
 import { pickReusableTab } from '@main/browser/tabs';
@@ -67,6 +69,7 @@ export interface BrowserActionResult {
 export interface BrowserOpenOptions {
   tabId?: string;
   newTab?: boolean;
+  requestId?: string;
 }
 
 export interface BrowserTypeOptions {
@@ -110,7 +113,6 @@ const closedPanelError = 'Open the in-app browser panel first.';
 const maxBrowserTabs = 8;
 const statusBroadcastDelayMs = 80;
 const actionReadyTimeoutMs = 3000;
-const screenshotWidth = 1024;
 const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
@@ -189,8 +191,6 @@ const clearPendingStatusBroadcast = () => {
 const externalUrl = (url: string) => {
   if (url.startsWith('mailto:')) shell.openExternal(url).catch(() => {});
 };
-
-const isInterruptedNavigation = (error: unknown) => String(error).includes('ERR_ABORTED');
 
 const createBrowserView = () => {
   const view = new WebContentsView({
@@ -393,7 +393,7 @@ export const setBrowserBounds = (sender: WebContents, bounds: BrowserBounds | nu
   return { ok: true, status: statusFromView() };
 };
 
-export const openBrowserUrl = async (
+const navigateBrowser = async (
   sender: WebContents,
   value: string,
   options: BrowserOpenOptions = {}
@@ -404,7 +404,10 @@ export const openBrowserUrl = async (
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  if (options.tabId && browserTabs.has(options.tabId)) {
+  if (options.tabId && !browserTabs.has(options.tabId))
+    return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
+
+  if (options.tabId) {
     activeTabId = options.tabId;
   } else if (options.newTab) {
     activeTabId = tabForNewPage(url).id;
@@ -423,12 +426,29 @@ export const openBrowserUrl = async (
     .loadURL(url)
     .then(() => null)
     .catch((error: unknown) => error);
-  if (loadError && !isInterruptedNavigation(loadError))
-    return { ok: false, error: 'This site cannot be loaded.', status: statusFromView() };
+  if (loadError) return { ok: false, error: 'This site cannot be loaded.', status: statusFromView() };
 
   await waitForPageReady(tab.view.webContents, actionReadyTimeoutMs);
   sendStatus();
-  return { ok: true, status: statusFromView() };
+  const status = statusFromView();
+  if (options.requestId && (!status.open || status.activeTabId !== tab.id))
+    return { ok: false, error: 'Browser tab changed. Read browser_status and select the intended tab.', status };
+  return { ok: true, status };
+};
+
+export const openBrowserUrl = async (
+  sender: WebContents,
+  value: string,
+  options: BrowserOpenOptions = {}
+): Promise<BrowserActionResult> => {
+  if (options.requestId && !hasBrowserOpenRequest(options.requestId))
+    return { ok: false, error: 'Browser open request expired.' };
+  const result = await navigateBrowser(sender, value, options).catch(() => ({
+    ok: false,
+    error: 'This site cannot be loaded.'
+  }));
+  if (options.requestId) completeBrowserOpen(options.requestId, result);
+  return result;
 };
 
 export const newBrowserTab = (sender: WebContents): BrowserActionResult => {
@@ -540,7 +560,9 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
   }
 };
 
-export const readBrowserScreenshot = async (): Promise<BrowserScreenshotResult> => {
+export const readBrowserScreenshot = async (
+  detail: ScreenshotDetail = 'standard'
+): Promise<BrowserScreenshotResult> => {
   const tab = activeTab();
   if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
@@ -555,7 +577,9 @@ export const readBrowserScreenshot = async (): Promise<BrowserScreenshotResult> 
       };
     if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
 
-    const scaled = image.getSize().width > screenshotWidth ? image.resize({ width: screenshotWidth }) : image;
+    const source = image.getSize();
+    const size = screenshotSize(source.width, source.height, detail);
+    const scaled = size.width !== source.width || size.height !== source.height ? image.resize(size) : image;
     return { ok: true, image: scaled.toPNG().toString('base64'), status: statusFromView() };
   } catch {
     return { ok: false, error: 'Could not capture the browser screenshot.', status: statusFromView() };

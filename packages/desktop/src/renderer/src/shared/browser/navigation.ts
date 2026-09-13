@@ -3,6 +3,7 @@ export interface BrowserNavigation {
   url: string;
   tabId: string;
   newTab: boolean;
+  requestId?: string;
 }
 
 export const emptyBrowserNavigation: BrowserNavigation = {
@@ -21,8 +22,10 @@ export const nextBrowserNavigation = (
   navigation: BrowserNavigation,
   url: string,
   newTab = false,
-  tabId = ''
+  tabId = '',
+  requestId = ''
 ): BrowserNavigation => ({
+  ...(requestId ? { requestId } : {}),
   id: navigation.id + 1,
   url,
   tabId,

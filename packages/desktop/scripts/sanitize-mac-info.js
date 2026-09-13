@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
@@ -19,12 +20,22 @@ const deleteInfoKey = async (plistPath, keyPath) => {
 const sanitizeMacInfo = async (context) => {
   if (context.electronPlatformName !== 'darwin') return;
 
-  const plistPath = path.join(
-    context.appOutDir,
-    `${context.packager.appInfo.productFilename}.app`,
-    'Contents',
-    'Info.plist'
-  );
+  const { productFilename } = context.packager.appInfo;
+  const contentsPath = path.join(context.appOutDir, `${productFilename}.app`, 'Contents');
+  const plistPath = path.join(contentsPath, 'Info.plist');
+  const frameworksPath = path.join(contentsPath, 'Frameworks');
+
+  for (const entry of await readdir(frameworksPath, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith(`${productFilename} Helper`) || !entry.name.endsWith('.app'))
+      continue;
+    const helperPlistPath = path.join(frameworksPath, entry.name, 'Contents', 'Info.plist');
+    const { stdout } = await execFileAsync('/usr/libexec/PlistBuddy', [
+      '-c',
+      'Print :CFBundleDisplayName',
+      helperPlistPath
+    ]);
+    await execFileAsync('/usr/libexec/PlistBuddy', ['-c', `Set :CFBundleName ${stdout.trim()}`, helperPlistPath]);
+  }
 
   for (const key of unwantedUsageDescriptionKeys) {
     await deleteInfoKey(plistPath, `:${key}`);
