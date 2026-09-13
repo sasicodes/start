@@ -290,10 +290,12 @@ describe('cursor waiting state', () => {
     expect(cursor.isVisible()).toBe(true);
     expect(styles[2]?.opacity).toBe('0.55');
     expect(styles[2]?.width).toBe('24px');
+    expect(intervals.size).toBe(0);
     expect(animations).toHaveLength(1);
     expect(animations[0]).toEqual(expect.arrayContaining([expect.objectContaining({ transform: 'rotate(-4deg)' })]));
     cursor.show();
     expect(styles[2]?.opacity).toBe('1');
+    expect(intervals.size).toBe(1);
     cursor.hide();
     expect(cursor.isVisible()).toBe(false);
     expect(intervals.size).toBe(0);

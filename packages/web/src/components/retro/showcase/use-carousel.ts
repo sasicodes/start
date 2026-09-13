@@ -16,7 +16,7 @@ export const useCarousel = (count: number) => {
   useEffect(() => {
     if (!ref.current || !ready || paused) return;
     return observeRotation(ref.current, () => setActive((index) => (index + 1) % count));
-  }, [count, ready, paused, active]);
+  }, [count, ready, paused]);
 
   return { ref, load, active, paused, setActive, setPaused };
 };

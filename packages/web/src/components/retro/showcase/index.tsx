@@ -1,6 +1,8 @@
 import { Button } from '@base-ui/react/button';
+import { type KeyboardEvent, useRef } from 'react';
 import { OUTER_RAIL } from '@/constants';
 import { useCarousel } from './use-carousel';
+import { getSlide } from './utils/navigation';
 
 const slides = [
   { name: 'Browser', src: '/images/chart-review.webp', alt: 'Start reviewing a chart beside its built-in browser' },
@@ -22,18 +24,28 @@ const slides = [
 ];
 
 export const Showcase = () => {
+  const buttons = useRef<(HTMLElement | null)[]>([]);
   const { ref, load, active, paused, setActive, setPaused } = useCarousel(slides.length);
+
+  const navigate = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const next = getSlide(active, slides.length, event.key);
+    if (next === null) return;
+    event.preventDefault();
+    setActive(next);
+    buttons.current[next]?.focus();
+  };
 
   return (
     <section
       ref={ref}
       aria-label="Start in action"
       aria-roledescription="carousel"
-      className="relative z-[101] w-full bg-retro-cream [font-family:system-ui,sans-serif]"
+      className="relative z-[101] w-full bg-canvas [font-family:system-ui,sans-serif]"
     >
       <div
         style={{ maxWidth: `${OUTER_RAIL}px` }}
-        className="mx-auto border-y border-dashed border-retro-stone/50 bg-retro-cream/50 px-4 py-6 sm:px-8 sm:py-8 lg:p-14"
+        className="mx-auto border-y border-dashed border-retro-stone/50 bg-canvas/50 px-4 py-6 sm:px-8 sm:py-8 lg:p-14"
       >
         <div style={{ borderRadius: '1% / 1.6%' }} className="grid overflow-hidden">
           {slides.map((slide, index) => (
@@ -56,10 +68,15 @@ export const Showcase = () => {
           {slides.map((slide, index) => (
             <Button
               key={slide.src}
+              onKeyDown={navigate}
+              tabIndex={active === index ? 0 : -1}
+              ref={(element) => {
+                buttons.current[index] = element;
+              }}
               aria-label={`Show ${slide.name.toLowerCase()}`}
               aria-pressed={active === index}
               onClick={() => setActive(index)}
-              className="group flex h-8 items-center justify-center rounded-sm px-0.5 outline-offset-2 focus-visible:outline-2 focus-visible:outline-retro-base"
+              className="group flex h-8 items-center justify-center rounded-sm px-0.5 outline-none"
             >
               <span
                 className={`h-0.75 rounded-full bg-retro-base transition-opacity duration-150 ${active === index ? 'w-5 opacity-100' : 'w-2 opacity-25 group-hover:opacity-60'}`}
@@ -67,6 +84,7 @@ export const Showcase = () => {
             </Button>
           ))}
           <Button
+            onKeyDown={navigate}
             aria-pressed={paused}
             aria-label={paused ? 'Play slideshow' : 'Pause slideshow'}
             onClick={() => setPaused(!paused)}

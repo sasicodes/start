@@ -58,7 +58,7 @@ export const Home = () => {
   }, [isVisible, startLoop, stopLoop]);
 
   return (
-    <div className="w-full bg-retro-cream relative">
+    <div className="w-full bg-canvas relative">
       <Rails />
       <section className="flex w-full flex-col py-12 sm:py-16 lg:py-24">
         <Landing />

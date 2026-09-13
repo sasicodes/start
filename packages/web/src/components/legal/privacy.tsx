@@ -5,7 +5,7 @@ import { Section } from './section';
 
 export const Privacy = () => {
   return (
-    <div className="relative min-h-dvh w-full bg-retro-cream font-sans">
+    <div className="relative min-h-dvh w-full bg-canvas font-sans">
       <div style={{ maxWidth: `${INNER_RAIL}px` }} className="mx-auto px-6 pt-12 pb-0 sm:px-10 sm:pt-20">
         <Header
           title="Privacy"

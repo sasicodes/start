@@ -200,6 +200,8 @@ export const cursorScript: string = `
   const startWaiting = () => {
     if (waiting) return;
     waiting = true;
+    window.clearInterval(watchdog);
+    watchdog = 0;
     root.style.opacity = '0.55';
     glyph.style.filter = SHADOW + GLOW;
     if (reducedMotion()) return;

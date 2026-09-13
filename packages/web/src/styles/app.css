@@ -56,6 +56,7 @@
 }
 
 @theme {
+  --color-canvas: #faf9f6;
   --font-serif: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-pixel: "VT323", "Courier New", monospace;
   --font-cursive: "Cursive", cursive;
@@ -89,7 +90,7 @@
 
 @layer base {
   body {
-    @apply bg-retro-cream text-sm antialiased tabular-nums [text-rendering:optimizeLegibility];
+    @apply bg-canvas text-sm antialiased tabular-nums [text-rendering:optimizeLegibility];
   }
 
   h1 {
@@ -119,7 +120,7 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.35) var(--color-retro-cream);
+    scrollbar-color: rgba(0, 0, 0, 0.35) var(--color-canvas);
   }
 
   .dark * {
