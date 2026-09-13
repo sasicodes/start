@@ -1,4 +1,4 @@
-import { createBrowserTools } from '@main/providers/tools/browser';
+import { createBrowserTools } from '@main/providers/tools/browser/index';
 import { createFffTools } from '@main/providers/tools/fff/index';
 import { createWebSearchTools } from '@main/providers/tools/search/index';
 import { createSessionTools, type SessionController } from '@main/providers/tools/sessions';

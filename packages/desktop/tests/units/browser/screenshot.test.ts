@@ -91,6 +91,26 @@ describe('readBrowserScreenshot', () => {
     destroyBrowser();
   });
 
+  it.each([
+    { width: 4000, height: 3000, detail: 'standard' as const, expected: { width: 1024, height: 768 } },
+    { width: 4000, height: 3000, detail: 'high' as const, expected: { width: 2048, height: 1536 } },
+    { width: 1000, height: 4000, detail: 'standard' as const, expected: { width: 256, height: 1024 } },
+    { width: 1000, height: 4000, detail: 'high' as const, expected: { width: 512, height: 2048 } },
+    { width: 800, height: 600, detail: 'high' as const, expected: null }
+  ])('bounds $detail captures at $width × $height without upscaling', async ({ width, height, detail, expected }) => {
+    const view = openView();
+    const image = await view.webContents.capturePage();
+    const resize = vi.fn(() => image);
+    vi.spyOn(view.webContents, 'capturePage').mockResolvedValue({
+      ...image,
+      resize,
+      getSize: () => ({ width, height })
+    });
+    await expect(readBrowserScreenshot(detail)).resolves.toMatchObject({ ok: true });
+    if (expected) expect(resize).toHaveBeenCalledWith(expected);
+    else expect(resize).not.toHaveBeenCalled();
+  });
+
   it('times out an unresponsive native screenshot fallback', async () => {
     vi.useFakeTimers();
     try {

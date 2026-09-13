@@ -1,6 +1,5 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
 import {
-  type BrowserStatus,
   captureBrowserSnapshot,
   clickInBrowser,
   getBrowserStatus,
@@ -15,14 +14,29 @@ import {
   typeInBrowser
 } from '@main/browser/index';
 import { normalizeBrowserUrl } from '@main/browser/url';
-import { wait } from '@main/browser/utils/wait';
 import { browserViewportMetrics } from '@main/browser/viewport';
+import {
+  requireActiveTab,
+  requiredString,
+  waitForBrowserOpen,
+  waitForBrowserSelection
+} from '@main/providers/tools/browser/navigation';
+import {
+  browserClickSchema,
+  browserOpenSchema,
+  browserPressSchema,
+  browserScrollSchema,
+  browserSelectSchema,
+  browserTypeSchema,
+  browserViewportSchema,
+  emptySchema,
+  screenshotSchema,
+  tabSchema
+} from '@main/providers/tools/browser/schemas';
 import { toolImageResult, toolResult } from '@main/providers/tools/result';
 import { sendToMainWindow } from '@main/window';
 import * as v from 'valibot';
 
-const openPollMs = 100;
-const openTimeoutMs = 5000;
 const browserPromptGuideline =
   'Use browser tools only when the user includes @Browser, or while continuing that active @Browser task.';
 const browserToolDefaults = {
@@ -30,175 +44,7 @@ const browserToolDefaults = {
   promptGuidelines: [browserPromptGuideline]
 };
 
-const emptySchema = {
-  type: 'object',
-  required: [],
-  properties: {},
-  additionalProperties: false
-} as const;
-
-const browserOpenSchema = {
-  type: 'object',
-  required: ['url'],
-  properties: {
-    url: {
-      type: 'string',
-      description: 'HTTP, HTTPS, or local file URL or path.'
-    },
-    tabId: {
-      type: 'string',
-      description: 'Existing browser tab id from browser_status.'
-    },
-    newTab: {
-      type: 'boolean',
-      description: 'Open the URL in a separate browser tab when true.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserSelectSchema = {
-  type: 'object',
-  required: ['tabId'],
-  properties: {
-    tabId: {
-      type: 'string',
-      description: 'Browser tab id from browser_status.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserClickSchema = {
-  type: 'object',
-  required: ['ref'],
-  properties: {
-    ref: {
-      type: 'string',
-      description: 'Element ref from browser_snapshot, such as e1.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserTypeSchema = {
-  type: 'object',
-  required: ['ref', 'text'],
-  properties: {
-    ref: {
-      type: 'string',
-      description: 'Input element ref from browser_snapshot, such as e1.'
-    },
-    text: {
-      type: 'string',
-      description: 'Text to enter.'
-    },
-    clear: {
-      type: 'boolean',
-      description: 'Replace existing text when true.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserScrollSchema = {
-  type: 'object',
-  required: ['direction'],
-  properties: {
-    direction: {
-      enum: ['up', 'down', 'left', 'right'],
-      type: 'string',
-      description: 'Scroll direction for the page or the scrollable area at the viewport center.'
-    },
-    amount: {
-      type: 'number',
-      description: 'Scroll distance in pixels. Defaults to 600.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserViewportSchema = {
-  type: 'object',
-  required: [],
-  properties: {
-    width: {
-      type: 'number',
-      description: 'Emulated viewport width in CSS pixels, between 240 and 4000.'
-    },
-    height: {
-      type: 'number',
-      description: 'Emulated viewport height in CSS pixels. Defaults to 900.'
-    },
-    reset: {
-      type: 'boolean',
-      description: 'Restore the real panel viewport when true.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
-const browserPressSchema = {
-  type: 'object',
-  required: ['key'],
-  properties: {
-    key: {
-      type: 'string',
-      description: 'One key such as Enter, Tab, Escape, or ArrowDown, optionally with cmd, ctrl, alt, or shift.'
-    }
-  },
-  additionalProperties: false
-} as const;
-
 const textResult = (text: string) => toolResult(text, null);
-
-const browserStringSchema = (label: string) =>
-  v.pipe(v.string(), v.trim(), v.minLength(1, `Enter a browser ${label}.`));
-
-const requiredString = (value: unknown, label: string) => {
-  const result = v.safeParse(browserStringSchema(label), value);
-  if (result.success) return result.output;
-  throw new Error(`Enter a browser ${label}.`);
-};
-
-export const browserOpenSettled = (
-  status: BrowserStatus,
-  expectedUrl: string,
-  initialUrl: string,
-  sawLoading: boolean
-): boolean => {
-  if (!status.open) return false;
-  if (status.url === expectedUrl) return true;
-  if (status.loading || !status.url) return false;
-  return sawLoading || status.url !== initialUrl;
-};
-
-const waitForBrowserOpen = async (expectedUrl: string) => {
-  const startedAt = Date.now();
-  const initialUrl = getBrowserStatus().url;
-  let sawLoading = false;
-
-  while (Date.now() - startedAt < openTimeoutMs) {
-    const status = getBrowserStatus();
-    if (browserOpenSettled(status, expectedUrl, initialUrl, sawLoading)) return status;
-    sawLoading = sawLoading || status.loading;
-    await wait(openPollMs);
-  }
-
-  return getBrowserStatus();
-};
-
-const waitForBrowserSelection = async (tabId: string) => {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < openTimeoutMs) {
-    const status = getBrowserStatus();
-    if (status.open && status.activeTabId === tabId) return status;
-    await wait(openPollMs);
-  }
-
-  return getBrowserStatus();
-};
 
 export const createBrowserTools = () => [
   defineTool({
@@ -208,11 +54,13 @@ export const createBrowserTools = () => [
       if (!normalizedUrl) throw new Error('Enter a valid http, https, or local file URL.');
 
       const tabIdValue = tabId ? requiredString(tabId, 'tab id') : '';
+      if (tabIdValue && !getBrowserStatus().tabs.some((tab) => tab.id === tabIdValue))
+        throw new Error('Browser tab is not available. Read browser_status before retrying.');
       sendToMainWindow('app:browser-open-request', {
         url: normalizedUrl,
         ...(tabIdValue ? { tabId: tabIdValue, newTab: newTab === true } : { newTab: newTab !== false })
       });
-      const status = await waitForBrowserOpen(normalizedUrl);
+      const status = await waitForBrowserOpen(normalizedUrl, tabIdValue);
       if (!status.open || !status.url) throw new Error('Browser did not open.');
 
       return textResult(`Opened ${normalizedUrl} in the in-app browser.`);
@@ -261,43 +109,47 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute() {
+    async execute(_toolCallId, { tabId }) {
+      requireActiveTab(tabId);
       const result = goBackInBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not go back in the browser.');
       return textResult('Went back in the in-app browser.');
     },
     name: 'browser_back',
-    parameters: emptySchema,
+    parameters: tabSchema,
     description: 'Go back one browser history entry.',
     promptSnippet: 'Go back after browser_status shows back history.'
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute() {
+    async execute(_toolCallId, { tabId }) {
+      requireActiveTab(tabId);
       const result = goForwardInBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not go forward in the browser.');
       return textResult('Went forward in the in-app browser.');
     },
     name: 'browser_forward',
-    parameters: emptySchema,
+    parameters: tabSchema,
     description: 'Go forward one browser history entry.',
     promptSnippet: 'Go forward after browser_status shows forward history.'
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute() {
+    async execute(_toolCallId, { tabId }) {
+      requireActiveTab(tabId);
       const result = reloadBrowser();
       if (!result.ok) throw new Error(result.error ?? 'Could not reload the browser.');
       return textResult('Reloaded the in-app browser.');
     },
     name: 'browser_reload',
-    parameters: emptySchema,
+    parameters: tabSchema,
     description: 'Reload the current browser page.',
     promptSnippet: 'Refresh the active browser page after stale state.'
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute(_toolCallId, { ref }) {
+    async execute(_toolCallId, { tabId, ref }) {
+      requireActiveTab(tabId);
       const refValue = requiredString(ref, 'element ref');
       const result = await clickInBrowser(refValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not click the browser element.');
@@ -310,7 +162,8 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute(_toolCallId, { ref, text, clear }) {
+    async execute(_toolCallId, { tabId, ref, text, clear }) {
+      requireActiveTab(tabId);
       const refValue = requiredString(ref, 'element ref');
       const textValue = v.parse(v.string('Enter a browser text value.'), text);
       const result = await typeInBrowser({ ref: refValue, text: textValue, clear: clear === true });
@@ -324,7 +177,8 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute(_toolCallId, { direction, amount }) {
+    async execute(_toolCallId, { tabId, direction, amount }) {
+      requireActiveTab(tabId);
       const directionValue = v.parse(v.picklist(['up', 'down', 'left', 'right']), direction);
       const amountValue = v.parse(v.optional(v.pipe(v.number(), v.finite())), amount);
       const result = await scrollInBrowser(directionValue, amountValue);
@@ -338,7 +192,8 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute(_toolCallId, { key }) {
+    async execute(_toolCallId, { tabId, key }) {
+      requireActiveTab(tabId);
       const keyValue = requiredString(key, 'key');
       const result = await pressInBrowser(keyValue);
       if (!result.ok) throw new Error(result.error ?? 'Could not press the browser key.');
@@ -351,19 +206,23 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute() {
-      const result = await readBrowserScreenshot();
+    async execute(_toolCallId, { tabId, detail }) {
+      const status = requireActiveTab(tabId);
+      const result = await readBrowserScreenshot(
+        v.parse(v.optional(v.picklist(['standard', 'high']), 'standard'), detail)
+      );
       if (!result.ok || !result.image) throw new Error(result.error ?? 'Could not capture the browser screenshot.');
-      return toolImageResult(`Screenshot of ${getBrowserStatus().url || 'the in-app browser'}.`, result.image);
+      return toolImageResult(`Screenshot of ${status.url || 'the in-app browser'}.`, result.image);
     },
-    parameters: emptySchema,
+    parameters: screenshotSchema,
     name: 'browser_screenshot',
     description: 'Capture the visible browser page and return it as an image.',
-    promptSnippet: 'Capture a visible-page screenshot for visual checks.'
+    promptSnippet: 'Use screenshots for visual checks; prefer browser_snapshot for text.'
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute(_toolCallId, { width, height, reset }) {
+    async execute(_toolCallId, { tabId, width, height, reset }) {
+      requireActiveTab(tabId);
       if (reset === true) {
         const cleared = await resetBrowserViewport();
         if (!cleared.ok) throw new Error(cleared.error ?? 'Could not reset the viewport size.');
@@ -386,12 +245,13 @@ export const createBrowserTools = () => [
   }),
   defineTool({
     ...browserToolDefaults,
-    async execute() {
+    async execute(_toolCallId, { tabId }) {
+      requireActiveTab(tabId);
       const result = await captureBrowserSnapshot();
       if (!result.ok || !result.snapshot) throw new Error(result.error ?? 'Could not read the browser page.');
-      return textResult(JSON.stringify(result.snapshot));
+      return textResult(JSON.stringify({ tabId, ...result.snapshot }));
     },
-    parameters: emptySchema,
+    parameters: tabSchema,
     name: 'browser_snapshot',
     description: 'Read page text, links, headings, and element refs.',
     promptSnippet: 'Read page text and refs for browser_click/browser_type.'

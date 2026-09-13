@@ -6,6 +6,7 @@ import { attachInspectListener, startInspect, stopInspect } from '@main/browser/
 import { clickBrowserElement, scrollBrowserPage, typeBrowserText } from '@main/browser/interaction';
 import { browserKey } from '@main/browser/keys';
 import { waitForPageReady } from '@main/browser/ready';
+import { type ScreenshotDetail, screenshotSize } from '@main/browser/screenshot';
 import type { BrowserScrollDirection } from '@main/browser/scroll';
 import { type BrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
 import { pickReusableTab } from '@main/browser/tabs';
@@ -110,7 +111,6 @@ const closedPanelError = 'Open the in-app browser panel first.';
 const maxBrowserTabs = 8;
 const statusBroadcastDelayMs = 80;
 const actionReadyTimeoutMs = 3000;
-const screenshotWidth = 1024;
 const emptyStatus: BrowserStatus = {
   url: '',
   open: false,
@@ -404,7 +404,10 @@ export const openBrowserUrl = async (
   const window = windowFromSender(sender);
   if (!window) return { ok: false, error: 'Browser window is not available.' };
 
-  if (options.tabId && browserTabs.has(options.tabId)) {
+  if (options.tabId && !browserTabs.has(options.tabId))
+    return { ok: false, error: 'Browser tab is not available.', status: statusFromView() };
+
+  if (options.tabId) {
     activeTabId = options.tabId;
   } else if (options.newTab) {
     activeTabId = tabForNewPage(url).id;
@@ -540,7 +543,9 @@ export const captureBrowserScreenshot = async (): Promise<BrowserActionResult> =
   }
 };
 
-export const readBrowserScreenshot = async (): Promise<BrowserScreenshotResult> => {
+export const readBrowserScreenshot = async (
+  detail: ScreenshotDetail = 'standard'
+): Promise<BrowserScreenshotResult> => {
   const tab = activeTab();
   if (!tab) return { ok: false, error: closedPanelError, status: statusFromView() };
 
@@ -555,7 +560,9 @@ export const readBrowserScreenshot = async (): Promise<BrowserScreenshotResult> 
       };
     if (image.isEmpty()) return { ok: false, error: 'Browser screenshot is empty.', status: statusFromView() };
 
-    const scaled = image.getSize().width > screenshotWidth ? image.resize({ width: screenshotWidth }) : image;
+    const source = image.getSize();
+    const size = screenshotSize(source.width, source.height, detail);
+    const scaled = size.width !== source.width || size.height !== source.height ? image.resize(size) : image;
     return { ok: true, image: scaled.toPNG().toString('base64'), status: statusFromView() };
   } catch {
     return { ok: false, error: 'Could not capture the browser screenshot.', status: statusFromView() };

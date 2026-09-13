@@ -118,6 +118,17 @@ describe('browser panel view', () => {
     expect(window.contentView.children[0]?.webContents.getURL()).toBe('file:///tmp/index.html');
   });
 
+  it.each([false, true])('rejects a missing tab without navigating or creating tabs, newTab: %s', async (newTab) => {
+    const window = createFakeBrowserWindow();
+    const sender = webContentsForTest(window);
+    setBrowserBounds(sender, { x: 0, y: 0, width: 800, height: 600 });
+    const before = await openBrowserUrl(sender, 'https://old.example.com');
+    const result = await openBrowserUrl(sender, 'https://new.example.com', { tabId: 'missing-tab', newTab });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('Browser tab is not available.');
+    expect(result.status).toEqual(before.status);
+  });
+
   it('opens and switches between separate browser tabs', async () => {
     const window = createFakeBrowserWindow();
     const webContents = webContentsForTest(window);

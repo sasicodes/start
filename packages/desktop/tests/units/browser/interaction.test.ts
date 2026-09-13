@@ -55,7 +55,10 @@ describe('clickBrowserElement', () => {
     let left = 10;
     let taps = 0;
     const scrollIntoView = vi.fn();
+    const document = {};
     const element = {
+      isConnected: true,
+      ownerDocument: document,
       scrollIntoView,
       getAttribute: () => null,
       getBoundingClientRect: () => ({ left, top: 20, width: 40, height: 30 })
@@ -64,6 +67,8 @@ describe('clickBrowserElement', () => {
       if (!script.includes('browserElementForRef')) return null;
       return runInNewContext(script, {
         window: {
+          location: { href: 'https://example.com/' },
+          __startBrowserElements__: { url: 'https://example.com/', elements: new Map([['e1', element]]) },
           innerWidth: 800,
           innerHeight: 600,
           getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
@@ -73,7 +78,7 @@ describe('clickBrowserElement', () => {
             }
           }
         },
-        document: { querySelectorAll: () => [element], elementFromPoint: () => element }
+        document: Object.assign(document, { elementFromPoint: () => element })
       });
     });
     const result = await clickBrowserElement(webContents, 'e1');
@@ -126,7 +131,10 @@ describe('clickBrowserElement', () => {
 
 describe('typeBrowserText', () => {
   it.each(['button', 'checkbox', 'readonly'])('rejects %s targets before clicking', async (kind) => {
+    const document = {};
     class Input {
+      isConnected = true;
+      ownerDocument = document;
       type = kind === 'readonly' ? 'text' : kind;
       readOnly = kind === 'readonly';
       getBoundingClientRect = () => ({ width: 100, height: 30 });
@@ -138,8 +146,13 @@ describe('typeBrowserText', () => {
       runInNewContext(script, {
         HTMLInputElement: Input,
         HTMLTextAreaElement: Textarea,
-        window: { __startCursor__: {}, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) },
-        document: { querySelectorAll: () => [element] }
+        window: {
+          location: { href: 'https://example.com/' },
+          __startBrowserElements__: { url: 'https://example.com/', elements: new Map([['e1', element]]) },
+          __startCursor__: {},
+          getComputedStyle: () => ({ display: 'block', visibility: 'visible' })
+        },
+        document
       })
     );
     await expect(typeBrowserText(webContents, 'e1', 'hello', true)).resolves.toMatchObject({

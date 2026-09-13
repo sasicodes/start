@@ -1,3 +1,4 @@
+import { runInNewContext } from 'node:vm';
 import { parseBrowserSnapshot, readBrowserSnapshot } from '@main/browser/snapshot';
 import type { WebContents } from 'electron';
 import { describe, expect, it } from 'vitest';
@@ -49,4 +50,32 @@ describe('parseBrowserSnapshot', () => {
 
     await expect(readBrowserSnapshot(webContents)).resolves.toBeNull();
   });
+});
+
+it('returns fresh compact identities from the actual snapshot script', async () => {
+  const element = {
+    tagName: 'BUTTON',
+    textContent: 'Save',
+    disabled: false,
+    getAttribute: () => null,
+    getBoundingClientRect: () => ({ width: 100, height: 30 })
+  };
+  const document = {
+    title: 'Example',
+    body: { innerText: 'Save' },
+    querySelectorAll: (selector: string) => (selector === 'a[href]' || selector === 'h1, h2, h3' ? [] : [element])
+  };
+  const window = {
+    location: { href: 'https://example.com/' },
+    getComputedStyle: () => ({ display: 'block', visibility: 'visible' })
+  };
+  const webContents = {
+    isLoading: () => false,
+    executeJavaScript: async (script: string) => runInNewContext(script, { window, document })
+  } as unknown as WebContents;
+  const first = await readBrowserSnapshot(webContents);
+  const second = await readBrowserSnapshot(webContents);
+  expect(first?.elements[0]?.ref).toMatch(/^e[A-Za-z0-9_-]{8}-1$/);
+  expect(second?.elements[0]?.ref).not.toBe(first?.elements[0]?.ref);
+  expect(first?.elements[0]?.text).toBe('Save');
 });

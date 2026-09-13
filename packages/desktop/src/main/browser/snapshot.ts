@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { browserElementsScript } from '@main/browser/elements';
 import { withTimeout } from '@main/utils/timeout';
 import type { WebContents } from 'electron';
@@ -33,7 +34,7 @@ export interface BrowserSnapshot {
 const loadTimeoutMs = 8000;
 const snapshotTimeoutMs = 3000;
 
-const snapshotScript = `
+const snapshotScript = (snapshotId: string) => `
 (() => {
   ${browserElementsScript}
   const maxLinkCount = 100;
@@ -61,8 +62,8 @@ const snapshotScript = `
     text: truncate(linkText(element), maxSnippetLength)
   })).filter((link) => link.url && link.text.length > 0).slice(0, maxLinkCount);
 
-  const elements = browserElements().map((element, index) => ({
-    ref: 'e' + (index + 1),
+  const elements = captureBrowserElements(${JSON.stringify(snapshotId)}).map(([ref, element]) => ({
+    ref,
     tag: element.tagName.toLowerCase(),
     role: normalize(element.getAttribute('role') || element.tagName.toLowerCase()),
     label: truncate(element.getAttribute('aria-label') || element.getAttribute('placeholder') || '', maxSnippetLength),
@@ -163,7 +164,10 @@ const waitForLoad = async (webContents: WebContents): Promise<void> => {
 export const readBrowserSnapshot = async (webContents: WebContents): Promise<BrowserSnapshot | null> => {
   await waitForLoad(webContents);
   try {
-    const snapshot = await withTimeout(webContents.executeJavaScript(snapshotScript), snapshotTimeoutMs);
+    const snapshot = await withTimeout(
+      webContents.executeJavaScript(snapshotScript(randomBytes(6).toString('base64url'))),
+      snapshotTimeoutMs
+    );
     return parseBrowserSnapshot(snapshot);
   } catch {
     return null;
