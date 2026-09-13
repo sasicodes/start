@@ -15,9 +15,7 @@ export const Screen = () => {
       >
         <div className="absolute inset-0 z-[2] flex items-center justify-center px-6">
           <div className="flex h-11 w-full items-center gap-2 rounded-full border border-zinc-200/80 bg-white px-2 py-1.5 font-sans shadow-[0_14px_38px_rgba(24,20,12,0.16),0_1px_0_rgba(255,255,255,0.9)_inset]">
-            <span className="min-w-0 flex-1 truncate px-2 text-[10px] leading-none text-zinc-400">
-              Ask Start to change anything
-            </span>
+            <span className="min-w-0 flex-1 truncate px-2 text-[10px] leading-none text-zinc-400">Ask anything</span>
             <button
               type="button"
               aria-label="Send prompt"
