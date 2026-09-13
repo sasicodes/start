@@ -13,11 +13,15 @@ vi.mock('@main/application', () => ({
 const menuActions = (
   onShowSettings = vi.fn(),
   onShowProviders = vi.fn(),
-  providerUsage: ProviderUsage[] | null = null
+  providerUsage: ProviderUsage[] | null = null,
+  onToggleSettings = vi.fn(),
+  onToggleShortcuts = vi.fn()
 ) => ({
   providerUsage,
   onShowSettings,
   onShowProviders,
+  onToggleSettings,
+  onToggleShortcuts,
   recentSessions: [],
   onNewSession: vi.fn(),
   onQuickAccess: vi.fn(),
@@ -38,11 +42,11 @@ describe('menus', () => {
     resetFakeMenus();
   });
 
-  it('opens settings from the application menu without forwarding Electron click arguments', async () => {
-    const onShowSettings = vi.fn();
+  it('toggles settings from the application menu without forwarding Electron click arguments', async () => {
+    const onToggleSettings = vi.fn();
     const { installApplicationMenu } = await import('@main/menu');
 
-    installApplicationMenu(menuActions(onShowSettings));
+    installApplicationMenu(menuActions(vi.fn(), vi.fn(), null, onToggleSettings));
 
     const appSubmenu = applicationMenuTemplate()?.[0]?.submenu ?? [];
     const settings = itemWithLabel(appSubmenu, 'Settings');
@@ -50,7 +54,24 @@ describe('menus', () => {
 
     settings.click({ label: 'Settings' }, { id: 'window' }, { triggeredByAccelerator: true });
 
-    expect(onShowSettings).toHaveBeenCalledWith();
+    expect(onToggleSettings).toHaveBeenCalledWith();
+    expect(settings.accelerator).toBe('CommandOrControl+,');
+  });
+
+  it('toggles the shortcuts tab from the help menu', async () => {
+    const onToggleShortcuts = vi.fn();
+    const { installApplicationMenu } = await import('@main/menu');
+
+    installApplicationMenu(menuActions(vi.fn(), vi.fn(), null, vi.fn(), onToggleShortcuts));
+
+    const help = (applicationMenuTemplate() ?? []).find((entry) => entry.role === 'help')?.submenu ?? [];
+    const shortcuts = itemWithLabel(help, 'Keyboard Shortcuts');
+    if (!shortcuts.click) throw new Error('Expected Keyboard Shortcuts menu item click handler.');
+
+    shortcuts.click({ label: 'Keyboard Shortcuts' }, { id: 'window' }, { triggeredByAccelerator: true });
+
+    expect(onToggleShortcuts).toHaveBeenCalledWith();
+    expect(shortcuts.accelerator).toBe('CommandOrControl+/');
   });
 
   it('opens settings from the tray menu without forwarding Electron click arguments', async () => {

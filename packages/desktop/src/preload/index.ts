@@ -492,6 +492,8 @@ const api = {
     onShowSettings: (listener: (tab: SettingsTab) => void): IpcDisposer =>
       onIpc<[SettingsTab]>('app:show-settings', listener),
     onShowShortcuts: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-shortcuts', listener),
+    onToggleSettings: (listener: (tab: SettingsTab) => void): IpcDisposer =>
+      onIpc<[SettingsTab]>('app:toggle-settings', listener),
     onSubmitComposer: (listener: (prompt: string, attachments: ImageAttachment[]) => void): IpcDisposer =>
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>
         listener(prompt, attachments)

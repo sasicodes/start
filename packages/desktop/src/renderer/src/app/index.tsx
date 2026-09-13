@@ -36,7 +36,6 @@ export const App = () => {
     closeSidePanel,
     openSettingsPanel,
     openBrowserPanel,
-    openShortcutsPanel,
     settingsTab,
     setSettingsTab,
     settingsPanelVisible,
@@ -64,15 +63,23 @@ export const App = () => {
     }
 
     setSurface('main');
-    openShortcutsPanel();
-  }, [openShortcutsPanel, setSurface, surface]);
+    openSettingsPanel('shortcuts');
+  }, [openSettingsPanel, setSurface, surface]);
 
   const browserPanel = useBrowserPanel({ openPanel: openBrowserPanel, setSurface });
 
-  const toggleSettings = useCallback(() => {
-    setSurface('main');
-    toggleSettingsPanel();
-  }, [setSurface, toggleSettingsPanel]);
+  const toggleSettings = useCallback(
+    (tab: SettingsTab = 'personalization') => {
+      if (surface === 'composer') {
+        window.pi.app.openSettings(tab).catch(() => {});
+        return;
+      }
+
+      setSurface('main');
+      toggleSettingsPanel(tab);
+    },
+    [setSurface, surface, toggleSettingsPanel]
+  );
 
   const showChatFromEvent = useCallback(() => {
     closeSidePanel();
@@ -204,12 +211,16 @@ export const App = () => {
   });
 
   useAppHotkey(appHotkeys.newChat, () => startNewSession());
-  useAppHotkey(appHotkeys.settings, () => showSettings());
-  useAppHotkey(appHotkeys.shortcuts, () => showShortcuts());
+  useAppHotkey(appHotkeys.settings, () => toggleSettings());
+  useAppHotkey(appHotkeys.shortcuts, () => toggleSettings('shortcuts'));
 
   useEffect(() => {
     return window.pi.app.onShowShortcuts(showShortcuts);
   }, [showShortcuts]);
+
+  useEffect(() => {
+    return window.pi.app.onToggleSettings(toggleSettings);
+  }, [toggleSettings]);
 
   const renderComposer = (overlay: boolean, hasTurns: boolean) => (
     <Composer

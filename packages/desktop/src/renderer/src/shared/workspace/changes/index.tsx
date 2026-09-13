@@ -21,7 +21,6 @@ import {
   bottomBubbleRevealTransition,
   bottomBubbleVisibleMotion
 } from '@renderer/ui/motion';
-import { playToggleSound } from '@renderer/ui/sounds';
 import { Tooltip } from '@renderer/ui/tooltip';
 import { tw } from '@renderer/utils/tw';
 import { motion } from 'motion/react';
@@ -76,11 +75,6 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
   const summary = git.summary;
   const label = gitChangesLabel(summary.filesChanged);
 
-  const handleToggle = () => {
-    if (!open) playToggleSound();
-    onToggle();
-  };
-
   return (
     <Tooltip label={label}>
       <motion.button
@@ -89,7 +83,7 @@ export const GitChanges = memo(({ open = false, path, onToggle }: GitChangesProp
         aria-expanded={open}
         aria-label={`${open ? 'Hide' : 'Show'} git changes, ${label}`}
         initial={bottomBubbleHiddenMotion}
-        onClick={handleToggle}
+        onClick={onToggle}
         style={{ maxWidth: `${gitChangesMaxWidthRatio * 100}vw` }}
         transition={appFocused ? bottomBubbleRevealTransition : bottomBubbleHideTransition}
         class={tw(
