@@ -146,7 +146,7 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
         !emptyReady && 'invisible has-[[data-review-ready=true]]:visible'
       )}
     >
-      <header class="flex h-11 min-w-0 shrink-0 items-center justify-between gap-3 px-3 text-xs leading-5 font-medium">
+      <header class="flex h-10 min-w-0 shrink-0 items-center justify-between gap-3 px-4 text-xs leading-5 font-medium">
         {patch.kind === 'ready' ? (
           <>
             <div class="flex min-w-0 items-center gap-3">
@@ -175,25 +175,25 @@ export const GitChangesPanel = memo(({ path }: GitChangesPanelProps) => {
                   />
                 </button>
               )}
-              {hasVisibleDiff && (
-                <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'} side="right">
-                  <button
-                    type="button"
-                    onClick={toggleFoldAll}
-                    aria-label={allCollapsed ? 'Expand all files' : 'Collapse all files'}
-                    class="relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
-                  >
-                    {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
-                  </button>
-                </Tooltip>
-              )}
             </div>
             <div class="flex items-center gap-3 font-medium">
               {hasVisibleDiff && (
-                <div class="flex items-center gap-2">
-                  <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
-                  <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
-                </div>
+                <>
+                  <div class="flex items-center gap-2">
+                    <span class="tabular-nums text-success">+{visibleSummary.insertions}</span>
+                    <span class="tabular-nums text-danger">-{visibleSummary.deletions}</span>
+                  </div>
+                  <Tooltip label={allCollapsed ? 'Expand all files' : 'Collapse all files'} side="left">
+                    <button
+                      type="button"
+                      onClick={toggleFoldAll}
+                      aria-label={allCollapsed ? 'Expand all files' : 'Collapse all files'}
+                      class="relative inline-flex size-4 flex-none items-center justify-center border-0 bg-transparent p-0 text-soft outline-0 transition-colors before:absolute before:-inset-2 before:rounded-full before:content-[''] hover:text-hover focus-visible:text-hover [&_svg]:block [&_svg]:size-4"
+                    >
+                      {allCollapsed ? <ExpandAllIcon /> : <CollapseAllIcon />}
+                    </button>
+                  </Tooltip>
+                </>
               )}
             </div>
           </>

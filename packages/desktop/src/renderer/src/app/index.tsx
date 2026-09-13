@@ -17,6 +17,7 @@ import { useChat } from '@renderer/shared/chat/use-chat';
 import { useFileAttachments } from '@renderer/shared/composer/use-file-attachments';
 import type { SettingsTab } from '@renderer/shared/settings/tab';
 import { appHotkeys, useAppHotkey } from '@renderer/ui/hotkeys';
+import { playToggleSound } from '@renderer/ui/sounds';
 import { useCallback, useEffect, useRef } from 'preact/hooks';
 
 export const App = () => {
@@ -71,6 +72,7 @@ export const App = () => {
   const toggleSettings = useCallback(
     (tab: SettingsTab = 'personalization') => {
       if (surface === 'composer') {
+        playToggleSound();
         window.pi.app.openSettings(tab).catch(() => {});
         return;
       }

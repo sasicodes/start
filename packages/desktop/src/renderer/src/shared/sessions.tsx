@@ -161,10 +161,8 @@ export const RecentSessions = memo(
 
     const updateOpen = useCallback(
       (nextOpen: boolean) => {
-        if (nextOpen) {
-          playToggleSound();
-          void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
-        }
+        playToggleSound();
+        if (nextOpen) void loadSessions(Math.max(sessionPageSize, loadedCountRef.current));
         setOpen(nextOpen);
       },
       [loadSessions]
