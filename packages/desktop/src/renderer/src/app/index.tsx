@@ -45,7 +45,7 @@ export const App = () => {
   } = useSessionPanels({ surface });
 
   const showSettings = useCallback(
-    (tab: SettingsTab = 'personalization') => {
+    (tab?: SettingsTab) => {
       if (surface === 'composer') {
         window.pi.app.openSettings(tab).catch(() => {});
         return;
@@ -70,7 +70,7 @@ export const App = () => {
   const browserPanel = useBrowserPanel({ openPanel: openBrowserPanel, setSurface });
 
   const toggleSettings = useCallback(
-    (tab: SettingsTab = 'personalization') => {
+    (tab?: SettingsTab) => {
       if (surface === 'composer') {
         playToggleSound();
         window.pi.app.openSettings(tab).catch(() => {});

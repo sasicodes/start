@@ -469,7 +469,7 @@ const api = {
       ipcRenderer.invoke('app:set-solid-window-background', enabled),
     hideComposer: (): Promise<void> => ipcRenderer.invoke('app:hide-composer'),
     showMain: (): Promise<void> => ipcRenderer.invoke('app:show-main'),
-    openSettings: (tab: SettingsTab = 'personalization'): Promise<void> => ipcRenderer.invoke('app:open-settings', tab),
+    openSettings: (tab?: SettingsTab): Promise<void> => ipcRenderer.invoke('app:open-settings', tab),
     openShortcuts: (): Promise<void> => ipcRenderer.invoke('app:open-shortcuts'),
     submitComposer: (prompt: string, attachments: ImageAttachment[] = []): Promise<void> =>
       ipcRenderer.invoke('app:submit-composer', prompt, attachments),
@@ -490,11 +490,11 @@ const api = {
       onIpc<[AppFocusState]>('app:focus-state-changed', listener),
     onUpdateStateChanged: (listener: (state: UpdateState) => void): IpcDisposer =>
       onIpc<[UpdateState]>('app:update-state-changed', listener),
-    onShowSettings: (listener: (tab: SettingsTab) => void): IpcDisposer =>
-      onIpc<[SettingsTab]>('app:show-settings', listener),
+    onShowSettings: (listener: (tab?: SettingsTab) => void): IpcDisposer =>
+      onIpc<[SettingsTab | undefined]>('app:show-settings', listener),
     onShowShortcuts: (listener: () => void): IpcDisposer => onIpc<[]>('app:show-shortcuts', listener),
-    onToggleSettings: (listener: (tab: SettingsTab) => void): IpcDisposer =>
-      onIpc<[SettingsTab]>('app:toggle-settings', listener),
+    onToggleSettings: (listener: (tab?: SettingsTab) => void): IpcDisposer =>
+      onIpc<[SettingsTab | undefined]>('app:toggle-settings', listener),
     onSubmitComposer: (listener: (prompt: string, attachments: ImageAttachment[]) => void): IpcDisposer =>
       onIpc<[string, ImageAttachment[] | undefined]>('app:submit-composer', (prompt, attachments = []) =>
         listener(prompt, attachments)
