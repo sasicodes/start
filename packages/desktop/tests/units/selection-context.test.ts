@@ -7,8 +7,8 @@ import { deferred } from '../helpers/deferred.js';
 const setup = () =>
   freshChatService({
     lastWorkspace: '/tmp/selection-context',
-    selectedModelKey: 'anthropic:claude-opus-5',
-    models: ['claude-opus-5', 'claude-sonnet-5'].map((id) => ({
+    selectedModelKey: 'anthropic:claude-opus-5-5',
+    models: ['claude-opus-5-5', 'claude-sonnet-5'].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,
@@ -35,7 +35,7 @@ it.each(['model', 'thinking'])('rejects %s selection after the chat changes duri
   expect(await selection).toMatchObject({ ready: false });
   expect(getStorageSnapshot()).toMatchObject({
     selectedThinkingLevel: 'medium',
-    selectedModelKey: 'anthropic:claude-opus-5'
+    selectedModelKey: 'anthropic:claude-opus-5-5'
   });
   chat.dispose();
 });
@@ -60,7 +60,7 @@ it('does not overwrite a new chat selection when an older session model save fin
   await chat.newSession();
   gate.resolve(null);
   expect(await selection).toMatchObject({ ready: false });
-  expect(getStorageSnapshot().selectedModelKey).toBe('anthropic:claude-opus-5');
+  expect(getStorageSnapshot().selectedModelKey).toBe('anthropic:claude-opus-5-5');
   chat.dispose();
 });
 
@@ -82,7 +82,7 @@ it.each(['model', 'thinking'])('rejects %s changes when generation starts during
   expect(await selection).toMatchObject({ ready: false });
   expect(getStorageSnapshot()).toMatchObject({
     selectedThinkingLevel: 'medium',
-    selectedModelKey: 'anthropic:claude-opus-5'
+    selectedModelKey: 'anthropic:claude-opus-5-5'
   });
   session.isStreaming = false;
   chat.dispose();

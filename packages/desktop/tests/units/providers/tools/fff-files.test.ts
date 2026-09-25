@@ -1,4 +1,3 @@
-import { findPathsWithRg, pathMatchesFromLines, rgFilesGlob } from '@main/providers/tools/fff/files';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const childProcessMocks = vi.hoisted(() =>
@@ -7,9 +6,8 @@ const childProcessMocks = vi.hoisted(() =>
 
 vi.mock('node:child_process', () => childProcessMocks);
 
-vi.mock('@main/environment', () => ({ rgBinaryPath: '/bundled/rg' }));
-
 const { execFile: execFileMock } = await childProcessMocks;
+const { findPathsWithRg, pathMatchesFromLines, rgFilesGlob } = await import('@main/providers/tools/fff/files');
 
 const succeedWith = (stdout: string) => {
   execFileMock.mockImplementation(

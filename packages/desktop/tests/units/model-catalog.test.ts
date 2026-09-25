@@ -1,5 +1,5 @@
 import type { CredentialStore } from '@earendil-works/pi-ai';
-import { hasApi } from '@earendil-works/pi-ai';
+import { hasApi, normalizeContext } from '@earendil-works/pi-ai';
 import { streamSimple as anthropicStream } from '@earendil-works/pi-ai/api/anthropic-messages';
 import { streamSimple as codexStream } from '@earendil-works/pi-ai/api/openai-codex-responses';
 import { streamSimple as openaiStream } from '@earendil-works/pi-ai/api/openai-responses';
@@ -45,7 +45,7 @@ it('includes every picker model and all four effort levels in the real offline r
             throw new Error('Payload captured before sending.');
           }
         };
-        const context = { messages: [] };
+        const context = normalizeContext({ messages: [] });
         if (hasApi(model, 'openai-responses')) await openaiStream(model, context, options).result();
         if (hasApi(model, 'openai-codex-responses')) await codexStream(model, context, options).result();
         if (hasApi(model, 'anthropic-messages')) await anthropicStream(model, context, options).result();

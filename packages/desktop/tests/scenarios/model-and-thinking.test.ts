@@ -9,8 +9,8 @@ const twoAnthropicModels: FakeModel[] = [
     reasoning: true,
     input: ['text'],
     contextWindow: 200000,
-    id: 'claude-opus-5',
-    name: 'Claude Opus 5',
+    id: 'claude-opus-5-5',
+    name: 'Claude Opus 5.5',
     provider: 'anthropic'
   },
   {
@@ -28,7 +28,7 @@ describe('model and thinking level', () => {
   it.each([
     ['openai', 'gpt-5.6-sol', 'gpt-6-astra'],
     ['openai-codex', 'gpt-5.6-sol', 'gpt-6-astra'],
-    ['anthropic', 'claude-opus-5', 'claude-fable-5-1']
+    ['anthropic', 'claude-opus-5-5', 'claude-fable-5-1']
   ])('defaults %s to the latest model for the picker and new sessions', async (provider, previous, latest) => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
@@ -75,7 +75,7 @@ describe('model and thinking level', () => {
           thinkingLevelMap: { off: null, xhigh: 'xhigh' }
         }
       ],
-      selectedModelKey: 'anthropic:claude-opus-5'
+      selectedModelKey: 'anthropic:claude-opus-5-5'
     });
     const tab = await chat.createTab('/tmp/workspace-a');
     const send = chat.send('hello', newWebContents());
@@ -104,7 +104,7 @@ describe('model and thinking level', () => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
       models: twoAnthropicModels,
-      selectedModelKey: 'anthropic:claude-opus-5'
+      selectedModelKey: 'anthropic:claude-opus-5-5'
     });
     const webContents = newWebContents();
 
@@ -138,7 +138,7 @@ describe('model and thinking level', () => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
       models: twoAnthropicModels,
-      selectedModelKey: 'anthropic:claude-opus-5'
+      selectedModelKey: 'anthropic:claude-opus-5-5'
     });
 
     const setA = await chat.selectModel('anthropic:claude-sonnet-5');
@@ -148,8 +148,10 @@ describe('model and thinking level', () => {
     );
 
     await chat.switchWorkspace('/tmp/workspace-b');
-    await chat.selectModel('anthropic:claude-opus-5');
-    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-b']?.modelKey).toBe('anthropic:claude-opus-5');
+    await chat.selectModel('anthropic:claude-opus-5-5');
+    expect(getStorageSnapshot().workspaceModelDefaults?.['/tmp/workspace-b']?.modelKey).toBe(
+      'anthropic:claude-opus-5-5'
+    );
 
     const backToA = await chat.switchWorkspace('/tmp/workspace-a');
     expect(backToA.status?.selectedModelKey).toBe('anthropic:claude-sonnet-5');
