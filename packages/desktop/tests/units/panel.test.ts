@@ -1,4 +1,4 @@
-import { sidePanelModeLayout, toggledSidePanel } from '@renderer/app/utils/panel';
+import { sidePanelModeLayout, toggledSettingsPanel, toggledSidePanel } from '@renderer/app/utils/panel';
 import { describe, expect, it } from 'vitest';
 
 describe('side panel toggling', () => {
@@ -26,6 +26,43 @@ describe('side panel toggling', () => {
     expect(toggledSidePanel({ open: true, mode: 'browser' }, 'browser', false)).toEqual({
       open: true,
       mode: 'browser'
+    });
+  });
+});
+
+describe('settings panel toggling', () => {
+  it('closes the open settings panel when no tab is requested', () => {
+    expect(toggledSettingsPanel({ open: true, mode: 'settings' }, 'providers')).toEqual({
+      open: false,
+      mode: 'settings'
+    });
+  });
+
+  it('reopens settings on the last tab when no tab is requested', () => {
+    expect(toggledSettingsPanel({ open: false, mode: 'settings' }, 'providers')).toEqual({
+      open: true,
+      mode: 'settings'
+    });
+  });
+
+  it('closes settings when the showing tab is requested again', () => {
+    expect(toggledSettingsPanel({ open: true, mode: 'settings' }, 'providers', 'providers')).toEqual({
+      open: false,
+      mode: 'settings'
+    });
+  });
+
+  it('stays open when another tab is requested', () => {
+    expect(toggledSettingsPanel({ open: true, mode: 'settings' }, 'providers', 'shortcuts')).toEqual({
+      open: true,
+      mode: 'settings'
+    });
+  });
+
+  it('switches from the browser panel instead of closing', () => {
+    expect(toggledSettingsPanel({ open: true, mode: 'browser' }, 'providers')).toEqual({
+      open: true,
+      mode: 'settings'
     });
   });
 });

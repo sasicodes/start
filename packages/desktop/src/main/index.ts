@@ -291,7 +291,7 @@ const withCachedWorkspace = async <T extends { status?: { workspacePath: string 
   return workspace ? { ...result, workspace } : result;
 };
 
-const showSettings = (tab: SettingsTab = 'personalization') => {
+const showSettings = (tab?: SettingsTab) => {
   sendToMainWindow('app:show-settings', tab);
 };
 
@@ -299,7 +299,7 @@ const showShortcuts = () => {
   sendToMainWindow('app:show-shortcuts');
 };
 
-const toggleSettings = (tab: SettingsTab = 'personalization') => {
+const toggleSettings = (tab?: SettingsTab) => {
   sendToMainWindow('app:toggle-settings', tab);
 };
 
@@ -336,7 +336,7 @@ const registerComposerShortcut = (accelerator: string) => {
 const menuActions = () => ({
   onShowSettings: showSettings,
   onShowShortcuts: showShortcuts,
-  onToggleSettings: () => toggleSettings(),
+  onToggleSettings: toggleSettings,
   onNewSession: () => startNewSession('menu'),
   onCheckForUpdates: () => checkForUpdatesNow(),
   onQuickAccess: () => toggleQuickAccess('menu'),
@@ -515,7 +515,7 @@ if (!singleInstanceLock) {
       hideComposerWindow({ keepAppActive: true });
       showMainWindow();
     });
-    ipcMain.handle('app:open-settings', (_event, tab: SettingsTab = 'personalization') => {
+    ipcMain.handle('app:open-settings', (_event, tab?: SettingsTab) => {
       hideComposerWindow({ keepAppActive: true });
       showSettings(tab);
     });

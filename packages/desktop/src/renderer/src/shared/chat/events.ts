@@ -33,7 +33,7 @@ interface UseChatEventsOptions {
   onShowChat: () => void;
   onOpenSession: (sessionId: string) => Promise<boolean>;
   clearSession: () => void;
-  onShowSettings: (tab: SettingsTab) => void;
+  onShowSettings: (tab?: SettingsTab) => void;
   loadModels: () => Promise<void>;
   loadAuthProviders: () => Promise<void>;
   syncStatus: () => Promise<void>;

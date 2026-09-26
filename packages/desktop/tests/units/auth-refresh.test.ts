@@ -64,9 +64,9 @@ describe('auth refresh', () => {
                 reasoning: true,
                 input: ['text'],
                 contextWindow: 200000,
-                name: 'Claude Opus 5',
+                name: 'Claude Opus 5.5',
                 provider: 'anthropic',
-                id: 'claude-opus-5'
+                id: 'claude-opus-5-5'
               }
             ]
           : []

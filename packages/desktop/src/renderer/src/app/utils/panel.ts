@@ -1,5 +1,6 @@
 import type { SidePanelMode } from '@renderer/app/types';
 import type { PanelLayoutProps } from '@renderer/shared/panel/types';
+import type { SettingsTab } from '@renderer/shared/settings/tab';
 
 export interface SidePanelState {
   open: boolean;
@@ -25,6 +26,9 @@ export const toggledSidePanel = (
   target: SidePanelMode,
   showing = mode === target
 ): SidePanelState => ({ mode: target, open: showing ? !open : true });
+
+export const toggledSettingsPanel = (state: SidePanelState, current: SettingsTab, target?: SettingsTab) =>
+  toggledSidePanel(state, 'settings', state.mode === 'settings' && (!target || target === current));
 
 export const sidePanelModeLabel = (mode: SidePanelMode) => (mode === 'settings' ? 'Settings' : 'Browser and review');
 

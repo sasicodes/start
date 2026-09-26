@@ -1,10 +1,11 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
+index be748bf45bea69461ef4f2a9a4dfc99bb3cbb1b1..df6b9ff6d496503839e8ce4bb2268ffec7f87f8e 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -54,7 +54,16 @@
-     "@mariozechner/pi-ai/providers/all": _bundledPiAiProviders,
-     "@mariozechner/pi-coding-agent": _bundledPiCodingAgent,
- };
+@@ -13,7 +13,16 @@ import { execCommand } from "../exec.js";
+ import { readPiManifest } from "../pi-manifest.js";
+ import { createSyntheticSourceInfo } from "../source-info.js";
+ import { time } from "../timings.js";
 -const require = createRequire(import.meta.url);
 +const require = createRequire(fs.realpathSync(fileURLToPath(import.meta.url)));
 +const resolvePackageEntry = (packageName, packageRelativePath) => {
@@ -19,7 +20,7 @@ diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
  const isNodeSeaBinary = ("sea" in process.features && process.features.sea === true) ||
      process.getBuiltinModule("node:sea")?.isSea() === true;
  const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
-@@ -72,22 +81,22 @@
+@@ -42,22 +51,22 @@ function getAliases() {
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");
