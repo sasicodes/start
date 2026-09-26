@@ -2814,7 +2814,7 @@ export class ChatService {
   }
 
   private findModelByKey(selectedModelKey: string) {
-    return this.modelRegistry.getAvailable().find((model) => modelKey(model) === selectedModelKey);
+    return this.getPickerModels().find((model) => modelKey(model) === selectedModelKey);
   }
 
   private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {

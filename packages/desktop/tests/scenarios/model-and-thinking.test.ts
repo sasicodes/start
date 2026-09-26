@@ -174,6 +174,31 @@ describe('model and thinking level', () => {
     await sendPromise;
   });
 
+  it('drops a stored selection for a model that left the picker', async () => {
+    const chat = freshChatService({
+      lastWorkspace: '/tmp/workspace-a',
+      selectedModelKey: 'anthropic:claude-opus-5',
+      models: [
+        ...twoAnthropicModels,
+        {
+          ...fakeModelDefaults,
+          reasoning: true,
+          input: ['text'],
+          contextWindow: 200000,
+          id: 'claude-opus-5',
+          name: 'Claude Opus 5',
+          provider: 'anthropic'
+        }
+      ]
+    });
+
+    const tab = await chat.createTab('/tmp/workspace-a');
+
+    expect(getFakeSession(tab.id)?.model.id).toBe('claude-opus-5-5');
+    expect((await chat.getStatus()).selectedModelKey).toBe('anthropic:claude-opus-5-5');
+    expect((await chat.selectModel('anthropic:claude-opus-5')).error).toBe('Selected model is no longer available.');
+  });
+
   it('persists the thinking level when changed', async () => {
     const chat = freshChatService({ lastWorkspace: '/tmp/workspace-a' });
 
