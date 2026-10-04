@@ -1,10 +1,10 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index be748bf45bea69461ef4f2a9a4dfc99bb3cbb1b1..df6b9ff6d496503839e8ce4bb2268ffec7f87f8e 100644
+index f9292e82120e4afbc3702b11d684867ae0ff7033..38c9f5651483cdbfea9fb703989fc6379ed320c2 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -13,7 +13,16 @@ import { execCommand } from "../exec.js";
+@@ -14,7 +14,16 @@ import { McpServerRegistry, mcpNamespace, validateMcpServerConfig } from "../mcp
  import { readPiManifest } from "../pi-manifest.js";
- import { createSyntheticSourceInfo } from "../source-info.js";
+ import { createSyntheticSourceInfo, getSyntheticPathSource, isSyntheticPath } from "../source-info.js";
  import { time } from "../timings.js";
 -const require = createRequire(import.meta.url);
 +const require = createRequire(fs.realpathSync(fileURLToPath(import.meta.url)));
@@ -20,7 +20,7 @@ index be748bf45bea69461ef4f2a9a4dfc99bb3cbb1b1..df6b9ff6d496503839e8ce4bb2268ffe
  const isNodeSeaBinary = ("sea" in process.features && process.features.sea === true) ||
      process.getBuiltinModule("node:sea")?.isSea() === true;
  const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
-@@ -42,22 +51,22 @@ function getAliases() {
+@@ -43,22 +52,22 @@ function getAliases() {
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");

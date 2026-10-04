@@ -1,9 +1,8 @@
 import { defineTool } from '@earendil-works/pi-coding-agent';
-import { callServerTool, connectServer } from '@main/mcp/clients';
+import { callServerTool, connectServer, McpUnauthorizedError } from '@main/mcp/clients';
 import type { McpServer } from '@main/mcp/config';
 import { mcpOutputText } from '@main/mcp/tools';
 import { toolResult } from '@main/providers/tools/result';
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import * as v from 'valibot';
 
 const minResultCount = 1;
@@ -124,7 +123,7 @@ export const createWebSearchTools = (readApiKey?: () => Promise<string>) => [
           ...(failed ? { error: 'search_failed' } : {})
         });
       } catch (error) {
-        const authRequired = error instanceof UnauthorizedError;
+        const authRequired = error instanceof McpUnauthorizedError;
         return toolResult(authRequired ? 'Web search authentication failed.' : searchFailedText, {
           query: searchQuery,
           error: authRequired ? 'auth_required' : 'search_failed'

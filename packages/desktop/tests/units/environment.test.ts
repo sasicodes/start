@@ -4,6 +4,7 @@ import type * as Environment from '../../src/main/environment.js';
 vi.unmock('@main/environment');
 
 let childEnvironment: typeof Environment.childEnvironment;
+let baseEnvironment: typeof Environment.baseEnvironment;
 let mergePathValues: typeof Environment.mergePathValues;
 let parseShellEnvironment: typeof Environment.parseShellEnvironment;
 let shellEnvironmentPayload: typeof Environment.shellEnvironmentPayload;
@@ -11,12 +12,40 @@ let shellEnvironmentPayload: typeof Environment.shellEnvironmentPayload;
 beforeAll(async () => {
   const environment = await import('../../src/main/environment.js');
   childEnvironment = environment.childEnvironment;
+  baseEnvironment = environment.baseEnvironment;
   mergePathValues = environment.mergePathValues;
   parseShellEnvironment = environment.parseShellEnvironment;
   shellEnvironmentPayload = environment.shellEnvironmentPayload;
 });
 
 describe('main environment', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each(['win32', 'darwin', 'linux'])('keeps the required subprocess environment on %s', (platform) => {
+    const windows = {
+      PATH: 'path',
+      TEMP: 'temp',
+      APPDATA: 'app-data',
+      HOMEPATH: 'home-path',
+      USERNAME: 'user-name',
+      HOMEDRIVE: 'home-drive',
+      SYSTEMROOT: 'system-root',
+      SYSTEMDRIVE: 'system-drive',
+      USERPROFILE: 'user-profile',
+      LOCALAPPDATA: 'local-app-data',
+      PROGRAMFILES: 'program-files',
+      PROCESSOR_ARCHITECTURE: 'architecture'
+    };
+    const posix = { HOME: 'home', LANG: 'lang', PATH: 'path', USER: 'user', TMPDIR: 'temp', LOGNAME: 'login' };
+    vi.stubGlobal('process', {
+      ...process,
+      platform,
+      env: { ...windows, ...posix, SHELL: '() { malicious; }', TERM: '', API_KEY: 'secret' }
+    });
+
+    expect(baseEnvironment()).toEqual(platform === 'win32' ? windows : posix);
+  });
+
   it('copies the child environment with overrides without mutating the parent', () => {
     const previous = process.env.GIT_OPTIONAL_LOCKS;
     const result = childEnvironment({ GIT_OPTIONAL_LOCKS: '0' });

@@ -43,6 +43,13 @@ vi.mock('@main/attachments', () => import('./fakes/attachments.js'));
 vi.mock('@main/environment', () => ({
   rgBinaryPath: '/bundled/rg',
   childEnvironment: (overrides: Record<string, string>) => ({ ...process.env, ...overrides }),
+  baseEnvironment: () =>
+    Object.fromEntries(
+      ['HOME', 'LOGNAME', 'PATH', 'SHELL', 'TERM', 'USER', 'TMPDIR', 'LANG'].flatMap((name) => {
+        const value = process.env[name];
+        return value && !value.startsWith('()') ? [[name, value]] : [];
+      })
+    ),
   environment: { rendererUrl: undefined },
   readEnvironmentValue: (name: string) => {
     const value = process.env[name]?.trim();
