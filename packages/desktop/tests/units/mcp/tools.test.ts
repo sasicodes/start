@@ -185,7 +185,19 @@ describe('mcp tools', () => {
     expect(mcpContent({ content })).toEqual([
       { type: 'text', text: '[Image omitted: too large.]' },
       ...Array.from({ length: 3 }, () => image('aGk=')),
-      ...Array.from({ length: 2 }, () => ({ type: 'text', text: '[Image omitted: too many images.]' }))
+      { type: 'text', text: '[Image omitted: too many images.]' }
+    ]);
+  });
+
+  it('uses one note for all images beyond the limit', () => {
+    const image = { type: 'image' as const, data: 'aGk=', mimeType: 'image/png' };
+
+    expect(mcpContent({ content: Array.from({ length: 1000 }, () => image) })).toEqual([
+      image,
+      image,
+      image,
+      image,
+      { type: 'text', text: '[Image omitted: too many images.]' }
     ]);
   });
 

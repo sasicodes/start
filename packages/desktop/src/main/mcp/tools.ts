@@ -52,8 +52,9 @@ export const mcpContent = (result: CallToolResult): LlmContent[] => {
 
   for (const item of resultContent(result)) {
     if (item.type === 'image') {
-      if (images >= maxImages) content.push(omittedImage('too many images'));
-      else if (item.data.length > maxImageLength) content.push(omittedImage('too large'));
+      if (images >= maxImages) {
+        if (images === maxImages) content.push(omittedImage('too many images'));
+      } else if (item.data.length > maxImageLength) content.push(omittedImage('too large'));
       else content.push(item);
       images += 1;
       continue;
