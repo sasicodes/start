@@ -1,13 +1,13 @@
 import type { McpServer } from '@main/mcp/config';
-import { mcpToolName, mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
+import { mcpOutput, mcpToolName, mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const clientsMock = vi.hoisted(() => ({
   connectServer: vi.fn(),
   callServerTool: vi.fn(),
   pruneMcpClients: vi.fn(),
-  serverConnection: vi.fn()
+  serverConnection: vi.fn(),
+  McpUnauthorizedError: class extends Error {}
 }));
 
 const configMock = vi.hoisted(() => ({
@@ -118,8 +118,57 @@ describe('mcp tools', () => {
     const tools = await sessionTools('/tmp/workspace');
     const result = await tools[0]?.execute('call-1', {});
 
-    expect(result?.content[0]?.text).toBe('{"hits":0}');
+    expect(result?.content[0]?.text).toBe('{\n  "hits": 0\n}');
     expect(result?.details).toEqual({ failed: true, server: 'github' });
+  });
+
+  it('passes image content through to the model', async () => {
+    configMock.servers = [globalServer];
+    clientsMock.connectServer.mockResolvedValue(connected(['screenshot']));
+    clientsMock.callServerTool.mockResolvedValue({
+      content: [
+        { type: 'text', text: 'captured' },
+        ...Array.from({ length: 5 }, () => ({ type: 'image', data: 'aGk=', mimeType: 'image/png' }))
+      ]
+    });
+
+    const tools = await sessionTools('/tmp/workspace');
+    const result = await tools[0]?.execute('call-1', {});
+
+    expect(result?.content).toEqual([
+      { type: 'text', text: 'captured' },
+      ...Array.from({ length: 4 }, () => ({ type: 'image', data: 'aGk=', mimeType: 'image/png' }))
+    ]);
+  });
+
+  it('returns images without an empty text block', async () => {
+    configMock.servers = [globalServer];
+    clientsMock.connectServer.mockResolvedValue(connected(['screenshot']));
+    clientsMock.callServerTool.mockResolvedValue({ content: [{ type: 'image', data: 'aGk=', mimeType: 'image/png' }] });
+
+    const tools = await sessionTools('/tmp/workspace');
+    const result = await tools[0]?.execute('call-1', {});
+
+    expect(result?.content).toEqual([{ type: 'image', data: 'aGk=', mimeType: 'image/png' }]);
+  });
+
+  it('keeps structured data alongside images', () => {
+    const image = { type: 'image' as const, data: 'aGk=', mimeType: 'image/png' };
+    const result = mcpOutput({ content: [image], structuredContent: { x: 10, y: 20 } });
+
+    expect(result).toEqual({ images: [image], text: '{\n  "x": 10,\n  "y": 20\n}' });
+  });
+
+  it('uses structured data when text blocks are empty', () => {
+    const result = mcpOutput({ content: [{ type: 'text', text: '  ' }], structuredContent: { hits: 0 } });
+
+    expect(result).toEqual({ images: [], text: '{\n  "hits": 0\n}' });
+  });
+
+  it('keeps readable text without duplicating structured data', () => {
+    const result = mcpOutput({ content: [{ type: 'text', text: 'found' }], structuredContent: { hits: 1 } });
+
+    expect(result).toEqual({ images: [], text: 'found' });
   });
 
   it('truncates oversized tool output', async () => {
@@ -145,7 +194,7 @@ describe('mcp tools', () => {
   it('reports authentication problems as tool text instead of throwing', async () => {
     configMock.servers = [globalServer];
     clientsMock.connectServer.mockResolvedValue(connected(['search']));
-    clientsMock.callServerTool.mockRejectedValue(new UnauthorizedError('Unauthorized'));
+    clientsMock.callServerTool.mockRejectedValue(new clientsMock.McpUnauthorizedError('Unauthorized'));
 
     const tools = await sessionTools('/tmp/workspace');
     const result = await tools[0]?.execute('call-1', {});

@@ -17,6 +17,33 @@ process.env.PI_TELEMETRY ??= '0';
 
 export const childEnvironment = (overrides: Record<string, string>) => ({ ...process.env, ...overrides });
 
+export const baseEnvironment = () => {
+  const names =
+    process.platform === 'win32'
+      ? [
+          'PATH',
+          'TEMP',
+          'APPDATA',
+          'HOMEPATH',
+          'USERNAME',
+          'HOMEDRIVE',
+          'SYSTEMROOT',
+          'SYSTEMDRIVE',
+          'USERPROFILE',
+          'LOCALAPPDATA',
+          'PROGRAMFILES',
+          'PROCESSOR_ARCHITECTURE'
+        ]
+      : ['HOME', 'LOGNAME', 'PATH', 'SHELL', 'TERM', 'USER', 'TMPDIR', 'LANG'];
+
+  return Object.fromEntries(
+    names.flatMap((name) => {
+      const value = process.env[name];
+      return value && !value.startsWith('()') ? [[name, value]] : [];
+    })
+  );
+};
+
 export const readEnvironmentValue = (name: string) => {
   const value = process.env[name]?.trim();
   if (!value) return;

@@ -19,6 +19,7 @@ describe('models allowlist', () => {
 
     const openai = allowedLatestModelIds('openai');
     expect(openai.has('gpt-6-astra')).toBe(true);
+    expect(openai.has('gpt-6.1-sol')).toBe(true);
     expect(openai.has('gpt-5.6-sol')).toBe(true);
     expect(openai.has('gpt-5.6-terra')).toBe(true);
     expect(openai.has('gpt-5.6-luna')).toBe(true);

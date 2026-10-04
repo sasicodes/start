@@ -1,12 +1,17 @@
+import {
+  type CallToolResult,
+  McpAuthRequiredError,
+  McpClient,
+  type McpTransport,
+  StdioTransport,
+  StreamableHttpTransport
+} from '@earendil-works/pi-mcp';
 import { appVersion } from '@main/application';
-import { readEnvironmentValue } from '@main/environment';
+import { baseEnvironment, readEnvironmentValue } from '@main/environment';
 import { expandServerValue, expandServerVars, type McpServer } from '@main/mcp/config';
 import { withTimeout } from '@main/utils/timeout';
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+
+export class McpUnauthorizedError extends Error {}
 
 export interface McpToolInfo {
   name: string;
@@ -20,7 +25,7 @@ export type McpConnection =
   | { kind: 'failed'; error: string };
 
 interface ClientResult {
-  client: Client | null;
+  client: McpClient | null;
   connection: McpConnection;
 }
 
@@ -45,19 +50,20 @@ const expandEnvironmentVars = (values: Record<string, string>) =>
 
 const expandedValue = (value: string) => expandServerValue(value, (name) => readEnvironmentValue(name) || '');
 
-const serverTransport = (server: McpServer): Transport => {
+const serverTransport = (server: McpServer): McpTransport => {
   if (server.kind === 'stdio') {
-    return new StdioClientTransport({
-      command: server.command,
+    return new StdioTransport({
       args: server.args,
-      stderr: 'ignore',
-      env: { ...getDefaultEnvironment(), ...expandEnvironmentVars(server.env) }
-    }) as Transport;
+      inheritEnv: false,
+      command: server.command,
+      env: { ...baseEnvironment(), ...expandEnvironmentVars(server.env) }
+    });
   }
 
-  return new StreamableHTTPClientTransport(new URL(expandedValue(server.url)), {
-    requestInit: { headers: expandEnvironmentVars(server.headers) }
-  }) as Transport;
+  return new StreamableHttpTransport({
+    url: expandedValue(server.url),
+    headers: expandEnvironmentVars(server.headers)
+  });
 };
 
 const connectWithin = async <T>(task: Promise<T>): Promise<T> => {
@@ -67,16 +73,16 @@ const connectWithin = async <T>(task: Promise<T>): Promise<T> => {
 };
 
 const connectClient = async (server: McpServer): Promise<ClientResult> => {
-  const client = new Client({ name: 'start', version: appVersion });
+  const client = new McpClient({ name: 'start', version: appVersion });
 
   try {
     await connectWithin(client.connect(serverTransport(server)));
-    const listed = await connectWithin(client.listTools());
+    const tools = await connectWithin(client.listTools());
     return {
       client,
       connection: {
         kind: 'connected',
-        tools: listed.tools.map((tool) => ({
+        tools: tools.map((tool) => ({
           name: tool.name,
           description: tool.description ?? '',
           inputSchema: tool.inputSchema
@@ -86,7 +92,7 @@ const connectClient = async (server: McpServer): Promise<ClientResult> => {
   } catch (error) {
     client.close().catch(() => {});
     const connection: McpConnection =
-      error instanceof UnauthorizedError ? { kind: 'unauthorized' } : { kind: 'failed', error: failureText(error) };
+      error instanceof McpAuthRequiredError ? { kind: 'unauthorized' } : { kind: 'failed', error: failureText(error) };
     return { client: null, connection };
   }
 };
@@ -147,17 +153,19 @@ export const callServerTool = async (
   toolName: string,
   args: Record<string, unknown>,
   { signal, timeoutMs }: CallServerToolOptions
-) => {
+): Promise<CallToolResult> => {
   const { client, connection } = await serverEntry(server).result;
   if (!client) {
-    if (connection.kind === 'unauthorized') throw new UnauthorizedError('Authentication required.');
+    if (connection.kind === 'unauthorized') throw new McpUnauthorizedError('Authentication required.');
     throw new Error('Server unavailable.');
   }
 
-  return await client.callTool({ name: toolName, arguments: args }, undefined, {
-    timeout: timeoutMs,
-    ...(signal ? { signal } : {})
-  });
+  try {
+    return await client.callTool(toolName, args, { timeoutMs, ...(signal ? { signal } : {}) });
+  } catch (error) {
+    if (error instanceof McpAuthRequiredError) throw new McpUnauthorizedError('Authentication required.');
+    throw error;
+  }
 };
 
 export const disposeMcpClients = () => {

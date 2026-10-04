@@ -1,11 +1,18 @@
 import { defineTool, type ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { callServerTool, connectServer, type McpToolInfo, pruneMcpClients, serverConnection } from '@main/mcp/clients';
+import { type CallToolResult, toLlmContent } from '@earendil-works/pi-mcp';
+import {
+  callServerTool,
+  connectServer,
+  McpUnauthorizedError,
+  type McpToolInfo,
+  pruneMcpClients,
+  serverConnection
+} from '@main/mcp/clients';
 import { loadMcpServers, type McpServer } from '@main/mcp/config';
 import { toolResult } from '@main/providers/tools/result';
 import { withTimeout } from '@main/utils/timeout';
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
-import * as v from 'valibot';
 
+const maxImages = 4;
 const callTimeoutMs = 30_000;
 const maxToolsPerServer = 40;
 const maxOutputLength = 80_000;
@@ -17,34 +24,22 @@ const authRequiredText = (server: string) => `Authentication required for ${serv
 
 export const mcpToolName = (server: string, tool: string) => `${server}_${tool}`.replace(/[^\w-]/gu, '_');
 
-const textContentSchema = v.object({ text: v.string(), type: v.literal('text') });
+const truncatedText = (text: string) =>
+  text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
 
-const callResultSchema = v.looseObject({
-  structuredContent: v.optional(v.unknown()),
-  content: v.optional(v.array(v.unknown()), [])
-});
-
-const mcpResultText = (result: unknown) => {
-  const parsed = v.safeParse(callResultSchema, result);
-  if (!parsed.success) return 'Done.';
-
-  const text = parsed.output.content
-    .flatMap((item) => {
-      const entry = v.safeParse(textContentSchema, item);
-      return entry.success ? [entry.output.text] : [];
-    })
+export const mcpOutput = (result: CallToolResult) => {
+  const content = toLlmContent(result);
+  let text = content
+    .flatMap((item) => (item.type === 'text' ? [item.text] : []))
     .join('\n')
     .trim();
-
-  if (text) return text;
-  if (parsed.output.structuredContent) return JSON.stringify(parsed.output.structuredContent);
-  return 'Done.';
+  if (!text && result.structuredContent) text = JSON.stringify(result.structuredContent, null, 2);
+  const images = content.flatMap((item) => (item.type === 'image' ? [item] : [])).slice(0, maxImages);
+  if (!text && images.length === 0) return { images, text: 'Done.' };
+  return { images, text: truncatedText(text) };
 };
 
-export const mcpOutputText = (result: unknown) => {
-  const text = mcpResultText(result);
-  return text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
-};
+export const mcpOutputText = (result: CallToolResult) => mcpOutput(result).text;
 
 const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinition =>
   defineTool({
@@ -59,12 +54,14 @@ const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinit
           ...(signal ? { signal } : {})
         });
         const failed = result.isError === true;
-        return toolResult<Record<string, unknown>>(mcpOutputText(result), {
+        const { text, images } = mcpOutput(result);
+        const output = toolResult<Record<string, unknown>>(text, {
           server: server.name,
           ...(failed ? { failed } : {})
         });
+        return { ...output, content: [...(text ? output.content : []), ...images] };
       } catch (error) {
-        const authRequired = error instanceof UnauthorizedError;
+        const authRequired = error instanceof McpUnauthorizedError;
         const message = error instanceof Error ? error.message : 'Tool call failed.';
         return toolResult(authRequired ? authRequiredText(server.name) : message, {
           failed: true,

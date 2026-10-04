@@ -1,12 +1,12 @@
 import { createWebSearchTools, warmWebSearchTools } from '@main/providers/tools/search/index';
-import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const clientsMock = vi.hoisted(() => ({
   callServerTool: vi.fn(),
   connectServer: vi.fn(),
   pruneMcpClients: vi.fn(),
-  serverConnection: vi.fn()
+  serverConnection: vi.fn(),
+  McpUnauthorizedError: class extends Error {}
 }));
 
 vi.mock('@main/mcp/clients', () => clientsMock);
@@ -234,7 +234,7 @@ describe('web_search tool', () => {
 
     const result = await tool().execute('call-1', { query: 'structured' });
 
-    expect(result.content[0]?.text).toBe('{"hits":2}');
+    expect(result.content[0]?.text).toBe('{\n  "hits": 2\n}');
   });
 
   it('marks MCP error results as failed details', async () => {
@@ -268,7 +268,7 @@ describe('web_search tool', () => {
   });
 
   it('returns a clear authentication failure result', async () => {
-    clientsMock.callServerTool.mockRejectedValue(new UnauthorizedError('Unauthorized'));
+    clientsMock.callServerTool.mockRejectedValue(new clientsMock.McpUnauthorizedError('Unauthorized'));
 
     const result = await tool().execute('call-1', { query: 'private' });
 

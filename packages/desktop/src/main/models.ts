@@ -14,6 +14,7 @@ export interface AllowedModel {
 
 export const models: readonly AllowedModel[] = [
   { provider: 'openai', id: 'gpt-6-astra', score: { taste: 9, intelligence: 10, affordability: 1 } },
+  { provider: 'openai', id: 'gpt-6.1-sol', score: { taste: 9, intelligence: 9, affordability: 7 } },
   { provider: 'openai', id: 'gpt-5.6-sol', score: { taste: 9, intelligence: 9, affordability: 3 } },
   { provider: 'openai', id: 'gpt-5.6-terra', score: { taste: 6, intelligence: 7, affordability: 7 } },
   { provider: 'openai', id: 'gpt-5.6-luna', score: { taste: 5, intelligence: 5, affordability: 9 } },
