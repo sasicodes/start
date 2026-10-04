@@ -40,4 +40,62 @@ describe('multi-session tabs', () => {
     const status = await chat.getStatus();
     expect(status.sessionId).toBe(tabA.id);
   });
+
+  it('isolates 16 concurrent chats with long histories across four workspaces and repeated switches', async () => {
+    const chat = freshChatService({ lastWorkspace: '/tmp/stress-0' });
+    const running = [];
+    for (let index = 0; index < 16; index++) {
+      const workspace = `/tmp/stress-${index % 4}`;
+      const tab = await chat.createTab(workspace);
+      const completion = chat.send(`request:${index}`, newWebContents());
+      const session = getFakeSession(tab.id);
+      if (!session) throw new Error('Missing test session');
+      await session.awaitPromptCall();
+      for (let entry = 0; entry < 400; entry++) {
+        session.sessionManager.appendEntry({
+          id: `history:${index}:${entry}`,
+          type: 'message',
+          timestamp: new Date(1000 + entry).toISOString(),
+          message: {
+            role: entry % 2 === 0 ? 'user' : 'assistant',
+            content: [{ type: 'text', text: `history:${index}:${entry} ${'long message '.repeat(100)}` }]
+          }
+        });
+      }
+      running.push({ tab, session, completion });
+    }
+
+    for (let round = 0; round < 8; round++) {
+      for (let index = 0; index < running.length; index++) {
+        const current = running[index];
+        if (!current) throw new Error('Missing test chat');
+        const { tab, session } = current;
+        const text = `live:${index}:${round}`;
+        const thinking = `thought:${index}:${round}`;
+        const message = { role: 'assistant' as const, content: [] };
+        session.pushEvent({ type: 'message_start', message });
+        session.pushEvent({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta: text } });
+        session.pushEvent({
+          type: 'message_update',
+          assistantMessageEvent: { type: 'thinking_delta', delta: thinking }
+        });
+        const restored = await chat.activateTab(tab.id);
+        expect(restored.ok).toBe(true);
+        expect(restored.status?.sessionId).toBe(tab.id);
+        expect(restored.status?.workspacePath).toBe(tab.workspacePath);
+        expect(restored.status?.isGenerating).toBe(true);
+        expect(restored.turns).toHaveLength(402);
+        expect(restored.turns?.at(-1)).toMatchObject({ text, thinking, streaming: true });
+        expect(restored.turns?.filter((turn) => turn.text.startsWith('live:'))).toHaveLength(1);
+        expect(
+          restored.turns
+            ?.filter((turn) => turn.text.startsWith('history:'))
+            .every((turn) => turn.text.startsWith(`history:${index}:`))
+        ).toBe(true);
+      }
+    }
+    for (const { session } of running) session.finishPrompt();
+    await Promise.all(running.map(({ completion }) => completion));
+    expect(chat.getTabs().every((tab) => tab.status !== 'generating')).toBe(true);
+  }, 20_000);
 });

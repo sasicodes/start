@@ -11,6 +11,7 @@ interface FakeTool {
 export type FakeAgentSessionEvent =
   | { type: 'message_start'; message: { role: 'user' | 'assistant'; content: unknown } }
   | { type: 'message_start'; message: { role: 'custom'; content: string; customType: string; display: boolean } }
+  | { type: 'message_end'; message: { role: 'assistant'; content: unknown } }
   | { type: 'queue_update'; steering: readonly string[]; followUp: readonly string[] }
   | { type: 'tool_execution_start'; toolCallId: string; toolName: string; args: unknown }
   | { type: 'tool_execution_update'; toolCallId: string; toolName: string; args: unknown; partialResult: unknown }

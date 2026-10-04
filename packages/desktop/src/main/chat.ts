@@ -188,18 +188,19 @@ type LiveAssistantTurn = {
   id: string;
   text: string;
   thinking: string;
+  messageComplete: boolean;
   createdAt: number;
   details: NonNullable<HistoryTurn['details']>;
 };
 
 const liveAssistantHistoryTurn = (turn: LiveAssistantTurn): HistoryTurn => ({
   id: turn.id,
-  text: turn.text,
+  text: !turn.messageComplete ? turn.text : '',
   streaming: true,
   role: 'assistant',
   createdAt: turn.createdAt,
-  ...(turn.thinking ? { thinking: turn.thinking } : {}),
-  ...(turn.details && turn.details.length > 0 ? { details: turn.details } : {})
+  ...(!turn.messageComplete && turn.thinking ? { thinking: turn.thinking } : {}),
+  ...(turn.details.length > 0 ? { details: turn.details } : {})
 });
 
 const liveAssistantPlaceholder = (session: AgentSession): LiveAssistantTurn => {
@@ -207,6 +208,7 @@ const liveAssistantPlaceholder = (session: AgentSession): LiveAssistantTurn => {
     text: '',
     details: [],
     thinking: '',
+    messageComplete: false,
     createdAt: Date.now(),
     id: streamingTurnId(session)
   };
@@ -1633,7 +1635,12 @@ export class ChatService {
           if (liveTurn) {
             liveTurn.text = '';
             liveTurn.thinking = '';
+            liveTurn.messageComplete = false;
           }
+        }
+
+        if (event.type === 'message_end' && event.message.role === 'assistant' && state.liveAssistantTurn) {
+          state.liveAssistantTurn.messageComplete = true;
         }
 
         if (event.type === 'tool_execution_start' || event.type === 'tool_execution_update') {

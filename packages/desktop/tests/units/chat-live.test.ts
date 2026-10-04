@@ -27,6 +27,85 @@ describe('appendLiveAssistantTurn', () => {
 
     expect(appendLiveAssistantTurn(turns, liveTurn).map((turn) => turn.id)).toEqual(['user', 'assistant', 'live']);
   });
+
+  it('preserves pending history thinking and details while appending new live work', () => {
+    const pending = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:old', title: 'Read file', kind: 'tool', state: 'done' },
+      'work',
+      1000
+    );
+    const current = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:new', title: 'Running command', kind: 'tool', state: 'active' },
+      'live',
+      2000
+    );
+    const turns: HistoryTurn[] = [
+      { id: 'work', role: 'event', text: '', createdAt: 1000, thinking: 'Earlier thought.', details: pending }
+    ];
+    const result = appendLiveAssistantTurn(turns, {
+      ...liveTurn,
+      thinking: 'Current thought.',
+      details: [...pending, ...current]
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.thinking).toBe('Earlier thought.\nCurrent thought.');
+    expect(result[0]?.details?.map((detail) => detail.key)).toEqual(['tool:old', 'tool:new']);
+    expect(turns[0]?.details).toEqual(pending);
+  });
+
+  it('keeps unfinished tools live without replaying completed tools', () => {
+    const done = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:done', title: 'Read file', kind: 'tool', state: 'done' },
+      'answer',
+      1000
+    );
+    const pending = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:active', title: 'Ran command', kind: 'tool', state: 'done' },
+      'answer',
+      1000
+    );
+    const active = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:active', title: 'Running command', kind: 'tool', state: 'active' },
+      'live',
+      2000
+    );
+    const result = appendLiveAssistantTurn(
+      [{ id: 'answer', role: 'assistant', text: 'Inspecting.', createdAt: 1000, details: [...done, ...pending] }],
+      { ...liveTurn, details: [...done, ...active] }
+    );
+
+    expect(result[0]?.details).toEqual(done);
+    expect(result[1]?.details).toEqual(active);
+  });
+
+  it('replaces a tool-only history placeholder with its active live tool', () => {
+    const pending = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:active', title: 'Ran command', kind: 'tool', state: 'done' },
+      'work',
+      1000
+    );
+    const active = upsertLiveAssistantDetail(
+      [],
+      { key: 'tool:active', title: 'Running command', kind: 'tool', state: 'active' },
+      'live',
+      2000
+    );
+    const result = appendLiveAssistantTurn(
+      [{ id: 'work', role: 'event', text: '', createdAt: 1000, details: pending }],
+      { ...liveTurn, details: active }
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe('live');
+    expect(result[0]?.details).toEqual(active);
+  });
 });
 
 describe('upsertLiveAssistantDetail', () => {

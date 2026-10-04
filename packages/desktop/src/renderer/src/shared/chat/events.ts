@@ -149,16 +149,17 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       streamFlush.schedule();
     };
 
-    const startActivitySegment = () => {
+    const startActivitySegment = (toolBoundary = false) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id || textAssistantId !== id) return;
-      if (endsMidWord(lastAssistantChar)) return;
+      if (!toolBoundary && endsMidWord(lastAssistantChar)) return;
 
       streamFlush.flushNow();
       assistantFlush.flushNow();
       setTurnStreaming(id, false);
 
       const assistantTurn = { ...createTurn('assistant', ''), streaming: true };
+      if (restoredStreaming()) assistantTurn.id = `streaming:${assistantTurn.id}`;
       optionsRef.current.assistantIdRef.current = assistantTurn.id;
       activityClearedAssistantId = null;
       textAssistantId = '';
@@ -274,7 +275,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
-      startActivitySegment();
+      startActivitySegment(true);
       queueDetail(event);
       const activity = turnActivityLabel(event);
       if (activity) setTurnActivity(optionsRef.current.assistantIdRef.current ?? id, activity);
@@ -309,7 +310,7 @@ export const useChatEvents = (options: UseChatEventsOptions) => {
       const id = optionsRef.current.assistantIdRef.current;
       if (!id) return;
 
-      startActivitySegment();
+      startActivitySegment(true);
       queueDetail(payload);
       const activity = turnActivityLabel(payload);
       if (activity) setTurnActivity(optionsRef.current.assistantIdRef.current ?? id, activity);
