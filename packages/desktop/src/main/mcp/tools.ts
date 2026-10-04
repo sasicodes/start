@@ -1,10 +1,10 @@
 import { defineTool, type ToolDefinition } from '@earendil-works/pi-coding-agent';
-import { type CallToolResult, toLlmContent } from '@earendil-works/pi-mcp';
+import { type CallToolResult, type LlmContent, toLlmContent } from '@earendil-works/pi-mcp';
 import {
   callServerTool,
   connectServer,
-  McpUnauthorizedError,
   type McpToolInfo,
+  McpUnauthorizedError,
   pruneMcpClients,
   serverConnection
 } from '@main/mcp/clients';
@@ -13,6 +13,7 @@ import { toolResult } from '@main/providers/tools/result';
 import { withTimeout } from '@main/utils/timeout';
 
 const maxImages = 4;
+const maxImageLength = 8 * 1024 * 1024;
 const callTimeoutMs = 30_000;
 const maxToolsPerServer = 40;
 const maxOutputLength = 80_000;
@@ -27,19 +28,44 @@ export const mcpToolName = (server: string, tool: string) => `${server}_${tool}`
 const truncatedText = (text: string) =>
   text.length > maxOutputLength ? `${text.slice(0, maxOutputLength)}\n[Output truncated.]` : text;
 
-export const mcpOutput = (result: CallToolResult) => {
-  const content = toLlmContent(result);
-  let text = content
+const resultContent = (result: CallToolResult) => {
+  const content = toLlmContent(result).filter((item) => item.type === 'image' || item.text.trim());
+  const hasText = content.some((item) => item.type === 'text');
+  if (hasText || !result.structuredContent) return content;
+  return [{ type: 'text' as const, text: JSON.stringify(result.structuredContent, null, 2) }, ...content];
+};
+
+export const mcpOutputText = (result: CallToolResult) => {
+  const text = resultContent(result)
     .flatMap((item) => (item.type === 'text' ? [item.text] : []))
     .join('\n')
     .trim();
-  if (!text && result.structuredContent) text = JSON.stringify(result.structuredContent, null, 2);
-  const images = content.flatMap((item) => (item.type === 'image' ? [item] : [])).slice(0, maxImages);
-  if (!text && images.length === 0) return { images, text: 'Done.' };
-  return { images, text: truncatedText(text) };
+  return truncatedText(text || 'Done.');
 };
 
-export const mcpOutputText = (result: CallToolResult) => mcpOutput(result).text;
+const omittedImage = (reason: string): LlmContent => ({ type: 'text', text: `[Image omitted: ${reason}.]` });
+
+export const mcpContent = (result: CallToolResult): LlmContent[] => {
+  let images = 0;
+  let remaining = maxOutputLength;
+  const content: LlmContent[] = [];
+
+  for (const item of resultContent(result)) {
+    if (item.type === 'image') {
+      if (images >= maxImages) content.push(omittedImage('too many images'));
+      else if (item.data.length > maxImageLength) content.push(omittedImage('too large'));
+      else content.push(item);
+      images += 1;
+      continue;
+    }
+    if (remaining <= 0) continue;
+    const fits = item.text.length <= remaining;
+    content.push({ type: 'text', text: fits ? item.text : `${item.text.slice(0, remaining)}\n[Output truncated.]` });
+    remaining -= item.text.length;
+  }
+
+  return content.length > 0 ? content : [{ type: 'text', text: 'Done.' }];
+};
 
 const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinition =>
   defineTool({
@@ -54,12 +80,8 @@ const serverToolDefinition = (server: McpServer, tool: McpToolInfo): ToolDefinit
           ...(signal ? { signal } : {})
         });
         const failed = result.isError === true;
-        const { text, images } = mcpOutput(result);
-        const output = toolResult<Record<string, unknown>>(text, {
-          server: server.name,
-          ...(failed ? { failed } : {})
-        });
-        return { ...output, content: [...(text ? output.content : []), ...images] };
+        const details: Record<string, unknown> = { server: server.name, ...(failed ? { failed } : {}) };
+        return { details, content: mcpContent(result) };
       } catch (error) {
         const authRequired = error instanceof McpUnauthorizedError;
         const message = error instanceof Error ? error.message : 'Tool call failed.';

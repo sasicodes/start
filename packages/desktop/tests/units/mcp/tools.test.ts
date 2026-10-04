@@ -1,5 +1,5 @@
 import type { McpServer } from '@main/mcp/config';
-import { mcpOutput, mcpToolName, mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
+import { mcpContent, mcpOutputText, mcpToolName, mcpToolsForSession, warmMcpServers } from '@main/mcp/tools';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const clientsMock = vi.hoisted(() => ({
@@ -137,7 +137,8 @@ describe('mcp tools', () => {
 
     expect(result?.content).toEqual([
       { type: 'text', text: 'captured' },
-      ...Array.from({ length: 4 }, () => ({ type: 'image', data: 'aGk=', mimeType: 'image/png' }))
+      ...Array.from({ length: 4 }, () => ({ type: 'image', data: 'aGk=', mimeType: 'image/png' })),
+      { type: 'text', text: '[Image omitted: too many images.]' }
     ]);
   });
 
@@ -154,21 +155,44 @@ describe('mcp tools', () => {
 
   it('keeps structured data alongside images', () => {
     const image = { type: 'image' as const, data: 'aGk=', mimeType: 'image/png' };
-    const result = mcpOutput({ content: [image], structuredContent: { x: 10, y: 20 } });
 
-    expect(result).toEqual({ images: [image], text: '{\n  "x": 10,\n  "y": 20\n}' });
+    expect(mcpContent({ content: [image], structuredContent: { x: 10, y: 20 } })).toEqual([
+      { type: 'text', text: '{\n  "x": 10,\n  "y": 20\n}' },
+      image
+    ]);
   });
 
   it('uses structured data when text blocks are empty', () => {
-    const result = mcpOutput({ content: [{ type: 'text', text: '  ' }], structuredContent: { hits: 0 } });
+    expect(mcpOutputText({ content: [{ type: 'text', text: '  ' }], structuredContent: { hits: 0 } })).toBe(
+      '{\n  "hits": 0\n}'
+    );
+  });
 
-    expect(result).toEqual({ images: [], text: '{\n  "hits": 0\n}' });
+  it('keeps captions next to their images', () => {
+    const image = (data: string) => ({ type: 'image' as const, data, mimeType: 'image/png' });
+
+    expect(
+      mcpContent({
+        content: [{ type: 'text', text: 'first' }, image('YQ=='), { type: 'text', text: 'second' }, image('Yg==')]
+      })
+    ).toEqual([{ type: 'text', text: 'first' }, image('YQ=='), { type: 'text', text: 'second' }, image('Yg==')]);
+  });
+
+  it('omits oversized and extra images', () => {
+    const image = (data: string) => ({ type: 'image' as const, data, mimeType: 'image/png' });
+    const content = [image('x'.repeat(8 * 1024 * 1024 + 4)), ...Array.from({ length: 5 }, () => image('aGk='))];
+
+    expect(mcpContent({ content })).toEqual([
+      { type: 'text', text: '[Image omitted: too large.]' },
+      ...Array.from({ length: 3 }, () => image('aGk=')),
+      ...Array.from({ length: 2 }, () => ({ type: 'text', text: '[Image omitted: too many images.]' }))
+    ]);
   });
 
   it('keeps readable text without duplicating structured data', () => {
-    const result = mcpOutput({ content: [{ type: 'text', text: 'found' }], structuredContent: { hits: 1 } });
-
-    expect(result).toEqual({ images: [], text: 'found' });
+    expect(mcpContent({ content: [{ type: 'text', text: 'found' }], structuredContent: { hits: 1 } })).toEqual([
+      { type: 'text', text: 'found' }
+    ]);
   });
 
   it('truncates oversized tool output', async () => {
