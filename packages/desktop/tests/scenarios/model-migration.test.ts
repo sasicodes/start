@@ -140,3 +140,67 @@ it.each(migrations)('resolves a subagent pick of %s:%s as %s', async (provider, 
   expect(options?.resolveModel(`${provider}:${previous}`)?.id).toBe(next);
   chat.dispose();
 });
+
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+
+it.each(migrations)('reopens real saved history using %s:%s as %s', async (provider, previous, next) => {
+  const { ModelRuntime, SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } =
+    await vi.importActual<typeof import('@earendil-works/pi-coding-agent')>('@earendil-works/pi-coding-agent');
+  const cwd = await mkdtemp(join(tmpdir(), 'start-model-migration-'));
+  try {
+    const modelRuntime = await ModelRuntime.create({
+      modelsPath: null,
+      allowModelNetwork: false,
+      credentials: new InMemoryCredentialStore()
+    });
+    const saved = SessionManager.create(cwd, join(cwd, 'sessions'));
+    saved.appendModelChange(provider, previous);
+    saved.appendThinkingLevelChange('high');
+    saved.appendMessage({ role: 'user', content: 'Saved conversation.', timestamp: 1 });
+    const path = saved.getSessionFile();
+    if (!path) throw new Error('Expected a saved session file.');
+
+    const reopened = SessionManager.open(path);
+    expect(reopened.buildSessionContext().model).toEqual({ provider, modelId: previous });
+    const key = replacementModelKey(`${provider}:${previous}`);
+    const model = modelRuntime.getModel(provider, key.slice(provider.length + 1));
+    if (!model) throw new Error('Expected the replacement model in the installed runtime.');
+
+    const settingsManager = SettingsManager.inMemory();
+    const resourceLoader = new DefaultResourceLoader({
+      cwd,
+      agentDir: cwd,
+      noSkills: true,
+      noThemes: true,
+      noExtensions: true,
+      noContextFiles: true,
+      noPromptTemplates: true,
+      settingsManager
+    });
+    await resourceLoader.reload();
+    const { session } = await createAgentSession({
+      cwd,
+      model,
+      agentDir: cwd,
+      noTools: 'all',
+      modelRuntime,
+      resourceLoader,
+      settingsManager,
+      thinkingLevel: 'high',
+      sessionManager: reopened
+    });
+    try {
+      expect(session.model?.id).toBe(next);
+      expect(session.model?.provider).toBe(provider);
+      expect(session.thinkingLevel).toBe('high');
+      expect(session.messages).toContainEqual({ role: 'user', content: 'Saved conversation.', timestamp: 1 });
+    } finally {
+      session.dispose();
+    }
+  } finally {
+    await rm(cwd, { force: true, recursive: true });
+  }
+});
