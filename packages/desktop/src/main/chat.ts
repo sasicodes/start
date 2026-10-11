@@ -116,6 +116,7 @@ import {
   type WorkspaceFolder
 } from '@main/types';
 import type { ProviderUsageCredential } from '@main/usage/types';
+import { replacementModelKey } from '@main/utils/model-key';
 import { directoryStatus, workspaceDisplayName } from '@main/utils/workspace';
 import { sendToMainWindowIfOpen, sendToRendererWindows } from '@main/window';
 import { activateWorkspaceAccess } from '@main/workspace/access';
@@ -2764,11 +2765,10 @@ export class ChatService {
 
   private pickModel() {
     const available = this.getPickerModels();
-    let selected: ReturnType<typeof this.findModelByKey>;
-    if (this.selectedModelKey) selected = this.findModelByKey(this.selectedModelKey);
-    if (selected) return selected;
+    const selected = this.selectedModelKey ? this.findModelByKey(this.selectedModelKey) : null;
+    if (selected && modelKey(selected) === this.selectedModelKey) return selected;
 
-    const model = available[0];
+    const model = selected ?? available[0];
 
     this.selectedModelKey = model ? modelKey(model) : null;
     if (model) this.selectedThinkingLevel = clampThinkingLevel(model, this.selectedThinkingLevel);
@@ -2821,7 +2821,8 @@ export class ChatService {
   }
 
   private findModelByKey(selectedModelKey: string) {
-    return this.getPickerModels().find((model) => modelKey(model) === selectedModelKey);
+    const key = replacementModelKey(selectedModelKey);
+    return this.getPickerModels().find((model) => modelKey(model) === key);
   }
 
   private resolveSessionSelection(sessionId: string): { modelKey: string; thinkingLevel: EffortLevel } | null {
@@ -2839,7 +2840,7 @@ export class ChatService {
     if (!resolvedKey || !model) return null;
 
     const fallbackLevel = thinkingLevel ?? workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
-    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
+    return { modelKey: modelKey(model), thinkingLevel: clampThinkingLevel(model, fallbackLevel) };
   }
 
   private applyStoredSessionSelection(sessionId: string): void {
@@ -2860,7 +2861,7 @@ export class ChatService {
     if (!resolvedKey || !model) return null;
 
     const level = workspaceDefault?.thinkingLevel ?? this.appState.selectedThinkingLevel;
-    return { modelKey: resolvedKey, thinkingLevel: clampThinkingLevel(model, level) };
+    return { modelKey: modelKey(model), thinkingLevel: clampThinkingLevel(model, level) };
   }
 
   private applyWorkspaceModelDefault(workspacePath: string): void {

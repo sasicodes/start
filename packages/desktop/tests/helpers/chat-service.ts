@@ -1,4 +1,5 @@
 import { ChatService } from '@main/chat';
+import type { WorkspaceModelDefault } from '@main/storage';
 import type { WebContents } from 'electron';
 import {
   type FakeModel,
@@ -17,6 +18,7 @@ export interface FreshServiceOptions {
   lastWorkspace?: string;
   selectedModelKey?: string;
   modelRegistryError?: string;
+  workspaceModelDefaults?: Record<string, WorkspaceModelDefault>;
   onMobileSessionChanged?: (change: { sessionId: string; workspacePath: string }) => void;
 }
 
@@ -39,6 +41,7 @@ export const freshChatService = (options: FreshServiceOptions = {}) => {
   resetStorage({
     ...(options.lastWorkspace ? { lastWorkspace: options.lastWorkspace } : {}),
     ...(options.selectedModelKey ? { selectedModelKey: options.selectedModelKey } : {}),
+    ...(options.workspaceModelDefaults ? { workspaceModelDefaults: options.workspaceModelDefaults } : {}),
     selectedThinkingLevel: 'medium'
   });
   setModelRegistryError(options.modelRegistryError);
