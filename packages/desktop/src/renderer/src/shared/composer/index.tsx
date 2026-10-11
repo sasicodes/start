@@ -248,7 +248,6 @@ export const Composer = memo(
                 label={promptPlaceholder.label}
                 onPaste={onPaste}
                 onInput={handleDraftInput}
-                expanded={finderVisible}
                 inputRef={setPromptInputRef}
                 singleLine={singleLine}
                 onKeyDown={handleKeyDown}
