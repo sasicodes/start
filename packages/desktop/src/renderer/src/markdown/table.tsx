@@ -10,7 +10,7 @@ interface ScrollEdges {
   right: boolean;
 }
 
-const useScrollEdges = (ref: RefObject<HTMLElement>): ScrollEdges => {
+const useScrollEdges = (ref: RefObject<HTMLElement | null>): ScrollEdges => {
   const [edges, setEdges] = useState<ScrollEdges>({ left: false, right: false });
 
   useEffect(() => {

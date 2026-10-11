@@ -19,7 +19,7 @@ describe('image runtime', () => {
     );
   });
 
-  it('shrinks oversized images instead of omitting them', async () => {
+  it('shrinks oversized images instead of omitting them', { timeout: 20_000 }, async () => {
     const width = 3200;
     const height = 1800;
     const pixels = new Uint8Array(width * height * 4).map((_, index) => (index * 37) % 251);

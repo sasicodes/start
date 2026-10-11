@@ -12,7 +12,7 @@ export const useVisibleRange = (
   cumulative: Float64Array,
   overscan: number,
   initialEnd: boolean,
-  containerRef: RefObject<HTMLElement>
+  containerRef: RefObject<HTMLElement | null>
 ): VisibleRange => {
   const initialEndRef = useRef(initialEnd);
   const cumulativeRef = useRef(cumulative);

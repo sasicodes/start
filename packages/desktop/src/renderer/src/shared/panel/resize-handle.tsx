@@ -1,10 +1,10 @@
 import { tw } from '@renderer/utils/tw';
-import type { JSX } from 'preact';
+import type { TargetedPointerEvent } from 'preact';
 import { useState } from 'preact/hooks';
 
 interface ResizeHandleProps {
   resizing: boolean;
-  onPointerDown: (event: JSX.TargetedPointerEvent<HTMLDivElement>) => void;
+  onPointerDown: (event: TargetedPointerEvent<HTMLDivElement>) => void;
 }
 
 export const ResizeHandle = ({ resizing, onPointerDown }: ResizeHandleProps) => {

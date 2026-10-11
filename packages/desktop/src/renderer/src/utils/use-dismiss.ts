@@ -1,7 +1,7 @@
 import type { RefObject } from 'preact';
 import { useEffect } from 'preact/hooks';
 
-type DismissRef = RefObject<HTMLElement>;
+type DismissRef = RefObject<HTMLElement | null>;
 
 interface UseDismissOptions {
   refs: DismissRef[];

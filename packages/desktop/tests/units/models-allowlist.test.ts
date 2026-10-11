@@ -14,15 +14,18 @@ describe('models allowlist', () => {
     expect(anthropic.has('claude-opus-5-5')).toBe(true);
     expect(anthropic.has('claude-opus-5')).toBe(false);
     expect(anthropic.has('claude-opus-4-8')).toBe(false);
-    expect(anthropic.has('claude-sonnet-5')).toBe(true);
+    expect(anthropic.has('claude-sonnet-5')).toBe(false);
+    expect(anthropic.has('claude-sonnet-5-5')).toBe(true);
     expect(anthropic.has('claude-haiku-4-5')).toBe(false);
+    expect(anthropic.has('claude-haiku-5-5')).toBe(true);
 
     const openai = allowedLatestModelIds('openai');
     expect(openai.has('gpt-6-astra')).toBe(true);
     expect(openai.has('gpt-6.1-sol')).toBe(true);
-    expect(openai.has('gpt-5.6-sol')).toBe(true);
-    expect(openai.has('gpt-5.6-terra')).toBe(true);
-    expect(openai.has('gpt-5.6-luna')).toBe(true);
+    expect(openai.has('gpt-5.6-sol')).toBe(false);
+    expect(openai.has('gpt-5.6-terra')).toBe(false);
+    expect(openai.has('gpt-5.6-luna')).toBe(false);
+    expect(openai.has('gpt-6-luna')).toBe(true);
     expect(openai.has('gpt-5.5')).toBe(false);
   });
 

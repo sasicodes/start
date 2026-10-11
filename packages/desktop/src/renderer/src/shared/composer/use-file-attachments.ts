@@ -8,7 +8,7 @@ type AttachmentSetter = (value: ImageAttachment[] | ((current: ImageAttachment[]
 interface UseFileAttachmentsOptions {
   enabled: boolean;
   setDraft: DraftSetter;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
   setAttachments: AttachmentSetter;
 }
 

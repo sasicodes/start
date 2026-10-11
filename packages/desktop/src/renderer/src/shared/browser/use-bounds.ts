@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef } from 'preact/hooks';
 interface BrowserBoundsInput {
   active: boolean;
   moving: boolean;
-  viewportRef: RefObject<HTMLDivElement>;
+  viewportRef: RefObject<HTMLDivElement | null>;
 }
 
 export const useBrowserBounds = ({ active, moving, viewportRef }: BrowserBoundsInput) => {

@@ -1,5 +1,5 @@
 import { usePanelResize } from '@renderer/shared/panel/resize';
-import type { JSX } from 'preact';
+import type { TargetedPointerEvent } from 'preact';
 import { afterEach, expect, it, vi } from 'vitest';
 
 vi.mock('preact/hooks', () => ({
@@ -36,7 +36,7 @@ it('commits the final drag coordinate before the scheduled frame renders', () =>
     clientX: 600,
     preventDefault: () => {},
     stopPropagation: () => {}
-  } as unknown as JSX.TargetedPointerEvent<HTMLDivElement>);
+  } as unknown as TargetedPointerEvent<HTMLDivElement>);
   handlers.get('pointermove')?.({ clientX: 450 } as PointerEvent);
   handlers.get('pointerup')?.({ type: 'pointerup', clientX: 400 } as PointerEvent);
   expect(setProperty).toHaveBeenCalledWith('--panel-width', '800px');

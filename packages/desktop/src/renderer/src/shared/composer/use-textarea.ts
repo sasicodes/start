@@ -7,7 +7,7 @@ interface TextareaOptions {
   draft: string;
   singleLine: boolean;
   hasAttachments: boolean;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
 }
 
 export const useComposerTextarea = ({ draft, singleLine, hasAttachments, textareaRef }: TextareaOptions) => {

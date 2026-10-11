@@ -8,7 +8,7 @@ const setup = () =>
   freshChatService({
     lastWorkspace: '/tmp/selection-context',
     selectedModelKey: 'anthropic:claude-opus-5-5',
-    models: ['claude-opus-5-5', 'claude-sonnet-5'].map((id) => ({
+    models: ['claude-opus-5-5', 'claude-sonnet-5-5'].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,
@@ -28,7 +28,8 @@ it.each(['model', 'thinking'])('rejects %s selection after the chat changes duri
     started.resolve(null);
     await gate.promise;
   });
-  const selection = kind === 'model' ? chat.selectModel('anthropic:claude-sonnet-5') : chat.selectThinkingLevel('high');
+  const selection =
+    kind === 'model' ? chat.selectModel('anthropic:claude-sonnet-5-5') : chat.selectThinkingLevel('high');
   await started.promise;
   await chat.newSession();
   gate.resolve(null);
@@ -55,7 +56,7 @@ it('does not overwrite a new chat selection when an older session model save fin
     started.resolve(null);
     await gate.promise;
   });
-  const selection = chat.selectModel('anthropic:claude-sonnet-5');
+  const selection = chat.selectModel('anthropic:claude-sonnet-5-5');
   await started.promise;
   await chat.newSession();
   gate.resolve(null);
@@ -75,7 +76,8 @@ it.each(['model', 'thinking'])('rejects %s changes when generation starts during
     started.resolve(null);
     await gate.promise;
   });
-  const selection = kind === 'model' ? chat.selectModel('anthropic:claude-sonnet-5') : chat.selectThinkingLevel('high');
+  const selection =
+    kind === 'model' ? chat.selectModel('anthropic:claude-sonnet-5-5') : chat.selectThinkingLevel('high');
   await started.promise;
   session.isStreaming = true;
   gate.resolve(null);

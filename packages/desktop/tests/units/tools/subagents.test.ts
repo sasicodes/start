@@ -79,12 +79,12 @@ describe('sub-agent tool details', () => {
       normalizeSubagentTasks({
         tasks: [
           { prompt: 'Review UI.', model: 'openai:gpt-5.5', effort: 'high' },
-          { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5', effort: 'low' }
+          { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5-5', effort: 'low' }
         ]
       })
     ).toEqual([
       { prompt: 'Review UI.', model: 'openai:gpt-5.5', effort: 'high' },
-      { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5', effort: 'low' }
+      { prompt: 'Review tests.', model: 'anthropic:claude-sonnet-5-5', effort: 'low' }
     ]);
     expect(normalizeSubagentTasks(['Review UI.', 'Review tests.'])).toEqual([]);
     expect(normalizeSubagentTasks({ tasks: [{ prompt: 'No model or effort.' }] })).toEqual([]);
