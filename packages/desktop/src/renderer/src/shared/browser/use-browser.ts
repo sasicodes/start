@@ -17,7 +17,7 @@ import { useBrowserBounds } from '@renderer/shared/browser/use-bounds';
 import { useBrowserInspect } from '@renderer/shared/browser/use-inspect';
 import { useBrowserScreenshot } from '@renderer/shared/browser/use-screenshot';
 import { usePanelMotion } from '@renderer/shared/panel/context';
-import type { JSX } from 'preact';
+import type { TargetedSubmitEvent } from 'preact';
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 
 interface BrowserOptions {
@@ -117,7 +117,7 @@ export const useBrowser = ({ onClose, navigation, onUrlOpened, onInspectText }: 
   );
 
   const submitAddress = useCallback(
-    (event: JSX.TargetedSubmitEvent<HTMLFormElement>) => {
+    (event: TargetedSubmitEvent<HTMLFormElement>) => {
       event.preventDefault();
       openAddress(address).catch(() => {});
     },

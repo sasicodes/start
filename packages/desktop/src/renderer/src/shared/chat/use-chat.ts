@@ -31,7 +31,7 @@ import { useCallback, useMemo, useRef, useState } from 'preact/hooks';
 interface UseChatOptions {
   onShowChat: () => void;
   onShowSettings: (tab?: SettingsTab) => void;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
 }
 
 interface ClearSessionOptions {

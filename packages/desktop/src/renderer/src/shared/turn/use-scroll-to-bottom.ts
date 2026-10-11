@@ -51,7 +51,10 @@ export const observeScrollToBottom = (
   };
 };
 
-export const useScrollToBottom = (scrollRef: RefObject<HTMLElement>, contentRef: RefObject<HTMLElement>) => {
+export const useScrollToBottom = (
+  scrollRef: RefObject<HTMLElement | null>,
+  contentRef: RefObject<HTMLElement | null>
+) => {
   useEffect(() => {
     const element = scrollRef.current;
     const content = contentRef.current;

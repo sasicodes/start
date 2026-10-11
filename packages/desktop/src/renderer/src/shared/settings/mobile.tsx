@@ -3,7 +3,7 @@ import { RELAY_SETUP_URL } from '@renderer/constants';
 import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
-import type { ComponentChildren } from 'preact';
+import type { AccessibleInputHTMLAttributes, ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 
 interface MobileProps {
@@ -11,13 +11,7 @@ interface MobileProps {
   onChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
 }
 
-interface MobileInputProps {
-  value: string;
-  placeholder: string;
-  type: 'text' | 'password';
-  trailing?: ComponentChildren;
-  onInput: (value: string) => void;
-}
+type MobileInputProps = AccessibleInputHTMLAttributes<HTMLInputElement> & { trailing?: ComponentChildren };
 
 const mobileRelaySettingsKey = (settings: MobileRelaySettings) =>
   `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.desktopName}:${settings.relayToken}`;
@@ -154,13 +148,10 @@ const IconAction = ({ label, danger, onClick, children }: IconActionProps) => (
   </button>
 );
 
-const MobileInput = ({ type, value, onInput, placeholder, trailing }: MobileInputProps) => (
+const MobileInput = ({ trailing, ...input }: MobileInputProps) => (
   <div class="relative">
     <input
-      type={type}
-      value={value}
-      placeholder={placeholder}
-      onInput={(event) => onInput(event.currentTarget.value)}
+      {...input}
       class={tw(
         'h-10 w-full rounded-full border border-line bg-composer px-4 text-sm text-ink outline-none placeholder:text-soft',
         trailing ? 'pr-11' : ''
@@ -236,17 +227,16 @@ export const Mobile = ({ settings, onChange }: MobileProps) => {
         <>
           <div class="grid gap-2">
             <MobileInput
-              type="text"
               value={draft.relayUrl}
               trailing={<RelayStatus status={probeStatus} />}
-              onInput={(relayUrl) => updateDraft({ relayUrl })}
+              onInput={(event) => updateDraft({ relayUrl: event.currentTarget.value })}
               placeholder="Relay URL (e.g. wss://relay.example.com/connect)"
             />
             <MobileInput
               type="password"
               value={draft.relayToken}
               placeholder="START_RELAY_TOKEN"
-              onInput={(relayToken) => updateDraft({ relayToken })}
+              onInput={(event) => updateDraft({ relayToken: event.currentTarget.value })}
             />
           </div>
 

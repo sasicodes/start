@@ -6,7 +6,6 @@ import { AnthropicIcon, CheckIcon, ChevronRightIcon, OpenAIIcon, SettingsIcon } 
 import { AppMenu, MenuPanel, MenuSurface } from '@renderer/ui/menu';
 import { tw } from '@renderer/utils/tw';
 import { AnimatePresence, motion } from 'motion/react';
-import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 
 interface ProviderGroup {
@@ -237,9 +236,7 @@ export const Models = ({ models, selectedModel, onSelectModel, onOpenSettings }:
       {flyout && (
         <div
           ref={flyoutRef}
-          style={
-            { '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` } as JSX.CSSProperties
-          }
+          style={{ '--flyout-rise': `${flyoutRisePx(providers.length, active, providerRowStep)}px` }}
           class="absolute bottom-1 left-full ml-2 w-56 -translate-y-(--flyout-rise)"
         >
           <MenuSurface>

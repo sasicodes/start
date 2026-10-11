@@ -9,7 +9,7 @@ export const initialSurface = (): AppSurface =>
 export const routeForSession = (sessionId: string): AppRoute =>
   sessionId ? { name: 'session', sessionId } : { name: 'chat' };
 
-export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement>) => {
+export const useAppNavigation = (textareaRef: RefObject<HTMLTextAreaElement | null>) => {
   const [route, setRoute] = useState<AppRoute>(currentRoute);
   const [surface, setSurface] = useState<AppSurface>(initialSurface);
 

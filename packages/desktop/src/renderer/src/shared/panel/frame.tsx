@@ -1,7 +1,7 @@
 import { PanelMotionProvider } from '@renderer/shared/panel/context';
 import { ResizeHandle } from '@renderer/shared/panel/resize-handle';
 import { tw } from '@renderer/utils/tw';
-import type { ComponentChildren, JSX } from 'preact';
+import type { ComponentChildren, TargetedPointerEvent } from 'preact';
 
 interface PanelFrameProps {
   label: string;
@@ -11,7 +11,7 @@ interface PanelFrameProps {
   resizable: boolean;
   initialWidth: number;
   children: ComponentChildren;
-  onResizePointerDown: (event: JSX.TargetedPointerEvent<HTMLDivElement>) => void;
+  onResizePointerDown: (event: TargetedPointerEvent<HTMLDivElement>) => void;
 }
 
 export const PanelFrame = ({

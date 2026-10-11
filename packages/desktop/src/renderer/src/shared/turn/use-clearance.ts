@@ -2,7 +2,7 @@ import { composerClearance } from '@renderer/shared/composer/state';
 import type { RefObject } from 'preact';
 import { useLayoutEffect } from 'preact/hooks';
 
-export const useTurnClearance = (ref: RefObject<HTMLElement>) => {
+export const useTurnClearance = (ref: RefObject<HTMLElement | null>) => {
   const clearance = composerClearance.value;
 
   useLayoutEffect(() => {

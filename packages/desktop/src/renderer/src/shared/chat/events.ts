@@ -43,7 +43,7 @@ interface UseChatEventsOptions {
   sessionRequestRef: MutableRef<number>;
   setIsGenerating: (value: boolean) => void;
   assistantIdRef: MutableRef<string | null>;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
   setQueuedMessages: (messages: QueuedMessage[]) => void;
   setTurns: (updater: (current: Turn[]) => Turn[]) => void;
 }

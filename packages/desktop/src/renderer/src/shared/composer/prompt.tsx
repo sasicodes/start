@@ -3,7 +3,6 @@ import { tw } from '@renderer/utils/tw';
 interface PromptProps {
   draft: string;
   label: string;
-  expanded: boolean;
   singleLine: boolean;
   placeholder: string;
   layered: boolean;
@@ -19,7 +18,6 @@ export const Prompt = ({
   label,
   onPaste,
   onInput,
-  expanded,
   inputRef,
   singleLine,
   onKeyDown,
@@ -31,9 +29,7 @@ export const Prompt = ({
     rows={1}
     value={draft}
     ref={inputRef}
-    role="combobox"
     aria-label={label}
-    aria-expanded={expanded}
     aria-controls="composer-finder"
     aria-autocomplete="list"
     {...(activeDescendant ? { 'aria-activedescendant': activeDescendant } : {})}

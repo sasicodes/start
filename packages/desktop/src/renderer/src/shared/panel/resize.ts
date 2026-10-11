@@ -8,7 +8,7 @@ import {
   readStoredPanelWidth,
   writeStoredPanelWidth
 } from '@renderer/shared/panel/width';
-import type { JSX } from 'preact';
+import type { TargetedPointerEvent } from 'preact';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 interface UsePanelResizeOptions {
@@ -30,12 +30,12 @@ export const usePanelResize = ({
   const [settling, setSettling] = useState(false);
   const [initialWidth] = useState(() => readStoredPanelWidth() ?? fallbackWidth);
   const rootRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController>();
-  const frameRef = useRef<number>();
+  const abortRef = useRef<AbortController | null>(null);
+  const frameRef = useRef(0);
   const lastClientXRef = useRef(0);
   const resizingRef = useRef(false);
-  const settleFrameRef = useRef<number>();
-  const settleTimeoutRef = useRef<number>();
+  const settleFrameRef = useRef(0);
+  const settleTimeoutRef = useRef(0);
   const startClientXRef = useRef(0);
   const startWidthRef = useRef(initialWidth);
   const widthRef = useRef(initialWidth);
@@ -113,12 +113,12 @@ export const usePanelResize = ({
   const clearSettle = useCallback(() => {
     if (settleFrameRef.current) {
       cancelAnimationFrame(settleFrameRef.current);
-      settleFrameRef.current = undefined;
+      settleFrameRef.current = 0;
     }
 
     if (settleTimeoutRef.current) {
       window.clearTimeout(settleTimeoutRef.current);
-      settleTimeoutRef.current = undefined;
+      settleTimeoutRef.current = 0;
     }
   }, []);
 
@@ -127,11 +127,11 @@ export const usePanelResize = ({
 
     resizingRef.current = false;
     abortRef.current?.abort();
-    abortRef.current = undefined;
+    abortRef.current = null;
 
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
-      frameRef.current = undefined;
+      frameRef.current = 0;
     }
 
     document.documentElement.style.cursor = interactionStyleRef.current.htmlCursor;
@@ -151,11 +151,11 @@ export const usePanelResize = ({
       stopResize();
 
       settleFrameRef.current = requestAnimationFrame(() => {
-        settleFrameRef.current = undefined;
+        settleFrameRef.current = 0;
         setOffset(0);
         applyWidth(width, true);
         settleTimeoutRef.current = window.setTimeout(() => {
-          settleTimeoutRef.current = undefined;
+          settleTimeoutRef.current = 0;
           setSettling(false);
         }, panelSettleDurationMs);
       });
@@ -170,11 +170,11 @@ export const usePanelResize = ({
 
     settleFrameRef.current = requestAnimationFrame(() => {
       const minWidth = getMinWidth();
-      settleFrameRef.current = undefined;
+      settleFrameRef.current = 0;
       setWidth(minWidth);
       setOffset(minWidth);
       settleTimeoutRef.current = window.setTimeout(() => {
-        settleTimeoutRef.current = undefined;
+        settleTimeoutRef.current = 0;
         onSidePanelCollapse?.();
         setSettling(false);
       }, panelSettleDurationMs);
@@ -213,7 +213,7 @@ export const usePanelResize = ({
       if (frameRef.current) return;
 
       frameRef.current = requestAnimationFrame(() => {
-        frameRef.current = undefined;
+        frameRef.current = 0;
 
         const currentX = lastClientXRef.current;
         const nextWidth = startWidthRef.current + startClientXRef.current - currentX;
@@ -224,7 +224,7 @@ export const usePanelResize = ({
   );
 
   const startResize = useCallback(
-    (event: JSX.TargetedPointerEvent<HTMLDivElement>) => {
+    (event: TargetedPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
 
       event.preventDefault();

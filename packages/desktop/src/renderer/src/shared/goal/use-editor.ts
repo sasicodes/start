@@ -8,7 +8,7 @@ interface GoalEditorOptions {
   overlay: boolean;
   hasAttachments: boolean;
   onDraftChange: (value: string) => void;
-  textareaRef: RefObject<HTMLTextAreaElement>;
+  textareaRef: RefObject<HTMLTextAreaElement | null>;
 }
 
 export const useGoalEditor = ({ draft, overlay, hasAttachments, onDraftChange, textareaRef }: GoalEditorOptions) => {
