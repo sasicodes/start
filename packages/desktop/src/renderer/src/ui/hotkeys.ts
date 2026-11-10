@@ -1,13 +1,19 @@
 import { isEditableTarget } from '@renderer/utils/dom';
-import { createHotkeyHandler, getHotkeyManager, type HotkeyCallbackContext, type Hotkey } from '@tanstack/hotkeys';
+import {
+  createHotkeyChordHandler,
+  getHotkeyManager,
+  type HotkeyCallback,
+  type HotkeyChord,
+  type HotkeyChordCallbackContext
+} from '@tanstack/hotkeys';
 import { useEffect, useRef } from 'preact/hooks';
 
 interface AppHotkey {
   name: string;
-  shortcuts: readonly Hotkey[];
+  shortcuts: readonly HotkeyChord[];
 }
 
-type AppHotkeyCallback = (event: KeyboardEvent, context: HotkeyCallbackContext) => void;
+type AppHotkeyCallback = HotkeyCallback<HotkeyChordCallbackContext>;
 
 export const appHotkeys = {
   newChat: {
@@ -49,7 +55,7 @@ export const useAppHotkey = (hotkey: AppHotkey, callback: AppHotkeyCallback, { c
 
     if (capture) {
       const handlers = hotkey.shortcuts.map((shortcut) =>
-        createHotkeyHandler(shortcut, invoke, { preventDefault: true, stopPropagation: true })
+        createHotkeyChordHandler(shortcut, invoke, { preventDefault: true, stopPropagation: true })
       );
 
       const onKeyDown = (event: KeyboardEvent) => {

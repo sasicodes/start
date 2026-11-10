@@ -6,6 +6,11 @@ describe('shortcutKeys', () => {
     expect(shortcutKeys('Command+/')).toEqual(['⌘', '/']);
   });
 
+  it('resolves Mod to the mac command symbol', () => {
+    expect(shortcutKeys('Mod+,')).toEqual(['⌘', ',']);
+    expect(shortcutKeys('Mod+Shift+N')).toEqual(['⇧', '⌘', 'N']);
+  });
+
   it('returns a single key for a literal chord', () => {
     expect(shortcutKeys(']')).toEqual([']']);
   });

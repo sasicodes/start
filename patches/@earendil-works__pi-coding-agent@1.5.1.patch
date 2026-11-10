@@ -1,8 +1,8 @@
 diff --git a/dist/core/extensions/loader.js b/dist/core/extensions/loader.js
-index f9292e82120e4afbc3702b11d684867ae0ff7033..38c9f5651483cdbfea9fb703989fc6379ed320c2 100644
+index 7fad6e0..6827254 100644
 --- a/dist/core/extensions/loader.js
 +++ b/dist/core/extensions/loader.js
-@@ -14,7 +14,16 @@ import { McpServerRegistry, mcpNamespace, validateMcpServerConfig } from "../mcp
+@@ -15,7 +15,16 @@ import { McpServerRegistry, validateMcpServerConfig } from "../mcp-servers.js";
  import { readPiManifest } from "../pi-manifest.js";
  import { createSyntheticSourceInfo, getSyntheticPathSource, isSyntheticPath } from "../source-info.js";
  import { time } from "../timings.js";
@@ -20,7 +20,7 @@ index f9292e82120e4afbc3702b11d684867ae0ff7033..38c9f5651483cdbfea9fb703989fc637
  const isNodeSeaBinary = ("sea" in process.features && process.features.sea === true) ||
      process.getBuiltinModule("node:sea")?.isSea() === true;
  const isTypeScriptSourceRuntime = !isBunBinary && path.extname(fileURLToPath(import.meta.url)) === ".ts";
-@@ -43,22 +52,22 @@ function getAliases() {
+@@ -44,24 +53,24 @@ function getAliases() {
      const typeboxCompileEntry = require.resolve("typebox/compile");
      const typeboxValueEntry = require.resolve("typebox/value");
      const packagesRoot = path.resolve(__dirname, "../../../../");
@@ -38,13 +38,15 @@ index f9292e82120e4afbc3702b11d684867ae0ff7033..38c9f5651483cdbfea9fb703989fc637
 -    const piTuiEntry = resolveWorkspaceOrImport("tui/dist/index.js", "@earendil-works/pi-tui");
 +    const piAgentCoreEntry = resolveWorkspaceOrPackage("agent/dist/index.js", "@earendil-works/pi-agent-core", "dist/index.js");
 +    const piTuiEntry = resolveWorkspaceOrPackage("tui/dist/index.js", "@earendil-works/pi-tui", "dist/index.js");
-     // Extensions resolve the pi-ai root to the compat entrypoint (a strict
-     // superset of the core entrypoint): existing extensions using the old
-     // global API keep working at runtime until compat is removed.
--    const piAiCompatEntry = resolveWorkspaceOrImport("ai/dist/compat.js", "@earendil-works/pi-ai/compat");
+     // Extensions resolve the pi-ai root to the extension view: the compat
+     // entrypoint (a strict superset of the core entrypoint) plus TypeBox's Type,
+     // Static and TSchema, so extensions using the old global API and pi-ai's
+     // former TypeBox re-exports keep working.
+     const piAiCompatEntry = path.resolve(__dirname, "pi-ai-extension-view.js");
+-    const piAiModelsEntry = resolveWorkspaceOrImport("ai/dist/models.js", "@earendil-works/pi-ai/models");
 -    const piAiOauthEntry = resolveWorkspaceOrImport("ai/dist/oauth.js", "@earendil-works/pi-ai/oauth");
 -    const piAiProvidersEntry = resolveWorkspaceOrImport("ai/dist/providers/all.js", "@earendil-works/pi-ai/providers/all");
-+    const piAiCompatEntry = resolveWorkspaceOrPackage("ai/dist/compat.js", "@earendil-works/pi-ai", "dist/compat.js");
++    const piAiModelsEntry = resolveWorkspaceOrPackage("ai/dist/models.js", "@earendil-works/pi-ai", "dist/models.js");
 +    const piAiOauthEntry = resolveWorkspaceOrPackage("ai/dist/oauth.js", "@earendil-works/pi-ai", "dist/oauth.js");
 +    const piAiProvidersEntry = resolveWorkspaceOrPackage("ai/dist/providers/all.js", "@earendil-works/pi-ai", "dist/providers/all.js");
      _aliases = {

@@ -28,7 +28,7 @@ describe('model and thinking level', () => {
   it.each([
     ['openai', 'gpt-6.1-sol', 'gpt-6-astra'],
     ['openai-codex', 'gpt-6.1-sol', 'gpt-6-astra'],
-    ['anthropic', 'claude-opus-5-5', 'claude-fable-5-1']
+    ['anthropic', 'claude-opus-5-5', 'claude-fable-5-2']
   ])('defaults %s to the latest model for the picker and new sessions', async (provider, previous, latest) => {
     const chat = freshChatService({
       lastWorkspace: '/tmp/workspace-a',
@@ -57,7 +57,7 @@ describe('model and thinking level', () => {
   it.each([
     ['openai', 'gpt-6-astra', 'GPT-6 Astra'],
     ['openai-codex', 'gpt-6-astra', 'GPT-6 Astra'],
-    ['anthropic', 'claude-fable-5-1', 'Claude Fable 5.1']
+    ['anthropic', 'claude-fable-5-2', 'Claude Fable 5.2']
   ])('selects and persists %s:%s with its reasoning levels', async (provider, id, name) => {
     const key = `${provider}:${id}`;
     const chat = freshChatService({
