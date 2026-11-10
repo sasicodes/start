@@ -57,14 +57,15 @@ describe('helpers', () => {
     expect(isProviderModel({ id: 'gpt-5.5', name: 'GPT 5.5', provider: 'openai' }, 'anthropic')).toBe(false);
   });
 
-  it('replaces fable 5 with fable 5.1 in the configured display order', () => {
+  it('replaces older fable models with fable 5.2 in the configured display order', () => {
     const sorted = getLatestProviderModels('anthropic', [
       { id: 'claude-sonnet-5-5', name: 'Sonnet 5.5', provider: 'anthropic' },
       { id: 'claude-fable-5', name: 'Fable 5', provider: 'anthropic' },
       { id: 'claude-fable-5-1', name: 'Fable 5.1', provider: 'anthropic' },
+      { id: 'claude-fable-5-2', name: 'Fable 5.2', provider: 'anthropic' },
       { id: 'claude-opus-5-5', name: 'Opus 5.5', provider: 'anthropic' }
     ]);
-    expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5-1', 'claude-opus-5-5', 'claude-sonnet-5-5']);
+    expect(sorted.map((model) => model.id)).toEqual(['claude-fable-5-2', 'claude-opus-5-5', 'claude-sonnet-5-5']);
   });
 
   it('restores a stored session model and thinking level when the model is available', () => {
@@ -145,11 +146,11 @@ describe('helpers', () => {
     expect(visible.map((model) => model.id)).toEqual(['gpt-6.1-sol', 'claude-opus-5-5']);
   });
 
-  it('includes astra for api and subscription providers and fable 5.1', () => {
+  it('includes astra for api and subscription providers and fable 5.2', () => {
     const models = [
       { id: 'gpt-6-astra', provider: 'openai' },
       { id: 'gpt-6-astra', provider: 'openai-codex' },
-      { id: 'claude-fable-5-1', provider: 'anthropic' }
+      { id: 'claude-fable-5-2', provider: 'anthropic' }
     ];
 
     expect(getVisibleModels(models)).toEqual(models);

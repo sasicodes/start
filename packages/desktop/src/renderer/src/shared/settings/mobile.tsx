@@ -3,7 +3,7 @@ import { RELAY_SETUP_URL } from '@renderer/constants';
 import { PairingQrDialog } from '@renderer/shared/settings/mobile/pairing';
 import { CheckIcon, QrIcon, SpinnerIcon, TrashIcon, XIcon } from '@renderer/ui/icons';
 import { tw } from '@renderer/utils/tw';
-import type { AccessibleInputHTMLAttributes, ComponentChildren } from 'preact';
+import type { ComponentChildren, InputHTMLAttributes } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 
 interface MobileProps {
@@ -11,7 +11,7 @@ interface MobileProps {
   onChange: (settings: MobileRelaySettings) => Promise<AppSettingsResult>;
 }
 
-type MobileInputProps = AccessibleInputHTMLAttributes<HTMLInputElement> & { trailing?: ComponentChildren };
+type MobileInputProps = InputHTMLAttributes<HTMLInputElement> & { trailing?: ComponentChildren };
 
 const mobileRelaySettingsKey = (settings: MobileRelaySettings) =>
   `${settings.desktopId}:${settings.enabled}:${settings.relayUrl}:${settings.desktopName}:${settings.relayToken}`;

@@ -13,7 +13,8 @@ const migrations = [
   ['openai-codex', 'gpt-5.6-sol', 'gpt-6.1-sol'],
   ['openai-codex', 'gpt-5.6-luna', 'gpt-6-luna'],
   ['openai-codex', 'gpt-5.6-terra', 'gpt-6.1-sol'],
-  ['anthropic', 'claude-sonnet-5', 'claude-sonnet-5-5']
+  ['anthropic', 'claude-sonnet-5', 'claude-sonnet-5-5'],
+  ['anthropic', 'claude-fable-5-1', 'claude-fable-5-2']
 ] as const;
 
 it.each(migrations)('maps %s:%s to %s without changing the provider', (provider, previous, next) => {
@@ -32,7 +33,7 @@ it.each(migrations)('restores the saved %s:%s selection as %s', async (provider,
   const chat = freshChatService({
     lastWorkspace: '/tmp/workspace-a',
     selectedModelKey: `${provider}:${previous}`,
-    models: [provider === 'anthropic' ? 'claude-fable-5-1' : 'gpt-6-astra', next].map((id) => ({
+    models: [provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-6-astra', next].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,
@@ -57,8 +58,8 @@ it.each(migrations)('restores a workspace default of %s:%s as %s', async (provid
     workspaceModelDefaults: {
       '/tmp/workspace-b': { modelKey: `${provider}:${previous}`, thinkingLevel: 'high' }
     },
-    selectedModelKey: `${provider}:${provider === 'anthropic' ? 'claude-fable-5-1' : 'gpt-6-astra'}`,
-    models: [provider === 'anthropic' ? 'claude-fable-5-1' : 'gpt-6-astra', next].map((id) => ({
+    selectedModelKey: `${provider}:${provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-6-astra'}`,
+    models: [provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-6-astra', next].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,
@@ -80,7 +81,7 @@ it.each(migrations)('restores a workspace default of %s:%s as %s', async (provid
 it.each(migrations)('restores an old session using %s:%s as %s', async (provider, previous, next) => {
   const chat = freshChatService({
     lastWorkspace: '/tmp/workspace-a',
-    models: [provider === 'anthropic' ? 'claude-fable-5-1' : 'gpt-6-astra', next].map((id) => ({
+    models: [provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-6-astra', next].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,
@@ -124,7 +125,7 @@ it('keeps the normal fallback when a replacement is unavailable', async () => {
 it.each(migrations)('resolves a subagent pick of %s:%s as %s', async (provider, previous, next) => {
   const createTools = vi.spyOn(tools, 'createStartCustomTools');
   const chat = freshChatService({
-    models: [provider === 'anthropic' ? 'claude-fable-5-1' : 'gpt-6-astra', next].map((id) => ({
+    models: [provider === 'anthropic' ? 'claude-haiku-5-5' : 'gpt-6-astra', next].map((id) => ({
       ...fakeModelDefaults,
       id,
       name: id,

@@ -1,6 +1,6 @@
+import type { Api, Model } from '@earendil-works/pi-ai';
 import type { GoalStatus } from '../shared/goal/types.js';
 export type EffortLevel = 'high' | 'low' | 'xhigh' | 'medium';
-export type ThinkingLevel = 'off' | 'minimal' | EffortLevel;
 export type ProviderKey = 'openai' | 'anthropic';
 
 export const effortLevels = ['low', 'medium', 'high', 'xhigh'] as const satisfies readonly EffortLevel[];
@@ -48,10 +48,7 @@ export type ProviderLoginResult = {
   providers: ProviderAuthStatus[];
 };
 
-export type ThinkingModel = {
-  reasoning: boolean;
-  thinkingLevelMap?: Partial<Record<ThinkingLevel, string | null>>;
-};
+export type ThinkingModel = Pick<Model<Api>, 'reasoning' | 'thinkingLevelMap'>;
 
 export type ImageAttachment = {
   id: string;

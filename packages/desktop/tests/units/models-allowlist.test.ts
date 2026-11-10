@@ -10,7 +10,8 @@ describe('models allowlist', () => {
   it('returns a set for each provider with the right ids', () => {
     const anthropic = allowedLatestModelIds('anthropic');
     expect(anthropic.has('claude-fable-5')).toBe(false);
-    expect(anthropic.has('claude-fable-5-1')).toBe(true);
+    expect(anthropic.has('claude-fable-5-1')).toBe(false);
+    expect(anthropic.has('claude-fable-5-2')).toBe(true);
     expect(anthropic.has('claude-opus-5-5')).toBe(true);
     expect(anthropic.has('claude-opus-5')).toBe(false);
     expect(anthropic.has('claude-opus-4-8')).toBe(false);
